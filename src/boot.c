@@ -110,9 +110,6 @@ int internal_boot(struct ds_config *cfg, int sock_fd) {
       close(console_fd);
   }
 
-  /* 20. Android optimizations */
-  android_optimizations();
-
   /* 21. EXEC INIT */
   char *argv[] = {"/sbin/init", NULL};
 

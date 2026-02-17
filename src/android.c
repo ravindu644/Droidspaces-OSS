@@ -26,18 +26,24 @@ int is_android(void) {
  * Android optimizations
  * ---------------------------------------------------------------------------*/
 
-void android_optimizations(void) {
+void android_optimizations(int enable) {
   if (!is_android())
     return;
 
-  ds_log("Applying Android system optimizations...");
-
-  /* Disable phantom process killer (Android 12+) */
-  system("device_config put activity_manager max_phantom_processes 2147483647 "
-         "2>/dev/null");
-
-  /* Disable battery optimizations (Doze mode) for shell/root if possible */
-  system("dumpsys deviceidle whitelist +com.android.shell 2>/dev/null");
+  if (enable) {
+    ds_log("Applying Android system optimizations...");
+    system("cmd device_config put activity_manager max_phantom_processes "
+           "2147483647 >/dev/null 2>&1");
+    system("cmd device_config set_sync_disabled_for_tests persistent "
+           ">/dev/null 2>&1");
+    system("dumpsys deviceidle disable >/dev/null 2>&1");
+  } else {
+    system("cmd device_config put activity_manager max_phantom_processes 32 "
+           ">/dev/null 2>&1");
+    system(
+        "cmd device_config set_sync_disabled_for_tests none >/dev/null 2>&1");
+    system("dumpsys deviceidle enable >/dev/null 2>&1");
+  }
 }
 
 /* ---------------------------------------------------------------------------
@@ -140,9 +146,16 @@ void android_configure_iptables(void) {
     return;
 
   ds_log("Configuring iptables for container networking...");
+  /* Configure iptables for container networking */
+  system("iptables -t filter -F 2>/dev/null");
+  system("ip6tables -t filter -F 2>/dev/null");
   system("iptables -P FORWARD ACCEPT 2>/dev/null");
   system("iptables -t nat -A POSTROUTING -s 10.0.3.0/24 ! -d 10.0.3.0/24 -j "
          "MASQUERADE 2>/dev/null");
+  system("iptables -t nat -A OUTPUT -p tcp -d 127.0.0.1 -m tcp --dport 1:65535 "
+         "-j REDIRECT --to-ports 1-65535 2>/dev/null");
+  system("iptables -t nat -A OUTPUT -p udp -d 127.0.0.1 -m udp --dport 1:65535 "
+         "-j REDIRECT --to-ports 1-65535 2>/dev/null");
 }
 
 void android_setup_paranoid_network_groups(void) {
@@ -166,17 +179,32 @@ int android_setup_storage(const char *rootfs_path) {
   if (!is_android())
     return 0;
 
-  char internal_storage[PATH_MAX];
-  snprintf(internal_storage, sizeof(internal_storage), "%s/sdcard",
-           rootfs_path);
-  mkdir(internal_storage, 0777);
+  const char *storage_src = "/storage/emulated/0";
+  struct stat st;
 
-  ds_log("Mounting Android internal storage to /sdcard...");
-  /* Attempt to mount /storage/emulated/0 (common internal storage path) */
-  if (domount("/storage/emulated/0", internal_storage, NULL, MS_BIND | MS_REC,
-              NULL) < 0) {
-    /* Fallback to /sdcard */
-    domount("/sdcard", internal_storage, NULL, MS_BIND | MS_REC, NULL);
+  if (stat(storage_src, &st) < 0 || !S_ISDIR(st.st_mode) ||
+      access(storage_src, R_OK) < 0) {
+    ds_warn("Android storage not found or not readable at %s", storage_src);
+    return -1;
+  }
+
+  /* Create target directories inside rootfs: storage/, storage/emulated/,
+   * storage/emulated/0 */
+  char path[PATH_MAX];
+
+  snprintf(path, sizeof(path), "%s/storage", rootfs_path);
+  mkdir(path, 0755);
+
+  snprintf(path, sizeof(path), "%s/storage/emulated", rootfs_path);
+  mkdir(path, 0755);
+
+  snprintf(path, sizeof(path), "%s/storage/emulated/0", rootfs_path);
+  mkdir(path, 0755);
+
+  ds_log("Mounting Android internal storage to /storage/emulated/0...");
+  if (domount(storage_src, path, NULL, MS_BIND | MS_REC, NULL) < 0) {
+    ds_warn("Failed to bind-mount Android storage %s -> %s", storage_src, path);
+    return -1;
   }
 
   return 0;

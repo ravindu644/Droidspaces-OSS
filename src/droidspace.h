@@ -165,7 +165,7 @@ void firmware_path_remove_rootfs(const char *rootfs);
  * ---------------------------------------------------------------------------*/
 
 int is_android(void);
-void android_optimizations(void);
+void android_optimizations(int enable);
 void android_set_selinux_permissive(void);
 int android_get_selinux_status(void);
 void android_remount_data_suid(void);

@@ -175,6 +175,7 @@ int start_rootfs(struct ds_config *cfg) {
 
   /* 5. Configure host-side networking (NAT, ip_forward) */
   fix_networking_host(cfg);
+  android_optimizations(1);
 
   if (cfg->hw_access)
     ds_log("Hardware access enabled: using host devtmpfs...");
@@ -236,6 +237,9 @@ int start_rootfs(struct ds_config *cfg) {
 
 void cleanup_container_resources(struct ds_config *cfg, pid_t pid,
                                  int skip_unmount) {
+  if (is_android())
+    android_optimizations(0);
+
   /* 1. Cleanup firmware path if it was added */
   if (pid > 0) {
     char rootfs[PATH_MAX];

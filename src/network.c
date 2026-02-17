@@ -20,6 +20,26 @@ int fix_networking_host(struct ds_config *cfg) {
   }
 
   if (is_android()) {
+    /* Get DNS (Android props if available), fallback to Google DNS */
+    char dns1[64] = {0}, dns2[64] = {0};
+    android_fill_dns_from_props(dns1, dns2, sizeof(dns1));
+    if (!dns1[0])
+      safe_strncpy(dns1, "8.8.8.8", sizeof(dns1));
+    if (!dns2[0])
+      safe_strncpy(dns2, "8.8.4.4", sizeof(dns2));
+
+    /* Save DNS to temp file in rootfs for use after pivot_root */
+    char dns_path[PATH_MAX];
+    snprintf(dns_path, sizeof(dns_path), "%s/.dns_servers", cfg->rootfs_path);
+    FILE *dns_fp = fopen(dns_path, "w");
+    if (dns_fp) {
+      if (dns2[0])
+        fprintf(dns_fp, "nameserver %s\nnameserver %s\n", dns1, dns2);
+      else
+        fprintf(dns_fp, "nameserver %s\n", dns1);
+      fclose(dns_fp);
+    }
+
     /* Android specific NAT and firewall */
     android_configure_iptables();
   }
@@ -53,20 +73,25 @@ int fix_networking_rootfs(struct ds_config *cfg) {
            cfg->hostname);
   write_file("/etc/hosts", hosts_content);
 
-  /* 3. resolv.conf */
-  char dns1[64] = "8.8.8.8", dns2[64] = "8.8.4.4";
-  if (is_android()) {
-    android_fill_dns_from_props(dns1, dns2, sizeof(dns1));
+  /* 3. resolv.conf (Android DNS from host via .dns_servers) */
+  mkdir("/run/resolvconf", 0755);
+  FILE *dns_fp = fopen("/.old_root/.dns_servers", "r");
+  if (dns_fp) {
+    char buf[512];
+    size_t n = fread(buf, 1, sizeof(buf), dns_fp);
+    if (n > 0) {
+      write_file("/run/resolvconf/resolv.conf", buf);
+    }
+    fclose(dns_fp);
+  } else {
+    /* Fallback/Linux default */
+    write_file("/run/resolvconf/resolv.conf",
+               "nameserver 8.8.8.8\nnameserver 8.8.4.4\n");
   }
 
-  char resolv_content[256];
-  if (dns2[0])
-    snprintf(resolv_content, sizeof(resolv_content),
-             "nameserver %s\nnameserver %s\n", dns1, dns2);
-  else
-    snprintf(resolv_content, sizeof(resolv_content), "nameserver %s\n", dns1);
-
-  write_file("/etc/resolv.conf", resolv_content);
+  /* Link /etc/resolv.conf */
+  unlink("/etc/resolv.conf");
+  symlink("/run/resolvconf/resolv.conf", "/etc/resolv.conf");
 
   /* 4. Android Network Groups */
   if (is_android()) {
@@ -83,6 +108,12 @@ int fix_networking_rootfs(struct ds_config *cfg) {
           fclose(fg);
         }
       }
+    }
+
+    /* Add root to groups if usermod exists */
+    if (access("/usr/sbin/usermod", X_OK) == 0 ||
+        access("/sbin/usermod", X_OK) == 0) {
+      system("usermod -a -G aid_inet,aid_net_raw root >/dev/null 2>&1");
     }
   }
 
