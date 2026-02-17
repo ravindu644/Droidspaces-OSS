@@ -113,7 +113,9 @@ int fix_networking_rootfs(struct ds_config *cfg) {
     /* Add root to groups if usermod exists */
     if (access("/usr/sbin/usermod", X_OK) == 0 ||
         access("/sbin/usermod", X_OK) == 0) {
-      system("usermod -a -G aid_inet,aid_net_raw root >/dev/null 2>&1");
+      char *args[] = {"usermod", "-a", "-G", "aid_inet,aid_net_raw",
+                      "root",    NULL};
+      run_command_quiet(args);
     }
   }
 

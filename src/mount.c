@@ -213,16 +213,15 @@ int mount_rootfs_img(const char *img_path, char *mount_point, size_t mp_size) {
   ds_log("Mounting rootfs image %s on %s...", img_path, mount_point);
 
   /* Run e2fsck first if it's an ext image */
-  char cmd[PATH_MAX + 64];
-  snprintf(cmd, sizeof(cmd), "e2fsck -f -y %s >/dev/null 2>&1", img_path);
-  if (system(cmd) == 0) {
+  char *e2fsck_argv[] = {"e2fsck", "-f", "-y", (char *)img_path, NULL};
+  if (run_command_quiet(e2fsck_argv) == 0) {
     ds_log("Image checked and repaired successfully.");
   }
 
   /* Mount via loop device */
-  snprintf(cmd, sizeof(cmd), "mount -o loop %s %s >/dev/null 2>&1", img_path,
-           mount_point);
-  if (system(cmd) != 0) {
+  char *mount_argv[] = {"mount",          "-o",        "loop",
+                        (char *)img_path, mount_point, NULL};
+  if (run_command_quiet(mount_argv) != 0) {
     ds_error("Failed to mount image %s", img_path);
     return -1;
   }
@@ -237,9 +236,8 @@ int unmount_rootfs_img(const char *mount_point) {
   /* Try unmounting: prefer aggressive lazy unmount syscall first */
   if (umount2(mount_point, MNT_DETACH) < 0) {
     /* Fallback to standard umount via shell with loop detach flag */
-    char cmd[PATH_MAX + 32];
-    snprintf(cmd, sizeof(cmd), "umount -d -l %s 2>/dev/null", mount_point);
-    system(cmd);
+    char *umount_argv[] = {"umount", "-d", "-l", (char *)mount_point, NULL};
+    run_command_quiet(umount_argv);
   }
 
   /* Try to remove the directory (will only succeed if empty) */

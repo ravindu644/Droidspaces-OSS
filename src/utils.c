@@ -270,8 +270,45 @@ void firmware_path_remove_rootfs(const char *rootfs) {
   char *after = pos + strlen(fw_path);
   if (*after == ':')
     after++;
-  if (*after)
+  if (*after) {
+    if (new_path[0])
+      strncat(new_path, ":", sizeof(new_path) - strlen(new_path) - 1);
     strncat(new_path, after, sizeof(new_path) - strlen(new_path) - 1);
+  }
 
   write_file(FW_PATH_FILE, new_path);
 }
+
+/* ---------------------------------------------------------------------------
+ * Safe Command Execution (fork + execvp)
+ * ---------------------------------------------------------------------------*/
+
+static int internal_run(char *const argv[], int quiet) {
+  pid_t pid = fork();
+  if (pid < 0)
+    return -1;
+
+  if (pid == 0) {
+    if (quiet) {
+      int devnull = open("/dev/null", O_RDWR);
+      if (devnull >= 0) {
+        dup2(devnull, 1);
+        dup2(devnull, 2);
+        close(devnull);
+      }
+    }
+    execvp(argv[0], argv);
+    exit(127); /* exec failed */
+  }
+
+  int status;
+  if (waitpid(pid, &status, 0) < 0)
+    return -1;
+
+  if (WIFEXITED(status))
+    return WEXITSTATUS(status);
+  return -1;
+}
+
+int run_command(char *const argv[]) { return internal_run(argv, 0); }
+int run_command_quiet(char *const argv[]) { return internal_run(argv, 1); }

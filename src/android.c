@@ -32,17 +32,33 @@ void android_optimizations(int enable) {
 
   if (enable) {
     ds_log("Applying Android system optimizations...");
-    system("cmd device_config put activity_manager max_phantom_processes "
-           "2147483647 >/dev/null 2>&1");
-    system("cmd device_config set_sync_disabled_for_tests persistent "
-           ">/dev/null 2>&1");
-    system("dumpsys deviceidle disable >/dev/null 2>&1");
+    char *args1[] = {"cmd",
+                     "device_config",
+                     "put",
+                     "activity_manager",
+                     "max_phantom_processes",
+                     "2147483647",
+                     NULL};
+    run_command_quiet(args1);
+    char *args2[] = {"cmd", "device_config", "set_sync_disabled_for_tests",
+                     "persistent", NULL};
+    run_command_quiet(args2);
+    char *args3[] = {"dumpsys", "deviceidle", "disable", NULL};
+    run_command_quiet(args3);
   } else {
-    system("cmd device_config put activity_manager max_phantom_processes 32 "
-           ">/dev/null 2>&1");
-    system(
-        "cmd device_config set_sync_disabled_for_tests none >/dev/null 2>&1");
-    system("dumpsys deviceidle enable >/dev/null 2>&1");
+    char *args1[] = {"cmd",
+                     "device_config",
+                     "put",
+                     "activity_manager",
+                     "max_phantom_processes",
+                     "32",
+                     NULL};
+    run_command_quiet(args1);
+    char *args2[] = {"cmd", "device_config", "set_sync_disabled_for_tests",
+                     "none", NULL};
+    run_command_quiet(args2);
+    char *args3[] = {"dumpsys", "deviceidle", "enable", NULL};
+    run_command_quiet(args3);
   }
 }
 
@@ -66,7 +82,8 @@ void android_set_selinux_permissive(void) {
     ds_log("Setting SELinux to permissive...");
     if (write_file("/sys/fs/selinux/enforce", "0") < 0) {
       /* Try setenforce command as fallback */
-      system("setenforce 0 2>/dev/null");
+      char *args[] = {"setenforce", "0", NULL};
+      run_command_quiet(args);
     }
   }
 }
@@ -82,7 +99,8 @@ void android_remount_data_suid(void) {
   ds_log("Ensuring /data is mounted with suid support...");
   /* On some Android versions, /data is mounted nosuid. We need suid for
    * sudo/su/ping within the container if it's stored on /data. */
-  system("mount -o remount,suid /data 2>/dev/null");
+  char *args[] = {"mount", "-o", "remount,suid", "/data", NULL};
+  run_command_quiet(args);
 }
 
 /* ---------------------------------------------------------------------------
@@ -147,15 +165,26 @@ void android_configure_iptables(void) {
 
   ds_log("Configuring iptables for container networking...");
   /* Configure iptables for container networking */
-  system("iptables -t filter -F 2>/dev/null");
-  system("ip6tables -t filter -F 2>/dev/null");
-  system("iptables -P FORWARD ACCEPT 2>/dev/null");
-  system("iptables -t nat -A POSTROUTING -s 10.0.3.0/24 ! -d 10.0.3.0/24 -j "
-         "MASQUERADE 2>/dev/null");
-  system("iptables -t nat -A OUTPUT -p tcp -d 127.0.0.1 -m tcp --dport 1:65535 "
-         "-j REDIRECT --to-ports 1-65535 2>/dev/null");
-  system("iptables -t nat -A OUTPUT -p udp -d 127.0.0.1 -m udp --dport 1:65535 "
-         "-j REDIRECT --to-ports 1-65535 2>/dev/null");
+  char *args_f[] = {"iptables", "-t", "filter", "-F", NULL};
+  run_command_quiet(args_f);
+  char *args_f6[] = {"ip6tables", "-t", "filter", "-F", NULL};
+  run_command_quiet(args_f6);
+  char *args_p[] = {"iptables", "-P", "FORWARD", "ACCEPT", NULL};
+  run_command_quiet(args_p);
+  char *args_masq[] = {"iptables", "-t",          "nat", "-A", "POSTROUTING",
+                       "-s",       "10.0.3.0/24", "!",   "-d", "10.0.3.0/24",
+                       "-j",       "MASQUERADE",  NULL};
+  run_command_quiet(args_masq);
+  char *args_red_tcp[] = {
+      "iptables", "-t", "nat",       "-A",         "OUTPUT",  "-p",
+      "tcp",      "-d", "127.0.0.1", "-m",         "tcp",     "--dport",
+      "1:65535",  "-j", "REDIRECT",  "--to-ports", "1-65535", NULL};
+  run_command_quiet(args_red_tcp);
+  char *args_red_udp[] = {
+      "iptables", "-t", "nat",       "-A",         "OUTPUT",  "-p",
+      "udp",      "-d", "127.0.0.1", "-m",         "udp",     "--dport",
+      "1:65535",  "-j", "REDIRECT",  "--to-ports", "1-65535", NULL};
+  run_command_quiet(args_red_udp);
 }
 
 void android_setup_paranoid_network_groups(void) {

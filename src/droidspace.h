@@ -161,6 +161,8 @@ int read_mount_path(const char *pidfile, char *buf, size_t size);
 int remove_mount_path(const char *pidfile);
 void firmware_path_add_rootfs(const char *rootfs);
 void firmware_path_remove_rootfs(const char *rootfs);
+int run_command(char *const argv[]);
+int run_command_quiet(char *const argv[]);
 
 /* ---------------------------------------------------------------------------
  * android.c
