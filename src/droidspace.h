@@ -59,6 +59,8 @@
 #define DS_WORKSPACE_ANDROID "/data/local/Droidspaces"
 #define DS_WORKSPACE_LINUX "/var/lib/Droidspaces"
 #define DS_PIDS_SUBDIR "Pids"
+#define DS_IMG_MOUNT_ROOT_UNIVERSAL "/mnt/Droidspaces"
+#define DS_MAX_MOUNT_TRIES 100
 
 /* Device nodes to create in container /dev (when using tmpfs) */
 #define DS_CONTAINER_MARKER "droidspaces"

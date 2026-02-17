@@ -5,6 +5,51 @@
 #include "droidspace.h"
 
 /* ---------------------------------------------------------------------------
+ * Helpers
+ * ---------------------------------------------------------------------------*/
+
+/* Check if a path is a mountpoint */
+static int is_mountpoint(const char *path) {
+  struct stat st1, st2;
+  if (stat(path, &st1) < 0)
+    return 0;
+
+  char parent[PATH_MAX];
+  snprintf(parent, sizeof(parent), "%s/..", path);
+  if (stat(parent, &st2) < 0)
+    return 0;
+
+  return st1.st_dev != st2.st_dev;
+}
+
+/* Find available mount point in /mnt/Droidspaces/ (Universal) */
+static int find_available_mountpoint(char *mount_path, size_t size) {
+  const char *base_dir = DS_IMG_MOUNT_ROOT_UNIVERSAL;
+
+  /* Create base directory if it doesn't exist */
+  mkdir(base_dir, 0755);
+
+  /* Try numbers 0-99 */
+  for (int i = 0; i < DS_MAX_MOUNT_TRIES; i++) {
+    snprintf(mount_path, size, "%s/%d", base_dir, i);
+
+    /* Check if directory exists and is not a mountpoint */
+    struct stat st;
+    if (stat(mount_path, &st) < 0) {
+      /* Directory doesn't exist, create it */
+      if (mkdir(mount_path, 0755) == 0) {
+        return 0;
+      }
+    } else if (S_ISDIR(st.st_mode) && !is_mountpoint(mount_path)) {
+      /* Directory exists and is not mounted, use it */
+      return 0;
+    }
+  }
+
+  return -1; /* No available mount point */
+}
+
+/* ---------------------------------------------------------------------------
  * Generic mount wrappers
  * ---------------------------------------------------------------------------*/
 
@@ -147,23 +192,11 @@ int setup_cgroups(void) {
  * ---------------------------------------------------------------------------*/
 
 int mount_rootfs_img(const char *img_path, char *mount_point, size_t mp_size) {
-  /* Use workspace/mounts/ as base for image mounts */
-  snprintf(mount_point, mp_size, "%s/mounts", get_workspace_dir());
-  mkdir(mount_point, 0755);
-
-  /* Construct unique mount point based on filename hash or name */
-  const char *filename = strrchr(img_path, '/');
-  filename = filename ? filename + 1 : img_path;
-
-  char name_only[128];
-  safe_strncpy(name_only, filename, sizeof(name_only));
-  char *dot = strrchr(name_only, '.');
-  if (dot)
-    *dot = '\0';
-
-  strncat(mount_point, "/", mp_size - strlen(mount_point) - 1);
-  strncat(mount_point, name_only, mp_size - strlen(mount_point) - 1);
-  mkdir(mount_point, 0755);
+  if (find_available_mountpoint(mount_point, mp_size) < 0) {
+    ds_error("Failed to find available mount point in %s",
+             DS_IMG_MOUNT_ROOT_UNIVERSAL);
+    return -1;
+  }
 
   ds_log("Mounting rootfs image %s on %s...", img_path, mount_point);
 
@@ -175,7 +208,7 @@ int mount_rootfs_img(const char *img_path, char *mount_point, size_t mp_size) {
   }
 
   /* Mount via loop device */
-  snprintf(cmd, sizeof(cmd), "mount -v -o loop %s %s 2>/dev/null", img_path,
+  snprintf(cmd, sizeof(cmd), "mount -o loop %s %s >/dev/null 2>&1", img_path,
            mount_point);
   if (system(cmd) != 0) {
     ds_error("Failed to mount image %s", img_path);
@@ -191,11 +224,11 @@ int unmount_rootfs_img(const char *mount_point) {
 
   ds_log("Unmounting rootfs image from %s...", mount_point);
 
-  /* Try lazy unmount first */
+  /* Try unmounting: prefer aggressive lazy unmount syscall first */
   if (umount2(mount_point, MNT_DETACH) < 0) {
-    /* Fallback to standard umount via shell for better loop cleanup */
-    char cmd[PATH_MAX + 16];
-    snprintf(cmd, sizeof(cmd), "umount -l %s 2>/dev/null", mount_point);
+    /* Fallback to standard umount via shell with loop detach flag */
+    char cmd[PATH_MAX + 32];
+    snprintf(cmd, sizeof(cmd), "umount -d -l %s 2>/dev/null", mount_point);
     system(cmd);
   }
 

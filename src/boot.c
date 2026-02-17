@@ -7,7 +7,11 @@
 int internal_boot(struct ds_config *cfg, int sock_fd) {
   (void)sock_fd; /* No longer used */
 
-  /* 1. Make root filesystem private to prevent mount leakage to host */
+  /* 1. Isolated mount namespace */
+  if (unshare(CLONE_NEWNS) < 0)
+    ds_die("Failed to unshare mount namespace: %s", strerror(errno));
+
+  /* 2. Make root filesystem private to prevent mount leakage to host */
   if (mount(NULL, "/", NULL, MS_REC | MS_PRIVATE, NULL) < 0)
     ds_die("Failed to remount / as private: %s", strerror(errno));
 

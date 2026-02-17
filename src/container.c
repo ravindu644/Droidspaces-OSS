@@ -98,7 +98,17 @@ int start_rootfs(struct ds_config *cfg) {
       break;
   }
 
-  /* 3. Pipe for synchronization */
+  /* 3. Resolve target PID file names early so monitor inherits them */
+  char global_pidfile[PATH_MAX];
+  resolve_pidfile_from_name(cfg->container_name, global_pidfile,
+                            sizeof(global_pidfile));
+
+  /* If no pidfile specified, or we want to use the global one */
+  if (!cfg->pidfile[0]) {
+    safe_strncpy(cfg->pidfile, global_pidfile, sizeof(cfg->pidfile));
+  }
+
+  /* 4. Pipe for synchronization */
   int sync_pipe[2];
   if (pipe(sync_pipe) < 0)
     ds_die("pipe failed: %s", strerror(errno));
@@ -114,10 +124,11 @@ int start_rootfs(struct ds_config *cfg) {
     setsid();
     prctl(PR_SET_NAME, "[ds-monitor]", 0, 0, 0);
 
-    /* Unshare namespaces - Monitor enters new MNT, UTS, IPC namespeces
+    /* Unshare namespaces - Monitor enters new UTS, IPC namespeces
      * immediately. PID namespace unshare means only CHILDREN of the monitor
-     * will be in the new PID NS. */
-    if (unshare(CLONE_NEWNS | CLONE_NEWUTS | CLONE_NEWIPC | CLONE_NEWPID) < 0)
+     * will be in the new PID NS. Note: we no longer unshare MNT here so
+     * monitor can cleanup host mounts. */
+    if (unshare(CLONE_NEWUTS | CLONE_NEWIPC | CLONE_NEWPID) < 0)
       ds_die("unshare failed: %s", strerror(errno));
 
     /* Fork Container Init (PID 1 inside) */
@@ -133,12 +144,12 @@ int start_rootfs(struct ds_config *cfg) {
       exit(internal_boot(cfg, -1));
     }
 
-    /* MONITOR CONTINUES */
-    cfg->container_pid = init_pid;
-
     /* Write child PID to sync pipe so parent knows it */
     write(sync_pipe[1], &init_pid, sizeof(pid_t));
     close(sync_pipe[1]);
+
+    /* Ensure monitor is not sitting inside any mount point */
+    chdir("/");
 
     /* Stdio handling for monitor in background mode */
     if (!cfg->foreground) {
@@ -156,7 +167,9 @@ int start_rootfs(struct ds_config *cfg) {
     while (waitpid(init_pid, &status, 0) < 0 && errno == EINTR)
       ;
 
-    /* Monitor shutting down silently */
+    /* Monitor cleans up resources before exiting */
+    cleanup_container_resources(cfg, init_pid, 0);
+
     exit(WEXITSTATUS(status));
   }
 
@@ -185,10 +198,6 @@ int start_rootfs(struct ds_config *cfg) {
   ds_log("Booting %s (init: /sbin/init)...", cfg->container_name);
 
   /* 6. Save PID file */
-  char global_pidfile[PATH_MAX];
-  resolve_pidfile_from_name(cfg->container_name, global_pidfile,
-                            sizeof(global_pidfile));
-
   char pid_str[32];
   snprintf(pid_str, sizeof(pid_str), "%d", cfg->container_pid);
 
@@ -204,9 +213,6 @@ int start_rootfs(struct ds_config *cfg) {
     }
   }
 
-  /* Update cfg->pidfile to the global one for consistent cleanup */
-  safe_strncpy(cfg->pidfile, global_pidfile, sizeof(cfg->pidfile));
-
   if (cfg->is_img_mount)
     save_mount_path(cfg->pidfile, cfg->img_mount_point);
 
@@ -214,8 +220,6 @@ int start_rootfs(struct ds_config *cfg) {
   if (cfg->foreground) {
     int ret = console_monitor_loop(cfg->console.master, monitor_pid,
                                    cfg->container_pid);
-    /* CLEANUP on foreground exit */
-    cleanup_container_resources(cfg, cfg->container_pid, 0);
     return ret;
   } else {
     ds_log("Container %s is running in background.", cfg->container_name);
@@ -237,11 +241,16 @@ int start_rootfs(struct ds_config *cfg) {
 
 void cleanup_container_resources(struct ds_config *cfg, pid_t pid,
                                  int skip_unmount) {
+  /* Flush filesystem buffers */
+  sync();
+
   if (is_android())
     android_optimizations(0);
 
   /* 1. Cleanup firmware path if it was added */
-  if (pid > 0) {
+  if (cfg->rootfs_path[0]) {
+    firmware_path_remove_rootfs(cfg->rootfs_path);
+  } else if (pid > 0) {
     char rootfs[PATH_MAX];
     char root_link[PATH_MAX];
     snprintf(root_link, sizeof(root_link), "/proc/%d/root", pid);
@@ -256,7 +265,7 @@ void cleanup_container_resources(struct ds_config *cfg, pid_t pid,
 
   /* 3. Handle rootfs image unmount */
   char mount_point[PATH_MAX];
-  if (read_mount_path(cfg->pidfile, mount_point, sizeof(mount_point)) == 0) {
+  if (read_mount_path(cfg->pidfile, mount_point, sizeof(mount_point)) > 0) {
     if (!skip_unmount)
       unmount_rootfs_img(mount_point);
   }
