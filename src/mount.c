@@ -126,14 +126,20 @@ int create_devices(const char *rootfs) {
   /* 1. Create standard devices */
   for (int i = 0; devices[i].name; i++) {
     snprintf(path, sizeof(path), "%s/dev/%s", rootfs, devices[i].name);
-    if (mknod(path, devices[i].mode, devices[i].dev) < 0 && errno != EEXIST) {
+    unlink(path); /* Always start fresh to ensure correct type/permissions */
+
+    if (mknod(path, devices[i].mode, devices[i].dev) < 0) {
       if (S_ISREG(devices[i].mode)) {
         write_file(path, "");
       } else {
+        /* If mknod fails for char dev, try bind mounting from host */
         char host_path[PATH_MAX];
         snprintf(host_path, sizeof(host_path), "/dev/%s", devices[i].name);
         bind_mount(host_path, path);
       }
+    } else {
+      /* Explicitly set permissions to bypass umask (essential for /dev/null) */
+      chmod(path, devices[i].mode & 0777);
     }
   }
 
@@ -143,6 +149,7 @@ int create_devices(const char *rootfs) {
     if (access(path, F_OK) != 0) {
       write_file(path, "");
     }
+    chmod(path, 0666);
   }
   /* Standard symlinks */
   char tgt[PATH_MAX];
