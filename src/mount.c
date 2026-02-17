@@ -119,24 +119,29 @@ int create_devices(const char *rootfs) {
                  {"tty", S_IFCHR | 0666, makedev(5, 0)},
                  {"console", S_IFCHR | 0600, makedev(5, 1)},
                  {"ptmx", S_IFCHR | 0666, makedev(5, 2)},
-                 {"tty1", S_IFREG | 0000, 0}, /* Mount targets for PTYs */
-                 {"tty2", S_IFREG | 0000, 0},
-                 {"tty3", S_IFREG | 0000, 0},
-                 {"tty4", S_IFREG | 0000, 0},
                  {NULL, 0, 0}};
 
   char path[PATH_MAX];
+
+  /* 1. Create standard devices */
   for (int i = 0; devices[i].name; i++) {
     snprintf(path, sizeof(path), "%s/dev/%s", rootfs, devices[i].name);
     if (mknod(path, devices[i].mode, devices[i].dev) < 0 && errno != EEXIST) {
       if (S_ISREG(devices[i].mode)) {
-        write_file(path, ""); /* Create empty file if mknod failed for reg */
+        write_file(path, "");
       } else {
-        /* If mknod fails for char dev, try bind mounting from host */
         char host_path[PATH_MAX];
         snprintf(host_path, sizeof(host_path), "/dev/%s", devices[i].name);
         bind_mount(host_path, path);
       }
+    }
+  }
+
+  /* 2. Create tty1...N nodes (mount targets for PTYs) */
+  for (int i = 1; i <= DS_MAX_TTYS; i++) {
+    snprintf(path, sizeof(path), "%s/dev/tty%d", rootfs, i);
+    if (access(path, F_OK) != 0) {
+      write_file(path, "");
     }
   }
   /* Standard symlinks */
@@ -221,8 +226,6 @@ int mount_rootfs_img(const char *img_path, char *mount_point, size_t mp_size) {
 int unmount_rootfs_img(const char *mount_point) {
   if (!mount_point || !mount_point[0])
     return 0;
-
-  ds_log("Unmounting rootfs image from %s...", mount_point);
 
   /* Try unmounting: prefer aggressive lazy unmount syscall first */
   if (umount2(mount_point, MNT_DETACH) < 0) {

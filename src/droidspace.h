@@ -48,7 +48,7 @@
  * ---------------------------------------------------------------------------*/
 
 #define DS_VERSION "3.0"
-#define DS_MAX_TTYS 4
+#define DS_MAX_TTYS 6
 #define DS_UUID_LEN 32
 #define DS_MAX_CONTAINERS 64
 #define DS_STOP_TIMEOUT 8 /* seconds */
