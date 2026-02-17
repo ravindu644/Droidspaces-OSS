@@ -111,6 +111,15 @@ int find_available_name(const char *base_name, char *final_name, size_t size) {
   return -1;
 }
 
+static int is_pid_file(const char *name) {
+  if (!name)
+    return 0;
+  size_t len = strlen(name);
+  if (len < 4)
+    return 0;
+  return (strcmp(name + len - 4, ".pid") == 0);
+}
+
 /* ---------------------------------------------------------------------------
  * PID File Resolution
  * ---------------------------------------------------------------------------*/
@@ -158,7 +167,7 @@ int auto_resolve_pidfile(struct ds_config *cfg) {
   int count = 0;
 
   while ((ent = readdir(d)) != NULL) {
-    if (strstr(ent->d_name, ".pid")) {
+    if (is_pid_file(ent->d_name)) {
       char path[PATH_MAX];
       const char *pids_dir = get_pids_dir();
       if (snprintf(path, sizeof(path), "%s/%s", pids_dir, ent->d_name) >=
@@ -264,7 +273,7 @@ int show_containers(void) {
 
   struct dirent *ent;
   while ((ent = readdir(d)) != NULL && count < 256) {
-    if (!strstr(ent->d_name, ".pid"))
+    if (!is_pid_file(ent->d_name))
       continue;
 
     char pidfile[PATH_MAX];
@@ -368,7 +377,7 @@ int scan_containers(void) {
   if (d) {
     struct dirent *ent;
     while ((ent = readdir(d)) != NULL && tracked_count < 128) {
-      if (!strstr(ent->d_name, ".pid"))
+      if (!is_pid_file(ent->d_name))
         continue;
       char pf[PATH_MAX];
       snprintf(pf, sizeof(pf), "%s/%s", get_pids_dir(), ent->d_name);
