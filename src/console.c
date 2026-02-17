@@ -127,7 +127,6 @@ int console_monitor_loop(int master_fd, pid_t intermediate_pid,
   /* Restore terminal settings */
   if (is_tty == 0) {
     tcsetattr(STDIN_FILENO, TCSAFLUSH, &oldtios);
-    printf("\n" C_CYAN "[*] " C_RESET "Disconnected from container console.\n");
   }
 
   close(epfd);
