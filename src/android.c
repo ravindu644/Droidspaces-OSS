@@ -111,46 +111,38 @@ int android_fill_dns_from_props(char *dns1, char *dns2, size_t size) {
   if (!is_android())
     return -1;
 
-  char cmd1[128], cmd2[128];
-  FILE *fp;
-
-  /* Try common Android DNS properties */
-  const char *props[] = {"net.dns1",
-                         "net.dns2",
-                         "net.eth0.dns1",
-                         "net.eth0.dns2",
-                         "net.wlan0.dns1",
-                         "net.wlan0.dns2",
-                         NULL};
-
   dns1[0] = dns2[0] = '\0';
+  FILE *fp = popen("getprop", "r");
+  if (!fp)
+    return -1;
 
-  for (int i = 0; props[i] && !dns1[0]; i += 2) {
-    snprintf(cmd1, sizeof(cmd1), "getprop %s", props[i]);
-    fp = popen(cmd1, "r");
-    if (fp) {
-      if (fgets(dns1, size, fp)) {
-        /* remove newline */
-        char *nl = strchr(dns1, '\n');
-        if (nl)
-          *nl = '\0';
-      }
-      pclose(fp);
-    }
+  char line[512];
+  while (fgets(line, sizeof(line), fp)) {
+    /* getprop output: [prop.name]: [value] */
+    if (strstr(line, "dns") == NULL)
+      continue;
 
-    if (dns1[0] && props[i + 1]) {
-      snprintf(cmd2, sizeof(cmd2), "getprop %s", props[i + 1]);
-      fp = popen(cmd2, "r");
-      if (fp) {
-        if (fgets(dns2, size, fp)) {
-          char *nl = strchr(dns2, '\n');
-          if (nl)
-            *nl = '\0';
-        }
-        pclose(fp);
-      }
+    char *name_start = strchr(line, '[');
+    char *name_end = strchr(line, ']');
+    if (!name_start || !name_end)
+      continue;
+
+    char *val_start = strchr(name_end + 1, '[');
+    char *val_end = strchr(name_end + 1, ']');
+    if (!val_start || !val_end)
+      continue;
+
+    *val_end = '\0';
+    char *val = val_start + 1;
+
+    if (!dns1[0]) {
+      safe_strncpy(dns1, val, size);
+    } else if (!dns2[0] && strcmp(dns1, val) != 0) {
+      safe_strncpy(dns2, val, size);
+      break; /* Found both */
     }
   }
+  pclose(fp);
 
   return (dns1[0]) ? 0 : -1;
 }

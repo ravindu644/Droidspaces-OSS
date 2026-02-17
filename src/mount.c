@@ -33,16 +33,18 @@ static int find_available_mountpoint(char *mount_path, size_t size) {
   for (int i = 0; i < DS_MAX_MOUNT_TRIES; i++) {
     snprintf(mount_path, size, "%s/%d", base_dir, i);
 
-    /* Check if directory exists and is not a mountpoint */
-    struct stat st;
-    if (stat(mount_path, &st) < 0) {
+    if (access(mount_path, F_OK) != 0) {
       /* Directory doesn't exist, create it */
       if (mkdir(mount_path, 0755) == 0) {
         return 0;
       }
-    } else if (S_ISDIR(st.st_mode) && !is_mountpoint(mount_path)) {
-      /* Directory exists and is not mounted, use it */
-      return 0;
+    } else {
+      /* Path exists, check if it's a directory and NOT a mountpoint */
+      struct stat st;
+      if (stat(mount_path, &st) == 0 && S_ISDIR(st.st_mode) &&
+          !is_mountpoint(mount_path)) {
+        return 0;
+      }
     }
   }
 

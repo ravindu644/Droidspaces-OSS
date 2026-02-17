@@ -136,7 +136,7 @@ int build_proc_root_path(pid_t pid, const char *suffix, char *buf,
  * ---------------------------------------------------------------------------*/
 
 int grep_file(const char *path, const char *pattern) {
-  char buf[4096];
+  char buf[16384];
   if (read_file(path, buf, sizeof(buf)) < 0)
     return -1;
   return strstr(buf, pattern) ? 1 : 0;

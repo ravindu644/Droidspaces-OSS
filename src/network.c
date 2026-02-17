@@ -113,9 +113,13 @@ int fix_networking_rootfs(struct ds_config *cfg) {
     /* Add root to groups if usermod exists */
     if (access("/usr/sbin/usermod", X_OK) == 0 ||
         access("/sbin/usermod", X_OK) == 0) {
-      char *args[] = {"usermod", "-a", "-G", "aid_inet,aid_net_raw",
-                      "root",    NULL};
-      run_command_quiet(args);
+      /* Performance skip: check if root is already in aid_inet */
+      if (!grep_file("/etc/group", "aid_inet:x:3003:root") &&
+          !grep_file("/etc/group", "aid_inet:*:3003:root")) {
+        char *args[] = {"usermod", "-a", "-G", "aid_inet,aid_net_raw",
+                        "root",    NULL};
+        run_command_quiet(args);
+      }
     }
   }
 
