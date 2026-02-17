@@ -198,6 +198,7 @@ int unmount_rootfs_img(const char *mount_point);
 
 int fix_networking_host(struct ds_config *cfg);
 int fix_networking_rootfs(struct ds_config *cfg);
+int ds_get_dns_servers(char *dns1, char *dns2, size_t size);
 int detect_ipv6_in_container(pid_t pid);
 
 /* ---------------------------------------------------------------------------

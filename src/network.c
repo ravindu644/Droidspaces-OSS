@@ -8,6 +8,24 @@
  * Host-side networking setup (before container boot)
  * ---------------------------------------------------------------------------*/
 
+int ds_get_dns_servers(char *dns1, char *dns2, size_t size) {
+  dns1[0] = dns2[0] = '\0';
+
+  /* 1. Try Android properties if on Android */
+  if (is_android()) {
+    android_fill_dns_from_props(dns1, dns2, size);
+  }
+
+  /* 2. Global stable fallbacks (Preferred over host resolv.conf which might be
+   * local loops) */
+  if (!dns1[0])
+    safe_strncpy(dns1, "1.1.1.1", size);
+  if (!dns2[0])
+    safe_strncpy(dns2, "8.8.8.8", size);
+
+  return 0;
+}
+
 int fix_networking_host(struct ds_config *cfg) {
   ds_log("Configuring host-side networking for %s...", cfg->container_name);
 
@@ -19,27 +37,23 @@ int fix_networking_host(struct ds_config *cfg) {
     write_file("/proc/sys/net/ipv6/conf/all/forwarding", "1");
   }
 
+  /* Get DNS (Android props -> Host /etc/resolv.conf -> Google/Cloudflare) */
+  char dns1[64] = {0}, dns2[64] = {0};
+  ds_get_dns_servers(dns1, dns2, sizeof(dns1));
+
+  /* Save DNS to temp file in rootfs for use after pivot_root */
+  char dns_path[PATH_MAX];
+  snprintf(dns_path, sizeof(dns_path), "%s/.dns_servers", cfg->rootfs_path);
+  FILE *dns_fp = fopen(dns_path, "w");
+  if (dns_fp) {
+    if (dns2[0])
+      fprintf(dns_fp, "nameserver %s\nnameserver %s\n", dns1, dns2);
+    else
+      fprintf(dns_fp, "nameserver %s\n", dns1);
+    fclose(dns_fp);
+  }
+
   if (is_android()) {
-    /* Get DNS (Android props if available), fallback to Google DNS */
-    char dns1[64] = {0}, dns2[64] = {0};
-    android_fill_dns_from_props(dns1, dns2, sizeof(dns1));
-    if (!dns1[0])
-      safe_strncpy(dns1, "8.8.8.8", sizeof(dns1));
-    if (!dns2[0])
-      safe_strncpy(dns2, "8.8.4.4", sizeof(dns2));
-
-    /* Save DNS to temp file in rootfs for use after pivot_root */
-    char dns_path[PATH_MAX];
-    snprintf(dns_path, sizeof(dns_path), "%s/.dns_servers", cfg->rootfs_path);
-    FILE *dns_fp = fopen(dns_path, "w");
-    if (dns_fp) {
-      if (dns2[0])
-        fprintf(dns_fp, "nameserver %s\nnameserver %s\n", dns1, dns2);
-      else
-        fprintf(dns_fp, "nameserver %s\n", dns1);
-      fclose(dns_fp);
-    }
-
     /* Android specific NAT and firewall */
     android_configure_iptables();
   }
@@ -86,7 +100,7 @@ int fix_networking_rootfs(struct ds_config *cfg) {
   } else {
     /* Fallback/Linux default */
     write_file("/run/resolvconf/resolv.conf",
-               "nameserver 8.8.8.8\nnameserver 8.8.4.4\n");
+               "nameserver 1.1.1.1\nnameserver 8.8.8.8\n");
   }
 
   /* Link /etc/resolv.conf */
