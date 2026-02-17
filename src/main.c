@@ -173,8 +173,6 @@ int main(int argc, char **argv) {
 
     if (check_requirements() < 0)
       return 1;
-    if (cfg.selinux_permissive)
-      android_set_selinux_permissive();
 
     return start_rootfs(&cfg);
   }

@@ -74,10 +74,13 @@ int android_get_selinux_status(void) {
 }
 
 void android_set_selinux_permissive(void) {
-  if (!is_android())
-    return;
-
   int status = android_get_selinux_status();
+  if (status == -1) {
+    ds_warn("SELinux not supported or interface missing. Skipping permissive "
+            "mode.");
+    return;
+  }
+
   if (status == 1) {
     ds_log("Setting SELinux to permissive...");
     if (write_file("/sys/fs/selinux/enforce", "0") < 0) {

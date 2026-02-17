@@ -51,6 +51,12 @@ int start_rootfs(struct ds_config *cfg) {
   /* 1. Preparation */
   ensure_workspace();
 
+  if (cfg->selinux_permissive)
+    android_set_selinux_permissive();
+  if (cfg->android_storage && !is_android())
+    ds_warn("--enable-android-storage is only supported on Android hosts. "
+            "Skipping.");
+
   if (cfg->rootfs_img_path[0]) {
     if (mount_rootfs_img(cfg->rootfs_img_path, cfg->rootfs_path,
                          sizeof(cfg->rootfs_path)) < 0)
