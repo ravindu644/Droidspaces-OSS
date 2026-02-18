@@ -6,9 +6,10 @@
 
 Droidspaces is a lightweight, zero-virtualization container runtime designed to run full Linux distributions (Ubuntu, Alpine, etc.) with systemd or openrc as PID 1, natively on Android devices. It achieves process isolation through Linux PID, IPC, MNT, and UTS namespaces — the same kernel primitives used by Docker and LXC — but targets the constrained and idiosyncratic Android kernel environment where many standard container tools refuse to operate.
 
-This document is a complete internal architecture reference for **Droidspaces v3.1.1**. Every struct, every syscall, every mount, and every design decision is documented here with the intent that a future implementer could rewrite this project from scratch without ever reading the original source. Where the implementation is elegant, I say so. Where it is broken or fragile, I say so with equal honesty.
+This document is a complete internal architecture reference for **Droidspaces v3.1.2**. Every struct, every syscall, every mount, and every design decision is documented here with the intent that a future implementer could rewrite this project from scratch without ever reading the original source. Where the implementation is elegant, I say so. Where it is broken or fragile, I say so with equal honesty.
 
-The codebase is approximately **3,100 lines of C** across 11 `.c` files and 1 master header, compiled as a single static binary against musl libc.
+The codebase is approximately **3,300 lines of C** across 12 `.c` files and 1 master header, compiled as a single static binary against musl libc.
+
 
 ---
 
@@ -43,9 +44,11 @@ src/
 ├── terminal.c          PTY allocation, /dev/console + /dev/ttyN setup
 ├── network.c           DNS, routing, hostname, IPv6 configuration
 ├── android.c           Android-specific: SELinux, optimizations, storage
+├── environment.c       Environment variables, os-release parsing
 ├── utils.c             File I/O, UUID generation, firmware path mgmt
 ├── pid.c               PID file management, workspace, container naming
 └── check.c             System requirements checker
+
 ```
 
 **Key architectural changes from v2:**
@@ -55,6 +58,10 @@ src/
 - Thread pool eliminated — all checks and scans run serially (the overhead was larger than the benefit)
 - Stop uses `SIGRTMIN+3` for systemd shutdown (not `system("poweroff")`)
 - The `[ds-monitor]` daemon uses `waitpid()` instead of `kill(pid, 0)` polling
+- **Hostname resolution:** Automatically maps `127.0.1.1` to the container hostname in `/etc/hosts` to fix `apt` and `sudo` resolution issues.
+- **PTY Allocation:** `enter` command allocates PTYs natively *inside* the container namespaces for perfect TTY isolation and `ps aux` accuracy.
+- **Security & De-duplication:** Environment setup, `os-release` parsing, and path resolution are consolidated into shared helpers with strict buffer bounds (`snprintf` with precision) and hardened I/O (`write_all`).
+
 
 ---
 
@@ -331,7 +338,13 @@ This MUST happen after `pivot_root` because devpts `newinstance` needs to be mou
 ```c
 fix_networking_rootfs(cfg);
 ```
-Sets hostname (from `--hostname`), writes `/etc/hosts`, reads DNS from `.old_root/.dns_servers` (written by `fix_networking_host()` before boot), writes `/run/resolvconf/resolv.conf`, symlinks `/etc/resolv.conf`, and appends Android network groups (`aid_inet`, `aid_net_raw`, `aid_net_admin`) to `/etc/group`.
+Sets hostname (from `--hostname`), writes `/etc/hostname`, and generates `/etc/hosts`.
+
+**The apt/sudo hostname fix:**
+To prevent `apt` warnings and `sudo` resolution delays, Droidspaces explicitly maps the container's hostname to `127.0.1.1` in `/etc/hosts`. This is a critical fix for many Linux distributions where the loopback alias is expected.
+
+It then reads DNS from `.old_root/.dns_servers` (written by `fix_networking_host()` before boot), writes `/run/resolvconf/resolv.conf` (ensuring proper null-termination for system stability), symlinks `/etc/resolv.conf`, and appends Android network groups (`aid_inet`, `aid_net_raw`, `aid_net_admin`) to `/etc/group`.
+
 
 **Step 17 — Unmount old root:**
 ```c
@@ -646,19 +659,29 @@ int enter_namespace(pid_t pid) {
 
 The mount namespace is mandatory; others are optional with warnings.
 
-### 9.2 The Double-Fork for PID Namespace
+### 9.2 The "Native PTY" Attachment Model
 
-After `setns(CLONE_NEWPID)`, a `fork()` is required — `setns` only affects children, not the caller:
+In v3.1.2, the `enter` and `run` commands use a sophisticated PTY attachment model to bridge the host and container:
+
+1. **Namespace Entry:** The intermediate process joins the container namespaces (`mnt`, `pid`, `ipc`, `uts`) using `enter_namespace()`.
+2. **Native PTY Allocation:** While *inside* the container's private mount and PID namespaces, it allocates a new PTY pair using `openpty()`. This ensures the PTY is part of the container's private `devpts` instance.
+3. **FD Passing:** The master side of this native PTY is passed back to the host process via `SCM_RIGHTS` over a Unix domain socket.
+4. **Proxy Loop:** The host process remains on the host and runs an `epoll` proxy loop between its own terminal and the received container PTY master.
+5. **Controlling TTY:** Inside the container, the intermediate process calls `setsid()` and `ioctl(TIOCSCTTY)` on the native PTY slave before forking the shell.
+
+This fixes the "not a tty" errors and ensures that `tty` and `ps aux` show the correct `/dev/pts/N` device *relative to the container*.
+
+### 9.3 The Double-Fork for PID Namespace
+
+After `setns(CLONE_NEWPID)`, a `fork()` is required because the calling process remains in its original PID namespace:
 
 ```c
-pid_t child = fork();           // First fork: host -> container namespaces
+pid_t child = fork();           // First fork: joins PID namespace
 if (child == 0) {
     enter_namespace(pid);
-    pid_t shell_pid = fork();   // Second fork: actually in the PID namespace
+    pid_t shell_pid = fork();   // Second fork: actually in the container PID tree
     if (shell_pid == 0) {
-        chdir("/");
-        clearenv();
-        /* ... set environment ... */
+        /* In PID 1 namespace view */
         execve("/bin/bash", argv, environ);
     }
     waitpid(shell_pid, NULL, 0);
@@ -666,17 +689,18 @@ if (child == 0) {
 waitpid(child, NULL, 0);
 ```
 
-### 9.3 Shell Selection
+
+### 9.4 Shell Selection
 
 The `enter` command tries shells in order: `/bin/bash` → `/bin/ash` → `/bin/sh`. If a user argument is provided, it uses `su -l <user>` instead.
 
-### 9.4 Environment Setup
+### 9.5 Environment Setup
 
 The `enter` and `run` commands set a clean environment:
 - Standard `PATH`, `TERM=xterm-256color`, `HOME=/root`, `container=droidspaces`, `LANG=C.UTF-8`
 - Sources `/etc/environment` if present (with proper KEY=VALUE and quote handling)
 
-### 9.5 Run Command
+### 9.6 Run Command
 
 `run_in_rootfs()` follows the same namespace entry pattern but executes the user-specified command instead of a shell. If the command string contains spaces and is a single argument, it's wrapped with `/bin/sh -c`.
 
@@ -758,14 +782,15 @@ Each name is parsed with `strtok()`, a subcfg is created, and `stop_rootfs()` is
 
 ### 11.2 Info Command
 
-`show_info()` displays:
-- Host info (Android/Linux, architecture)
-- Feature flags (introspected from the running container, not from CLI flags):
-  - SELinux status (read from `/sys/fs/selinux/enforce`)
-  - IPv6 (read from `/proc/<pid>/root/proc/sys/net/ipv6/conf/all/disable_ipv6`)
-  - Android storage (check `/storage/emulated/0` mount and verify `/storage/emulated/0/Android` exists in `/proc/<pid>/root`)
-  - HW access (check `/dev` fstype in `/proc/<pid>/mounts` — `devtmpfs` = hw-access)
-- Container name, PID, OS info (from `/proc/<pid>/root/etc/os-release`)
+`show_info()` provides detailed introspection:
+
+1. **Auto-Resolution:** If no container name is specified, it auto-detects the running container if only one is found. If multiple are running, it lists them.
+2. **Feature Introspection:** It detects active features by probing the container's `/proc/<pid>/root`:
+   - **SELinux:** Reads `/sys/fs/selinux/enforce`.
+   - **IPv6:** Checks `/proc/sys/net/ipv6/conf/all/disable_ipv6` inside the container.
+   - **Android Storage:** Verifies the mount at `/storage/emulated/0`.
+   - **HW Access:** Checks the `/dev` filesystem type.
+3. **Guest OS Info:** Reads `/etc/os-release` from the container's rootfs (even if stopped).
 
 ### 11.3 Show Command
 
@@ -1034,6 +1059,24 @@ If you're rewriting Droidspaces from scratch, here is the checklist of every dec
 
 ---
 
+## 13. Project Licensing & SPDX
+
+The Droidspaces source code is licensed under the **GNU General Public License v3.0 or later (GPL-3.0-or-later)**. 
+
+Every source file in the `src/` directory and the `Makefile` contain standard SPDX-License-Identifier tags and copyright headers. A full copy of the license is provided in the `LICENSE` file at the root of the project.
+
+**Copyright (C) 2026 Ravindu <ravindu644>**
+
+---
+
+## 14. Document License
+
+This document is licensed under the Creative Commons Attribution 4.0 International (CC BY 4.0) License.
+You are free to share and adapt the material for any purpose, even commercially, provided you give appropriate credit,
+provide a link to the license, and indicate if changes were made.
+
+---
+
 **End of Document**
 
-*This document was written by analyzing v3.1.1 of the Droidspaces source code — approximately 3,100 lines of C across 12 files. Every syscall, every mount, and every design decision described here was verified against the actual implementation.*
+*This document was written by analyzing v3.1.2 of the Droidspaces source code — approximately 3,300 lines of C across 13 files. Every syscall, every mount, and every design decision described here was verified against the actual implementation.*
