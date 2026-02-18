@@ -35,8 +35,41 @@ int internal_boot(struct ds_config *cfg, int sock_fd) {
   mkdir("proc", 0755);
   domount("proc", "proc", "proc", MS_NOSUID | MS_NODEV | MS_NOEXEC, NULL);
 
+  /* Mount /sys
+   * CRITICAL: Without --hw-access, mount sysfs as read-only to prevent
+   * systemd-udevd from triggering hardware events on the host.
+   * However, remount /sys/devices/virtual/net as read-write for networking
+   * (needed for Docker, WireGuard, Tailscale, SSH, etc.).
+   * With --hw-access, allow read-write access for full hardware control. */
   mkdir("sys", 0755);
-  domount("sysfs", "sys", "sysfs", MS_NOSUID | MS_NODEV | MS_NOEXEC, NULL);
+  if (cfg->hw_access) {
+    /* Full hardware access: mount sysfs read-write */
+    domount("sysfs", "sys", "sysfs", MS_NOSUID | MS_NODEV | MS_NOEXEC, NULL);
+  } else {
+    /* Hardware isolation: mixed mode
+     * Step 1: Mount sysfs read-write initially */
+    domount("sysfs", "sys", "sysfs", MS_NOSUID | MS_NODEV | MS_NOEXEC, NULL);
+
+    /* Step 2: Create directory structure and mount new sysfs instance at
+     * /sys/devices/virtual/net (read-write). This must be done BEFORE
+     * remounting the parent /sys as read-only. */
+    mkdir("sys/devices", 0755);
+    mkdir("sys/devices/virtual", 0755);
+    mkdir("sys/devices/virtual/net", 0755);
+
+    if (domount("sysfs", "sys/devices/virtual/net", "sysfs",
+                MS_NOSUID | MS_NODEV | MS_NOEXEC, NULL) < 0) {
+      ds_warn("Failed to mount sysfs at sys/devices/virtual/net "
+              "(networking may be limited)");
+    }
+
+    /* Step 3: Remount entire /sys as read-only (prevents hardware
+     * interference). The subdirectory mount at /sys/devices/virtual/net remains
+     * read-write as a separate mount point. */
+    if (mount(NULL, "sys", NULL, MS_REMOUNT | MS_BIND | MS_RDONLY, NULL) < 0) {
+      ds_warn("Failed to remount /sys as read-only: %s", strerror(errno));
+    }
+  }
 
   mkdir("run", 0755);
   domount("tmpfs", "run", "tmpfs", MS_NOSUID | MS_NODEV, "mode=755");
