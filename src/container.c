@@ -297,6 +297,8 @@ int start_rootfs(struct ds_config *cfg) {
 
   /* 6. Foreground or background finish */
   if (cfg->foreground) {
+    ds_log("Entering console monitor loop for container %d...",
+           cfg->container_pid);
     int ret = console_monitor_loop(cfg->console.master, monitor_pid,
                                    cfg->container_pid);
     return ret;
