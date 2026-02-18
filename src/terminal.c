@@ -20,6 +20,14 @@ int ds_terminal_create(struct ds_tty_info *tty) {
     return -1;
   }
 
+  /* Set ownership and permissions for the slave TTY */
+  if (fchown(tty->slave, 0, 5) < 0) {
+    /* 5 is usually 'tty' group, failure ignored on some platforms */
+  }
+  if (fchmod(tty->slave, 0620) < 0) {
+    /* Failure ignored */
+  }
+
   /* Set FD_CLOEXEC so they don't leak to the container's init */
   if (fcntl(tty->master, F_SETFD, FD_CLOEXEC) < 0)
     ds_warn("fcntl(master, FD_CLOEXEC) failed: %s", strerror(errno));

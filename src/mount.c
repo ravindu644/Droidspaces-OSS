@@ -25,6 +25,20 @@ static int is_mountpoint(const char *path) {
   return st1.st_dev != st2.st_dev;
 }
 
+/* Helper to force removal of a path, even if it is a directory */
+static int force_unlink(const char *path) {
+  if (unlink(path) < 0) {
+    if (errno == EISDIR) {
+      return rmdir(path);
+    }
+    if (errno == ENOENT) {
+      return 0;
+    }
+    return -1;
+  }
+  return 0;
+}
+
 /* Find available mount point in /mnt/Droidspaces/ (Universal) */
 static int find_available_mountpoint(char *mount_path, size_t size) {
   const char *base_dir = DS_IMG_MOUNT_ROOT_UNIVERSAL;
@@ -113,7 +127,7 @@ int setup_dev(const char *rootfs, int hw_access) {
         snprintf(path, sizeof(path), "%.4080s/%s", dev_path, conflicts[i]);
         /* Unmount if it was somehow bind-mounted */
         umount2(path, MNT_DETACH);
-        unlink(path);
+        force_unlink(path);
       }
     } else {
       ds_warn("Failed to mount devtmpfs, falling back to tmpfs");
@@ -144,7 +158,7 @@ int create_devices(const char *rootfs, int hw_access) {
                  {"random", S_IFCHR | 0666, makedev(1, 8)},
                  {"urandom", S_IFCHR | 0666, makedev(1, 9)},
                  {"tty", S_IFCHR | 0666, makedev(5, 0)},
-                 {"console", S_IFCHR | 0600, makedev(5, 1)},
+                 {"console", S_IFCHR | 0620, makedev(5, 1)},
                  {"ptmx", S_IFCHR | 0666, makedev(5, 2)},
                  {NULL, 0, 0}};
 
@@ -153,7 +167,8 @@ int create_devices(const char *rootfs, int hw_access) {
   /* 1. Create standard devices */
   for (int i = 0; devices[i].name; i++) {
     snprintf(path, sizeof(path), "%s/dev/%s", rootfs, devices[i].name);
-    unlink(path); /* Always start fresh to ensure correct type/permissions */
+    force_unlink(
+        path); /* Always start fresh to ensure correct type/permissions */
 
     if (mknod(path, devices[i].mode, devices[i].dev) < 0) {
       /* Fallback for environments where mknod is restricted */
@@ -162,6 +177,13 @@ int create_devices(const char *rootfs, int hw_access) {
       bind_mount(host_path, path);
     } else {
       chmod(path, devices[i].mode & 0777);
+      /* Success! Now set ownership to root:tty (gid 5) for console/tty nodes */
+      if (strcmp(devices[i].name, "console") == 0 ||
+          strcmp(devices[i].name, "tty") == 0) {
+        if (chown(path, 0, 5) < 0) {
+          /* Ignore failure */
+        }
+      }
     }
   }
 
@@ -169,7 +191,7 @@ int create_devices(const char *rootfs, int hw_access) {
   snprintf(path, sizeof(path), "%s/dev/net", rootfs);
   mkdir(path, 0755);
   snprintf(path, sizeof(path), "%s/dev/net/tun", rootfs);
-  unlink(path);
+  force_unlink(path);
   if (mknod(path, S_IFCHR | 0666, makedev(10, 200)) < 0)
     bind_mount("/dev/net/tun", path);
   else
@@ -177,7 +199,7 @@ int create_devices(const char *rootfs, int hw_access) {
 
   /* 3. Create /dev/fuse */
   snprintf(path, sizeof(path), "%s/dev/fuse", rootfs);
-  unlink(path);
+  force_unlink(path);
   if (mknod(path, S_IFCHR | 0666, makedev(10, 229)) < 0)
     bind_mount("/dev/fuse", path);
   else
