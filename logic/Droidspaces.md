@@ -6,7 +6,7 @@
 
 Droidspaces is a lightweight, zero-virtualization container runtime designed to run full Linux distributions (Ubuntu, Alpine, etc.) with systemd or openrc as PID 1, natively on Android devices. It achieves process isolation through Linux PID, IPC, MNT, and UTS namespaces — the same kernel primitives used by Docker and LXC — but targets the constrained and idiosyncratic Android kernel environment where many standard container tools refuse to operate.
 
-This document is a complete internal architecture reference for **Droidspaces v3.1.2**. Every struct, every syscall, every mount, and every design decision is documented here with the intent that a future implementer could rewrite this project from scratch without ever reading the original source. Where the implementation is elegant, I say so. Where it is broken or fragile, I say so with equal honesty.
+This document is a complete internal architecture reference for **Droidspaces v3.1.3**. Every struct, every syscall, every mount, and every design decision is documented here with the intent that a future implementer could rewrite this project from scratch without ever reading the original source. Where the implementation is elegant, I say so. Where it is broken or fragile, I say so with equal honesty.
 
 The codebase is approximately **3,300 lines of C** across 12 `.c` files and 1 master header, compiled as a single static binary against musl libc.
 
@@ -282,10 +282,10 @@ domount("proc", "proc", "proc", MS_NOSUID | MS_NODEV | MS_NOEXEC, NULL);
 ```
 
 **Step 8 — Mount /sys:**
-- Without `--hw-access`: sysfs is mounted RW initially, then a separate sysfs instance is mounted at `sys/devices/virtual/net` for networking tools, and finally the parent `/sys` is remounted read-only via `mount(NULL, "sys", NULL, MS_REMOUNT | MS_BIND | MS_RDONLY, NULL)`.
-- With `--hw-access`: sysfs is simply mounted RW.
+- **Without `--hw-access`**: sysfs is mounted RW initially, then a separate sysfs instance is mounted at `sys/devices/virtual/net` for networking tools, and finally the parent `/sys` is remounted read-only.
+- **With `--hw-access`**: Core `sysfs` is mounted RW, then **dynamically iterated**. Every subdirectory (devices, bus, class, etc.) is self-bind mounted to "pin" it as an independent RW entry. Finally, the top-level `/sys` is remounted RO.
 
-The mixed-mode mount is excellent engineering — it gives Docker, WireGuard, Tailscale, and SSH the read-write access they need at `/sys/devices/virtual/net` while preventing systemd-udevd from triggering hardware events through the parent `/sys`.
+Aligning with the official **systemd Container Interface**, the top-level `/sys` must be RO for systemd 258+ to correctly identify the environment as a container. The "dynamic hole-punching" ensures hardware access remains RW.
 
 **Step 9 — Mount /run as tmpfs:**
 ```c
@@ -618,9 +618,21 @@ if (hw_access) {
 }
 ```
 
-### 8.5 /sys in HW Access Mode
+### 8.5 /sys in HW Access Mode (The systemd 258+ Getty Fix)
 
-With `--hw-access`, `/sys` is mounted **read-write** (no mixed-mode). This allows full hardware control via sysfs, but also means systemd-udevd can trigger device events on the host.
+Starting with version **258**, systemd changed its container detection logic. It now uses the Read-Only status of the top-level `/sys` mount as the primary indicator of a virtualized environment. 
+
+**The Problem:**
+In standard `--hw-access` mode, `/sys` was previously Read-Write. Systemd 258+ would misidentify the container as a "Physical Host" and trigger a hardware console resolution logic (`resolve_dev_console`). This logic reads `/sys/class/tty/console/active` and attempts to open the host's actual console (e.g., `/dev/tty0`). Since this device node is either missing or an invalid directory in the container, the startup of `console-getty.service` would fail with an **`EISDIR`** (Is a directory) error, causing an infinite restart loop.
+
+**The Fix (Dynamic Hole-Punching):**
+Droidspaces solves this by strictly adhering to the systemd Container Interface while preserving hardware transparency:
+1. **Dynamic Iteration**: Droidspaces opens the `/sys` directory and iterates through all sub-entries using `readdir`.
+2. **RW Pinning**: Every subdirectory (e.g., `/sys/devices`, `/sys/bus`, `/sys/class`, `/sys/block`) is **self-bind mounted** onto itself (`MS_BIND | MS_REC`). This "pins" them as independent mount points that preserve their Read-Write state.
+3. **Container Signaling**: The top-level `/sys` mount is then remounted as **Read-Only** (`MS_RDONLY`).
+4. **Result**: Systemd sees a RO `/sys` and correctly identifies the container environment, while the container processes retain full RW access to the hardware subsystems via the pinned sub-mounts.
+
+Additionally, `/dev/null` is bind-mounted over `/sys/class/tty/console/active` to mask host TTY discovery entirely.
 
 ---
 
@@ -971,20 +983,20 @@ If you're rewriting Droidspaces from scratch, here is the checklist of every dec
 20. `mkdir(".old_root", 0755)`
 
 21. Setup `/dev`:
-    - Without `--hw-access`: `mount("none", "<rootfs>/dev", "tmpfs", ...)` + `mknod()` for null, zero, full, random, urandom, tty, console, ptmx, net/tun, fuse
-    - With `--hw-access`: `mount("devtmpfs", "<rootfs>/dev", "devtmpfs", ...)`, unlink conflicting nodes, then recreate with `mknod()`
+    -   Without `--hw-access`: `mount("none", "<rootfs>/dev", "tmpfs", ...)` + `mknod()` for null, zero, full, random, urandom, tty, console, ptmx, net/tun, fuse
+    -   With `--hw-access`: `mount("devtmpfs", "<rootfs>/dev", "devtmpfs", ...)`, unlink conflicting nodes, then recreate with `mknod()`
 
 22. `mount("proc", "proc", "proc", MS_NOSUID | MS_NODEV | MS_NOEXEC, NULL)`
 
 23. Mount sysfs:
-    - Without `--hw-access`: mount RW → mount separate sysfs at `sys/devices/virtual/net` → remount parent RO
-    - With `--hw-access`: mount RW
+    -   Without `--hw-access`: mount RW → mount separate sysfs instance at `sys/devices/virtual/net` → remount parent RO
+    -   With `--hw-access`: mount RW → **dynamic self-bind mount** all subdirectories → remount parent RO
 
 24. `mount("tmpfs", "run", "tmpfs", MS_NOSUID | MS_NODEV, "mode=755")`
 
 25. **Bind-mount PTY slaves** from parent:
-    - `mount(cfg->console.name, "dev/console", NULL, MS_BIND, NULL)`
-    - `mount(cfg->ttys[i].name, "dev/tty<N>", NULL, MS_BIND, NULL)` for each TTY
+    -   `mount(cfg->console.name, "dev/console", NULL, MS_BIND, NULL)`
+    -   `mount(cfg->ttys[i].name, "dev/tty<N>", NULL, MS_BIND, NULL)` for each TTY
 
 26. `write_file("run/<uuid>", "init")` — UUID marker for PID discovery/boot confirmation
 
