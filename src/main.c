@@ -131,7 +131,6 @@ int main(int argc, char **argv) {
       cfg.selinux_permissive = 1;
       break;
     case 'v':
-      printf("\n");
       print_usage();
       return 0;
     case '?':
@@ -167,7 +166,6 @@ int main(int argc, char **argv) {
     return 0;
   }
   if (strcmp(cmd, "help") == 0) {
-    printf("\n");
     print_usage();
     return 0;
   }
