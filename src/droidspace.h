@@ -168,6 +168,8 @@ void firmware_path_add_rootfs(const char *rootfs);
 void firmware_path_remove_rootfs(const char *rootfs);
 int run_command(char *const argv[]);
 int run_command_quiet(char *const argv[]);
+int ds_send_fd(int sock, int fd);
+int ds_recv_fd(int sock);
 
 /* ---------------------------------------------------------------------------
  * android.c
@@ -220,6 +222,7 @@ int ds_terminal_make_controlling(int fd);
 int ds_setup_tios(int fd, struct termios *old);
 void build_container_ttys_string(struct ds_tty_info *ttys, int count, char *buf,
                                  size_t size);
+int ds_terminal_proxy(int master_fd);
 
 /* ---------------------------------------------------------------------------
  * console.c

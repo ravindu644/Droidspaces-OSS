@@ -104,3 +104,54 @@ void build_container_ttys_string(struct ds_tty_info *ttys, int count, char *buf,
     strncat(buf, ttys[i].name, size - strlen(buf) - 1);
   }
 }
+
+static int proxy_master_fd = -1;
+static void handle_sigwinch(int sig) {
+  (void)sig;
+  struct winsize ws;
+  if (proxy_master_fd != -1 && ioctl(STDIN_FILENO, TIOCGWINSZ, &ws) == 0) {
+    ioctl(proxy_master_fd, TIOCSWINSZ, &ws);
+  }
+}
+
+int ds_terminal_proxy(int master_fd) {
+  fd_set fds;
+  char buf[8192];
+  proxy_master_fd = master_fd;
+
+  /* Propagate initial window size */
+  handle_sigwinch(SIGWINCH);
+  signal(SIGWINCH, handle_sigwinch);
+
+  while (1) {
+    FD_ZERO(&fds);
+    FD_SET(STDIN_FILENO, &fds);
+    FD_SET(master_fd, &fds);
+
+    if (select(master_fd + 1, &fds, NULL, NULL, NULL) < 0) {
+      if (errno == EINTR)
+        continue;
+      break;
+    }
+
+    if (FD_ISSET(STDIN_FILENO, &fds)) {
+      ssize_t n = read(STDIN_FILENO, buf, sizeof(buf));
+      if (n <= 0)
+        break;
+      if (write_all(master_fd, buf, (size_t)n) < 0)
+        break;
+    }
+
+    if (FD_ISSET(master_fd, &fds)) {
+      ssize_t n = read(master_fd, buf, sizeof(buf));
+      if (n <= 0)
+        break;
+      if (write_all(STDOUT_FILENO, buf, (size_t)n) < 0)
+        break;
+    }
+  }
+
+  signal(SIGWINCH, SIG_DFL);
+  proxy_master_fd = -1;
+  return 0;
+}

@@ -320,3 +320,52 @@ static int internal_run(char *const argv[], int quiet) {
 
 int run_command(char *const argv[]) { return internal_run(argv, 0); }
 int run_command_quiet(char *const argv[]) { return internal_run(argv, 1); }
+
+/* ---------------------------------------------------------------------------
+ * FD Passing (SCM_RIGHTS)
+ * ---------------------------------------------------------------------------*/
+
+int ds_send_fd(int sock, int fd) {
+  struct msghdr msg = {0};
+  char buf[CMSG_SPACE(sizeof(int))];
+  memset(buf, 0, sizeof(buf));
+
+  struct iovec io = {.iov_base = "FD", .iov_len = 2};
+
+  msg.msg_iov = &io;
+  msg.msg_iovlen = 1;
+  msg.msg_control = buf;
+  msg.msg_controllen = sizeof(buf);
+
+  struct cmsghdr *cmsg = CMSG_FIRSTHDR(&msg);
+  cmsg->cmsg_level = SOL_SOCKET;
+  cmsg->cmsg_type = SCM_RIGHTS;
+  cmsg->cmsg_len = CMSG_LEN(sizeof(int));
+
+  *((int *)CMSG_DATA(cmsg)) = fd;
+
+  if (sendmsg(sock, &msg, 0) < 0)
+    return -1;
+
+  return 0;
+}
+
+int ds_recv_fd(int sock) {
+  struct msghdr msg = {0};
+  char buf[CMSG_SPACE(sizeof(int))];
+  struct iovec io = {.iov_base = buf, .iov_len = sizeof(buf)};
+
+  msg.msg_iov = &io;
+  msg.msg_iovlen = 1;
+  msg.msg_control = buf;
+  msg.msg_controllen = sizeof(buf);
+
+  if (recvmsg(sock, &msg, 0) < 0)
+    return -1;
+
+  struct cmsghdr *cmsg = CMSG_FIRSTHDR(&msg);
+  if (!cmsg || cmsg->cmsg_type != SCM_RIGHTS)
+    return -1;
+
+  return *((int *)CMSG_DATA(cmsg));
+}

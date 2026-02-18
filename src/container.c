@@ -404,15 +404,45 @@ int enter_rootfs(struct ds_config *cfg, const char *user) {
   if (check_status(cfg, &pid) < 0)
     return -1;
 
-  ds_log("Entering container %s (PID %d)...", cfg->container_name, pid);
-
-  pid_t child = fork();
-  if (child < 0)
+  int sv[2];
+  if (socketpair(AF_UNIX, SOCK_STREAM, 0, sv) < 0)
     return -1;
 
+  ds_log("Entering container %s...", cfg->container_name);
+
+  pid_t child = fork();
+  if (child < 0) {
+    close(sv[0]);
+    close(sv[1]);
+    return -1;
+  }
+
   if (child == 0) {
+    close(sv[0]);
     if (enter_namespace(pid) < 0)
       exit(EXIT_FAILURE);
+
+    /* Allocate TTY INSIDE the container namespaces */
+    struct ds_tty_info tty;
+    if (ds_terminal_create(&tty) < 0)
+      exit(EXIT_FAILURE);
+
+    /* Send master FD back to parent */
+    if (ds_send_fd(sv[1], tty.master) < 0)
+      exit(EXIT_FAILURE);
+
+    close(tty.master);
+    close(sv[1]);
+
+    /* Establish controlling terminal using the native slave */
+    if (ds_terminal_make_controlling(tty.slave) < 0)
+      exit(EXIT_FAILURE);
+
+    if (ds_terminal_set_stdfds(tty.slave) < 0)
+      exit(EXIT_FAILURE);
+
+    if (tty.slave > STDERR_FILENO)
+      close(tty.slave);
 
     /* Must fork again to actually be in the new PID namespace */
     pid_t shell_pid = fork();
@@ -452,6 +482,29 @@ int enter_rootfs(struct ds_config *cfg, const char *user) {
     exit(EXIT_SUCCESS);
   }
 
+  close(sv[1]);
+
+  /* Receive native PTY master from child */
+  int master_fd = ds_recv_fd(sv[0]);
+  close(sv[0]);
+
+  if (master_fd < 0) {
+    ds_error("Failed to receive PTY master from child");
+    waitpid(child, NULL, 0);
+    return -1;
+  }
+
+  /* Parent: setup host terminal and proxy I/O */
+  struct termios old_tios;
+  int has_tty = (ds_setup_tios(STDIN_FILENO, &old_tios) == 0);
+
+  ds_terminal_proxy(master_fd);
+
+  if (has_tty) {
+    tcsetattr(STDIN_FILENO, TCSAFLUSH, &old_tios);
+  }
+
+  close(master_fd);
   waitpid(child, NULL, 0);
   return 0;
 }
