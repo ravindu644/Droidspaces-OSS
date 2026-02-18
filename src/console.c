@@ -70,8 +70,6 @@ int console_monitor_loop(int master_fd, pid_t intermediate_pid,
       ioctl(master_fd, TIOCSWINSZ, &ws);
   }
 
-  ds_log("Entering console monitor loop for container %d...", container_pid);
-
   int running = 1;
   while (running) {
     int nfds = epoll_wait(epfd, events, 10, -1);

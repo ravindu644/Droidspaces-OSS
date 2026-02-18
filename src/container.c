@@ -297,8 +297,8 @@ int start_rootfs(struct ds_config *cfg) {
 
   /* 6. Foreground or background finish */
   if (cfg->foreground) {
-    ds_log("Entering console monitor loop for container %d...",
-           cfg->container_pid);
+    /* Visual separation before container output */
+    printf("\n");
     int ret = console_monitor_loop(cfg->console.master, monitor_pid,
                                    cfg->container_pid);
     return ret;
@@ -466,8 +466,6 @@ int enter_rootfs(struct ds_config *cfg, const char *user) {
   int sv[2];
   if (socketpair(AF_UNIX, SOCK_STREAM, 0, sv) < 0)
     return -1;
-
-  ds_log("Entering container %s...", cfg->container_name);
 
   pid_t child = fork();
   if (child < 0) {
