@@ -78,7 +78,7 @@ Droidspaces performs a formal requirements check via the `check` command (implem
 | Mount namespace | `access("/proc/self/ns/mnt", F_OK) && is_root` | Filesystem isolation |
 | UTS namespace | `access("/proc/self/ns/uts", F_OK) && is_root` | Hostname isolation |
 | IPC namespace | `access("/proc/self/ns/ipc", F_OK) && is_root` | IPC isolation |
-| devtmpfs | `access("/dev/null", F_OK)` | Device node creation |
+| devtmpfs | `grep_file("/proc/filesystems", "devtmpfs")` | Proper HW device node support |
 | cgroup support | `access("/sys/fs/cgroup/devices", F_OK) \|\| access("/sys/fs/cgroup/cgroup.controllers", F_OK) \|\| grep_file("/proc/mounts", "cgroup2")` | systemd requires this (v1 or v2) |
 | `pivot_root` syscall | `statfs("/", &st)` — not RAMFS_MAGIC | Root filesystem switching |
 | `/proc` and `/sys` | `access()` check | Essential virtual filesystems |

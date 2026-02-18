@@ -140,7 +140,7 @@ int check_requirements_detailed(void) {
                  check_ns("ipc"), "MUST");
 
   print_ds_check("devtmpfs support", "Kernel support for devtmpfs",
-                 access("/dev/null", F_OK) == 0, "MUST");
+                 grep_file("/proc/filesystems", "devtmpfs"), "MUST");
 
   print_ds_check("cgroup support", "Control Groups (v1 or v2) support",
                  check_cgroup_v1("devices") || check_cgroup_v2(), "MUST");
