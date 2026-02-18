@@ -54,12 +54,18 @@ int internal_boot(struct ds_config *cfg) {
 
   if (cfg->hw_access) {
     /* Create writable holes for hardware access BEFORE remounting /sys RO.
-     * We use separate sysfs instances for these to keep them RW. */
-    const char *rw_paths[] = {"sys/devices", "sys/bus", "sys/class", NULL};
+     * We use self-bind mounts to 'pin' these directories as independent mount
+     * points. This preserves the original sysfs hierarchy (important for
+     * lsblk/blkid) while allowing them to stay RW when the parent is remounted
+     * RO. */
+    const char *rw_paths[] = {"sys/devices", "sys/bus",   "sys/class",
+                              "sys/dev",     "sys/block", NULL};
     for (int i = 0; rw_paths[i]; i++) {
       mkdir(rw_paths[i], 0755);
-      domount("sysfs", rw_paths[i], "sysfs", MS_NOSUID | MS_NODEV | MS_NOEXEC,
-              NULL);
+      if (mount(rw_paths[i], rw_paths[i], NULL, MS_BIND | MS_REC, NULL) < 0) {
+        ds_warn("Failed to self-bind mount %s: %s", rw_paths[i],
+                strerror(errno));
+      }
     }
   } else {
     /* Hardware isolation: network only mixed mode */
@@ -76,7 +82,8 @@ int internal_boot(struct ds_config *cfg) {
 
   /* CRITICAL: Remount entire /sys as read-only. This is the official systemd
    * indicator that it is running in a container. Without this, systemd 258+
-   * tries to 'resolve' /dev/console to a host TTY, leading to Loop. */
+   * tries to 'resolve' /dev/console to a host TTY, leading to the getty Loop.
+   * Because we self-bind mounted subdirectories above, they remain RW. */
   if (mount(NULL, "sys", NULL, MS_REMOUNT | MS_BIND | MS_RDONLY, NULL) < 0) {
     ds_warn("Failed to remount /sys as read-only: %s", strerror(errno));
   }
