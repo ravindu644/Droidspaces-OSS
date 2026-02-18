@@ -88,17 +88,17 @@
 
 #define ds_log(fmt, ...)                                                       \
   do {                                                                         \
-    fprintf(stdout, "[" C_GREEN "+" C_RESET "] " fmt "\n", ##__VA_ARGS__);     \
+    fprintf(stdout, "[" C_GREEN "+" C_RESET "] " fmt "\r\n", ##__VA_ARGS__);   \
     fflush(stdout);                                                            \
   } while (0)
 #define ds_warn(fmt, ...)                                                      \
   do {                                                                         \
-    fprintf(stderr, "[" C_YELLOW "!" C_RESET "] " fmt "\n", ##__VA_ARGS__);    \
+    fprintf(stderr, "[" C_YELLOW "!" C_RESET "] " fmt "\r\n", ##__VA_ARGS__);  \
     fflush(stderr);                                                            \
   } while (0)
 #define ds_error(fmt, ...)                                                     \
   do {                                                                         \
-    fprintf(stderr, "[" C_RED "-" C_RESET "] " fmt "\n", ##__VA_ARGS__);       \
+    fprintf(stderr, "[" C_RED "-" C_RESET "] " fmt "\r\n", ##__VA_ARGS__);     \
     fflush(stderr);                                                            \
   } while (0)
 #define ds_die(fmt, ...)                                                       \
