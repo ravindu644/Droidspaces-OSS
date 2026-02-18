@@ -53,19 +53,28 @@ int internal_boot(struct ds_config *cfg) {
   domount("sysfs", "sys", "sysfs", MS_NOSUID | MS_NODEV | MS_NOEXEC, NULL);
 
   if (cfg->hw_access) {
-    /* Create writable holes for hardware access BEFORE remounting /sys RO.
-     * We use self-bind mounts to 'pin' these directories as independent mount
-     * points. This preserves the original sysfs hierarchy (important for
-     * lsblk/blkid) while allowing them to stay RW when the parent is remounted
-     * RO. */
-    const char *rw_paths[] = {"sys/devices", "sys/bus",   "sys/class",
-                              "sys/dev",     "sys/block", NULL};
-    for (int i = 0; rw_paths[i]; i++) {
-      mkdir(rw_paths[i], 0755);
-      if (mount(rw_paths[i], rw_paths[i], NULL, MS_BIND | MS_REC, NULL) < 0) {
-        ds_warn("Failed to self-bind mount %s: %s", rw_paths[i],
-                strerror(errno));
+    /* DYNAMIC HARDWARE HOLES: Instead of hardcoding, we iterate through
+     * everything in /sys and 'pin' subdirectories as independent RW mounts.
+     * This ensures 100% hardware visibility (devices, bus, class, block, etc)
+     * even after we remount the top-level /sys as RO for systemd's benefit. */
+    DIR *d = opendir("sys");
+    if (d) {
+      struct dirent *de;
+      while ((de = readdir(d)) != NULL) {
+        if (de->d_name[0] == '.')
+          continue;
+
+        char subpath[PATH_MAX];
+        snprintf(subpath, sizeof(subpath), "sys/%s", de->d_name);
+
+        struct stat st;
+        if (stat(subpath, &st) == 0 && S_ISDIR(st.st_mode)) {
+          if (mount(subpath, subpath, NULL, MS_BIND | MS_REC, NULL) < 0) {
+            /* Ignore errors for files or pseudo-dirs that can't be mounted */
+          }
+        }
       }
+      closedir(d);
     }
   } else {
     /* Hardware isolation: network only mixed mode */
