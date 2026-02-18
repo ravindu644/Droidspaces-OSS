@@ -190,8 +190,8 @@ int domount(const char *src, const char *tgt, const char *fstype,
             unsigned long flags, const char *data);
 int bind_mount(const char *src, const char *tgt);
 int setup_dev(const char *rootfs, int hw_access);
-int create_devices(const char *rootfs);
-int setup_devpts(void);
+int create_devices(const char *rootfs, int hw_access);
+int setup_devpts(int hw_access);
 int setup_cgroups(void);
 int mount_rootfs_img(const char *img_path, char *mount_point, size_t mp_size);
 int unmount_rootfs_img(const char *mount_point);

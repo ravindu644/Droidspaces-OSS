@@ -111,7 +111,7 @@ int internal_boot(struct ds_config *cfg, int sock_fd) {
     ds_die("chdir / failed: %s", strerror(errno));
 
   /* 14. Setup devpts (must be after pivot_root for newinstance) */
-  setup_devpts();
+  setup_devpts(cfg->hw_access);
 
   /* 15. Configure rootfs networking (hostname, resolv.conf, etc) */
   fix_networking_rootfs(cfg);

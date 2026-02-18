@@ -92,14 +92,17 @@ int setup_dev(const char *rootfs, int hw_access) {
   char dev_path[PATH_MAX];
   snprintf(dev_path, sizeof(dev_path), "%s/dev", rootfs);
 
+  /* Ensure the directory exists */
+  mkdir(dev_path, 0755);
+
   if (hw_access) {
     /* If hw_access is enabled, we mount host's devtmpfs.
-     * WARNING: This is insecure but provides full hardware access. */
+     * WARNING: This is a shared singleton. We MUST be careful. */
     if (domount("devtmpfs", dev_path, "devtmpfs", MS_NOSUID | MS_NOEXEC,
                 "mode=755") == 0) {
-      /* Even with devtmpfs, we MUST isolate critical devices that systemd
-       * or pty management depends on. Unlink them so create_devices()
-       * can recreate them safely. */
+      /* Clean up conflicting nodes from the shared devtmpfs.
+       * We MUST immediately recreate them in create_devices() as REAL
+       * character devices to prevent host breakage. */
       const char *conflicts[] = {"console", "tty",     "full", "null", "zero",
                                  "random",  "urandom", "ptmx", NULL};
       for (int i = 0; conflicts[i]; i++) {
@@ -123,10 +126,11 @@ int setup_dev(const char *rootfs, int hw_access) {
   }
 
   /* Create minimal set of device nodes (creates secure console/ptmx/etc.) */
-  return create_devices(rootfs);
+  return create_devices(rootfs, hw_access);
 }
 
-int create_devices(const char *rootfs) {
+int create_devices(const char *rootfs, int hw_access) {
+  (void)hw_access;
   const struct {
     const char *name;
     mode_t mode;
@@ -149,40 +153,32 @@ int create_devices(const char *rootfs) {
     unlink(path); /* Always start fresh to ensure correct type/permissions */
 
     if (mknod(path, devices[i].mode, devices[i].dev) < 0) {
-      if (S_ISREG(devices[i].mode)) {
-        write_file(path, "");
-      } else {
-        /* If mknod fails for char dev, try bind mounting from host */
-        char host_path[PATH_MAX];
-        snprintf(host_path, sizeof(host_path), "/dev/%s", devices[i].name);
-        bind_mount(host_path, path);
-      }
+      /* Fallback for environments where mknod is restricted */
+      char host_path[PATH_MAX];
+      snprintf(host_path, sizeof(host_path), "/dev/%s", devices[i].name);
+      bind_mount(host_path, path);
     } else {
-      /* Explicitly set permissions to bypass umask (essential for /dev/null) */
       chmod(path, devices[i].mode & 0777);
     }
   }
 
-  /* 2. Create /dev/net/tun if possible */
+  /* 2. Create /dev/net/tun */
   snprintf(path, sizeof(path), "%s/dev/net", rootfs);
   mkdir(path, 0755);
   snprintf(path, sizeof(path), "%s/dev/net/tun", rootfs);
   unlink(path);
-  if (mknod(path, S_IFCHR | 0666, makedev(10, 200)) < 0) {
-    /* Fallback to bind mount if mknod fails */
+  if (mknod(path, S_IFCHR | 0666, makedev(10, 200)) < 0)
     bind_mount("/dev/net/tun", path);
-  } else {
+  else
     chmod(path, 0666);
-  }
 
-  /* 3. Create /dev/fuse if possible */
+  /* 3. Create /dev/fuse */
   snprintf(path, sizeof(path), "%s/dev/fuse", rootfs);
   unlink(path);
-  if (mknod(path, S_IFCHR | 0666, makedev(10, 229)) < 0) {
+  if (mknod(path, S_IFCHR | 0666, makedev(10, 229)) < 0)
     bind_mount("/dev/fuse", path);
-  } else {
+  else
     chmod(path, 0666);
-  }
 
   /* 4. Create tty1...N nodes (mount targets for PTYs) */
   for (int i = 1; i <= DS_MAX_TTYS; i++) {
@@ -206,7 +202,7 @@ int create_devices(const char *rootfs) {
   return 0;
 }
 
-int setup_devpts(void) {
+int setup_devpts(int hw_access) {
   const char *pts_path = "/dev/pts";
 
   /* Unmount any existing devpts instance first */
@@ -230,24 +226,31 @@ int setup_devpts(void) {
       const char *ptmx_path = "/dev/ptmx";
       const char *pts_ptmx = "/dev/pts/ptmx";
 
-      /* Remove any existing node */
-      unlink(ptmx_path);
-
-      /* Method 1: Bind mount (preferred for systemd/udev) */
-      /* Create a dummy file to act as mount target */
-      if (write_file(ptmx_path, "") == 0) {
+      if (hw_access) {
+        /* In HW access mode, /dev is a devtmpfs (shared singleton).
+         * CRITICAL: Do NOT unlink. create_devices() already created
+         * a real char device node (5,2) for us to bind-mount over. */
         if (mount(pts_ptmx, ptmx_path, NULL, MS_BIND, NULL) == 0) {
+          return 0;
+        }
+      } else {
+        /* Secure mode: /dev is a private tmpfs. Unlink is safe. */
+        unlink(ptmx_path);
+
+        /* Method 1: Bind mount (preferred) */
+        if (write_file(ptmx_path, "") == 0) {
+          if (mount(pts_ptmx, ptmx_path, NULL, MS_BIND, NULL) == 0) {
+            return 0;
+          }
+        }
+
+        /* Method 2: Symlink (fallback) */
+        unlink(ptmx_path);
+        if (symlink("pts/ptmx", ptmx_path) == 0) {
           return 0;
         }
       }
 
-      /* Method 2: Symlink (fallback) */
-      unlink(ptmx_path);
-      if (symlink("pts/ptmx", ptmx_path) == 0) {
-        return 0;
-      }
-
-      /* If ptmx setup failed but devpts is mounted, we're still better off */
       ds_warn("Failed to virtualize /dev/ptmx, PTYs might not work");
       return 0;
     }
