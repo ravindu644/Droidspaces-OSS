@@ -202,7 +202,7 @@ int main(int argc, char **argv) {
   if (strcmp(cmd, "scan") == 0)
     return scan_containers();
   if (strcmp(cmd, "docs") == 0) {
-    ds_log("Droidspaces v3 Research Paper is available at Droidspaces.md");
+    print_documentation(argv[0]);
     return 0;
   }
 

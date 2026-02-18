@@ -21,6 +21,7 @@ SRCS = $(SRC_DIR)/main.c \
        $(SRC_DIR)/boot.c \
        $(SRC_DIR)/container.c \
        $(SRC_DIR)/environment.c \
+       $(SRC_DIR)/documentation.c \
        $(SRC_DIR)/check.c
 
 # Compiler flags — hardened warning set, all warnings are errors
