@@ -78,9 +78,27 @@ int main(int argc, char **argv) {
   extern int opterr;
   opterr = 0;
 
+  /*
+   * Two-pass argument parsing:
+   * 1. Pass 1 finds the command strictly (using '+' prefix).
+   * 2. Based on the command, Pass 2 decides whether to allow flag permutation.
+   *    Permutation is allowed for life-cycle commands (e.g., start -f) but
+   *    forbidden for execution commands (e.g., run ls -l) to protect sub-flags.
+   */
+  const char *discovered_cmd = NULL;
+  int temp_optind = optind;
+  while (getopt_long(argc, argv, "+r:i:n:p:h:fHISPv", long_options, NULL) != -1)
+    ;
+  if (optind < argc)
+    discovered_cmd = argv[optind];
+  optind = temp_optind; /* Reset for Pass 2 */
+
+  int strict = (discovered_cmd && (strcmp(discovered_cmd, "run") == 0 ||
+                                   strcmp(discovered_cmd, "enter") == 0));
+  const char *optstring = strict ? "+r:i:n:p:h:fHISPv" : "r:i:n:p:h:fHISPv";
+
   int opt;
-  while ((opt = getopt_long(argc, argv, "+r:i:n:p:h:fHISPv", long_options,
-                            NULL)) != -1) {
+  while ((opt = getopt_long(argc, argv, optstring, long_options, NULL)) != -1) {
     switch (opt) {
     case 'r':
       safe_strncpy(cfg.rootfs_path, optarg, sizeof(cfg.rootfs_path));
