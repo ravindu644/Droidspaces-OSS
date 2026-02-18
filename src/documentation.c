@@ -29,6 +29,8 @@ static const char *get_binary_name(const char *argv0) {
 #define BOLD "\033[1m"
 #define REVERSE "\033[7m"
 #define CURSOR_HOME "\033[H" /* Move cursor to home position */
+#define HIDE_CURSOR "\033[?25l"
+#define SHOW_CURSOR "\033[?25h"
 
 /* Page titles */
 static const char *page_titles[] = {
@@ -441,6 +443,8 @@ void print_documentation(const char *argv0) {
 
   /* Clear screen before starting */
   clear_screen_completely();
+  printf("%s", HIDE_CURSOR);
+  fflush(stdout);
 
   int current_page = 0;
   int running = 1;
@@ -489,6 +493,8 @@ void print_documentation(const char *argv0) {
 
   /* Restore terminal settings */
   tcsetattr(STDIN_FILENO, TCSAFLUSH, &old_tios);
+  printf("%s", SHOW_CURSOR);
+  fflush(stdout);
 
   /* Clear screen completely one final time */
   clear_screen_completely();
