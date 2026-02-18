@@ -121,7 +121,8 @@ int main(int argc, char **argv) {
         ds_error("Unrecognized option: -%c", optopt);
       else
         ds_error("Unrecognized option: %s", argv[optind - 1]);
-      print_usage();
+      printf("\n");
+      ds_log("Use --help for usage information.");
       return 1;
     default:
       return 1;
@@ -130,7 +131,8 @@ int main(int argc, char **argv) {
 
   if (optind >= argc) {
     ds_error("Missing command (e.g., start, stop, enter, show)");
-    print_usage();
+    printf("\n");
+    ds_log("Use --help for usage information.");
     return 1;
   }
 
@@ -163,7 +165,8 @@ int main(int argc, char **argv) {
 
   if (!found) {
     ds_error("Unknown command: %s", cmd);
-    print_usage();
+    printf("\n");
+    ds_log("Use --help for usage information.");
     return 1;
   }
 
