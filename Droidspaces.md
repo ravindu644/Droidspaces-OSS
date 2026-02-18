@@ -486,7 +486,9 @@ When foreground is not requested:
 
 ### 6.4 How Getty/Login Works
 
-After systemd boots, it spawns `agetty` on the TTY devices listed in `container_ttys`. The `container_ttys` environment variable tells systemd which `/dev/pts/N` devices are available. `agetty` opens `/dev/ttyN`, which is bind-mounted to a PTY slave. The PTY master is held open by the monitor process (background) or the console monitor loop (foreground).
+In the current implementation, the login process (getty) attaches directly to `/dev/console`. Even after a user logs in, the session remains attached to the console.
+
+**Note:** This is a stable but primitive implementation. A future improvement (TODO) is to properly spawn `agetty` on individual `/dev/ttyN` nodes. Pull Requests are welcome to refine this behavior!
 
 ---
 
@@ -521,16 +523,11 @@ mount(cfg->console.name, "dev/console", NULL, MS_BIND, NULL);
 
 After pivot_root, `internal_boot()` opens `/dev/console`, redirects stdin/stdout/stderr to it, and makes it the controlling terminal via `TIOCSCTTY`.
 
-### 7.3 TTY PTYs
+### 7.3 TTY PTYs (Placeholders)
 
-Up to 6 additional PTYs (`DS_MAX_TTYS = 6`) are allocated for `/dev/tty1` through `/dev/tty6`. Each slave path is bind-mounted:
+Up to 6 PTYs are allocated for `/dev/tty1` through `/dev/tty6` and bind-mounted into the container. However, in the current version, these are **non-functional placeholders**. 
 
-```c
-for (int i = 0; i < cfg->tty_count; i++) {
-    snprintf(tgt, sizeof(tgt), "dev/tty%d", i + 1);
-    mount(cfg->ttys[i].name, tgt, NULL, MS_BIND, NULL);
-}
-```
+They exist primarily to satisfy Init systems like OpenRC, which expect these devices to exist and would otherwise flood the log with "not found" errors. They are currently "nuking errors" rather than providing multiple login seats.
 
 ### 7.4 devpts newinstance
 
