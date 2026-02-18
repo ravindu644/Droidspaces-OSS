@@ -59,13 +59,28 @@ static void cleanup_container_resources(struct ds_config *cfg, pid_t pid,
 
 int is_valid_container_pid(pid_t pid) {
   char path[PATH_MAX];
-  build_proc_root_path(pid, "/run/systemd/container", path, sizeof(path));
+  char buf[256];
 
-  char buf[64];
+  /* 1. Check systemd marker */
+  build_proc_root_path(pid, "/run/systemd/container", path, sizeof(path));
   if (read_file(path, buf, sizeof(buf)) < 0)
     return 0;
+  if (!strstr(buf, "droidspaces"))
+    return 0;
 
-  return strstr(buf, "droidspaces") ? 1 : 0;
+  /* 2. Check /run/droidspaces for version info */
+  build_proc_root_path(pid, "/run/droidspaces", path, sizeof(path));
+  if (access(path, F_OK) != 0)
+    return 0;
+
+  /* 3. Check cmdline for /sbin/init. Use a larger buffer for cmdline. */
+  snprintf(path, sizeof(path), "/proc/%d/cmdline", pid);
+  if (read_file(path, buf, sizeof(buf)) < 0)
+    return 0;
+  if (!strstr(buf, "/sbin/init"))
+    return 0;
+
+  return 1;
 }
 
 int check_status(struct ds_config *cfg, pid_t *pid_out) {
@@ -75,12 +90,13 @@ int check_status(struct ds_config *cfg, pid_t *pid_out) {
   }
 
   pid_t pid = 0;
-  if (read_and_validate_pid(cfg->pidfile, &pid) < 0) {
-    if (pid == 0) {
-      /* PID no longer running, cleanup */
-      cleanup_container_resources(cfg, 0, 0);
+  if (read_and_validate_pid(cfg->pidfile, &pid) < 0 ||
+      (pid > 0 && !is_valid_container_pid(pid))) {
+    if (pid == 0 || (pid > 0 && !is_valid_container_pid(pid))) {
+      /* PID no longer running or not a valid container, cleanup */
+      cleanup_container_resources(cfg, pid, 0);
     }
-    ds_error("Container %s is not running.", cfg->container_name);
+    ds_error("Container %s is not running or invalid.", cfg->container_name);
     return -1;
   }
 
@@ -133,7 +149,27 @@ int start_rootfs(struct ds_config *cfg) {
 
   generate_uuid(cfg->uuid, sizeof(cfg->uuid));
 
+  /* Write UUID sync file for boot sequence */
+  char uuid_sync[PATH_MAX];
+  snprintf(uuid_sync, sizeof(uuid_sync), "%.4070s/.droidspaces-uuid",
+           cfg->rootfs_path);
+  write_file(uuid_sync, cfg->uuid);
+
   /* 2. Parent-side PTY allocation (LXC Model) */
+  /* CRITICAL: Before forking, verify /sbin/init exists in the rootfs */
+  char init_path[PATH_MAX];
+  char rootfs_norm[PATH_MAX];
+  safe_strncpy(rootfs_norm, cfg->rootfs_path, sizeof(rootfs_norm));
+  size_t rlen = strlen(rootfs_norm);
+  if (rlen > 0 && rootfs_norm[rlen - 1] == '/')
+    rootfs_norm[rlen - 1] = '\0';
+
+  snprintf(init_path, sizeof(init_path), "%.4080s/sbin/init", rootfs_norm);
+  if (access(init_path, X_OK) != 0) {
+    ds_error("Init binary not found or not executable: %s", init_path);
+    ds_die("Please ensure the rootfs path is correct and contains /sbin/init.");
+  }
+
   cfg->tty_count = DS_MAX_TTYS;
   if (ds_terminal_create(&cfg->console) < 0)
     ds_die("Failed to allocate console PTY");
@@ -271,11 +307,26 @@ int start_rootfs(struct ds_config *cfg) {
     char marker[PATH_MAX];
     snprintf(marker, sizeof(marker), "/proc/%d/root/run/droidspaces",
              cfg->container_pid);
+    int booted = 0;
     for (int i = 0; i < 50; i++) { /* 5 seconds max */
-      if (access(marker, F_OK) == 0)
+      if (access(marker, F_OK) == 0) {
+        booted = 1;
+        break;
+      }
+      /* If the container PID is already dead, stop polling */
+      if (kill(cfg->container_pid, 0) < 0 && errno == ESRCH)
         break;
       usleep(100000); /* 100ms */
     }
+
+    if (!booted) {
+      ds_error("Container failed to boot correctly.");
+      /* If pid is still alive, we might want to kill it, but monitor usually
+       * handles this. Let's just return error so parent doesn't report success.
+       */
+      return -1;
+    }
+
     show_info(cfg);
     ds_log("Container %s is running in background.", cfg->container_name);
     if (is_android()) {

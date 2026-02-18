@@ -228,11 +228,15 @@ pid_t find_container_init_pid(const char *uuid) {
       continue;
 
     for (size_t i = 0; i < count; i++) {
+      /* First check the UUID marker */
       build_proc_root_path(pids[i], marker, path, sizeof(path));
       if (access(path, F_OK) == 0) {
-        pid_t found = pids[i];
-        free(pids);
-        return found;
+        /* Then perform stricter validation (cmdline, systemd marker) */
+        if (is_valid_container_pid(pids[i])) {
+          pid_t found = pids[i];
+          free(pids);
+          return found;
+        }
       }
     }
     free(pids);

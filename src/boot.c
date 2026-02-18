@@ -26,6 +26,12 @@ int internal_boot(struct ds_config *cfg) {
   if (chdir(cfg->rootfs_path) < 0)
     ds_die("Failed to chdir to rootfs: %s", strerror(errno));
 
+  /* 3.1 Read UUID from sync file if not already provided (parity with v2) */
+  if (cfg->uuid[0] == '\0') {
+    read_file(".droidspaces-uuid", cfg->uuid, sizeof(cfg->uuid));
+  }
+  unlink(".droidspaces-uuid");
+
   /* 4. Prepare .old_root for pivot_root */
   mkdir(".old_root", 0755);
 
@@ -142,13 +148,11 @@ int internal_boot(struct ds_config *cfg) {
   /* 21. EXEC INIT */
   char *argv[] = {"/sbin/init", NULL};
 
-  execve("/sbin/init", argv, environ);
+  if (execve("/sbin/init", argv, environ) < 0) {
+    ds_error("Failed to execute /sbin/init: %s", strerror(errno));
+    ds_die("Container boot failed. Please ensure the rootfs path is correct "
+           "and contains a valid /sbin/init binary.");
+  }
 
-  /* Fallback if /sbin/init is missing */
-  ds_warn("/sbin/init not found, trying /bin/sh...");
-  argv[0] = "/bin/sh";
-  execve("/bin/sh", argv, environ);
-
-  ds_die("Final execve failed: %s", strerror(errno));
   return -1;
 }
