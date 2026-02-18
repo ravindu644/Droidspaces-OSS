@@ -589,15 +589,54 @@ int show_info(struct ds_config *cfg) {
   /* Host info */
   const char *host = is_android() ? "Android" : "Linux";
   const char *arch = get_architecture();
-  printf("\n" C_GREEN "Host:" C_RESET " %s %s\n\n", host, arch);
+  printf("\n" C_GREEN "Host:" C_RESET " %s %s\n", host, arch);
 
-  /* Container status */
+  /* Case 1: No container name specified */
+  if (cfg->container_name[0] == '\0') {
+    char first_name[256];
+    int count = count_running_containers(first_name, sizeof(first_name));
+
+    if (count == 0) {
+      printf("\n" C_YELLOW "Container:" C_RESET " No containers running.\n\n");
+      return 0;
+    }
+
+    if (count == 1) {
+      /* Auto-resolve to the only running container */
+      safe_strncpy(cfg->container_name, first_name,
+                   sizeof(cfg->container_name));
+      resolve_pidfile_from_name(first_name, cfg->pidfile, sizeof(cfg->pidfile));
+    } else {
+      /* Multiple containers running, show list */
+      printf("\n" C_YELLOW "Multiple containers running:" C_RESET "\n");
+      show_containers();
+      printf("\nUse '" C_GREEN "--name <NAME> info" C_RESET
+             "' for detailed information.\n\n");
+      return 0;
+    }
+  }
+
+  /* Case 2: Specific name specified or auto-resolved */
+  if (cfg->pidfile[0] == '\0' && cfg->container_name[0] != '\0') {
+    resolve_pidfile_from_name(cfg->container_name, cfg->pidfile,
+                              sizeof(cfg->pidfile));
+  }
+
   pid_t pid = 0;
-  check_status(cfg, &pid);
+  read_and_validate_pid(cfg->pidfile, &pid);
+
+  printf("\n" C_GREEN "Container:" C_RESET " %s (%s)\n", cfg->container_name,
+         pid > 0 ? "RUNNING" : "STOPPED");
 
   if (pid > 0) {
-    /* Feature flags (introspected from the live container) */
-    printf(C_GREEN "Features:" C_RESET "\n");
+    printf("  PID: %d\n", pid);
+
+    char pretty[256];
+    get_container_os_pretty(pid, pretty, sizeof(pretty));
+    if (pretty[0])
+      printf("  OS: %s\n", pretty);
+
+    printf("\n" C_GREEN "Features:" C_RESET "\n");
 
     /* SELinux */
     if (access("/sys/fs/selinux/enforce", R_OK) == 0) {
@@ -620,22 +659,7 @@ int show_info(struct ds_config *cfg) {
       printf("  " C_RED "HW access:" C_RESET " enabled\n");
     else
       printf("  HW access: disabled\n");
-
-    printf("\n");
-    printf(C_GREEN "Container:" C_RESET " RUNNING (PID: %d)\n", pid);
-
-    if (cfg->container_name[0])
-      printf("  Name: %s\n", cfg->container_name);
-
-    char pretty[256];
-    get_container_os_pretty(pid, pretty, sizeof(pretty));
-    if (pretty[0])
-      printf("  OS: %s\n", pretty);
-
-    printf("\n");
   } else {
-    printf(C_RED "Container:" C_RESET " STOPPED\n");
-
     /* Best effort: read os-release from rootfs path */
     if (cfg->rootfs_path[0]) {
       char osr_path[PATH_MAX];
@@ -644,9 +668,10 @@ int show_info(struct ds_config *cfg) {
       char pretty[256];
       get_os_pretty_from_path(osr_path, pretty, sizeof(pretty));
       if (pretty[0])
-        printf("  Rootfs OS: %s\n\n", pretty);
+        printf("  Rootfs OS: %s\n", pretty);
     }
   }
+  printf("\n");
 
   return 0;
 }

@@ -239,6 +239,7 @@ int generate_container_name(const char *rootfs_path, char *name, size_t size);
 int find_available_name(const char *base_name, char *final_name, size_t size);
 int resolve_pidfile_from_name(const char *name, char *pidfile, size_t size);
 int auto_resolve_pidfile(struct ds_config *cfg);
+int count_running_containers(char *first_name, size_t size);
 pid_t find_container_init_pid(const char *uuid);
 int sync_pidfile(const char *src_pidfile, const char *name);
 int show_containers(void);

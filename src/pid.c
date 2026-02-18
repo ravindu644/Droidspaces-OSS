@@ -136,6 +136,38 @@ int resolve_pidfile_from_name(const char *name, char *pidfile, size_t size) {
   return (r > 0 && (size_t)r < size) ? 0 : -1;
 }
 
+int count_running_containers(char *first_name, size_t size) {
+  DIR *d = opendir(get_pids_dir());
+  if (!d)
+    return 0;
+
+  struct dirent *ent;
+  int count = 0;
+
+  while ((ent = readdir(d)) != NULL) {
+    if (is_pid_file(ent->d_name)) {
+      char path[PATH_MAX];
+      const char *pids_dir = get_pids_dir();
+      if (snprintf(path, sizeof(path), "%.4070s/%.24s", pids_dir,
+                   ent->d_name) >= (int)sizeof(path))
+        continue;
+
+      pid_t pid;
+      if (read_and_validate_pid(path, &pid) == 0) {
+        if (count == 0 && first_name && size > 0) {
+          safe_strncpy(first_name, ent->d_name, size);
+          char *dot = strrchr(first_name, '.');
+          if (dot)
+            *dot = '\0';
+        }
+        count++;
+      }
+    }
+  }
+  closedir(d);
+  return count;
+}
+
 int auto_resolve_pidfile(struct ds_config *cfg) {
   /* 1. If pidfile is explicitly provided, resolve name from it if needed */
   if (cfg->pidfile[0]) {
@@ -157,36 +189,9 @@ int auto_resolve_pidfile(struct ds_config *cfg) {
     return 0;
   }
 
-  /* 3. Otherwise, look for the ONLY .pid file in the pids dir */
-  DIR *d = opendir(get_pids_dir());
-  if (!d)
-    return -1;
-
-  struct dirent *ent;
-  char found_name[256] = "";
-  int count = 0;
-
-  while ((ent = readdir(d)) != NULL) {
-    if (is_pid_file(ent->d_name)) {
-      char path[PATH_MAX];
-      const char *pids_dir = get_pids_dir();
-      if (snprintf(path, sizeof(path), "%.4070s/%.24s", pids_dir,
-                   ent->d_name) >= (int)sizeof(path))
-        continue;
-
-      pid_t pid;
-      if (read_and_validate_pid(path, &pid) == 0) {
-        if (count == 0) {
-          safe_strncpy(found_name, ent->d_name, sizeof(found_name));
-          char *dot = strrchr(found_name, '.');
-          if (dot)
-            *dot = '\0';
-        }
-        count++;
-      }
-    }
-  }
-  closedir(d);
+  /* 3. Otherwise, look for the ONLY running container */
+  char found_name[256];
+  int count = count_running_containers(found_name, sizeof(found_name));
 
   if (count == 1) {
     safe_strncpy(cfg->container_name, found_name, sizeof(cfg->container_name));
