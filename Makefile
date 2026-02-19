@@ -91,32 +91,40 @@ $(BINARY_NAME): $(OUT_DIR)
 
 # Build targets
 native:
-	@if ! command -v musl-gcc >/dev/null 2>&1; then \
-		echo "Error: musl-gcc not found. Please install musl-devel."; \
+	@ARCH_TARGET=$(shell $(CC) -dumpmachine 2>/dev/null | cut -d'-' -f1 | sed 's/i.86/i686/'); \
+	if [ "$$ARCH_TARGET" = "x86_64" ]; then TARGET="x86_64-linux-musl"; \
+	elif [ "$$ARCH_TARGET" = "aarch64" ]; then TARGET="aarch64-linux-musl"; \
+	elif [ "$$ARCH_TARGET" = "i686" ]; then TARGET="i686-linux-musl"; \
+	else TARGET="x86_64-linux-musl"; fi; \
+	CROSS_CC="$(call find-cc,$$TARGET)"; \
+	if [ -n "$$CROSS_CC" ]; then \
+		$(MAKE) $(BINARY_NAME) CC=$$CROSS_CC; \
+	else \
+		echo "Error: Musl toolchain for $$TARGET not found."; \
+		echo "Please run: ./install-musl.sh $$(echo $$TARGET | cut -d'-' -f1 | sed 's/i686/x86/')"; \
 		exit 1; \
 	fi
-	@$(MAKE) $(BINARY_NAME) CC=musl-gcc
 
 x86_64:
 	@CROSS_CC="$(call find-cc,x86_64-linux-musl)"; \
 	if [ -n "$$CROSS_CC" ]; then $(MAKE) $(BINARY_NAME) CC=$$CROSS_CC; \
-	else echo "Error: x86_64-linux-musl-gcc not found"; exit 1; fi
+	else echo "Error: x86_64-linux-musl-gcc not found. Run ./install-musl.sh x86_64"; exit 1; fi
 
 aarch64:
 	@CROSS_CC="$(call find-cc,aarch64-linux-musl)"; \
 	if [ -n "$$CROSS_CC" ]; then $(MAKE) $(BINARY_NAME) CC=$$CROSS_CC; \
-	else echo "Error: aarch64-linux-musl-gcc not found"; exit 1; fi
+	else echo "Error: aarch64-linux-musl-gcc not found. Run ./install-musl.sh aarch64"; exit 1; fi
 
 armhf:
 	@CROSS_CC="$(call find-cc,arm-linux-musleabihf)"; \
 	if [ -z "$$CROSS_CC" ]; then CROSS_CC="$(call find-cc,armv7l-linux-musleabihf)"; fi; \
 	if [ -n "$$CROSS_CC" ]; then $(MAKE) $(BINARY_NAME) CC=$$CROSS_CC; \
-	else echo "Error: arm-linux-musleabihf-gcc not found"; exit 1; fi
+	else echo "Error: arm-linux-musleabihf-gcc not found. Run ./install-musl.sh armhf"; exit 1; fi
 
 x86:
 	@CROSS_CC="$(call find-cc,i686-linux-musl)"; \
 	if [ -n "$$CROSS_CC" ]; then $(MAKE) $(BINARY_NAME) CC=$$CROSS_CC; \
-	else echo "Error: i686-linux-musl-gcc not found"; exit 1; fi
+	else echo "Error: i686-linux-musl-gcc not found. Run ./install-musl.sh x86"; exit 1; fi
 
 all-build:
 	@echo "[*] Building for all architectures..."
