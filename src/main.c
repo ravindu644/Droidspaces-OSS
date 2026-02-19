@@ -55,6 +55,37 @@ void print_usage(void) {
 }
 
 /* ---------------------------------------------------------------------------
+ * Kernel Validation
+ * ---------------------------------------------------------------------------*/
+
+static int validate_kernel_version(void) {
+  int major = 0, minor = 0;
+  if (get_kernel_version(&major, &minor) < 0) {
+    ds_error("Failed to detect kernel version.");
+    return -1;
+  }
+
+  if (major < DS_MIN_KERNEL_MAJOR ||
+      (major == DS_MIN_KERNEL_MAJOR && minor < DS_MIN_KERNEL_MINOR)) {
+    printf("\n" C_RED C_BOLD "[ FATAL: UNSUPPORTED KERNEL ]" C_RESET "\n\n");
+    ds_error("Droidspaces requires at least Linux %d.%d.0.",
+             DS_MIN_KERNEL_MAJOR, DS_MIN_KERNEL_MINOR);
+    ds_log("Detected kernel: %d.%d", major, minor);
+    printf("\n" C_DIM
+           "Why? Droidspaces v3 relies on features like OverlayFS and mature\n"
+           "namespace isolation that are only stable on kernels %d.%d+.\n"
+           "Running on this kernel would lead to system instability or "
+           "crashes." C_RESET "\n\n",
+           DS_MIN_KERNEL_MAJOR, DS_MIN_KERNEL_MINOR);
+    ds_log("You can still use " C_BOLD "check, info, help, scan" C_RESET
+           " for diagnostics.");
+    return -1;
+  }
+
+  return 0;
+}
+
+/* ---------------------------------------------------------------------------
  * Command Dispatch
  * ---------------------------------------------------------------------------*/
 
@@ -254,6 +285,8 @@ int main(int argc, char **argv) {
 
   /* Start command */
   if (strcmp(cmd, "start") == 0) {
+    if (validate_kernel_version() < 0)
+      return 1;
     if (cfg.rootfs_path[0] == '\0' && cfg.rootfs_img_path[0] == '\0')
       ds_die("--rootfs or --rootfs-img is required for start");
     if (cfg.rootfs_path[0] != '\0' && cfg.rootfs_img_path[0] != '\0')
@@ -284,8 +317,12 @@ int main(int argc, char **argv) {
     return stop_rootfs(&cfg, 0);
   }
 
-  if (strcmp(cmd, "restart") == 0)
+  if (strcmp(cmd, "restart") == 0) {
+    if (validate_kernel_version() < 0)
+      return 1;
     return restart_rootfs(&cfg);
+  }
+
   if (strcmp(cmd, "status") == 0) {
     if (check_status(&cfg, NULL) == 0) {
       printf("Container %s is " C_GREEN "Running" C_RESET "\n",
@@ -301,6 +338,8 @@ int main(int argc, char **argv) {
     return show_info(&cfg);
 
   if (strcmp(cmd, "enter") == 0) {
+    if (validate_kernel_version() < 0)
+      return 1;
     /* Optional: we could validate container exists here,
      * but enter_rootfs already does it. */
     const char *user = (optind + 1 < argc) ? argv[optind + 1] : NULL;
@@ -308,6 +347,8 @@ int main(int argc, char **argv) {
   }
 
   if (strcmp(cmd, "run") == 0) {
+    if (validate_kernel_version() < 0)
+      return 1;
     if (optind + 1 >= argc) {
       ds_error("Command required for 'run' (e.g., run ls -l)");
       return 1;

@@ -77,6 +77,17 @@ static int check_seccomp(void) {
   return (prctl(PR_GET_SECCOMP, 0, 0, 0, 0) >= 0 || errno == EINVAL);
 }
 
+static int check_kernel_version_supported(void) {
+  int major = 0, minor = 0;
+  if (get_kernel_version(&major, &minor) < 0)
+    return 0;
+  if (major < DS_MIN_KERNEL_MAJOR)
+    return 0;
+  if (major == DS_MIN_KERNEL_MAJOR && minor < DS_MIN_KERNEL_MINOR)
+    return 0;
+  return 1;
+}
+
 /* ---------------------------------------------------------------------------
  * Minimal check for 'start' (used internaly)
  * ---------------------------------------------------------------------------*/
@@ -130,6 +141,13 @@ int check_requirements(void) {
   if (!check_cgroup_v1("devices") && !check_cgroup_v2()) {
     ds_error("Kernel missing required cgroup support (v1 devices or v2)");
     ds_log("systemd requires at least one of these for container management.");
+    missing++;
+  }
+
+  if (!check_kernel_version_supported()) {
+    ds_error("Kernel version is too old");
+    ds_log("Droidspaces requires at least Linux %d.%d.0.", DS_MIN_KERNEL_MAJOR,
+           DS_MIN_KERNEL_MINOR);
     missing++;
   }
 
@@ -188,6 +206,13 @@ int check_requirements_detailed(void) {
   print_ds_check("Root privileges",
                  "Running as root user (required for container operations)",
                  is_root, "MUST");
+
+  char kver_desc[128];
+  snprintf(kver_desc, sizeof(kver_desc),
+           "Linux kernel version %d.%d.0 or later", DS_MIN_KERNEL_MAJOR,
+           DS_MIN_KERNEL_MINOR);
+  print_ds_check("Linux version", kver_desc, check_kernel_version_supported(),
+                 "MUST");
 
   print_ds_check("PID namespace", "Process ID namespace isolation",
                  check_ns(CLONE_NEWPID, "pid"), "MUST");
@@ -278,6 +303,8 @@ int check_requirements_detailed(void) {
   if (!(check_cgroup_v1("devices") || check_cgroup_v2()))
     missing_must++;
   if (!check_pivot_root())
+    missing_must++;
+  if (!check_kernel_version_supported())
     missing_must++;
 
   printf("\n" C_BOLD "Summary:" C_RESET "\n");

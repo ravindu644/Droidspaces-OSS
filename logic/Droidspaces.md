@@ -81,6 +81,7 @@ Droidspaces performs a formal requirements check via the `check` command (implem
 | Requirement | How It's Checked | Why |
 |---|---|---|
 | Root privileges | `getuid() == 0` | Namespace creation and mount operations require CAP_SYS_ADMIN |
+| Linux version | `DS_MIN_KERNEL_MAJOR` / `DS_MIN_KERNEL_MINOR` (3.18.0) | Absolute floor for stable namespaces and OverlayFS support |
 | PID namespace | `access("/proc/self/ns/pid", F_OK) && is_root` | Container PID isolation |
 | Mount namespace | `access("/proc/self/ns/mnt", F_OK) && is_root` | Filesystem isolation |
 | UTS namespace | `access("/proc/self/ns/uts", F_OK) && is_root` | Hostname isolation |
