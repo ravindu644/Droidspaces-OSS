@@ -97,8 +97,7 @@ int main(int argc, char **argv) {
     discovered_cmd = argv[optind];
   optind = temp_optind; /* Reset for Pass 2 */
 
-  int strict = (discovered_cmd && (strcmp(discovered_cmd, "run") == 0 ||
-                                   strcmp(discovered_cmd, "enter") == 0));
+  int strict = (discovered_cmd && (strcmp(discovered_cmd, "run") == 0));
   const char *optstring =
       strict ? "+r:i:n:p:h:fHISPvVB:" : "r:i:n:p:h:fHISPvVB:";
 
