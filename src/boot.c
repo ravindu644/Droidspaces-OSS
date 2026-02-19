@@ -17,22 +17,28 @@ int internal_boot(struct ds_config *cfg) {
   if (mount(NULL, "/", NULL, MS_REC | MS_PRIVATE, NULL) < 0)
     ds_die("Failed to remount / as private: %s", strerror(errno));
 
-  /* 2. Bind mount rootfs to itself (required for pivot_root) */
+  /* 2.5 Setup volatile overlay INSIDE the container's mount namespace.
+   * This MUST happen here (not in parent) so the overlay's connection to
+   * its lowerdir (e.g. a loop-mounted image) survives mount privatization. */
+  if (setup_volatile_overlay(cfg) < 0)
+    ds_die("Failed to setup volatile overlay");
+
+  /* 3. Bind mount rootfs to itself (required for pivot_root) */
   if (mount(cfg->rootfs_path, cfg->rootfs_path, NULL, MS_BIND | MS_REC, NULL) <
       0)
     ds_die("Failed to bind mount rootfs: %s", strerror(errno));
 
-  /* 3. Change directory to rootfs */
+  /* 4. Change directory to rootfs */
   if (chdir(cfg->rootfs_path) < 0)
     ds_die("Failed to chdir to rootfs: %s", strerror(errno));
 
-  /* 3.1 Read UUID from sync file if not already provided (parity with v2) */
+  /* 4.1 Read UUID from sync file if not already provided (parity with v2) */
   if (cfg->uuid[0] == '\0') {
     read_file(".droidspaces-uuid", cfg->uuid, sizeof(cfg->uuid));
   }
   unlink(".droidspaces-uuid");
 
-  /* 4. Prepare .old_root for pivot_root */
+  /* 5. Prepare .old_root for pivot_root */
   mkdir(".old_root", 0755);
 
   /* 5. Setup /dev (tmpfs or devtmpfs) */

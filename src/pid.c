@@ -351,7 +351,7 @@ int show_containers(void) {
   return 0;
 }
 
-static int is_container_init(pid_t pid) {
+int is_container_init(pid_t pid) {
   char path[PATH_MAX];
   snprintf(path, sizeof(path), "/proc/%d/status", pid);
   FILE *f = fopen(path, "r");
@@ -384,7 +384,11 @@ int scan_containers(void) {
   if (collect_pids(&pids, &count) < 0)
     return -1;
 
-  /* Get list of already tracked PIDs */
+  /* 1. Tracked Mount Points (to detect orphaned mounts) */
+  char tracked_mounts[128][PATH_MAX];
+  int tracked_mount_count = 0;
+
+  /* 2. Get list of already tracked PIDs */
   pid_t tracked[128];
   int tracked_count = 0;
   DIR *d = opendir(get_pids_dir());
@@ -394,12 +398,17 @@ int scan_containers(void) {
       if (!is_pid_file(ent->d_name))
         continue;
       char pf[PATH_MAX];
-      if (snprintf(pf, sizeof(pf), "%.4070s/%.24s", get_pids_dir(),
-                   ent->d_name) >= (int)sizeof(pf))
-        continue;
+      snprintf(pf, sizeof(pf), "%s/%s", get_pids_dir(), ent->d_name);
+
       pid_t p;
       if (read_and_validate_pid(pf, &p) == 0) {
         tracked[tracked_count++] = p;
+        /* Also capture the mount path if tracked */
+        if (tracked_mount_count < 128) {
+          if (read_mount_path(pf, tracked_mounts[tracked_mount_count],
+                              PATH_MAX) > 0)
+            tracked_mount_count++;
+        }
       } else if (p == 0) {
         /* Stale PID file, nuke it */
         unlink(pf);
@@ -409,7 +418,8 @@ int scan_containers(void) {
     closedir(d);
   }
 
-  int found = 0;
+  /* 3. Scan for untracked containers (init processes) */
+  int untracked_found = 0;
   for (size_t i = 0; i < count; i++) {
     pid_t pid = pids[i];
     if (pid <= 1)
@@ -428,10 +438,8 @@ int scan_containers(void) {
 
     /* Validate it's a Droidspaces container and the init process */
     if (is_valid_container_pid(pid) && is_container_init(pid)) {
-      printf("[%d] Found untracked container (init) at /proc/%d/root\n", pid,
-             pid);
+      ds_log("Found untracked container PID %d", pid);
 
-      /* Construct the /proc/pid/root path to generate a name */
       char proc_root[PATH_MAX];
       snprintf(proc_root, sizeof(proc_root), "/proc/%d/root", pid);
 
@@ -449,15 +457,52 @@ int scan_containers(void) {
           }
         }
       }
-      found++;
+      untracked_found++;
     }
   }
   free(pids);
 
-  if (found == 0)
-    ds_log("No untracked containers found.");
+  /* 4. Scan for orphaned loop mounts in /mnt/Droidspaces */
+  int orphaned_found = 0;
+  DIR *md = opendir(DS_IMG_MOUNT_ROOT_UNIVERSAL);
+  if (md) {
+    struct dirent *ent;
+    while ((ent = readdir(md)) != NULL) {
+      if (ent->d_name[0] == '.')
+        continue;
+
+      char mpath[PATH_MAX];
+      snprintf(mpath, sizeof(mpath), "%s/%s", DS_IMG_MOUNT_ROOT_UNIVERSAL,
+               ent->d_name);
+
+      if (is_mountpoint(mpath)) {
+        int is_tracked = 0;
+        for (int i = 0; i < tracked_mount_count; i++) {
+          if (strcmp(mpath, tracked_mounts[i]) == 0) {
+            is_tracked = 1;
+            break;
+          }
+        }
+
+        if (!is_tracked) {
+          ds_warn("Found orphaned mount: %s, cleaning up...", mpath);
+          unmount_rootfs_img(mpath);
+          orphaned_found++;
+        }
+      } else {
+        /* If it's just an empty directory in /mnt/Droidspaces, clean it too */
+        rmdir(mpath);
+      }
+    }
+    closedir(md);
+  }
+
+  if (untracked_found == 0 && orphaned_found == 0)
+    ds_log("No untracked resources found.");
   else
-    ds_log("Scan complete: found %d untracked container(s).", found);
+    ds_log(
+        "Scan complete: found %d container(s), cleaned %d orphaned mount(s).",
+        untracked_found, orphaned_found);
 
   return 0;
 }

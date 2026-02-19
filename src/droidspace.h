@@ -51,7 +51,7 @@
  * ---------------------------------------------------------------------------*/
 
 #define DS_PROJECT_NAME "Droidspaces"
-#define DS_VERSION "3.2.1"
+#define DS_VERSION "3.2.2"
 #define DS_AUTHOR "ravindu644, Antigravity"
 #define DS_REPO "https://github.com/ravindu644/Droidspaces-OSS"
 #define DS_MAX_TTYS 6
@@ -224,6 +224,7 @@ int get_container_mount_fstype(pid_t pid, const char *path, char *fstype,
                                size_t size);
 int detect_android_storage_in_container(pid_t pid);
 int detect_hw_access_in_container(pid_t pid);
+int is_mountpoint(const char *path);
 
 /* ---------------------------------------------------------------------------
  * network.c
@@ -264,6 +265,7 @@ int generate_container_name(const char *rootfs_path, char *name, size_t size);
 int find_available_name(const char *base_name, char *final_name, size_t size);
 int resolve_pidfile_from_name(const char *name, char *pidfile, size_t size);
 int auto_resolve_pidfile(struct ds_config *cfg);
+int is_container_init(pid_t pid);
 int count_running_containers(char *first_name, size_t size);
 pid_t find_container_init_pid(const char *uuid);
 int sync_pidfile(const char *src_pidfile, const char *name);

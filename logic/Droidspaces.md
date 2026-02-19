@@ -6,7 +6,7 @@
 
 Droidspaces is a lightweight, zero-virtualization container runtime designed to run full Linux distributions (Ubuntu, Alpine, etc.) with systemd or openrc as PID 1, natively on Android devices. It achieves process isolation through Linux PID, IPC, MNT, and UTS namespaces — the same kernel primitives used by Docker and LXC — but targets the constrained and idiosyncratic Android kernel environment where many standard container tools refuse to operate.
 
-This document is a complete internal architecture reference for **Droidspaces v3.2.0**. Every struct, every syscall, every mount, and every design decision is documented here with the intent that a future implementer could rewrite this project from scratch without ever reading the original source. Where the implementation is elegant, I say so. Where it is broken or fragile, I say so with equal honesty.
+This document is a complete internal architecture reference for **Droidspaces v3.2.2**. Every struct, every syscall, every mount, and every design decision is documented here with the intent that a future implementer could rewrite this project from scratch without ever reading the original source. Where the implementation is elegant, I say so. Where it is broken or fragile, I say so with equal honesty.
 
 The codebase is approximately **3,300 lines of C** across 12 `.c` files and 1 master header, compiled as a single static binary against musl libc.
 
@@ -259,10 +259,11 @@ When `--volatile` (`-V`) is used, Droidspaces wraps the rootfs in an ephemeral w
 3. **Layering**: 
    - **Lowerdir**: The original rootfs (or RO image mount).
    - **Upperdir/Workdir**: Managed in a dedicated `tmpfs` mounted at the Volatile workspace path.
-4. **Merged View**: Mounts the OverlayFS to `<workspace>/merged`.
+    - **Merged View**: Mounts the OverlayFS to `<workspace>/merged`.
+    - **SELinux Fix (Android)**: On Android, the overlay is mounted with `context="u:object_r:tmpfs:s0"` to allow standard write operations within the upperdir.
 5. **Redirection**: The configuration's `rootfs_path` is updated to point to this merged view for the duration of the boot.
 
-All file modifications happen in the `tmpfs`-backed `upperdir`. On container exit, the monitor process unmounts the overlay and recursively deletes the workspace, ensuring no changes persist.
+All file modifications happen in the `tmpfs`-backed `upperdir`. On container exit, the monitor process unmounts the overlay and recursively deletes the workspace, ensuring no changes persist. Droidspaces ensures that the overlay is cleaned up *before* the underlying rootfs image is unmounted.
 
 **Known Limitation — f2fs (Android):**
 Most Android devices use f2fs for `/data`. OverlayFS on many Android kernels (4.14, 5.15) does not support f2fs as a `lowerdir`. This means **volatile mode + directory rootfs (`-r`) will fail** when the rootfs lives on f2fs. Droidspaces detects this at runtime (via `statfs()` magic `0xF2F52010`) and prints a clear diagnostic. **Workaround**: Use a rootfs image (`-i`) instead — the ext4 loop mount provides a compatible lowerdir.
@@ -796,8 +797,8 @@ if (!stopped) {
 ```c
 cleanup_container_resources(cfg, 0, skip_unmount);
 ```
-- `sync()` — flush filesystem buffers
 - Restore Android optimizations (`android_optimizations(0)`)
+- **Robust Cleanup (v3.2.1+)**: Adds a settle-time for lazy unmounts (`MNT_DETACH`) before attempting to remove host-side mount directories. This prevents leftover empty directories in `/mnt/Droidspaces/` when the kernel is slow to release loop devices.
 - Remove firmware path entry
 - **Cleanup Volatile Overlay**: Calls `cleanup_volatile_overlay()` to unmount the OverlayFS, unmount the workspace `tmpfs`, and recursively delete the temporary directory.
 - Unmount rootfs.img if applicable (unless `skip_unmount` for restart)

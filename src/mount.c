@@ -12,7 +12,7 @@
  * ---------------------------------------------------------------------------*/
 
 /* Check if a path is a mountpoint */
-static int is_mountpoint(const char *path) {
+int is_mountpoint(const char *path) {
   struct stat st1, st2;
   if (stat(path, &st1) < 0)
     return 0;
@@ -39,7 +39,9 @@ static int force_unlink(const char *path) {
   return 0;
 }
 
-/* Find available mount point in /mnt/Droidspaces/ using suggested name */
+/* Find available mount point in /mnt/Droidspaces/ using container name.
+ * If a mount point already exists for this name but is not associated
+ * with an active container (stale), it will be cleaned up. */
 static int find_available_mountpoint(const char *name, char *mount_path,
                                      size_t size) {
   const char *base_dir = DS_IMG_MOUNT_ROOT_UNIVERSAL;
@@ -47,37 +49,30 @@ static int find_available_mountpoint(const char *name, char *mount_path,
   /* Create base directory if it doesn't exist */
   mkdir(base_dir, 0755);
 
-  /* Case 1: Use exact name if available */
   snprintf(mount_path, size, "%s/%s", base_dir, name);
-  if (access(mount_path, F_OK) != 0) {
-    if (mkdir(mount_path, 0755) == 0)
-      return 0;
-  } else {
-    /* Path exists, check if it's a directory and NOT a mountpoint */
-    struct stat st;
-    if (stat(mount_path, &st) == 0 && S_ISDIR(st.st_mode) &&
-        !is_mountpoint(mount_path)) {
-      return 0;
-    }
-  }
 
-  /* Case 2: Fallback to name-N if name is already a mountpoint */
-  for (int i = 1; i < DS_MAX_MOUNT_TRIES; i++) {
-    snprintf(mount_path, size, "%s/%s-%d", base_dir, name, i);
-
-    if (access(mount_path, F_OK) != 0) {
-      if (mkdir(mount_path, 0755) == 0)
-        return 0;
-    } else {
-      struct stat st;
-      if (stat(mount_path, &st) == 0 && S_ISDIR(st.st_mode) &&
-          !is_mountpoint(mount_path)) {
-        return 0;
+  if (access(mount_path, F_OK) == 0) {
+    if (is_mountpoint(mount_path)) {
+      /* This is a stale mount point from a previous crashed run.
+       * (We know it's stale because start_rootfs ensures the container name
+       * itself is unique among currently running containers). */
+      ds_warn("Found stale mount at %s, cleaning up...", mount_path);
+      if (umount2(mount_path, MNT_DETACH) < 0) {
+        /* If detach fails, try unmount -d to clean loop device */
+        char *umount_argv[] = {"umount", "-d", "-l", mount_path, NULL};
+        run_command_quiet(umount_argv);
       }
     }
+    return 0;
   }
 
-  return -1;
+  if (mkdir(mount_path, 0755) < 0) {
+    ds_error("Failed to create mount directory %s: %s", mount_path,
+             strerror(errno));
+    return -1;
+  }
+
+  return 0;
 }
 
 /* ---------------------------------------------------------------------------
@@ -392,6 +387,17 @@ int setup_volatile_overlay(struct ds_config *cfg) {
   p += 9;
   memcpy(p, work, len);
   p += len;
+
+  /* On Android, SELinux blocks writes through overlay when the upperdir
+   * creates files with tmpfs context that can't associate with the overlay's
+   * default filesystem label. Use tmpfs context to match the upperdir. */
+  if (is_android()) {
+    const char *ctx = ",context=\"u:object_r:tmpfs:s0\"";
+    size_t ctx_len = strlen(ctx);
+    memcpy(p, ctx, ctx_len);
+    p += ctx_len;
+  }
+
   *p = '\0';
 
   if (domount("overlay", merged, "overlay", 0, opts) < 0) {
@@ -479,14 +485,14 @@ int mount_rootfs_img(const char *img_path, char *mount_point, size_t mp_size,
     return -1;
   }
 
-  ds_log("Mounting rootfs image %s on %s...", img_path, mount_point);
-
   /* Run e2fsck first if it's an ext image */
   char *e2fsck_argv[] = {"e2fsck", "-f", "-y", (char *)(uintptr_t)img_path,
                          NULL};
   if (run_command_quiet(e2fsck_argv) == 0) {
     ds_log("Image checked and repaired successfully.");
   }
+
+  ds_log("Mounting rootfs image %s on %s...", img_path, mount_point);
 
   /* Mount via loop device */
   char *opts = readonly ? "loop,ro" : "loop";
@@ -504,16 +510,28 @@ int unmount_rootfs_img(const char *mount_point) {
   if (!mount_point || !mount_point[0])
     return 0;
 
-  /* Try unmounting: prefer aggressive lazy unmount syscall first */
+  ds_log("Unmounting rootfs image from %s...", mount_point);
+
+  /* 1. Try lazy unmount first (most reliable for detached loop mounts) */
   if (umount2(mount_point, MNT_DETACH) < 0) {
-    /* Fallback to standard umount via shell with loop detach flag */
+    /* Fallback to shell command with loop detach */
     char *umount_argv[] = {"umount", "-d", "-l", (char *)(uintptr_t)mount_point,
                            NULL};
     run_command_quiet(umount_argv);
   }
 
-  /* Try to remove the directory (will only succeed if empty) */
-  rmdir(mount_point);
+  /* 2. Give the kernel a moment to settle the unmount (critical for loop
+   * devices) */
+  usleep(100000); /* 100ms */
+
+  /* 3. Try to remove the directory */
+  if (rmdir(mount_point) < 0 && errno != ENOENT) {
+    /* If it failed because it wasn't empty, it might still be a mountpoint or
+     * contain files. Try one more time with a slightly longer wait. */
+    usleep(200000);
+    rmdir(mount_point);
+  }
+
   return 0;
 }
 

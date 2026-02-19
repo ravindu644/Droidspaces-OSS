@@ -38,22 +38,25 @@ static void cleanup_container_resources(struct ds_config *cfg, pid_t pid,
   resolve_pidfile_from_name(cfg->container_name, global_pidfile,
                             sizeof(global_pidfile));
 
-  /* 3. Handle rootfs image unmount */
+  /* 3. Handle Volatile Overlay Cleanup (upper/work/merged)
+   * This MUST happen before unmounting the lower rootfs image. */
+  if (cfg->volatile_mode) {
+    cleanup_volatile_overlay(cfg);
+  }
+
+  /* 4. Handle rootfs image unmount */
   char mount_point[PATH_MAX];
   if (read_mount_path(cfg->pidfile, mount_point, sizeof(mount_point)) > 0) {
     if (!skip_unmount)
       unmount_rootfs_img(mount_point);
   }
 
-  /* 4. Remove tracking info and unlink PID files */
+  /* 5. Remove tracking info and unlink PID files */
   remove_mount_path(cfg->pidfile);
   if (cfg->pidfile[0])
     unlink(cfg->pidfile);
-  if (strcmp(cfg->pidfile, global_pidfile) != 0)
+  if (global_pidfile[0] && strcmp(cfg->pidfile, global_pidfile) != 0)
     unlink(global_pidfile);
-
-  /* 5. Cleanup volatile overlay if applicable */
-  cleanup_volatile_overlay(cfg);
 }
 
 /* ---------------------------------------------------------------------------
@@ -159,18 +162,23 @@ int start_rootfs(struct ds_config *cfg) {
 
   generate_uuid(cfg->uuid, sizeof(cfg->uuid));
 
-  /* 1.5 Handle Volatile Mode (OverlayFS)
-   * This MUST happen before we write any sync files to rootfs */
+  /* Pre-populate volatile_dir for monitor cleanup (actual overlay setup
+   * happens inside internal_boot's isolated mount namespace) */
   if (cfg->volatile_mode) {
-    if (setup_volatile_overlay(cfg) < 0)
-      return -1;
+    snprintf(cfg->volatile_dir, sizeof(cfg->volatile_dir),
+             "%s/" DS_VOLATILE_SUBDIR "/%s", get_workspace_dir(),
+             cfg->container_name);
   }
 
-  /* Write UUID sync file for boot sequence */
-  char uuid_sync[PATH_MAX];
-  snprintf(uuid_sync, sizeof(uuid_sync), "%.4070s/.droidspaces-uuid",
-           cfg->rootfs_path);
-  write_file(uuid_sync, cfg->uuid);
+  /* Write UUID sync file for boot sequence
+   * Skip in volatile mode: rootfs.img is mounted RO, and UUID
+   * is already in cfg (survives fork). */
+  if (!cfg->volatile_mode) {
+    char uuid_sync[PATH_MAX];
+    snprintf(uuid_sync, sizeof(uuid_sync), "%.4070s/.droidspaces-uuid",
+             cfg->rootfs_path);
+    write_file(uuid_sync, cfg->uuid);
+  }
 
   /* 2. Parent-side PTY allocation (LXC Model) */
   /* CRITICAL: Before forking, verify /sbin/init exists in the rootfs */
@@ -480,6 +488,9 @@ int enter_rootfs(struct ds_config *cfg, const char *user) {
   if (check_status(cfg, &pid) < 0)
     return -1;
 
+  ds_log("Entering container %s as %s...", cfg->container_name,
+         user ? user : "root");
+
   int sv[2];
   if (socketpair(AF_UNIX, SOCK_STREAM, 0, sv) < 0)
     return -1;
@@ -588,6 +599,8 @@ int run_in_rootfs(struct ds_config *cfg, int argc, char **argv) {
   pid_t pid;
   if (check_status(cfg, &pid) < 0)
     return -1;
+
+  ds_log("Executing command in container %s...", cfg->container_name);
 
   pid_t child = fork();
   if (child < 0)
