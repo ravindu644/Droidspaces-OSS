@@ -264,6 +264,9 @@ When `--volatile` (`-V`) is used, Droidspaces wraps the rootfs in an ephemeral w
 
 All file modifications happen in the `tmpfs`-backed `upperdir`. On container exit, the monitor process unmounts the overlay and recursively deletes the workspace, ensuring no changes persist.
 
+**Known Limitation — f2fs (Android):**
+Most Android devices use f2fs for `/data`. OverlayFS on many Android kernels (4.14, 5.15) does not support f2fs as a `lowerdir`. This means **volatile mode + directory rootfs (`-r`) will fail** when the rootfs lives on f2fs. Droidspaces detects this at runtime (via `statfs()` magic `0xF2F52010`) and prints a clear diagnostic. **Workaround**: Use a rootfs image (`-i`) instead — the ext4 loop mount provides a compatible lowerdir.
+
 **What is NOT used and why:**
 - `CLONE_NEWNET` — The container shares the host network. Deliberate design choice for simplicity on Android.
 - `CLONE_NEWUSER` — Not used because Android kernels often lack support, and the tool requires root anyway.

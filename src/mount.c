@@ -384,7 +384,21 @@ int setup_volatile_overlay(struct ds_config *cfg) {
   *p = '\0';
 
   if (domount("overlay", merged, "overlay", 0, opts) < 0) {
-    ds_error("OverlayFS mount failed. Your kernel might not support it.");
+    /* Check if lowerdir is on f2fs — a known incompatibility */
+    struct statfs sfs;
+    if (statfs(cfg->rootfs_path, &sfs) == 0 && sfs.f_type == 0xF2F52010) {
+      ds_error(
+          "OverlayFS failed: Your rootfs is on f2fs, which is not "
+          "supported as an OverlayFS lower layer on most Android kernels.");
+      ds_error("Tip: Use a rootfs image (-i) instead of a directory (-r) "
+               "for volatile mode on f2fs partitions.");
+    } else {
+      ds_error("OverlayFS mount failed. Your kernel might not support it.");
+    }
+    /* Cleanup: unmount tmpfs and remove workspace */
+    umount2(base, MNT_DETACH);
+    remove_recursive(cfg->volatile_dir);
+    cfg->volatile_dir[0] = '\0';
     return -1;
   }
 
