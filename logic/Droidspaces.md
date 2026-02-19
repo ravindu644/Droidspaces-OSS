@@ -294,9 +294,9 @@ This is required by `pivot_root(2)` — the new root must be a mount point. For 
 ```c
 setup_custom_binds(cfg, cfg->rootfs_path);
 ```
-Iterates through `--bind-mount` entries and performs recursive bind mounts from host to container. It uses `mkdir_p` to automatically create parent directories inside the rootfs if they don't exist.
+Iterates through `--bind-mount` entries and performs recursive bind mounts from host to container. It uses `mkdir_p` to automatically create parent directories inside the rootfs if they don't exist. 
 
-**Step 5 — chdir to rootfs:**
+**Resilience (v3.2.0+)**: If a host source path is missing or the mount fails, Droidspaces issues a warning and skips the specific entry rather than failing the entire boot sequence ("soft-fail" model).
 ```c
 chdir(cfg->rootfs_path);
 ```

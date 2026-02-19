@@ -426,6 +426,13 @@ int setup_custom_binds(struct ds_config *cfg, const char *rootfs) {
     char tgt[PATH_MAX];
     snprintf(tgt, sizeof(tgt), "%s%s", rootfs, cfg->binds[i].dest);
 
+    /* Check if source exists on host */
+    if (access(cfg->binds[i].src, F_OK) != 0) {
+      ds_warn("Skip bind mount: source path not found on host: %s",
+              cfg->binds[i].src);
+      continue;
+    }
+
     /* Ensure parent directory exists */
     char parent[PATH_MAX];
     safe_strncpy(parent, tgt, sizeof(parent));
@@ -437,8 +444,9 @@ int setup_custom_binds(struct ds_config *cfg, const char *rootfs) {
 
     /* Perform bind mount */
     if (bind_mount(cfg->binds[i].src, tgt) < 0) {
-      ds_error("Failed to bind mount %s on %s", cfg->binds[i].src, tgt);
-      return -1;
+      ds_warn("Failed to bind mount %s on %s (skipping)", cfg->binds[i].src,
+              tgt);
+      continue;
     }
   }
 
