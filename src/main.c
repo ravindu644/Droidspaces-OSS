@@ -40,11 +40,9 @@ void print_usage(void) {
   printf("  -p, --pidfile=PATH        Path to pidfile\n");
   printf("  -h, --hostname=NAME       Set container hostname\n");
   printf("  -f, --foreground          Run in foreground (attach console)\n");
-  printf("  --hw-access               Enable full hardware access (mount "
-         "devtmpfs)\n");
-  printf("  --enable-ipv6             Enable IPv6 support\n");
-  printf("  --enable-android-storage  Mount Android storage (/sdcard)\n");
-  printf("  --selinux-permissive      Set SELinux to permissive mode\n");
+  printf("  -V, --volatile            Discard changes on exit (OverlayFS)\n");
+  printf(
+      "  -B, --bind-mount=SRC:DEST Bind mount host directory into container\n");
   printf("  --help                    Show this help message\n\n");
 
   printf(C_BOLD "Examples:" C_RESET "\n");
@@ -72,6 +70,8 @@ int main(int argc, char **argv) {
       {"enable-ipv6", no_argument, 0, 'I'},
       {"enable-android-storage", no_argument, 0, 'S'},
       {"selinux-permissive", no_argument, 0, 'P'},
+      {"volatile", no_argument, 0, 'V'},
+      {"bind-mount", required_argument, 0, 'B'},
       {"help", no_argument, 0, 'v'},
       {0, 0, 0, 0}};
 
@@ -87,7 +87,8 @@ int main(int argc, char **argv) {
    */
   const char *discovered_cmd = NULL;
   int temp_optind = optind;
-  while (getopt_long(argc, argv, "+r:i:n:p:h:fHISPv", long_options, NULL) != -1)
+  while (getopt_long(argc, argv, "+r:i:n:p:h:fHISPvVB:", long_options, NULL) !=
+         -1)
     ;
   if (optind < argc)
     discovered_cmd = argv[optind];
@@ -95,7 +96,8 @@ int main(int argc, char **argv) {
 
   int strict = (discovered_cmd && (strcmp(discovered_cmd, "run") == 0 ||
                                    strcmp(discovered_cmd, "enter") == 0));
-  const char *optstring = strict ? "+r:i:n:p:h:fHISPv" : "r:i:n:p:h:fHISPv";
+  const char *optstring =
+      strict ? "+r:i:n:p:h:fHISPvVB:" : "r:i:n:p:h:fHISPvVB:";
 
   int opt;
   while ((opt = getopt_long(argc, argv, optstring, long_options, NULL)) != -1) {
@@ -130,6 +132,27 @@ int main(int argc, char **argv) {
     case 'P':
       cfg.selinux_permissive = 1;
       break;
+    case 'V':
+      cfg.volatile_mode = 1;
+      break;
+    case 'B': {
+      if (cfg.bind_count >= DS_MAX_BINDS) {
+        ds_error("Too many bind mounts (max %d)", DS_MAX_BINDS);
+        return 1;
+      }
+      char *sep = strchr(optarg, ':');
+      if (!sep) {
+        ds_error("Invalid bind mount format: %s (expected SRC:DEST)", optarg);
+        return 1;
+      }
+      *sep = '\0';
+      safe_strncpy(cfg.binds[cfg.bind_count].src, optarg,
+                   sizeof(cfg.binds[cfg.bind_count].src));
+      safe_strncpy(cfg.binds[cfg.bind_count].dest, sep + 1,
+                   sizeof(cfg.binds[cfg.bind_count].dest));
+      cfg.bind_count++;
+      break;
+    }
     case 'v':
       print_usage();
       return 0;

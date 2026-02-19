@@ -312,6 +312,127 @@ int setup_cgroups(void) {
   return 0;
 }
 
+int setup_volatile_overlay(struct ds_config *cfg) {
+  if (!cfg->volatile_mode)
+    return 0;
+
+  if (grep_file("/proc/filesystems", "overlay") != 1) {
+    ds_error("OverlayFS is not supported by your kernel. Volatile mode cannot "
+             "be used.");
+    return -1;
+  }
+
+  ds_log("Entering volatile mode (OverlayFS)...");
+
+  /* 1. Create temporary workspace in Droidspaces/Volatile/<uuid> */
+  char base[PATH_MAX];
+  snprintf(base, sizeof(base), "%s/" DS_VOLATILE_SUBDIR "/%s",
+           get_workspace_dir(), cfg->uuid);
+  if (mkdir_p(base, 0755) < 0) {
+    ds_error("Failed to create volatile workspace: %s", base);
+    return -1;
+  }
+  safe_strncpy(cfg->volatile_dir, base, sizeof(cfg->volatile_dir));
+
+  /* 2. Mount tmpfs as the backing store for upper/work */
+  if (domount("none", base, "tmpfs", 0, "size=50%,mode=755") < 0)
+    return -1;
+
+  /* 3. Create subdirectories */
+  char upper[PATH_MAX + 32], work[PATH_MAX + 32], merged[PATH_MAX + 32];
+  snprintf(upper, sizeof(upper), "%s/upper", base);
+  snprintf(work, sizeof(work), "%s/work", base);
+  snprintf(merged, sizeof(merged), "%s/merged", base);
+  mkdir(upper, 0755);
+  mkdir(work, 0755);
+  mkdir(merged, 0755);
+
+  /* 4. Perform Overlay mount */
+  char opts[32768];
+  char *p = opts;
+  size_t len;
+
+  len = strlen(cfg->rootfs_path);
+  memcpy(p, "lowerdir=", 9);
+  p += 9;
+  memcpy(p, cfg->rootfs_path, len);
+  p += len;
+
+  len = strlen(upper);
+  memcpy(p, ",upperdir=", 10);
+  p += 10;
+  memcpy(p, upper, len);
+  p += len;
+
+  len = strlen(work);
+  memcpy(p, ",workdir=", 9);
+  p += 9;
+  memcpy(p, work, len);
+  p += len;
+  *p = '\0';
+
+  if (domount("overlay", merged, "overlay", 0, opts) < 0) {
+    ds_error("OverlayFS mount failed. Your kernel might not support it.");
+    return -1;
+  }
+
+  /* 5. Switch rootfs path to the merged view */
+  ds_log("OverlayFS ready: Changes will be written to RAM and lost on exit.");
+  safe_strncpy(cfg->rootfs_path, merged, sizeof(cfg->rootfs_path));
+
+  return 0;
+}
+
+int cleanup_volatile_overlay(struct ds_config *cfg) {
+  if (cfg->volatile_dir[0] == '\0')
+    return 0;
+
+  ds_log("Cleaning up volatile overlay...");
+
+  char merged[PATH_MAX + 32];
+  snprintf(merged, sizeof(merged), "%s/merged", cfg->volatile_dir);
+
+  /* Unmount merged (lazy) */
+  umount2(merged, MNT_DETACH);
+
+  /* Unmount base tmpfs (lazy) */
+  umount2(cfg->volatile_dir, MNT_DETACH);
+
+  /* Remove directories */
+  remove_recursive(cfg->volatile_dir);
+
+  return 0;
+}
+
+int setup_custom_binds(struct ds_config *cfg, const char *rootfs) {
+  if (cfg->bind_count == 0)
+    return 0;
+
+  ds_log("Setting up %d custom bind mount(s)...", cfg->bind_count);
+
+  for (int i = 0; i < cfg->bind_count; i++) {
+    char tgt[PATH_MAX];
+    snprintf(tgt, sizeof(tgt), "%s%s", rootfs, cfg->binds[i].dest);
+
+    /* Ensure parent directory exists */
+    char parent[PATH_MAX];
+    safe_strncpy(parent, tgt, sizeof(parent));
+    char *slash = strrchr(parent, '/');
+    if (slash) {
+      *slash = '\0';
+      mkdir_p(parent, 0755);
+    }
+
+    /* Perform bind mount */
+    if (bind_mount(cfg->binds[i].src, tgt) < 0) {
+      ds_error("Failed to bind mount %s on %s", cfg->binds[i].src, tgt);
+      return -1;
+    }
+  }
+
+  return 0;
+}
+
 /* ---------------------------------------------------------------------------
  * Rootfs Image Handling
  * ---------------------------------------------------------------------------*/

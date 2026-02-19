@@ -6,6 +6,7 @@
  */
 
 #include "droidspace.h"
+#include <ftw.h>
 
 /* ---------------------------------------------------------------------------
  * String helpers
@@ -16,6 +17,52 @@ void safe_strncpy(char *dst, const char *src, size_t size) {
     return;
   strncpy(dst, src, size - 1);
   dst[size - 1] = '\0';
+}
+
+int mkdir_p(const char *path, mode_t mode) {
+  char tmp[PATH_MAX];
+  char *p = NULL;
+  size_t len;
+
+  snprintf(tmp, sizeof(tmp), "%s", path);
+  len = strlen(tmp);
+  if (len == 0)
+    return 0;
+  if (tmp[len - 1] == '/')
+    tmp[len - 1] = '\0';
+
+  for (p = tmp + 1; *p; p++) {
+    if (*p == '/') {
+      *p = '\0';
+      if (mkdir(tmp, mode) < 0 && errno != EEXIST)
+        return -1;
+      *p = '/';
+    }
+  }
+  if (mkdir(tmp, mode) < 0 && errno != EEXIST)
+    return -1;
+  return 0;
+}
+
+static int remove_recursive_handler(const char *fpath, const struct stat *sb,
+                                    int tflag, struct FTW *ftwbuf) {
+  (void)sb;
+  (void)tflag;
+  (void)ftwbuf;
+  int r = remove(fpath);
+  if (r)
+    perror(fpath);
+  return r;
+}
+
+#if !defined(_XOPEN_SOURCE) || _XOPEN_SOURCE < 500
+#undef _XOPEN_SOURCE
+#define _XOPEN_SOURCE 500
+#endif
+#include <ftw.h>
+
+int remove_recursive(const char *path) {
+  return nftw(path, remove_recursive_handler, 64, FTW_DEPTH | FTW_PHYS);
 }
 
 /* ---------------------------------------------------------------------------

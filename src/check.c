@@ -248,6 +248,8 @@ int check_requirements_detailed(void) {
                  "OPT");
   print_ds_check("TUN/TAP support", "Virtual network device support",
                  access("/dev/net/tun", F_OK) == 0, "OPT");
+  print_ds_check("OverlayFS support", "Required for --volatile mode",
+                 grep_file("/proc/filesystems", "overlay"), "OPT");
 
   /* FINAL SUMMARY */
   int missing_must = 0;

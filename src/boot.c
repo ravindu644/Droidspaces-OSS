@@ -134,6 +134,9 @@ int internal_boot(struct ds_config *cfg) {
     android_setup_storage(".");
   }
 
+  /* 11. Custom bind mounts */
+  setup_custom_binds(cfg, ".");
+
   /* 12. PIVOT_ROOT */
   if (syscall(SYS_pivot_root, ".", ".old_root") < 0)
     ds_die("pivot_root failed: %s", strerror(errno));

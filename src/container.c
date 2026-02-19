@@ -51,6 +51,9 @@ static void cleanup_container_resources(struct ds_config *cfg, pid_t pid,
     unlink(cfg->pidfile);
   if (strcmp(cfg->pidfile, global_pidfile) != 0)
     unlink(global_pidfile);
+
+  /* 5. Cleanup volatile overlay if applicable */
+  cleanup_volatile_overlay(cfg);
 }
 
 /* ---------------------------------------------------------------------------
@@ -148,6 +151,13 @@ int start_rootfs(struct ds_config *cfg) {
   }
 
   generate_uuid(cfg->uuid, sizeof(cfg->uuid));
+
+  /* 1.5 Handle Volatile Mode (OverlayFS)
+   * This MUST happen before we write any sync files to rootfs */
+  if (cfg->volatile_mode) {
+    if (setup_volatile_overlay(cfg) < 0)
+      return -1;
+  }
 
   /* Write UUID sync file for boot sequence */
   char uuid_sync[PATH_MAX];

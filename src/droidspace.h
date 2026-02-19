@@ -67,6 +67,8 @@
 #define DS_PIDS_SUBDIR "Pids"
 #define DS_IMG_MOUNT_ROOT_UNIVERSAL "/mnt/Droidspaces"
 #define DS_MAX_MOUNT_TRIES 1024
+#define DS_MAX_BINDS 16
+#define DS_VOLATILE_SUBDIR "Volatile"
 
 /* Device nodes to create in container /dev (when using tmpfs) */
 #define DS_CONTAINER_MARKER "droidspaces"
@@ -111,6 +113,12 @@
  * Data structures
  * ---------------------------------------------------------------------------*/
 
+/* Bind mount entry */
+struct ds_bind_mount {
+  char src[PATH_MAX];
+  char dest[PATH_MAX];
+};
+
 /* Terminal/TTY info — one per allocated PTY */
 struct ds_tty_info {
   int master;          /* master fd (stays in parent/monitor) */
@@ -133,16 +141,22 @@ struct ds_config {
   /* Flags */
   int foreground;         /* --foreground */
   int hw_access;          /* --hw-access */
+  int volatile_mode;      /* --volatile */
   int enable_ipv6;        /* --enable-ipv6 */
   int android_storage;    /* --enable-android-storage */
   int selinux_permissive; /* --selinux-permissive */
   char prog_name[64];     /* argv[0] for logging */
 
   /* Runtime state */
+  char volatile_dir[PATH_MAX];    /* temporary overlay dir */
   pid_t container_pid;            /* PID 1 of the container (host view) */
   pid_t intermediate_pid;         /* intermediate fork pid */
   int is_img_mount;               /* 1 if rootfs was loop-mounted from .img */
   char img_mount_point[PATH_MAX]; /* where the .img was mounted */
+
+  /* Custom bind mounts */
+  struct ds_bind_mount binds[DS_MAX_BINDS];
+  int bind_count;
 
   /* Terminal (console + ttys) */
   struct ds_tty_info console;
@@ -159,6 +173,8 @@ int write_file(const char *path, const char *content);
 int read_file(const char *path, char *buf, size_t size);
 ssize_t write_all(int fd, const void *buf, size_t count);
 int generate_uuid(char *buf, size_t size);
+int mkdir_p(const char *path, mode_t mode);
+int remove_recursive(const char *path);
 int collect_pids(pid_t **pids_out, size_t *count_out);
 int build_proc_root_path(pid_t pid, const char *suffix, char *buf, size_t size);
 int grep_file(const char *path, const char *pattern);
@@ -198,6 +214,9 @@ int setup_dev(const char *rootfs, int hw_access);
 int create_devices(const char *rootfs, int hw_access);
 int setup_devpts(int hw_access);
 int setup_cgroups(void);
+int setup_volatile_overlay(struct ds_config *cfg);
+int cleanup_volatile_overlay(struct ds_config *cfg);
+int setup_custom_binds(struct ds_config *cfg, const char *rootfs);
 int mount_rootfs_img(const char *img_path, char *mount_point, size_t mp_size);
 int unmount_rootfs_img(const char *mount_point);
 int get_container_mount_fstype(pid_t pid, const char *path, char *fstype,
