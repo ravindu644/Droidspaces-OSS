@@ -249,8 +249,8 @@ int main(int argc, char **argv) {
 
   /* Validate if command exists at all before root check */
   const char *valid_cmds[] = {"start", "stop",   "restart", "enter",
-                              "run",   "status", "info",    "show",
-                              "scan",  "docs",   NULL};
+                              "run",   "status", "pid",     "info",
+                              "show",  "scan",   "docs",    NULL};
   int found = 0;
   for (int i = 0; valid_cmds[i]; i++) {
     if (strcmp(cmd, valid_cmds[i]) == 0) {
@@ -333,6 +333,28 @@ int main(int argc, char **argv) {
              cfg.container_name);
       return 1;
     }
+  }
+
+  /* Machine-readable PID query — safe, never triggers cleanup.
+   * Prints just the integer PID, or the literal string "NONE".
+   * App uses this instead of 'status' to avoid PID file deletion races. */
+  if (strcmp(cmd, "pid") == 0) {
+    if (auto_resolve_pidfile(&cfg) < 0) {
+      printf("NONE\n");
+      return 1;
+    }
+    pid_t pid = 0;
+    if (read_and_validate_pid(cfg.pidfile, &pid) < 0 || pid <= 0) {
+      printf("NONE\n");
+      return 1;
+    }
+    /* Only confirm alive — do NOT call cleanup on failure */
+    if (kill(pid, 0) < 0) {
+      printf("NONE\n");
+      return 1;
+    }
+    printf("%d\n", (int)pid);
+    return 0;
   }
   if (strcmp(cmd, "info") == 0)
     return show_info(&cfg);

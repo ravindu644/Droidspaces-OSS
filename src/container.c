@@ -67,23 +67,20 @@ int is_valid_container_pid(pid_t pid) {
   char path[PATH_MAX];
   char buf[256];
 
-  /* 1. Check systemd marker */
-  build_proc_root_path(pid, "/run/systemd/container", path, sizeof(path));
-  if (read_file(path, buf, sizeof(buf)) < 0)
-    return 0;
-  if (!strstr(buf, "droidspaces"))
-    return 0;
-
-  /* 2. Check /run/droidspaces for version info */
+  /* Primary marker: /run/droidspaces must exist inside the container.
+   * This is the one authoritative marker written by droidspaces on boot.
+   * We do NOT require /run/systemd/container — Alpine/runit/openrc never
+   * write that file, causing scan to be blind to non-systemd distros. */
   build_proc_root_path(pid, "/run/droidspaces", path, sizeof(path));
   if (access(path, F_OK) != 0)
     return 0;
 
-  /* 3. Check cmdline for /sbin/init. Use a larger buffer for cmdline. */
+  /* Secondary check: cmdline must contain "init" (any init system).
+   * Accepts: /sbin/init, /bin/init, /usr/bin/runit-init, /bin/openrc-init */
   snprintf(path, sizeof(path), "/proc/%d/cmdline", pid);
   if (read_file(path, buf, sizeof(buf)) < 0)
     return 0;
-  if (!strstr(buf, "/sbin/init"))
+  if (!strstr(buf, "init"))
     return 0;
 
   return 1;
@@ -390,7 +387,7 @@ int start_rootfs(struct ds_config *cfg) {
 int stop_rootfs(struct ds_config *cfg, int skip_unmount) {
   pid_t pid;
   if (check_status(cfg, &pid) < 0) {
-    return 0;
+    return -1; /* Container not running — signal failure to caller */
   }
 
   ds_log("Stopping container '%s' (PID %d)...", cfg->container_name, pid);
