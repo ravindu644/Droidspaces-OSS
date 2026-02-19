@@ -442,8 +442,9 @@ int stop_rootfs(struct ds_config *cfg, int skip_unmount) {
 
     if (!killed) {
       ds_error("Container PID %d is in an unkillable state!", pid);
-      ds_die("This often happens on old Android kernels due to zombie "
-             "processes.\nPlease restart your device to clear it.");
+      ds_warn("This often happens on old Android kernels due to zombie "
+              "processes.\nPlease restart your device to clear it.");
+      ds_warn("Proceeding with best-effort host cleanup...");
     }
   }
 
