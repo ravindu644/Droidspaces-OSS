@@ -255,7 +255,7 @@ This split is deliberate: the monitor retains the host mount namespace so it can
 When `--volatile` (`-V`) is used, Droidspaces wraps the rootfs in an ephemeral writable layer:
 
 1. **Probe**: `setup_volatile_overlay()` checks `/proc/filesystems` for `overlay` support.
-2. **Workspace**: Creates a temporary structure in `/var/lib/Droidspaces/Volatile/<uuid>/`.
+2. **Workspace**: Creates a temporary structure in `/var/lib/Droidspaces/Volatile/<name>/`.
 3. **Layering**: 
    - **Lowerdir**: The original rootfs (or RO image mount).
    - **Upperdir/Workdir**: Managed in a dedicated `tmpfs` mounted at the Volatile workspace path.

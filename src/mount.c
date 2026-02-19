@@ -336,10 +336,10 @@ int setup_volatile_overlay(struct ds_config *cfg) {
 
   ds_log("Entering volatile mode (OverlayFS)...");
 
-  /* 1. Create temporary workspace in Droidspaces/Volatile/<uuid> */
+  /* 1. Create temporary workspace in Droidspaces/Volatile/<name> */
   char base[PATH_MAX];
   snprintf(base, sizeof(base), "%s/" DS_VOLATILE_SUBDIR "/%s",
-           get_workspace_dir(), cfg->uuid);
+           get_workspace_dir(), cfg->container_name);
   if (mkdir_p(base, 0755) < 0) {
     ds_error("Failed to create volatile workspace: %s", base);
     return -1;
