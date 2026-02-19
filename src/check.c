@@ -6,6 +6,8 @@
  */
 
 #include "droidspace.h"
+#include <linux/seccomp.h>
+#include <sys/prctl.h>
 
 /* ---------------------------------------------------------------------------
  * Static status variables
@@ -68,6 +70,11 @@ static int check_cgroup_v1(const char *sub) {
 static int check_cgroup_v2(void) {
   return access("/sys/fs/cgroup/cgroup.controllers", F_OK) == 0 ||
          grep_file("/proc/mounts", "cgroup2");
+}
+
+static int check_seccomp(void) {
+  /* Probe for SECCOMP_MODE_FILTER support */
+  return (prctl(PR_GET_SECCOMP, 0, 0, 0, 0) >= 0 || errno == EINVAL);
 }
 
 /* ---------------------------------------------------------------------------
@@ -209,6 +216,9 @@ int check_requirements_detailed(void) {
 
   print_ds_check("/sys filesystem", "Sys filesystem mount support",
                  access("/sys/kernel", F_OK) == 0, "MUST");
+
+  print_ds_check("Seccomp support", "Kernel support for Seccomp (Bypass Mode)",
+                 check_seccomp(), "MUST");
 
   /* RECOMMENDED */
   printf("\n" C_BOLD "[RECOMMENDED]" C_RESET

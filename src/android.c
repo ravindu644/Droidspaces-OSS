@@ -6,6 +6,11 @@
  */
 
 #include "droidspace.h"
+#include <linux/audit.h>
+#include <linux/filter.h>
+#include <linux/seccomp.h>
+#include <stddef.h>
+#include <sys/prctl.h>
 
 /* ---------------------------------------------------------------------------
  * Android detection
@@ -16,8 +21,9 @@ int is_android(void) {
   if (cached_result != -1)
     return cached_result;
 
-  /* Check for ANDROID_ROOT env var or presence of /system/bin/app_process */
-  if (getenv("ANDROID_ROOT") || access("/system/bin/app_process", F_OK) == 0)
+  /* Check for Android-specific environments or devices */
+  if (getenv("ANDROID_ROOT") || access("/system/bin/app_process", F_OK) == 0 ||
+      access("/dev/binder", F_OK) == 0 || access("/dev/ashmem", F_OK) == 0)
     cached_result = 1;
   else
     cached_result = 0;

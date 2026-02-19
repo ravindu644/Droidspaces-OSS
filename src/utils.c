@@ -483,3 +483,18 @@ int ds_recv_fd(int sock) {
 
   return *((int *)CMSG_DATA(cmsg));
 }
+
+/* ---------------------------------------------------------------------------
+ * System helpers
+ * ---------------------------------------------------------------------------*/
+
+int get_kernel_version(int *major, int *minor) {
+  struct utsname uts;
+  if (uname(&uts) < 0)
+    return -1;
+
+  if (sscanf(uts.release, "%d.%d", major, minor) != 2)
+    return -1;
+
+  return 0;
+}

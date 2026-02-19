@@ -13,6 +13,7 @@ VERSION := $(shell grep "DS_VERSION" $(SRC_DIR)/droidspace.h | awk '{print $$3}'
 SRCS = $(SRC_DIR)/main.c \
        $(SRC_DIR)/utils.c \
        $(SRC_DIR)/android.c \
+       $(SRC_DIR)/android_seccomp.c \
        $(SRC_DIR)/mount.c \
        $(SRC_DIR)/network.c \
        $(SRC_DIR)/terminal.c \
@@ -90,18 +91,26 @@ $(BINARY_NAME): $(OUT_DIR)
 	@echo "[+] Built: $(OUT_DIR)/$(BINARY_NAME)"
 
 # Build targets
+# Detection for native target
+NATIVE_ARCH_RAW := $(shell $(CC) -dumpmachine 2>/dev/null | cut -d'-' -f1 | sed 's/i.86/i686/')
+ifeq ($(NATIVE_ARCH_RAW),x86_64)
+  NATIVE_TARGET := x86_64-linux-musl
+else ifeq ($(NATIVE_ARCH_RAW),aarch64)
+  NATIVE_TARGET := aarch64-linux-musl
+else ifeq ($(NATIVE_ARCH_RAW),i686)
+  NATIVE_TARGET := i686-linux-musl
+else
+  NATIVE_TARGET := x86_64-linux-musl
+endif
+
+NATIVE_CC := $(call find-cc,$(NATIVE_TARGET))
+
 native:
-	@ARCH_TARGET=$(shell $(CC) -dumpmachine 2>/dev/null | cut -d'-' -f1 | sed 's/i.86/i686/'); \
-	if [ "$$ARCH_TARGET" = "x86_64" ]; then TARGET="x86_64-linux-musl"; \
-	elif [ "$$ARCH_TARGET" = "aarch64" ]; then TARGET="aarch64-linux-musl"; \
-	elif [ "$$ARCH_TARGET" = "i686" ]; then TARGET="i686-linux-musl"; \
-	else TARGET="x86_64-linux-musl"; fi; \
-	CROSS_CC="$(call find-cc,$$TARGET)"; \
-	if [ -n "$$CROSS_CC" ]; then \
-		$(MAKE) $(BINARY_NAME) CC=$$CROSS_CC; \
+	@if [ -n "$(NATIVE_CC)" ]; then \
+		$(MAKE) $(BINARY_NAME) CC=$(NATIVE_CC); \
 	else \
-		echo "Error: Musl toolchain for $$TARGET not found."; \
-		echo "Please run: ./install-musl.sh $$(echo $$TARGET | cut -d'-' -f1 | sed 's/i686/x86/')"; \
+		echo "Error: Musl toolchain for $(NATIVE_TARGET) not found."; \
+		echo "Please run: ./install-musl.sh $(shell echo $(NATIVE_TARGET) | cut -d'-' -f1 | sed 's/i686/x86/')"; \
 		exit 1; \
 	fi
 

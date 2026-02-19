@@ -175,6 +175,7 @@ int write_file(const char *path, const char *content);
 int read_file(const char *path, char *buf, size_t size);
 ssize_t write_all(int fd, const void *buf, size_t count);
 int generate_uuid(char *buf, size_t size);
+int get_kernel_version(int *major, int *minor);
 int mkdir_p(const char *path, mode_t mode);
 int remove_recursive(const char *path);
 int collect_pids(pid_t **pids_out, size_t *count_out);
@@ -204,6 +205,7 @@ int android_fill_dns_from_props(char *dns1, char *dns2, size_t size);
 void android_configure_iptables(void);
 void android_setup_paranoid_network_groups(void);
 int android_setup_storage(const char *rootfs_path);
+int android_seccomp_setup(void);
 
 /* ---------------------------------------------------------------------------
  * mount.c

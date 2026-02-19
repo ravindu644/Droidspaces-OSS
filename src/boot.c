@@ -8,7 +8,6 @@
 #include "droidspace.h"
 
 int internal_boot(struct ds_config *cfg) {
-
   /* 1. Isolated mount namespace */
   if (unshare(CLONE_NEWNS) < 0) {
     ds_error("Failed to unshare mount namespace: %s", strerror(errno));
@@ -19,6 +18,12 @@ int internal_boot(struct ds_config *cfg) {
   if (mount(NULL, "/", NULL, MS_REC | MS_PRIVATE, NULL) < 0) {
     ds_error("Failed to make / private: %s", strerror(errno));
     return -1;
+  }
+
+  /* Apply Android compatibility Seccomp filter to child processes.
+   * This neutralizes broken sandboxing/keyring logic in systemd. */
+  if (is_android()) {
+    android_seccomp_setup();
   }
 
   /* 2.5 Setup volatile overlay INSIDE the container's mount namespace.
