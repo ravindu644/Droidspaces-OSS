@@ -31,8 +31,11 @@ void print_usage(void) {
   printf("  show                      List all running containers\n");
   printf("  scan                      Scan for untracked containers\n");
   printf("  check                     Check system requirements\n");
+  printf("  docs                      Show interactive documentation\n");
+  printf("  help                      Show this help message\n");
+  printf("  version                   Show version information\n");
 
-  printf(C_BOLD "Options:" C_RESET "\n");
+  printf(C_BOLD "\nOptions:" C_RESET "\n");
   printf("  -r, --rootfs=PATH         Path to rootfs directory\n");
   printf("  -i, --rootfs-img=PATH     Path to rootfs image (.img)\n");
   printf("  -n, --name=NAME           Container name (auto-generated if "
@@ -162,7 +165,8 @@ int main(int argc, char **argv) {
       else
         ds_error(C_BOLD "Unrecognized option:" C_RESET " %s", argv[optind - 1]);
       printf("\n");
-      ds_log("Use " C_BOLD "%s --help" C_RESET " for usage information.",
+      ds_log("Use " C_BOLD "%s help" C_RESET " or " C_BOLD "--help" C_RESET
+             " for usage information.",
              argv[0]);
       return 1;
     default:
@@ -174,7 +178,8 @@ int main(int argc, char **argv) {
     ds_error(C_BOLD "Missing command" C_RESET
                     " (e.g., start, stop, enter, show)");
     printf("\n");
-    ds_log("Use " C_BOLD "%s --help" C_RESET " for usage information.",
+    ds_log("Use " C_BOLD "%s help" C_RESET " or " C_BOLD "--help" C_RESET
+           " for usage information.",
            argv[0]);
     return 1;
   }
@@ -208,7 +213,8 @@ int main(int argc, char **argv) {
   if (!found) {
     ds_error(C_BOLD "Unknown command:" C_RESET " %s", cmd);
     printf("\n");
-    ds_log("Use " C_BOLD "%s --help" C_RESET " for usage information.",
+    ds_log("Use " C_BOLD "%s help" C_RESET " or " C_BOLD "--help" C_RESET
+           " for usage information.",
            argv[0]);
     return 1;
   }
