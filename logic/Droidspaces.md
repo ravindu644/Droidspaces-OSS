@@ -6,7 +6,7 @@
 
 Droidspaces is a lightweight, zero-virtualization container runtime designed to run full Linux distributions (Ubuntu, Alpine, etc.) with systemd or openrc as PID 1, natively on Android devices. It achieves process isolation through Linux PID, IPC, MNT, and UTS namespaces — the same kernel primitives used by Docker and LXC — but targets the constrained and idiosyncratic Android kernel environment where many standard container tools refuse to operate.
 
-This document is a complete internal architecture reference for **Droidspaces v3.1.3**. Every struct, every syscall, every mount, and every design decision is documented here with the intent that a future implementer could rewrite this project from scratch without ever reading the original source. Where the implementation is elegant, I say so. Where it is broken or fragile, I say so with equal honesty.
+This document is a complete internal architecture reference for **Droidspaces v3.2.0**. Every struct, every syscall, every mount, and every design decision is documented here with the intent that a future implementer could rewrite this project from scratch without ever reading the original source. Where the implementation is elegant, I say so. Where it is broken or fragile, I say so with equal honesty.
 
 The codebase is approximately **3,300 lines of C** across 12 `.c` files and 1 master header, compiled as a single static binary against musl libc.
 
@@ -61,6 +61,9 @@ src/
 - **Hostname resolution:** Automatically maps `127.0.1.1` to the container hostname in `/etc/hosts` to fix `apt` and `sudo` resolution issues.
 - **PTY Allocation:** `enter` command allocates PTYs natively *inside* the container namespaces for perfect TTY isolation and `ps aux` accuracy.
 - **Security & De-duplication:** Environment setup, `os-release` parsing, and path resolution are consolidated into shared helpers with strict buffer bounds (`snprintf` with precision) and hardened I/O (`write_all`).
+- **Volatile Overlay Mode:** Leverages Linux OverlayFS to store all container changes in RAM, ensuring an ephemeral environment that is wiped on exit.
+- **Custom Bind Mounts:** Allows mapping host directories into the container at arbitrary mount points with automatic destination creation.
+- **Strict Naming Architecture:** Enforces mandatory `--name` for image-based containers to ensure host-side mount points and PID files are perfectly synchronized and descriptive.
 
 
 ---
@@ -82,6 +85,7 @@ Droidspaces performs a formal requirements check via the `check` command (implem
 | cgroup support | `access("/sys/fs/cgroup/devices", F_OK) \|\| access("/sys/fs/cgroup/cgroup.controllers", F_OK) \|\| grep_file("/proc/mounts", "cgroup2")` | systemd requires this (v1 or v2) |
 | `pivot_root` syscall | `statfs("/", &st)` — not RAMFS_MAGIC | Root filesystem switching |
 | `/proc` and `/sys` | `access()` check | Essential virtual filesystems |
+| OverlayFS (Optional) | `grep_file("/proc/filesystems", "overlay")` | Required for Volatile Mode (`--volatile`) |
 
 ### Recommended
 
@@ -114,7 +118,7 @@ Here's the high-level flow from `start` to `stop`, distilled to its essence:
                           │    (LXC model)       │
                           └──────────┬──────────┘
                                      │
-                              fork() │
+                               fork() │
                     ┌────────────────┼────────────────┐
                     │ PARENT         │ MONITOR        │
                     │                │ PROCESS        │
@@ -131,7 +135,11 @@ Here's the high-level flow from `start` to `stop`, distilled to its essence:
                     │         │ internal_boot()       │
                     │         │   │ unshare(NEWNS)    │
                     │         │   │ mount(/ PRIVATE)  │
+                    │         │   │ setup_volatile_   │
+                    │         │   │   overlay()       │
                     │         │   │ bind mount rootfs │
+                    │         │   │ setup_custom_     │
+                    │         │   │   binds()         │
                     │         │   │ setup_dev()       │
                     │         │   │ mount proc,sys,run│
                     │         │   │ bind-mount PTYs   │
@@ -189,10 +197,18 @@ Before any forking, `start_rootfs()` in `container.c` performs:
 
 1. **Workspace creation:** `ensure_workspace()` creates `Pids/` directory under the workspace path
 2. **SELinux:** If `--selinux-permissive`, set SELinux to permissive mode
-3. **Rootfs image mount:** If `--rootfs-img`, run `e2fsck -f -y` then `mount -o loop`
-4. **Container name:** Auto-generated from `/etc/os-release`'s `ID` and `VERSION_ID` fields (e.g., `ubuntu-24.04`). Duplicate names get suffix (`ubuntu-24.04-1`)
-5. **UUID generation:** 32 hex chars from `/dev/urandom`
-6. **PTY allocation (LXC model):**
+3. **Android Storage:** Detect if running on Android and validate storage requirements.
+4. **Container Naming (Sync Transition):** 
+   - If no `--name` is provided, Droidspaces auto-generates one from `/etc/os-release`.
+   - **MANDATORY**: If using a rootfs image (`-i`), the `--name` flag is now mandatory to ensure the host-side infrastructure is predictable.
+   - Duplicate names are resolved with a numeric suffix (e.g., `ubuntu-1`) via `find_available_name()`.
+   - **Note**: The name is finalized **before** any mounting occurs.
+5. **Rootfs image mount:** If `-i` provided, `mount_rootfs_img()` is called:
+   - It runs `e2fsck -f -y` to ensure filesystem integrity.
+   - It identifies a descriptive mount point at `/mnt/Droidspaces/<name>`.
+   - If `--volatile` is active, the image is mounted **Read-Only** (`-o loop,ro`) for maximum safety.
+6. **UUID generation:** 32 hex chars from `/dev/urandom`
+7. **PTY allocation (LXC model):**
    ```c
    ds_terminal_create(&cfg->console);       // 1 console PTY
    for (int i = 0; i < cfg->tty_count; i++) // 6 TTY PTYs (DS_MAX_TTYS)
@@ -232,13 +248,27 @@ if (monitor_pid == 0) {
 - `CLONE_NEWUTS | CLONE_NEWIPC | CLONE_NEWPID` — called in the monitor via `unshare()`
 - `CLONE_NEWNS` — called inside `internal_boot()` by the container init itself
 
-This split is deliberate: the monitor retains the host mount namespace so it can perform cleanup (unmounting rootfs images, removing pidfiles) after the container exits. The container init gets its own private mount namespace inside `internal_boot()`.
+This split is deliberate: the monitor retains the host mount namespace so it can perform cleanup (unmounting rootfs images, removing pidfiles, and clearing volatile overlays) after the container exits. The container init gets its own private mount namespace inside `internal_boot()`.
+
+### 4.3 Volatile Mode (OverlayFS Implementation)
+
+When `--volatile` (`-V`) is used, Droidspaces wraps the rootfs in an ephemeral writable layer:
+
+1. **Probe**: `setup_volatile_overlay()` checks `/proc/filesystems` for `overlay` support.
+2. **Workspace**: Creates a temporary structure in `/var/lib/Droidspaces/Volatile/<uuid>/`.
+3. **Layering**: 
+   - **Lowerdir**: The original rootfs (or RO image mount).
+   - **Upperdir/Workdir**: Managed in a dedicated `tmpfs` mounted at the Volatile workspace path.
+4. **Merged View**: Mounts the OverlayFS to `<workspace>/merged`.
+5. **Redirection**: The configuration's `rootfs_path` is updated to point to this merged view for the duration of the boot.
+
+All file modifications happen in the `tmpfs`-backed `upperdir`. On container exit, the monitor process unmounts the overlay and recursively deletes the workspace, ensuring no changes persist.
 
 **What is NOT used and why:**
 - `CLONE_NEWNET` — The container shares the host network. Deliberate design choice for simplicity on Android.
 - `CLONE_NEWUSER` — Not used because Android kernels often lack support, and the tool requires root anyway.
 
-### 4.3 The internal_boot() Sequence
+### 4.4 The internal_boot() Sequence
 
 This is the critical function — it runs as PID 1 inside the new PID namespace. Here is the exact order of operations:
 
@@ -260,7 +290,13 @@ mount(cfg->rootfs_path, cfg->rootfs_path, NULL, MS_BIND | MS_REC, NULL);
 ```
 This is required by `pivot_root(2)` — the new root must be a mount point. For rootfs.img, the ext4 image is already loop-mounted, so this is redundant but harmless.
 
-**Step 4 — chdir to rootfs:**
+**Step 4 — Custom Bind Mounts (Optional):**
+```c
+setup_custom_binds(cfg, cfg->rootfs_path);
+```
+Iterates through `--bind-mount` entries and performs recursive bind mounts from host to container. It uses `mkdir_p` to automatically create parent directories inside the rootfs if they don't exist.
+
+**Step 5 — chdir to rootfs:**
 ```c
 chdir(cfg->rootfs_path);
 ```
@@ -429,13 +465,16 @@ The `find_container_init_pid()` function retains the full UUID scan for containe
 
 Each container gets a unique UUID. The marker file exists only inside that specific container's mount namespace (in its `/run` tmpfs). The `/proc/<pid>/root` path traverses into the container's root filesystem from the host. So two containers with different rootfs paths will have different UUIDs, and the scan will find the correct PID for each.
 
-### 5.6 PID Persistence
+### 5.6 PID Persistence and Strict Naming
 
 The discovered PID is written to a pidfile at `<workspace>/Pids/<name>.pid`:
 - Android: `/data/local/Droidspaces/Pids/ubuntu-24.04.pid`
 - Linux: `/var/lib/Droidspaces/Pids/ubuntu-24.04.pid`
 
-Container names are auto-generated from `/etc/os-release` (`ID-VERSION_ID`, e.g., `ubuntu-24.04`). Duplicate names get a numeric suffix (`ubuntu-24.04-1`, `ubuntu-24.04-2`, etc.) via `find_available_name()`.
+**Strict Naming Rules (v3.2.0+):**
+- **Image Mode**: `--name` is now **mandatory** for containers starting from an image (`-i`). This ensures host-side infrastructure (like `/mnt/Droidspaces/<name>`) is perfectly descriptive.
+- **Rootfs Mode**: If no name is provided, it is auto-generated from `/etc/os-release`.
+- **Synchronization**: The final container name (resolved via `find_available_name()`) is used consistently for the PID file, the hostname, and the host-side mount point.
 
 ---
 
@@ -757,6 +796,7 @@ cleanup_container_resources(cfg, 0, skip_unmount);
 - `sync()` — flush filesystem buffers
 - Restore Android optimizations (`android_optimizations(0)`)
 - Remove firmware path entry
+- **Cleanup Volatile Overlay**: Calls `cleanup_volatile_overlay()` to unmount the OverlayFS, unmount the workspace `tmpfs`, and recursively delete the temporary directory.
 - Unmount rootfs.img if applicable (unless `skip_unmount` for restart)
 - Remove `.mount` sidecar file
 - Remove pidfile
@@ -947,7 +987,10 @@ If you're rewriting Droidspaces from scratch, here is the checklist of every dec
 
 6. Generate UUID (32 hex chars from `/dev/urandom`)
 
-7. If `rootfs.img`: `e2fsck -f -y <img>`, then `mount -o loop <img> /mnt/Droidspaces/<N>`
+7. **Rootfs image mount**: If `-i` provided:
+   - Identify host-side mount point at `/mnt/Droidspaces/<name>`.
+   - `e2fsck -f -y <img>`
+   - `mount -o loop,ro <img> <mount_point>` (RO is mandatory if `--volatile`).
 
 8. **Allocate PTYs in the parent** (LXC model):
    - `openpty()` × (1 console + N TTYs)
@@ -976,51 +1019,60 @@ If you're rewriting Droidspaces from scratch, here is the checklist of every dec
 
 17. `mount(NULL, "/", NULL, MS_REC | MS_PRIVATE, NULL)` — prevent mount propagation
 
-18. Bind mount rootfs to itself: `mount(rootfs, rootfs, NULL, MS_BIND | MS_REC, NULL)`
+18. **Optional: Setup Volatile Overlay** (`setup_volatile_overlay()`):
+    - Verify OverlayFS support.
+    - Setup `upperdir`/`workdir` in a private `tmpfs`.
+    - Mount OverlayFS over the rootfs and update `cfg->rootfs_path`.
 
-19. `chdir(rootfs)`
+19. Bind mount rootfs to itself: `mount(rootfs, rootfs, NULL, MS_BIND | MS_REC, NULL)`
 
-20. `mkdir(".old_root", 0755)`
+20. **Optional: Custom Bind Mounts** (`setup_custom_binds()`):
+    - Iterate entries and bind-mount host paths to container targets.
+    - Use `mkdir_p` for automatic destination creation.
 
-21. Setup `/dev`:
+21. `chdir(rootfs)`
+
+22. `mkdir(".old_root", 0755)`
+
+23. Setup `/dev`:
     -   Without `--hw-access`: `mount("none", "<rootfs>/dev", "tmpfs", ...)` + `mknod()` for null, zero, full, random, urandom, tty, console, ptmx, net/tun, fuse
     -   With `--hw-access`: `mount("devtmpfs", "<rootfs>/dev", "devtmpfs", ...)`, unlink conflicting nodes, then recreate with `mknod()`
 
-22. `mount("proc", "proc", "proc", MS_NOSUID | MS_NODEV | MS_NOEXEC, NULL)`
+24. `mount("proc", "proc", "proc", MS_NOSUID | MS_NODEV | MS_NOEXEC, NULL)`
 
-23. Mount sysfs:
+25. Mount sysfs:
     -   Without `--hw-access`: mount RW → mount separate sysfs instance at `sys/devices/virtual/net` → remount parent RO
     -   With `--hw-access`: mount RW → **dynamic self-bind mount** all subdirectories → remount parent RO
 
-24. `mount("tmpfs", "run", "tmpfs", MS_NOSUID | MS_NODEV, "mode=755")`
+26. `mount("tmpfs", "run", "tmpfs", MS_NOSUID | MS_NODEV, "mode=755")`
 
-25. **Bind-mount PTY slaves** from parent:
+27. **Bind-mount PTY slaves** from parent:
     -   `mount(cfg->console.name, "dev/console", NULL, MS_BIND, NULL)`
     -   `mount(cfg->ttys[i].name, "dev/tty<N>", NULL, MS_BIND, NULL)` for each TTY
 
-26. `write_file("run/<uuid>", "init")` — UUID marker for PID discovery/boot confirmation
+28. `write_file("run/<uuid>", "init")` — UUID marker for PID discovery/boot confirmation
 
-27. Setup cgroups: detect v2 or fall back to v1 with individual controllers
+29. Setup cgroups: detect v2 or fall back to v1 with individual controllers
 
-28. Optional: bind mount Android storage
+30. Optional: bind mount Android storage
 
-29. **`syscall(SYS_pivot_root, ".", ".old_root")`**
+31. **`syscall(SYS_pivot_root, ".", ".old_root")`**
 
-30. `chdir("/")`
+32. `chdir("/")`
 
-31. `mount("devpts", "/dev/pts", "devpts", MS_NOSUID | MS_NOEXEC, "gid=5,newinstance,ptmxmode=0666,mode=0620")`
+33. `mount("devpts", "/dev/pts", "devpts", MS_NOSUID | MS_NOEXEC, "gid=5,newinstance,ptmxmode=0666,mode=0620")`
 
-32. Setup `/dev/ptmx`: bind mount `/dev/pts/ptmx` → `/dev/ptmx`
+34. Setup `/dev/ptmx`: bind mount `/dev/pts/ptmx` → `/dev/ptmx`
 
-33. Configure networking (rootfs side): hostname, DNS, resolv.conf, Android groups
+35. Configure networking (rootfs side): hostname, DNS, resolv.conf, Android groups
 
-34. `umount2("/.old_root", MNT_DETACH)`, `rmdir("/.old_root")`
+36. `umount2("/.old_root", MNT_DETACH)`, `rmdir("/.old_root")`
 
-35. `write_file("/run/systemd/container", "droidspaces")`
+37. `write_file("/run/systemd/container", "droidspaces")`
 
-36. `clearenv()`, set `PATH`, `TERM`, `HOME`, `container`, `container_ttys`
+38. `clearenv()`, set `PATH`, `TERM`, `HOME`, `container`, `container_ttys`
 
-37. Redirect stdio:
+39. Redirect stdio:
     ```c
     int fd = open("/dev/console", O_RDWR);
     dup2(fd, 0); dup2(fd, 1); dup2(fd, 2);
@@ -1028,43 +1080,43 @@ If you're rewriting Droidspaces from scratch, here is the checklist of every dec
     ioctl(0, TIOCSCTTY, 0);
     ```
 
-38. `execve("/sbin/init", {"init", NULL}, environ)`
+40. `execve("/sbin/init", {"init", NULL}, environ)`
 
 ### Phase 5: Parent — Post-Fork
 
-39. Read `init_pid` from sync pipe
+41. Read `init_pid` from sync pipe
 
-40. Configure host-side networking (ip_forward, IPv6, DNS file, iptables)
+42. Configure host-side networking (ip_forward, IPv6, DNS file, iptables)
 
-41. Save PID to pidfile
+43. Save PID to pidfile
 
-42. If foreground: enter console monitor loop (epoll: stdin↔pty_master, signalfd for SIGCHLD/SIGINT/SIGTERM/SIGWINCH)
+44. If foreground: enter console monitor loop (epoll: stdin↔pty_master, signalfd for SIGCHLD/SIGINT/SIGTERM/SIGWINCH)
 
-43. If background: show info and exit (monitor process handles cleanup)
+45. If background: show info and exit (monitor process handles cleanup)
 
 ### Phase 6: Stop
 
-44. Read PID from pidfile, validate
+46. Read PID from pidfile, validate
 
-45. `kill(pid, SIGRTMIN + 3)` for systemd
+47. `kill(pid, SIGRTMIN + 3)` for systemd
 
-46. Wait up to 8 seconds with 200ms polling
+48. Wait up to 8 seconds with 200ms polling
 
-47. Escalate to `SIGTERM` after 2 seconds
+49. Escalate to `SIGTERM` after 2 seconds
 
-48. If still alive: `kill(pid, SIGKILL)`
+50. If still alive: `kill(pid, SIGKILL)`
 
-49. Cleanup: remove pidfile, unmount rootfs.img, restore firmware path, restore Android settings
+51. Cleanup: remove pidfile, unmount rootfs.img, restore firmware path, restore Android settings
 
 ### Phase 7: Enter
 
-50. Read PID from pidfile
-51. Open `/proc/<pid>/ns/{mnt,uts,ipc,pid}` — all FDs at once
-52. `setns()` for each
-53. `fork()` (required after `setns(CLONE_NEWPID)`)
-54. In child: `fork()` again to actually be in the new PID namespace
-55. `clearenv()`, set environment, source `/etc/environment`
-56. `execve()` shell: try `/bin/bash`, `/bin/ash`, `/bin/sh`
+52. Read PID from pidfile
+53. Open `/proc/<pid>/ns/{mnt,uts,ipc,pid}` — all FDs at once
+54. `setns()` for each
+55. `fork()` (required after `setns(CLONE_NEWPID)`)
+56. In child: `fork()` again to actually be in the new PID namespace
+57. `clearenv()`, set environment, source `/etc/environment`
+58. `execve()` shell: try `/bin/bash`, `/bin/ash`, `/bin/sh`
 
 ---
 
@@ -1088,4 +1140,4 @@ provide a link to the license, and indicate if changes were made.
 
 **End of Document**
 
-*This document was written by analyzing v3.1.2 of the Droidspaces source code — approximately 3,300 lines of C across 13 files. Every syscall, every mount, and every design decision described here was verified against the actual implementation.*
+*This document was written by analyzing v3.2.0 of the Droidspaces source code — approximately 3,300 lines of C across 13 files. Every syscall, every mount, and every design decision described here was verified against the actual implementation.*
