@@ -51,7 +51,7 @@
  * ---------------------------------------------------------------------------*/
 
 #define DS_PROJECT_NAME "Droidspaces"
-#define DS_VERSION "3.2.2"
+#define DS_VERSION "3.3.0"
 #define DS_AUTHOR "ravindu644, Antigravity"
 #define DS_REPO "https://github.com/ravindu644/Droidspaces-OSS"
 #define DS_MAX_TTYS 6
