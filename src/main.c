@@ -260,7 +260,7 @@ int main(int argc, char **argv) {
   }
 
   if (!found) {
-    ds_error(C_BOLD "Unknown command:" C_RESET " %s", cmd);
+    ds_error(C_BOLD "Unknown command:" C_RESET " '%s'", cmd);
     printf("\n");
     ds_log("Use " C_BOLD "%s help" C_RESET " or " C_BOLD "--help" C_RESET
            " for usage information.",
@@ -325,11 +325,11 @@ int main(int argc, char **argv) {
 
   if (strcmp(cmd, "status") == 0) {
     if (check_status(&cfg, NULL) == 0) {
-      printf("Container %s is " C_GREEN "Running" C_RESET "\n",
+      printf("Container '%s' is " C_GREEN "Running" C_RESET "\n",
              cfg.container_name);
       return 0;
     } else {
-      printf("Container %s is " C_RED "Stopped" C_RESET "\n",
+      printf("Container '%s' is " C_RED "Stopped" C_RESET "\n",
              cfg.container_name);
       return 1;
     }

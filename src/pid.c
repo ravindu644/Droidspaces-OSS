@@ -453,7 +453,8 @@ int scan_containers(void) {
           char pid_str[32];
           snprintf(pid_str, sizeof(pid_str), "%d", pid);
           if (write_file(pf, pid_str) == 0) {
-            ds_log("Tracked untracked container: %s (PID %d)", final_name, pid);
+            ds_log("Tracked untracked container: '%s' (PID %d)", final_name,
+                   pid);
           }
         }
       }

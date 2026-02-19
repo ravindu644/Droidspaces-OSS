@@ -102,7 +102,7 @@ int check_status(struct ds_config *cfg, pid_t *pid_out) {
       /* PID no longer running or not a valid container, cleanup */
       cleanup_container_resources(cfg, pid, 0);
     }
-    ds_error("Container %s is not running or invalid.", cfg->container_name);
+    ds_error("Container '%s' is not running or invalid.", cfg->container_name);
     return -1;
   }
 
@@ -318,7 +318,7 @@ int start_rootfs(struct ds_config *cfg) {
   else
     ds_log("Hardware access disabled: using isolated tmpfs /dev...");
 
-  ds_log("Booting %s (init: /sbin/init)...", cfg->container_name);
+  ds_log("Booting '%s' (init: /sbin/init)...", cfg->container_name);
 
   /* 6. Save PID file */
   char pid_str[32];
@@ -374,12 +374,12 @@ int start_rootfs(struct ds_config *cfg) {
     }
 
     show_info(cfg);
-    ds_log("Container %s is running in background.", cfg->container_name);
+    ds_log("Container '%s' is running in background.", cfg->container_name);
     if (is_android()) {
-      ds_log("Use 'su -c \"%s --name=%s enter\"' to connect.", cfg->prog_name,
+      ds_log("Use 'su -c \"%s --name='%s' enter\"' to connect.", cfg->prog_name,
              cfg->container_name);
     } else {
-      ds_log("Use 'sudo %s --name=%s enter' to connect.", cfg->prog_name,
+      ds_log("Use 'sudo %s --name='%s' enter' to connect.", cfg->prog_name,
              cfg->container_name);
     }
   }
@@ -393,7 +393,7 @@ int stop_rootfs(struct ds_config *cfg, int skip_unmount) {
     return 0;
   }
 
-  ds_log("Stopping container %s (PID %d)...", cfg->container_name, pid);
+  ds_log("Stopping container '%s' (PID %d)...", cfg->container_name, pid);
 
   /* Cleanup resources that need the process to be alive (like proc/pid/root) */
   /* Actually, we call the full cleanup at the end, but let's grab rootfs now */
@@ -455,7 +455,7 @@ int stop_rootfs(struct ds_config *cfg, int skip_unmount) {
   /* 5. Complete resource cleanup */
   cleanup_container_resources(cfg, 0, skip_unmount);
 
-  ds_log("Container %s stopped.", cfg->container_name);
+  ds_log("Container '%s' stopped.", cfg->container_name);
   return 0;
 }
 
@@ -522,7 +522,7 @@ int enter_rootfs(struct ds_config *cfg, const char *user) {
   if (check_status(cfg, &pid) < 0)
     return -1;
 
-  ds_log("Entering container %s as %s...", cfg->container_name,
+  ds_log("Entering container '%s' as %s...", cfg->container_name,
          user ? user : "root");
 
   int sv[2];
@@ -634,7 +634,7 @@ int run_in_rootfs(struct ds_config *cfg, int argc, char **argv) {
   if (check_status(cfg, &pid) < 0)
     return -1;
 
-  ds_log("Executing command in container %s...", cfg->container_name);
+  ds_log("Executing command in container '%s'...", cfg->container_name);
 
   pid_t child = fork();
   if (child < 0)

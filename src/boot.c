@@ -46,7 +46,7 @@ int internal_boot(struct ds_config *cfg) {
 
   /* 5. Set working directory to rootfs */
   if (chdir(cfg->rootfs_path) < 0) {
-    ds_error("Failed to chdir to %s: %s", cfg->rootfs_path, strerror(errno));
+    ds_error("Failed to chdir to '%s': %s", cfg->rootfs_path, strerror(errno));
     return -1;
   }
 
@@ -172,14 +172,14 @@ int internal_boot(struct ds_config *cfg) {
    * host */
   /* We use relative paths to the current directory (rootfs) */
   if (mount(cfg->console.name, "dev/console", NULL, MS_BIND, NULL) < 0)
-    ds_warn("Failed to bind mount console %s: %s", cfg->console.name,
+    ds_warn("Failed to bind mount console '%s': %s", cfg->console.name,
             strerror(errno));
 
   char tty_target[32];
   for (int i = 0; i < cfg->tty_count; i++) {
     snprintf(tty_target, sizeof(tty_target), "dev/tty%d", i + 1);
     if (mount(cfg->ttys[i].name, tty_target, NULL, MS_BIND, NULL) < 0)
-      ds_warn("Failed to bind mount %s: %s", tty_target, strerror(errno));
+      ds_warn("Failed to bind mount '%s': %s", tty_target, strerror(errno));
   }
 
   /* 8. Write UUID marker for PID discovery */
