@@ -334,6 +334,17 @@ int setup_volatile_overlay(struct ds_config *cfg) {
     return -1;
   }
 
+  /* Pre-flight: reject f2fs lowerdir — known Android kernel limitation */
+  struct statfs sfs;
+  if (statfs(cfg->rootfs_path, &sfs) == 0 && sfs.f_type == 0xF2F52010) {
+    ds_error("Volatile mode cannot be used: Your rootfs is on f2fs, which is "
+             "not supported as an OverlayFS lower layer on most Android "
+             "kernels.");
+    ds_error("Tip: Use a rootfs image (-i) instead of a directory (-r) "
+             "for volatile mode on f2fs partitions.");
+    return -1;
+  }
+
   ds_log("Entering volatile mode (OverlayFS)...");
 
   /* 1. Create temporary workspace in Droidspaces/Volatile/<name> */
@@ -384,18 +395,8 @@ int setup_volatile_overlay(struct ds_config *cfg) {
   *p = '\0';
 
   if (domount("overlay", merged, "overlay", 0, opts) < 0) {
-    /* Check if lowerdir is on f2fs — a known incompatibility */
-    struct statfs sfs;
-    if (statfs(cfg->rootfs_path, &sfs) == 0 && sfs.f_type == 0xF2F52010) {
-      ds_error(
-          "OverlayFS failed: Your rootfs is on f2fs, which is not "
-          "supported as an OverlayFS lower layer on most Android kernels.");
-      ds_error("Tip: Use a rootfs image (-i) instead of a directory (-r) "
-               "for volatile mode on f2fs partitions.");
-    } else {
-      ds_error("OverlayFS mount failed. Your kernel might not support it.");
-    }
-    /* Cleanup: unmount tmpfs and remove workspace */
+    ds_error("OverlayFS mount failed. Your kernel might not support it.");
+    /* Cleanup: unmount tmpfs first, then remove workspace */
     umount2(base, MNT_DETACH);
     remove_recursive(cfg->volatile_dir);
     cfg->volatile_dir[0] = '\0';
