@@ -22,14 +22,29 @@ static int check_root(void) {
   return is_root;
 }
 
-static int check_ns(const char *name) {
-  /* 1. Check kernel support via /proc */
+static int check_ns(int flag, const char *name) {
+  /* 1. Fast check for kernel support via /proc */
   char path[PATH_MAX];
   snprintf(path, sizeof(path), "/proc/self/ns/%s", name);
-  int supported = (access(path, F_OK) == 0);
+  if (access(path, F_OK) != 0)
+    return 0;
 
-  /* 2. Functional check: requires root for Droidspaces namespaces */
-  return (supported && is_root);
+  /* 2. Functional check: Try to actually unshare.
+   * We fork because unshare() affects the current process. */
+  pid_t p = fork();
+  if (p < 0)
+    return 0;
+
+  if (p == 0) {
+    if (unshare(flag) < 0) {
+      exit(1);
+    }
+    exit(0);
+  }
+
+  int status;
+  waitpid(p, &status, 0);
+  return (WIFEXITED(status) && WEXITSTATUS(status) == 0);
 }
 
 static int check_pivot_root(void) {
@@ -60,22 +75,62 @@ static int check_cgroup_v2(void) {
  * ---------------------------------------------------------------------------*/
 
 int check_requirements(void) {
-  if (!check_root())
-    return -1;
-  if (!check_ns("mnt"))
-    return -1;
-  if (!check_ns("pid"))
-    return -1;
-  if (!check_ns("uts"))
-    return -1;
-  if (!check_ns("ipc"))
-    return -1;
-  if (!check_pivot_root())
-    return -1;
+  int missing = 0;
+
+  if (!check_root()) {
+    ds_error("Must be run as root");
+    ds_log("This tool requires root privileges for namespace and mount "
+           "operations.");
+    missing++;
+  }
+
+  if (grep_file("/proc/filesystems", "devtmpfs") == 0) {
+    ds_error("devtmpfs is not supported by the kernel");
+    ds_log("This is a REQUIRED feature for hardware node management.");
+    missing++;
+  }
+
+  /* Functional namespace checks */
+  if (!check_ns(CLONE_NEWNS, "mnt")) {
+    ds_error("Mount namespace is not supported by the kernel");
+    ds_log("This is a REQUIRED feature for filesystem isolation.");
+    missing++;
+  }
+  if (!check_ns(CLONE_NEWPID, "pid")) {
+    ds_error("PID namespace is not supported by the kernel");
+    ds_log("This is a REQUIRED feature for process isolation.");
+    missing++;
+  }
+  if (!check_ns(CLONE_NEWUTS, "uts")) {
+    ds_error("UTS namespace is not supported by the kernel");
+    ds_log("This is a REQUIRED feature for hostname isolation.");
+    missing++;
+  }
+  if (!check_ns(CLONE_NEWIPC, "ipc")) {
+    ds_error("IPC namespace is not supported by the kernel");
+    ds_log("This is a REQUIRED feature for IPC isolation.");
+    missing++;
+  }
+
+  if (!check_pivot_root()) {
+    ds_error("pivot_root syscall is not supported on the current filesystem");
+    ds_log("Droidspaces requires a rootfs that supports pivot_root (not "
+           "ramfs).");
+    missing++;
+  }
 
   /* Cgroup check (v1 or v2) */
   if (!check_cgroup_v1("devices") && !check_cgroup_v2()) {
-    ds_error("Kernel missing required cgroup support (v1 devices or v2).");
+    ds_error("Kernel missing required cgroup support (v1 devices or v2)");
+    ds_log("systemd requires at least one of these for container management.");
+    missing++;
+  }
+
+  if (missing > 0) {
+    printf("\n");
+    ds_error("Missing %d required feature(s) - cannot proceed", missing);
+    ds_log("Please run " C_BOLD "./droidspaces check" C_RESET
+           " for a full diagnostic report.");
     return -1;
   }
 
@@ -128,16 +183,16 @@ int check_requirements_detailed(void) {
                  is_root, "MUST");
 
   print_ds_check("PID namespace", "Process ID namespace isolation",
-                 check_ns("pid"), "MUST");
+                 check_ns(CLONE_NEWPID, "pid"), "MUST");
 
   print_ds_check("Mount namespace", "Filesystem namespace isolation",
-                 check_ns("mnt"), "MUST");
+                 check_ns(CLONE_NEWNS, "mnt"), "MUST");
 
   print_ds_check("UTS namespace", "Hostname/domainname isolation",
-                 check_ns("uts"), "MUST");
+                 check_ns(CLONE_NEWUTS, "uts"), "MUST");
 
   print_ds_check("IPC namespace", "Inter-process communication isolation",
-                 check_ns("ipc"), "MUST");
+                 check_ns(CLONE_NEWIPC, "ipc"), "MUST");
 
   print_ds_check("devtmpfs support", "Kernel support for devtmpfs",
                  grep_file("/proc/filesystems", "devtmpfs"), "MUST");
@@ -198,13 +253,13 @@ int check_requirements_detailed(void) {
   int missing_must = 0;
   if (!is_root)
     missing_must++;
-  if (!check_ns("mnt"))
+  if (!check_ns(CLONE_NEWNS, "mnt"))
     missing_must++;
-  if (!check_ns("pid"))
+  if (!check_ns(CLONE_NEWPID, "pid"))
     missing_must++;
-  if (!check_ns("uts"))
+  if (!check_ns(CLONE_NEWUTS, "uts"))
     missing_must++;
-  if (!check_ns("ipc"))
+  if (!check_ns(CLONE_NEWIPC, "ipc"))
     missing_must++;
   if (access("/dev/null", F_OK) != 0)
     missing_must++;
