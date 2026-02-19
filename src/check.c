@@ -7,6 +7,7 @@
 
 #include "droidspace.h"
 #include <linux/seccomp.h>
+#include <stdarg.h>
 #include <sys/prctl.h>
 
 /* ---------------------------------------------------------------------------
@@ -14,6 +15,30 @@
  * ---------------------------------------------------------------------------*/
 
 static int is_root = 0;
+
+/* ---------------------------------------------------------------------------
+ * Output buffering (for one-shot terminal output)
+ * ---------------------------------------------------------------------------*/
+
+#define CHECK_BUF_SIZE 16384
+static char check_buf[CHECK_BUF_SIZE];
+static size_t check_buf_pos = 0;
+
+static void check_append(const char *fmt, ...) {
+  va_list args;
+  va_start(args, fmt);
+  int n = vsnprintf(check_buf + check_buf_pos, CHECK_BUF_SIZE - check_buf_pos,
+                    fmt, args);
+  va_end(args);
+
+  if (n > 0) {
+    if (check_buf_pos + n < CHECK_BUF_SIZE) {
+      check_buf_pos += n;
+    } else {
+      check_buf_pos = CHECK_BUF_SIZE - 1; /* Truncate if full */
+    }
+  }
+}
 
 /* ---------------------------------------------------------------------------
  * Requirement checks
@@ -181,27 +206,33 @@ void print_ds_check(const char *name, const char *desc, int status,
       status ? C_GREEN : (strcmp(level, "MUST") == 0 ? C_RED : C_YELLOW);
   const char *sym = status ? "✓" : "✗";
 
-  printf("  [%s%s%s] %s\n", c_sym, sym, C_RESET, name);
+  check_append("  [%s%s%s] %s\n", c_sym, sym, C_RESET, name);
   if (!status) {
-    printf("      " C_DIM "%s" C_RESET "\n", desc);
+    check_append("      " C_DIM "%s" C_RESET "\n", desc);
     if (strstr(name, "namespace") || strstr(name, "Root")) {
       if (!is_root)
-        printf("      " C_YELLOW
-               "(Note: Namespace checks require root privileges)" C_RESET "\n");
+        check_append("      " C_YELLOW
+                     "(Note: Namespace checks require root privileges)" C_RESET
+                     "\n");
     }
   }
 }
 
 int check_requirements_detailed(void) {
+  check_buf_pos = 0;
+  check_buf[0] = '\0';
+
   check_root();
 
-  printf("\n" C_BOLD "Droidspaces v%s — Checking system requirements..." C_RESET
-         "\n\n",
-         DS_VERSION);
+  check_append("\n" C_BOLD
+               "Droidspaces v%s — Checking system requirements..." C_RESET
+               "\n\n",
+               DS_VERSION);
 
   /* MUST HAVE */
-  printf(C_BOLD "[MUST HAVE]" C_RESET
-                "\nThese features are required for Droidspaces to work:\n\n");
+  check_append(C_BOLD
+               "[MUST HAVE]" C_RESET
+               "\nThese features are required for Droidspaces to work:\n\n");
 
   print_ds_check("Root privileges",
                  "Running as root user (required for container operations)",
@@ -246,9 +277,9 @@ int check_requirements_detailed(void) {
                  check_seccomp(), "MUST");
 
   /* RECOMMENDED */
-  printf("\n" C_BOLD "[RECOMMENDED]" C_RESET
-         "\nThese features improve functionality but are not strictly "
-         "required:\n\n");
+  check_append("\n" C_BOLD "[RECOMMENDED]" C_RESET
+               "\nThese features improve functionality but are not strictly "
+               "required:\n\n");
 
   print_ds_check("epoll support", "Efficient I/O event notification",
                  check_fd_feature(epoll_create(1)), "OPT");
@@ -271,9 +302,9 @@ int check_requirements_detailed(void) {
                  grep_file("/proc/filesystems", "ext4"), "OPT");
 
   /* OPTIONAL */
-  printf("\n" C_BOLD "[OPTIONAL]" C_RESET
-         "\nThese features are optional and only used for specific "
-         "functionality:\n\n");
+  check_append("\n" C_BOLD "[OPTIONAL]" C_RESET
+               "\nThese features are optional and only used for specific "
+               "functionality:\n\n");
 
   print_ds_check("IPv6 support", "IPv6 networking support",
                  access("/proc/sys/net/ipv6", F_OK) == 0, "OPT");
@@ -307,19 +338,24 @@ int check_requirements_detailed(void) {
   if (!check_kernel_version_supported())
     missing_must++;
 
-  printf("\n" C_BOLD "Summary:" C_RESET "\n");
+  check_append("\n" C_BOLD "Summary:" C_RESET "\n");
   if (missing_must > 0)
-    printf("  [" C_RED "✗" C_RESET
-           "] %d required feature(s) missing - Droidspaces will not work\n",
-           missing_must);
+    check_append(
+        "  [" C_RED "✗" C_RESET
+        "] %d required feature(s) missing - Droidspaces will not work\n",
+        missing_must);
   else
-    printf("  [" C_GREEN "✓" C_RESET "] All required features found!\n");
+    check_append("  [" C_GREEN "✓" C_RESET "] All required features found!\n");
 
   if (!is_root) {
-    printf(C_YELLOW "\n[!] Warning: You are not root. Some checks may be "
-                    "inaccurate.\n" C_RESET);
+    check_append(C_BOLD C_YELLOW "\n[!] Warning: You are not root. Some checks "
+                                 "may be inaccurate.\n" C_RESET);
   }
-  printf("\n");
+  check_append("\n");
+
+  /* One-shot output to terminal */
+  fwrite(check_buf, 1, check_buf_pos, stdout);
+  fflush(stdout);
 
   return 0;
 }
