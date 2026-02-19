@@ -274,11 +274,21 @@ static void print_page(int page, const char *bin) {
     printf("GIGACHAD USAGE\n");
     printf("--------------\n\n");
 
+    printf("%sEphemeral container (Volatile Mode):%s\n", bold, reset);
+    printf("  %s -r /path/to/rootfs --volatile start\n", bin);
+    printf("  (All changes are stored in RAM and lost on exit)\n\n");
+
+    printf("%sMultiple bind mounts (Comma-separated or Chained):%s\n", bold,
+           reset);
+    printf("  %s -r rootfs/ start -B /src1:/dst1,/src2:/dst2\n", bin);
+    printf("  %s -r rootfs/ start -B /src1:/dst1 -B /src2:/dst2\n", bin);
+    printf("  (Mix and match supported, up to 16 mounts)\n\n");
+
     printf("%sContainer with maximum features (not secure):%s\n", bold, reset);
     printf("  %s --name=featureful --rootfs-img=/path/to/rootfs.img \\\n", bin);
     printf("      --hw-access --enable-android-storage --enable-ipv6 \\\n");
     printf("      --selinux-permissive --hostname=feature-box \\\n");
-    printf("      --foreground start\n\n");
+    printf("      --volatile --foreground start\n\n");
 
     printf("%sComplex command execution with pipes and redirection:%s\n", bold,
            reset);
