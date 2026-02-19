@@ -408,6 +408,57 @@ int setup_volatile_overlay(struct ds_config *cfg) {
   return 0;
 }
 
+/**
+ * is_mount_in_namespace() — Check if `path` is mounted in OUR namespace.
+ *
+ * Reads /proc/self/mountinfo and searches for an exact match of `path`
+ * in the mount-point column (field 5, 0-indexed: 4).
+ *
+ * Unlike is_mountpoint() (which uses stat-based device ID comparison),
+ * this checks the kernel's mount table directly. This is critical for
+ * overlay mounts that may share the same device as the lowerdir.
+ *
+ * Returns 1 if mounted, 0 if not.
+ */
+static int is_mount_in_namespace(const char *path) {
+  FILE *f = fopen("/proc/self/mountinfo", "r");
+  if (!f)
+    return 0;
+
+  char line[4096];
+  size_t path_len = strlen(path);
+
+  while (fgets(line, sizeof(line), f)) {
+    /* mountinfo format: id parent_id major:minor root mount_point ... */
+    /* We need field 5 (mount_point), skip first 4 fields */
+    const char *p = line;
+    for (int skip = 0; skip < 4 && *p; skip++) {
+      while (*p && *p != ' ')
+        p++;
+      while (*p == ' ')
+        p++;
+    }
+    /* p now points at the mount_point field */
+    if (strncmp(p, path, path_len) == 0 &&
+        (p[path_len] == ' ' || p[path_len] == '\n' || p[path_len] == '\0')) {
+      fclose(f);
+      return 1;
+    }
+  }
+  fclose(f);
+  return 0;
+}
+
+/**
+ * cleanup_volatile_overlay() — Simplified OverlayFS cleanup.
+ *
+ * The overlay is mounted INSIDE the container's mount namespace (boot.c).
+ * When the container dies, the kernel tears down the namespace and the
+ * mounts vanish automatically.
+ *
+ * We simply check if the mount is visible in our namespace (host); if so,
+ * we try to unmount it normally before deleting the workspace directory.
+ */
 int cleanup_volatile_overlay(struct ds_config *cfg) {
   if (cfg->volatile_dir[0] == '\0')
     return 0;
@@ -415,28 +466,23 @@ int cleanup_volatile_overlay(struct ds_config *cfg) {
   char merged[PATH_MAX + 32];
   snprintf(merged, sizeof(merged), "%s/merged", cfg->volatile_dir);
 
-  ds_log("Cleaning up volatile overlay: %s", cfg->volatile_dir);
+  /* Skip logging for clean exits — nothing prints after 'Powering off.' */
 
-  /* Retry loop for unmounting busy filesystems */
-  for (int retry = 0; retry < 5; retry++) {
-    int m_fail = 0, b_fail = 0;
-
-    if (umount2(merged, MNT_DETACH) < 0 && errno != ENOENT) {
-      m_fail = 1;
-    }
-    if (umount2(cfg->volatile_dir, MNT_DETACH) < 0 && errno != ENOENT) {
-      b_fail = 1;
-    }
-
-    if (!m_fail && !b_fail)
-      break;
-
-    if (retry < 4) {
-      ds_warn("Volatile mounts busy, retrying cleanup (%d/5)...", retry + 1);
-      usleep(200000); /* 200ms */
-    }
+  /* 1. Fast path: check if mounts already vanished (normal case) */
+  if (!is_mount_in_namespace(merged) &&
+      !is_mount_in_namespace(cfg->volatile_dir)) {
+    goto done;
   }
 
+  /* 2. Slow path: unmount visible mounts (e.g. stop-rootfs on live container)
+   */
+  sync();
+  umount(merged);
+  umount(cfg->volatile_dir);
+
+done:
+  /* settle time for kernel to release backing store info */
+  usleep(100000);
   int r = remove_recursive(cfg->volatile_dir);
   cfg->volatile_dir[0] = '\0';
   return r;
