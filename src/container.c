@@ -48,7 +48,7 @@ static void cleanup_container_resources(struct ds_config *cfg, pid_t pid,
   char mount_point[PATH_MAX];
   if (read_mount_path(cfg->pidfile, mount_point, sizeof(mount_point)) > 0) {
     if (!skip_unmount)
-      unmount_rootfs_img(mount_point);
+      unmount_rootfs_img(mount_point, cfg->foreground);
   }
 
   /* 5. Remove tracking info and unlink PID files */
@@ -160,7 +160,7 @@ int start_rootfs(struct ds_config *cfg) {
   /* 3. Early pre-flight for volatile mode (before any host changes) */
   if (check_volatile_mode(cfg) < 0) {
     if (cfg->is_img_mount)
-      unmount_rootfs_img(cfg->img_mount_point);
+      unmount_rootfs_img(cfg->img_mount_point, cfg->foreground);
     return -1;
   }
 

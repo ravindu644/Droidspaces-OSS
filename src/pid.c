@@ -487,7 +487,7 @@ int scan_containers(void) {
 
         if (!is_tracked) {
           ds_warn("Found orphaned mount: %s, cleaning up...", mpath);
-          unmount_rootfs_img(mpath);
+          unmount_rootfs_img(mpath, 0);
           orphaned_found++;
         }
       } else {

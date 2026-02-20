@@ -546,11 +546,12 @@ int mount_rootfs_img(const char *img_path, char *mount_point, size_t mp_size,
   return 0;
 }
 
-int unmount_rootfs_img(const char *mount_point) {
+int unmount_rootfs_img(const char *mount_point, int silent) {
   if (!mount_point || !mount_point[0])
     return 0;
 
-  ds_log("Unmounting rootfs image from %s...", mount_point);
+  if (!silent)
+    ds_log("Unmounting rootfs image from %s...", mount_point);
 
   /* 1. Try lazy unmount first (most reliable for detached loop mounts) */
   if (umount2(mount_point, MNT_DETACH) < 0) {
