@@ -320,8 +320,6 @@ int setup_volatile_overlay(struct ds_config *cfg) {
   if (check_volatile_mode(cfg) < 0)
     return -1;
 
-  ds_log("Entering volatile mode (OverlayFS)...");
-
   /* 1. Create temporary workspace in Droidspaces/Volatile/<name> */
   char base[PATH_MAX];
   snprintf(base, sizeof(base), "%s/" DS_VOLATILE_SUBDIR "/%s",
@@ -376,7 +374,6 @@ int setup_volatile_overlay(struct ds_config *cfg) {
 
   /* 9. Update cfg->rootfs_path to the merged view */
   safe_strncpy(cfg->rootfs_path, merged, sizeof(cfg->rootfs_path));
-  ds_log("Volatile mode enabled (writes redirect to RAM)");
 
   return 0;
 }
@@ -464,8 +461,6 @@ done:
 int setup_custom_binds(struct ds_config *cfg, const char *rootfs) {
   if (cfg->bind_count == 0)
     return 0;
-
-  ds_log("Setting up %d custom bind mount(s)...", cfg->bind_count);
 
   for (int i = 0; i < cfg->bind_count; i++) {
     char tgt[PATH_MAX];

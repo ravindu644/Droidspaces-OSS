@@ -337,6 +337,14 @@ int start_rootfs(struct ds_config *cfg) {
   else
     ds_log("Hardware access disabled: using isolated tmpfs /dev...");
 
+  /* Log volatile mode before boot message */
+  if (cfg->volatile_mode)
+    ds_log("Entering volatile mode (OverlayFS)...");
+
+  /* Log bind mounts before boot message */
+  if (cfg->bind_count > 0)
+    ds_log("Setting up %d custom bind mount(s)...", cfg->bind_count);
+
   ds_log("Booting '%s' (init: /sbin/init)...", cfg->container_name);
 
   /* 6. Save PID file */
