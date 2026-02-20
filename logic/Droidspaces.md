@@ -23,13 +23,14 @@ Droidspaces takes a Linux rootfs directory (or ext4 image) and boots it inside a
 - Its own mount table (the rootfs becomes `/`)
 - Its own hostname (UTS namespace)
 - Its own IPC resources (semaphores, shared memory)
+- Its own Cgroup view (Cgroup namespace / Sub-cgroup isolation)
 - Full networking via the host kernel's network stack (no NET namespace)
 
 ### 1.2 What It Does NOT Do
 
 - **No user namespace.** The container runs as root from the host kernel's perspective. This is deliberate — Android kernels often lack user namespace support, and Droidspaces requires root anyway.
 - **No network namespace.** The container shares the host's network stack. This simplifies setup enormously but means no per-container firewall rules via network namespaces.
-- **No cgroup isolation.** The code creates cgroup mount points for systemd compatibility (both v1 and v2), but does not actually constrain CPU, memory, or I/O.
+- **Limited resource constraints.** Droidspaces implements full cgroup isolation via namespaces and subtree binding (see Section 11), providing a clean root for `systemd`. However, it does not set hard resource limits (CPU/Mem quotas) by default.
 
 ### 1.3 Source Structure
 
@@ -87,9 +88,8 @@ Droidspaces performs a formal requirements check via the `check` command (implem
 | UTS namespace | `access("/proc/self/ns/uts", F_OK) && is_root` | Hostname isolation |
 | IPC namespace | `access("/proc/self/ns/ipc", F_OK) && is_root` | IPC isolation |
 | devtmpfs | `grep_file("/proc/filesystems", "devtmpfs")` | Proper HW device node support |
-| cgroup support | `access("/sys/fs/cgroup/devices", F_OK) \|\| access("/sys/fs/cgroup/cgroup.controllers", F_OK) \|\| grep_file("/proc/mounts", "cgroup2")` | systemd requires this (v1 or v2) |
-| `pivot_root` syscall | `statfs("/", &st)` — not RAMFS_MAGIC | Root filesystem switching |
-| `/proc` and `/sys` | `access()` check | Essential virtual filesystems |
+| Cgroup namespace | `access("/proc/self/ns/cgroup", F_OK)` | Adaptive Cgroup isolation (Modern Path) |
+| proc/sys virtual FS | `access()` check | Essential systems for container operation |
 | OverlayFS (Optional) | `grep_file("/proc/filesystems", "overlay")` | Required for Volatile Mode (`--volatile`) |
 
 ### Recommended
@@ -123,69 +123,55 @@ Here's the high-level flow from `start` to `stop`, distilled to its essence:
                           │    (LXC model)       │
                           └──────────┬──────────┘
                                      │
-                               fork() │
-                    ┌────────────────┼────────────────┐
-                    │ PARENT         │ MONITOR        │
-                    │                │ PROCESS        │
-                    │                │                │
-                    │                ▼                │
-                    │     setsid()                    │
-                    │     unshare(PID|UTS|IPC)        │
-                    │                │                │
-                    │           fork()│                │
-                    │         ┌──────┼──────┐         │
-                    │         │      │ PID 1│         │
-                    │         │      │      │         │
-                    │         │      ▼      │         │
-                    │         │ internal_boot()       │
-                    │         │   │ unshare(NEWNS)    │
-                    │         │   │ mount(/ PRIVATE)  │
-                    │         │   │ setup_volatile_   │
-                    │         │   │   overlay()       │
-                    │         │   │ bind mount rootfs │
-                    │         │   │ setup_custom_     │
-                    │         │   │   binds()         │
-                    │         │   │ setup_dev()       │
-                    │         │   │ mount proc,sys,run│
-                    │         │   │ bind-mount PTYs   │
-                    │         │   │   (console+ttys)  │
-                    │         │   │ write UUID marker │
-                    │         │   │ setup_cgroups     │
-                    │         │   │ pivot_root(".",   │
-                    │         │   │   ".old_root")    │
-                    │         │   │ chdir("/")        │
-                    │         │   │ setup_devpts      │
-                    │         │   │ fix_networking_   │
-                    │         │   │   rootfs          │
-                    │         │   │ umount .old_root  │
-                    │         │   │ redirect stdio    │
-                    │         │   │   to /dev/console │
-                    │         │   │ execve(/sbin/init)│
-                    │         │   ▼                   │
-                    │         │ waitpid(init)         │
-                    │         │ cleanup_container_    │
-                    │         │   resources()         │
-                    │         │ (proxy exit)          │
-                    │         └──────────────┘        │
-                    │                                 │
-                    ▼                                 │
-          read init_pid from sync_pipe               │
-          fix_networking_host()                      │
-          find_and_save_pid()                        │
-                    │                                │
-            ┌───────┴────────┐                       │
-            │ FOREGROUND?    │                       │
-            ├────YES─────┐   │                       │
-            │            ▼   │                       │
-            │  console_monitor_loop()                │
-            │  (epoll stdin↔pty_master)              │
-            │                │                       │
-            ├────NO──────┐   │                       │
-            │            ▼   │                       │
-            │  show_info()                           │
-            │  parent exits                          │
-            │  monitor holds PTY FDs via waitpid()   │
-            └────────────────┘                       │
+                           fork()    │
+                ┌────────────────────┼───────────────────┐
+                │ PARENT             │ MONITOR           │
+                │                    │ PROCESS           │
+                │                    │                   │
+                │                    ▼                   │
+                │               setsid()                 │
+                │          migrate to sub-cgroup         │
+                │     unshare(PID|UTS|IPC|CGROUP)        │
+                │                    │                   │
+                │               fork()│                   │
+                │         ┌──────────┼──────────┐        │
+                │         │          │ PID 1    │        │
+                │         │          │          │        │
+                │         │          ▼          │        │
+                │         │   internal_boot()   │        │
+                │         │     │ unshare(MNT)  │        │
+                │         │     │ mount(/ PRIV) │        │
+                │         │     │ setup_volatile│        │
+                │         │     │ setup_binds   │        │
+                │         │     │ setup_dev     │        │
+                │         │     │ setup_cgroups │        │
+                │         │     │ pivot_root    │        │
+                │         │     │ networking    │        │
+                │         │     │ umount .old   │        │
+                │         │     │ execve(init)  │        │
+                │         │     ▼               │        │
+                │         │ waitpid(init)       │        │
+                │         │ cleanup_resources() │        │
+                │         └─────────────────────┘        │
+                │                                        │
+                ▼                                        │
+      read init_pid from sync_pipe                       │
+      fix_networking_host()                              │
+      find_and_save_pid()                                │
+                │                                        │
+        ┌───────┴────────┐                               │
+        │ FOREGROUND?    │                               │
+        ├────YES─────┐   │                               │
+        │            ▼   │                               │
+        │  console_monitor_loop()                        │
+        │  (epoll stdin↔pty_master)                      │
+        │                │                               │
+        ├────NO──────┐   │                               │
+        │            ▼   │                               │
+        │  show_info()                                   │
+        │  parent exits                                  │
+        │  monitor holds PTY FDs via waitpid()           │
+        └────────────────┘                               │
 ```
 
 **Key insight:** The monitor process (`[ds-monitor]`) creates the namespace via `unshare()`, then forks the container init (PID 1). The monitor stays alive via `waitpid()` on init — it holds all PTY master FDs open for the lifetime of the container. When init exits, the monitor calls `cleanup_container_resources()` and exits.
@@ -251,7 +237,15 @@ if (monitor_pid == 0) {
 
 **Namespace allocation split:**
 - `CLONE_NEWUTS | CLONE_NEWIPC | CLONE_NEWPID` — called in the monitor via `unshare()`
-- `CLONE_NEWNS` — called inside `internal_boot()` by the container init itself
+- `CLONE_NEWUTS | CLONE_NEWIPC | CLONE_NEWPID | CLONE_NEWCGROUP` — called in the monitor via `unshare()`.
+    
+**The Cgroup "Jail" Trick (v4.0.0+):**
+To achieve isolation on kernels with cgroup namespace support (4.6+), Droidspaces must be in a non-root cgroup *before* calling `unshare`. If the monitor remains in the host's root (`/`), the new namespace root will also be `/`, providing zero isolation.
+Droidspaces implements "Sub-Cgroup Jailing":
+1.  Creates `/sys/fs/cgroup/droidspaces`.
+2.  Moves itself into that cgroup (`cgroup.procs`).
+3.  Calls `unshare(CLONE_NEWCGROUP)`.
+Result: Inside the container, `/sys/fs/cgroup` points to the `droidspaces` subtree on the host, naturally hiding all host processes and other containers.
 
 This split is deliberate: the monitor retains the host mount namespace so it can perform cleanup (unmounting rootfs images, removing pidfiles, and clearing volatile overlays) after the container exits. The container init gets its own private mount namespace inside `internal_boot()`.
 
@@ -364,7 +358,13 @@ The UUID marker is used by the parent for PID discovery (see Section 5). The `ru
 ```c
 setup_cgroups();
 ```
-Detects cgroup v2 (unified hierarchy) or falls back to cgroup v1 legacy directories: `cpu`, `cpuacct`, `devices`, `memory`, `freezer`, `blkio`, `pids`, `systemd`.
+Droidspaces v4.0.0 uses a "data-driven" cgroup strategy ported from LXC:
+- **Host Discovery**: Parses `/proc/self/mountinfo` to identify exactly where and how the host has mounted cgroups (v1 comounts, v2 unified, hybrid).
+- **Adaptive Strategy**:
+    - **Modern (NS active)**: Directly mounts `cgroup`/`cgroup2` FS. The kernel-managed namespace provides the isolation.
+    - **Legacy (No NS)**: Manually bind-mounts the process's specific cgroup subtree from the host into the container's hierarchy.
+- **Systemd Compatibility**: Replicates comounted v1 controllers (e.g., `cpu,cpuacct`) and creates symlinks for secondary names.
+- **Pure V2 Protection**: Detects if the host is pure cgroup v2; if so, it skips the Read-Only remount of `/sys/fs/cgroup` to ensure `systemd` can create its own scopes.
 
 **Step 13 — Optional: Android storage bind mount:**
 ```c
@@ -1064,7 +1064,9 @@ If you're rewriting Droidspaces from scratch, here is the checklist of every dec
 
 11. `fork()` → monitor process
 
-12. In monitor: `setsid()`, `prctl(PR_SET_NAME, "[ds-monitor]")`, `unshare(CLONE_NEWUTS | CLONE_NEWIPC | CLONE_NEWPID)`
+12. In monitor: `setsid()`, `prctl(PR_SET_NAME, "[ds-monitor]")`.
+    - **Sub-Cgroup Jailing**: Create `/sys/fs/cgroup/droidspaces` and move the monitor PID into it.
+    - **Namespace Creation**: `unshare(CLONE_NEWUTS | CLONE_NEWIPC | CLONE_NEWPID | CLONE_NEWCGROUP)`
 
 13. `fork()` again → PID 1 child (this is the process that becomes init)
 
@@ -1111,7 +1113,11 @@ If you're rewriting Droidspaces from scratch, here is the checklist of every dec
 
 28. `write_file("run/<uuid>", "init")` — UUID marker for PID discovery/boot confirmation
 
-29. Setup cgroups: detect v2 or fall back to v1 with individual controllers
+29. **Setup cgroups** (`setup_cgroups()`): 
+    - Discover host hierarchies via `mountinfo`.
+    - If in cgroup namespace, direct-mount `cgroup`/`cgroup2`.
+    - If legacy, bind-mount subtrees.
+    - Handle v1 comounts and create symlinks.
 
 30. Optional: bind mount Android storage
 
