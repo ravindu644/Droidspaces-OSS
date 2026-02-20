@@ -302,6 +302,8 @@ int main(int argc, char **argv) {
 
   /* Other lifestyle commands */
   if (strcmp(cmd, "stop") == 0) {
+    if (check_requirements() < 0)
+      return 1;
     /* Support multi-stop via comma separated names in --name */
     if (strchr(cfg.container_name, ',')) {
       char *name = strtok(cfg.container_name, ",");
@@ -319,6 +321,8 @@ int main(int argc, char **argv) {
 
   if (strcmp(cmd, "restart") == 0) {
     if (validate_kernel_version() < 0)
+      return 1;
+    if (check_requirements() < 0)
       return 1;
     return restart_rootfs(&cfg);
   }
@@ -362,6 +366,8 @@ int main(int argc, char **argv) {
   if (strcmp(cmd, "enter") == 0) {
     if (validate_kernel_version() < 0)
       return 1;
+    if (check_requirements() < 0)
+      return 1;
     /* Optional: we could validate container exists here,
      * but enter_rootfs already does it. */
     const char *user = (optind + 1 < argc) ? argv[optind + 1] : NULL;
@@ -370,6 +376,8 @@ int main(int argc, char **argv) {
 
   if (strcmp(cmd, "run") == 0) {
     if (validate_kernel_version() < 0)
+      return 1;
+    if (check_requirements() < 0)
       return 1;
     if (optind + 1 >= argc) {
       ds_error("Command required for 'run' (e.g., run ls -l)");

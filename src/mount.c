@@ -293,29 +293,51 @@ int setup_devpts(int hw_access) {
 }
 
 int setup_cgroups(void) {
-  mkdir("/sys/fs/cgroup", 0755);
-
-  /* Detect Cgroup v2 (unified hierarchy) */
-  if (access("/sys/fs/cgroup/cgroup.controllers", F_OK) == 0 ||
-      grep_file("/proc/mounts", "cgroup2")) {
-    return domount("cgroup2", "/sys/fs/cgroup", "cgroup2",
-                   MS_NOSUID | MS_NODEV | MS_NOEXEC, NULL);
+  /* Use relative paths because we are in the rootfs but haven't pivoted yet.
+   * Check for existence first to avoid EROFS if /sys is already read-only. */
+  if (access("sys/fs/cgroup", F_OK) != 0) {
+    if (mkdir_p("sys/fs/cgroup", 0755) < 0)
+      return -1;
   }
 
-  /* Fallback to Cgroup v1 legacy hierarchies */
-  if (domount("none", "/sys/fs/cgroup", "tmpfs",
+  /*
+   * Always mount a tmpfs as the base for the cgroup hierarchy.
+   * This allows us to mount both v1 and v2 hierarchies as subdirectories,
+   * providing the "components" (mountpoints) visibility and hybrid support.
+   */
+  if (domount("none", "sys/fs/cgroup", "tmpfs",
               MS_NOSUID | MS_NODEV | MS_NOEXEC, "mode=755") < 0)
     return -1;
 
+  /* 1. Try to mount Cgroup v2 (unified hierarchy) at sys/fs/cgroup/unified.
+   * Detect support using the host's sysfs (still visible at /sys). */
+  if (access("/sys/fs/cgroup/cgroup.controllers", F_OK) == 0 ||
+      grep_file("/proc/mounts", "cgroup2")) {
+    mkdir("sys/fs/cgroup/unified", 0755);
+    domount("cgroup2", "sys/fs/cgroup/unified", "cgroup2",
+            MS_NOSUID | MS_NODEV | MS_NOEXEC, NULL);
+  }
+
+  /* 2. Try to mount legacy Cgroup v1 hierarchies at sys/fs/cgroup/<controller>.
+   */
   const char *subs[] = {"cpu",   "cpuacct", "devices", "memory", "freezer",
                         "blkio", "pids",    "systemd", NULL};
   char path[PATH_MAX];
   for (int i = 0; subs[i]; i++) {
-    snprintf(path, sizeof(path), "/sys/fs/cgroup/%s", subs[i]);
+    snprintf(path, sizeof(path), "sys/fs/cgroup/%s", subs[i]);
     mkdir(path, 0755);
-    domount("cgroup", path, "cgroup", MS_NOSUID | MS_NODEV | MS_NOEXEC,
-            subs[i]);
+
+    const char *opts = subs[i];
+    if (strcmp(subs[i], "systemd") == 0)
+      opts = "none,name=systemd";
+
+    /* Best effort: mount whatever is enabled in the kernel/host.
+     * We don't warn/error on failure here because many controllers (like cpu,
+     * memory) are moved to cgroup2 on modern unified systems and will reject
+     * being mounted as v1 hierarchies (Invalid Argument). */
+    mount("cgroup", path, "cgroup", MS_NOSUID | MS_NODEV | MS_NOEXEC, opts);
   }
+
   return 0;
 }
 

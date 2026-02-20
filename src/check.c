@@ -86,15 +86,8 @@ static int check_pivot_root(void) {
 
 static int check_loop(void) { return access("/dev/loop-control", F_OK) == 0; }
 
-static int check_cgroup_v1(const char *sub) {
-  char path[PATH_MAX];
-  snprintf(path, sizeof(path), "/sys/fs/cgroup/%s", sub);
-  return access(path, F_OK) == 0;
-}
-
-static int check_cgroup_v2(void) {
-  return access("/sys/fs/cgroup/cgroup.controllers", F_OK) == 0 ||
-         grep_file("/proc/mounts", "cgroup2");
+static int check_cgroup_devices(void) {
+  return grep_file("/proc/cgroups", "devices");
 }
 
 static int check_seccomp(void) {
@@ -162,10 +155,11 @@ int check_requirements(void) {
     missing++;
   }
 
-  /* Cgroup check (v1 or v2) */
-  if (!check_cgroup_v1("devices") && !check_cgroup_v2()) {
-    ds_error("Kernel missing required cgroup support (v1 devices or v2)");
-    ds_log("systemd requires at least one of these for container management.");
+  /* Cgroup check (v1 devices or v2) */
+  if (!check_cgroup_devices()) {
+    ds_error("Kernel missing required cgroup support");
+    ds_log("Droidspaces requires cgroup 'devices' controller (missing "
+           "'devices' in /proc/cgroups).");
     missing++;
   }
 
@@ -260,8 +254,9 @@ int check_requirements_detailed(void) {
   print_ds_check("devtmpfs support", "Kernel support for devtmpfs",
                  grep_file("/proc/filesystems", "devtmpfs"), "MUST");
 
-  print_ds_check("cgroup support", "Control Groups (v1 or v2) support",
-                 check_cgroup_v1("devices") || check_cgroup_v2(), "MUST");
+  print_ds_check("cgroup devices support",
+                 "Control Groups (devices controller) support",
+                 check_cgroup_devices(), "MUST");
 
   print_ds_check("pivot_root syscall",
                  "Kernel support for the pivot_root syscall",
@@ -331,7 +326,7 @@ int check_requirements_detailed(void) {
     missing_must++;
   if (access("/dev/null", F_OK) != 0)
     missing_must++;
-  if (!(check_cgroup_v1("devices") || check_cgroup_v2()))
+  if (!check_cgroup_devices())
     missing_must++;
   if (!check_pivot_root())
     missing_must++;

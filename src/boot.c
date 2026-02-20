@@ -84,12 +84,7 @@ int internal_boot(struct ds_config *cfg) {
     return -1;
   }
 
-  /* Mount /sys
-   * CRITICAL: Without --hw-access, mount sysfs as read-only to prevent
-   * systemd-udevd from triggering hardware events on the host.
-   * However, remount /sys/devices/virtual/net as read-write for networking
-   * (needed for Docker, WireGuard, Tailscale, SSH, etc.).
-   * With --hw-access, allow read-write access for full hardware control. */
+  /* Mount /sys */
   if (mkdir("sys", 0755) < 0 && errno != EEXIST) {
     ds_error("Failed to create sys directory: %s", strerror(errno));
     return -1;
@@ -99,6 +94,10 @@ int internal_boot(struct ds_config *cfg) {
     ds_error("Failed to mount sysfs: %s", strerror(errno));
     return -1;
   }
+
+  /* 8. Pre-create the cgroup mountpoint while /sys is still RW.
+   * This allows us to mount cgroups onto it later even after /sys is RO. */
+  mkdir_p("sys/fs/cgroup", 0755);
 
   if (cfg->hw_access) {
     /* DYNAMIC HARDWARE HOLES: Instead of hardcoding, we iterate through
@@ -145,13 +144,14 @@ int internal_boot(struct ds_config *cfg) {
     }
   }
 
-  /* CRITICAL: Remount entire /sys as read-only. This is the official systemd
-   * indicator that it is running in a container. Without this, systemd 258+
-   * tries to 'resolve' /dev/console to a host TTY, leading to the getty Loop.
-   * Because we self-bind mounted subdirectories above, they remain RW. */
   if (mount(NULL, "sys", NULL, MS_REMOUNT | MS_BIND | MS_RDONLY, NULL) < 0) {
     ds_warn("Failed to remount /sys as read-only: %s", strerror(errno));
   }
+
+  /* 9. Setup Cgroups AFTER locking down /sys.
+   * Mounting onto a directory on a RO parent is allowed for root, and it
+   * ensures the sub-mount (tmpfs) is RW and independent of the parent's RO. */
+  setup_cgroups();
 
   /* Mask the console discovery file to prevent resolution back to host */
   if (mount("/dev/null", "sys/class/tty/console/active", NULL, MS_BIND, NULL) <
@@ -187,9 +187,6 @@ int internal_boot(struct ds_config *cfg) {
   snprintf(marker, sizeof(marker), "run/%s", cfg->uuid);
   write_file(marker, "init");
   write_file("run/droidspaces", DS_VERSION);
-
-  /* 9. Setup Cgroups */
-  setup_cgroups();
 
   /* 10. Android-specific storage */
   if (cfg->android_storage) {
