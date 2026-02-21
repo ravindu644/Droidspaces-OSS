@@ -513,7 +513,10 @@ When `--foreground` is specified:
    new_tios.c_iflag |= IGNPAR;
    new_tios.c_iflag &= ~(ISTRIP | INLCR | IGNCR | ICRNL | IXON | IXANY | IXOFF);
    new_tios.c_lflag &= ~(TOSTOP | ISIG | ICANON | ECHO | ECHOE | ECHOK | ECHONL);
-   new_tios.c_oflag &= ~ONLCR;
+   /* Keep host's ONLCR enabled to avoid staircase output if the container side
+    * stops sending \r (e.g. during shutdown or sudo execution). Duplicate \r
+    * are harmless. */
+   // new_tios.c_oflag &= ~ONLCR;
    new_tios.c_oflag |= OPOST;
    ```
 
@@ -566,6 +569,7 @@ Key points:
 - `openpty()` allocates a master/slave pair from the host's `/dev/ptmx`
 - Both FDs are marked `FD_CLOEXEC` so they don't leak to the container's init via `execve()`
 - The slave name (e.g., `/dev/pts/3`) is recorded in `tty->name`
+- **Initial Winsize Propagation**: Immediately after allocation, Droidspaces propagates the host terminal's window size to the master PTY. This ensures the slave side has correct dimensions from the very first line of boot output, preventing "staircase" alignment issues in programs like `sudo` that query the terminal size during startup.
 
 ### 7.2 Console PTY
 
@@ -576,6 +580,8 @@ mount(cfg->console.name, "dev/console", NULL, MS_BIND, NULL);
 ```
 
 After pivot_root, `internal_boot()` opens `/dev/console`, redirects stdin/stdout/stderr to it, and makes it the controlling terminal via `TIOCSCTTY`.
+
+**The Fallback Winsize:** If the console PTY reports uninitialized `{0, 0}` dimensions, PID 1 applies a sane default of 24×80. This acts as a safety net until the host-side `console_monitor_loop` performs the first real synchronization.
 
 ### 7.3 TTY PTYs (Placeholders)
 
@@ -729,8 +735,10 @@ In v3.1.2, the `enter` and `run` commands use a sophisticated PTY attachment mod
 1. **Namespace Entry:** The intermediate process joins the container namespaces (`mnt`, `pid`, `ipc`, `uts`) using `enter_namespace()`.
 2. **Native PTY Allocation:** While *inside* the container's private mount and PID namespaces, it allocates a new PTY pair using `openpty()`. This ensures the PTY is part of the container's private `devpts` instance.
 3. **FD Passing:** The master side of this native PTY is passed back to the host process via `SCM_RIGHTS` over a Unix domain socket.
-4. **Proxy Loop:** The host process remains on the host and runs an `epoll` proxy loop between its own terminal and the received container PTY master.
-5. **Controlling TTY:** Inside the container, the intermediate process calls `setsid()` and `ioctl(TIOCSCTTY)` on the native PTY slave before forking the shell.
+4. **Proxy Loop & Eager Sync:** The host process remains on the host and runs an `epoll` proxy loop. Crucially, the parent **eagerly synchronizes** the host terminal's window size to the received PTY master *before* anything else. This eliminates race conditions where the child shell execs interactive programs (like `htop` or `nano`) before the proxy loop has synchronized the terminal size.
+5. **Precise Controlling TTY:** Inside the container, following the double-fork for PID namespace (see 9.3), the **final child process** calls `setsid()` and `ioctl(TIOCSCTTY)` on the native PTY slave *immediately* before binary execution. 
+
+**Why This Matters**: Calling `setsid()` in the final process (and not an intermediate parent) is critical for compatibility with tools like the `login` command. Since `login` itself calls `setsid()`, it must be able to re-acquire the controlling terminal. If an intermediate process holds the session lock, `login` will hang. Droidspaces matches the LXC/Docker attachment model here for perfect POSIX behavior.
 
 This fixes the "not a tty" errors and ensures that `tty` and `ps aux` show the correct `/dev/pts/N` device *relative to the container*.
 
