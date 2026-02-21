@@ -99,10 +99,15 @@ int bind_mount(const char *src, const char *tgt) {
     return -1;
 
   if (stat(tgt, &st_tgt) < 0) {
-    if (S_ISDIR(st_src.st_mode))
-      mkdir(tgt, 0755);
-    else
+    if (S_ISDIR(st_src.st_mode)) {
+      /* CRITICAL: Match source permissions — never hardcode 0755.
+       * This preserves UID/GID/mode so bind mounts behave like Docker:
+       * the kernel overlays the source transparently. */
+      mkdir(tgt, st_src.st_mode & 07777);
+      chown(tgt, st_src.st_uid, st_src.st_gid);
+    } else {
       write_file(tgt, ""); /* Create empty file as mount point */
+    }
   }
 
   return domount(src, tgt, NULL, MS_BIND | MS_REC, NULL);
