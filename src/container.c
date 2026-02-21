@@ -514,12 +514,12 @@ int enter_namespace(pid_t pid) {
     return -1;
   }
 
-  const char *ns_names[] = {"mnt", "uts", "ipc", "pid"};
-  int ns_fds[4];
+  const char *ns_names[] = {"mnt", "uts", "ipc", "pid", "cgroup"};
+  int ns_fds[5];
   char path[PATH_MAX];
 
   /* 1. Open all namespace descriptors first (CRITICAL: before any setns) */
-  for (int i = 0; i < 4; i++) {
+  for (int i = 0; i < 5; i++) {
     snprintf(path, sizeof(path), "/proc/%d/ns/%s", pid, ns_names[i]);
     ns_fds[i] = open(path, O_RDONLY);
     if (ns_fds[i] < 0) {
@@ -537,14 +537,14 @@ int enter_namespace(pid_t pid) {
   }
 
   /* 2. Enter namespaces */
-  for (int i = 0; i < 4; i++) {
+  for (int i = 0; i < 5; i++) {
     if (ns_fds[i] < 0)
       continue;
 
     if (setns(ns_fds[i], 0) < 0) {
       if (i == 0) { /* mnt is mandatory */
         ds_error("setns(mnt) failed: %s", strerror(errno));
-        for (int j = i; j < 4; j++)
+        for (int j = i; j < 5; j++)
           if (ns_fds[j] >= 0)
             close(ns_fds[j]);
         return -1;
