@@ -242,6 +242,7 @@ int is_mountpoint(const char *path);
  * ---------------------------------------------------------------------------*/
 
 int setup_cgroups(void);
+int ds_cgroup_attach(pid_t target_pid);
 
 /* ---------------------------------------------------------------------------
  * network.c

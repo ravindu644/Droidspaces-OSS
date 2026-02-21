@@ -273,10 +273,19 @@ int start_rootfs(struct ds_config *cfg) {
     if (access("/proc/self/ns/cgroup", F_OK) == 0) {
       /* To get isolation from a cgroup namespace, we must be in a sub-cgroup
        * BEFORE we unshare. If we are in the root '/', the namespace root will
-       * be the host's root, providing zero isolation. */
+       * be the host's root, providing zero isolation.
+       * We use a container-specific path to avoid conflicts. */
       if (access("/sys/fs/cgroup/cgroup.procs", F_OK) == 0) {
-        mkdir("/sys/fs/cgroup/droidspaces", 0755);
-        FILE *f = fopen("/sys/fs/cgroup/droidspaces/cgroup.procs", "we");
+        char cg_path[PATH_MAX];
+        snprintf(cg_path, sizeof(cg_path), "/sys/fs/cgroup/droidspaces/%s",
+                 cfg->container_name);
+        mkdir_p(cg_path, 0755);
+
+        char cg_procs[PATH_MAX];
+        safe_strncpy(cg_procs, cg_path, sizeof(cg_procs));
+        strncat(cg_procs, "/cgroup.procs",
+                sizeof(cg_procs) - strlen(cg_procs) - 1);
+        FILE *f = fopen(cg_procs, "we");
         if (f) {
           fprintf(f, "%d\n", getpid());
           fclose(f);
@@ -582,6 +591,14 @@ int enter_rootfs(struct ds_config *cfg, const char *user) {
 
   if (child == 0) {
     close(sv[0]);
+
+    /* CRITICAL: Physically attach process to the container's cgroup on the
+     * host. This ensures the process is inside the container's hierarchy
+     * subtree, which is required for D-Bus/logind inside to move it into
+     * session scopes.
+     */
+    ds_cgroup_attach(pid);
+
     if (enter_namespace(pid) < 0)
       exit(EXIT_FAILURE);
 

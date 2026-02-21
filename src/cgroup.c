@@ -313,3 +313,91 @@ int setup_cgroups(void) {
 
   return 0;
 }
+
+/**
+ * Move a process (usually self) into the same cgroup hierarchy as target_pid.
+ * This is used by 'enter' to ensure the process is physically inside the
+ * container's cgroup subtree on the host, which is required for D-Bus/logind
+ * inside the container to correctly move the process into session scopes.
+ */
+int ds_cgroup_attach(pid_t target_pid) {
+  struct host_cgroup hosts[32];
+  int n = get_host_cgroups(hosts, 32);
+
+  for (int i = 0; i < n; i++) {
+    const char *ctrl = (hosts[i].version == 2) ? NULL : hosts[i].controllers;
+    char first_ctrl[64];
+
+    if (hosts[i].version == 1 && ctrl) {
+      if (sscanf(ctrl, "%63[^,]", first_ctrl) == 1)
+        ctrl = first_ctrl;
+    }
+
+    /* 1. Discover where target_pid is for this hierarchy */
+    char proc_path[PATH_MAX];
+    snprintf(proc_path, sizeof(proc_path), "/proc/%d/cgroup", target_pid);
+
+    FILE *f = fopen(proc_path, "re");
+    if (!f)
+      continue;
+
+    char line[1024];
+    char subpath[PATH_MAX] = {0};
+    while (fgets(line, sizeof(line), f)) {
+      char *col1 = strchr(line, ':');
+      if (!col1)
+        continue;
+      char *col2 = strchr(col1 + 1, ':');
+      if (!col2)
+        continue;
+
+      char *subsys = col1 + 1;
+      *col2 = '\0';
+      char *path = col2 + 1;
+
+      int match = 0;
+      if (hosts[i].version == 2 && subsys[0] == '\0') {
+        match = 1;
+      } else if (hosts[i].version == 1 && ctrl && strstr(subsys, ctrl)) {
+        match = 1;
+      }
+
+      if (match) {
+        char *nl = strchr(path, '\n');
+        if (nl)
+          *nl = '\0';
+        safe_strncpy(subpath, path, sizeof(subpath));
+        break;
+      }
+    }
+    fclose(f);
+
+    if (subpath[0] == '\0')
+      continue;
+
+    /* 2. Move self (or caller) into that cgroup on the host */
+    char tasks_path[PATH_MAX];
+    safe_strncpy(tasks_path, hosts[i].mountpoint, sizeof(tasks_path));
+    strncat(tasks_path, "/", sizeof(tasks_path) - strlen(tasks_path) - 1);
+    strncat(tasks_path, subpath, sizeof(tasks_path) - strlen(tasks_path) - 1);
+    strncat(tasks_path, (hosts[i].version == 2) ? "/cgroup.procs" : "/tasks",
+            sizeof(tasks_path) - strlen(tasks_path) - 1);
+
+    int fd = open(tasks_path, O_WRONLY | O_CLOEXEC);
+    if (fd >= 0) {
+      char pid_s[32];
+      int len = snprintf(pid_s, sizeof(pid_s), "%d", getpid());
+      if (write(fd, pid_s, len) < 0) {
+        /* Ignore EPERM if we're already there or restricted,
+         * but log other errors. */
+        if (errno != EPERM) {
+          ds_warn("Failed to attach to cgroup %s: %s", tasks_path,
+                  strerror(errno));
+        }
+      }
+      close(fd);
+    }
+  }
+
+  return 0;
+}
