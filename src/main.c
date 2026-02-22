@@ -42,6 +42,8 @@ void print_usage(void) {
          "omitted)\n");
   printf("  -p, --pidfile=PATH        Path to pidfile\n");
   printf("  -h, --hostname=NAME       Set container hostname\n");
+  printf(
+      "  -d, --dns=SERVERS         Set custom DNS servers (comma separated)\n");
   printf("  -f, --foreground          Run in foreground (attach console)\n");
   printf("  -V, --volatile            Discard changes on exit (OverlayFS)\n");
   printf(
@@ -99,6 +101,7 @@ int main(int argc, char **argv) {
       {"name", required_argument, 0, 'n'},
       {"pidfile", required_argument, 0, 'p'},
       {"hostname", required_argument, 0, 'h'},
+      {"dns", required_argument, 0, 'd'},
       {"foreground", no_argument, 0, 'f'},
       {"hw-access", no_argument, 0, 'H'},
       {"enable-ipv6", no_argument, 0, 'I'},
@@ -121,8 +124,8 @@ int main(int argc, char **argv) {
    */
   const char *discovered_cmd = NULL;
   int temp_optind = optind;
-  while (getopt_long(argc, argv, "+r:i:n:p:h:fHISPvVB:", long_options, NULL) !=
-         -1)
+  while (getopt_long(argc, argv, "+r:i:n:p:h:d:fHISPvVB:", long_options,
+                     NULL) != -1)
     ;
   if (optind < argc)
     discovered_cmd = argv[optind];
@@ -130,7 +133,7 @@ int main(int argc, char **argv) {
 
   int strict = (discovered_cmd && (strcmp(discovered_cmd, "run") == 0));
   const char *optstring =
-      strict ? "+r:i:n:p:h:fHISPvVB:" : "r:i:n:p:h:fHISPvVB:";
+      strict ? "+r:i:n:p:h:d:fHISPvVB:" : "r:i:n:p:h:d:fHISPvVB:";
 
   int opt;
   while ((opt = getopt_long(argc, argv, optstring, long_options, NULL)) != -1) {
@@ -149,6 +152,9 @@ int main(int argc, char **argv) {
       break;
     case 'h':
       safe_strncpy(cfg.hostname, optarg, sizeof(cfg.hostname));
+      break;
+    case 'd':
+      safe_strncpy(cfg.dns_servers, optarg, sizeof(cfg.dns_servers));
       break;
     case 'f':
       cfg.foreground = 1;

@@ -11,22 +11,50 @@
  * Host-side networking setup (before container boot)
  * ---------------------------------------------------------------------------*/
 
-int ds_get_dns_servers(char *dns1, char *dns2, size_t size) {
-  dns1[0] = dns2[0] = '\0';
+int ds_get_dns_servers(const char *custom_dns, char *out, size_t size) {
+  out[0] = '\0';
+  int count = 0;
 
-  /* 1. Try Android properties if on Android */
-  if (is_android()) {
-    android_fill_dns_from_props(dns1, dns2, size);
+  /* 0. Try custom DNS if provided */
+  if (custom_dns && custom_dns[0]) {
+    char buf[256];
+    safe_strncpy(buf, custom_dns, sizeof(buf));
+    char *saveptr;
+    char *token = strtok_r(buf, ", ", &saveptr);
+    while (token && (size_t)strlen(out) < size - 64) {
+      char line[128];
+      snprintf(line, sizeof(line), "nameserver %s\n", token);
+      strcat(out, line);
+      count++;
+      token = strtok_r(NULL, ", ", &saveptr);
+    }
   }
 
-  /* 2. Global stable fallbacks (Preferred over host resolv.conf which might be
-   * local loops) */
-  if (!dns1[0])
-    safe_strncpy(dns1, "1.1.1.1", size);
-  if (!dns2[0])
-    safe_strncpy(dns2, "8.8.8.8", size);
+  /* 1. Try Android properties if on Android (if still empty) */
+  if (count == 0 && is_android()) {
+    char dns1[64] = {0}, dns2[64] = {0};
+    android_fill_dns_from_props(dns1, dns2, sizeof(dns1));
+    if (dns1[0]) {
+      strcat(out, "nameserver ");
+      strcat(out, dns1);
+      strcat(out, "\n");
+      count++;
+    }
+    if (dns2[0]) {
+      strcat(out, "nameserver ");
+      strcat(out, dns2);
+      strcat(out, "\n");
+      count++;
+    }
+  }
 
-  return 0;
+  /* 2. Global stable fallbacks */
+  if (count == 0) {
+    strcat(out, "nameserver 1.1.1.1\nnameserver 8.8.8.8\n");
+    count = 2;
+  }
+
+  return count;
 }
 
 int fix_networking_host(struct ds_config *cfg) {
@@ -46,9 +74,14 @@ int fix_networking_host(struct ds_config *cfg) {
     write_file("/proc/sys/net/ipv6/conf/default/disable_ipv6", "1");
   }
 
-  /* Get DNS (Android props -> Host /etc/resolv.conf -> Google/Cloudflare) */
-  char dns1[64] = {0}, dns2[64] = {0};
-  ds_get_dns_servers(dns1, dns2, sizeof(dns1));
+  /* Get DNS (Custom -> Android props -> Google/Cloudflare) */
+  char dns_buf[1024] = {0};
+  int count = ds_get_dns_servers(cfg->dns_servers, dns_buf, sizeof(dns_buf));
+
+  if (cfg->dns_servers[0])
+    ds_log("Setting up %d custom DNS servers...", count);
+  else
+    ds_log("Setting up %d default DNS servers...", count);
 
   /* Save DNS to temp file in rootfs for use after pivot_root */
   char dns_path[PATH_MAX];
@@ -56,10 +89,7 @@ int fix_networking_host(struct ds_config *cfg) {
            cfg->rootfs_path);
   FILE *dns_fp = fopen(dns_path, "w");
   if (dns_fp) {
-    if (dns2[0])
-      fprintf(dns_fp, "nameserver %s\nnameserver %s\n", dns1, dns2);
-    else
-      fprintf(dns_fp, "nameserver %s\n", dns1);
+    fputs(dns_buf, dns_fp);
     fclose(dns_fp);
   }
 
@@ -102,11 +132,12 @@ int fix_networking_rootfs(struct ds_config *cfg) {
 
   /* 3. resolv.conf (Android DNS from host via .dns_servers) */
   mkdir("/run/resolvconf", 0755);
-  FILE *dns_fp = fopen("/.old_root/.dns_servers", "r");
+  FILE *dns_fp = fopen("/.dns_servers", "r");
   if (dns_fp) {
-    char buf[512];
+    char buf[1024];
     size_t n = fread(buf, 1, sizeof(buf) - 1, dns_fp);
     fclose(dns_fp);
+    unlink("/.dns_servers"); /* Cleanup the temporary marker */
     if (n > 0) {
       buf[n] = '\0'; /* Ensure null-termination */
       write_file("/run/resolvconf/resolv.conf", buf);

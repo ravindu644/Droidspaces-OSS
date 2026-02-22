@@ -142,6 +142,7 @@ struct ds_config {
   char pidfile[PATH_MAX];         /* --pidfile= or auto-resolved */
   char container_name[256];       /* --name= or auto-generated */
   char hostname[256];             /* --hostname= or container_name */
+  char dns_servers[256];          /* --dns= (comma/space separated) */
 
   /* UUID for PID discovery */
   char uuid[DS_UUID_LEN + 1];
@@ -187,6 +188,8 @@ int mkdir_p(const char *path, mode_t mode);
 int remove_recursive(const char *path);
 int collect_pids(pid_t **pids_out, size_t *count_out);
 int build_proc_root_path(pid_t pid, const char *suffix, char *buf, size_t size);
+int parse_os_release(const char *rootfs_path, char *id_out, char *ver_out,
+                     size_t out_size);
 int grep_file(const char *path, const char *pattern);
 int read_and_validate_pid(const char *pidfile, pid_t *pid_out);
 int save_mount_path(const char *pidfile, const char *mount_path);
@@ -250,7 +253,7 @@ int ds_cgroup_attach(pid_t target_pid);
 
 int fix_networking_host(struct ds_config *cfg);
 int fix_networking_rootfs(struct ds_config *cfg);
-int ds_get_dns_servers(char *dns1, char *dns2, size_t size);
+int ds_get_dns_servers(const char *custom_dns, char *out, size_t size);
 int detect_ipv6_in_container(pid_t pid);
 
 /* ---------------------------------------------------------------------------
