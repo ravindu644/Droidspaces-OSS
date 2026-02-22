@@ -42,46 +42,12 @@ int ensure_workspace(void) {
  * ---------------------------------------------------------------------------*/
 
 int generate_container_name(const char *rootfs_path, char *name, size_t size) {
-  char os_release[PATH_MAX];
-  snprintf(os_release, sizeof(os_release), "%s/etc/os-release", rootfs_path);
+  char id[64], version[64];
 
-  char buf[4096];
-  if (read_file(os_release, buf, sizeof(buf)) < 0) {
+  if (parse_os_release(rootfs_path, id, version, sizeof(id)) < 0) {
     /* Fallback if os-release is missing */
     safe_strncpy(name, "linux-container", size);
     return 0;
-  }
-
-  /* Parse ID and VERSION_ID */
-  char id[64] = "linux", version[64] = "";
-  char *p = strstr(buf, "\nID=");
-  if (!p && strncmp(buf, "ID=", 3) == 0)
-    p = buf;
-  if (p) {
-    if (*p == '\n')
-      p++;
-    p += 3;
-    if (*p == '"')
-      p++;
-    int i = 0;
-    while (p[i] && p[i] != '"' && p[i] != '\n' && i < 63) {
-      id[i] = p[i];
-      i++;
-    }
-    id[i] = '\0';
-  }
-
-  p = strstr(buf, "VERSION_ID=");
-  if (p) {
-    p += 11;
-    if (*p == '"')
-      p++;
-    int i = 0;
-    while (p[i] && p[i] != '"' && p[i] != '\n' && i < 63) {
-      version[i] = p[i];
-      i++;
-    }
-    version[i] = '\0';
   }
 
   if (version[0])
@@ -278,44 +244,63 @@ int show_containers(void) {
   struct container_info {
     char name[128];
     pid_t pid;
-  } containers[256];
+  } *containers = NULL;
 
   int count = 0;
+  int cap = 32;
+  containers = malloc(cap * sizeof(struct container_info));
+  if (!containers) {
+    closedir(d);
+    return -1;
+  }
+
   size_t max_name_len = 4; /* "NAME" */
 
   struct dirent *ent;
-  while ((ent = readdir(d)) != NULL && count < 256) {
-    if (!is_pid_file(ent->d_name))
-      continue;
+  while ((ent = readdir(d)) != NULL) {
+    if (is_pid_file(ent->d_name)) {
+      char pidfile[PATH_MAX];
+      if (snprintf(pidfile, sizeof(pidfile), "%.4070s/%.24s", get_pids_dir(),
+                   ent->d_name) >= (int)sizeof(pidfile))
+        continue;
 
-    char pidfile[PATH_MAX];
-    if (snprintf(pidfile, sizeof(pidfile), "%.4070s/%.24s", get_pids_dir(),
-                 ent->d_name) >= (int)sizeof(pidfile))
-      continue;
+      pid_t pid;
+      if (read_and_validate_pid(pidfile, &pid) == 0) {
+        if (count >= cap) {
+          cap *= 2;
+          struct container_info *tmp =
+              realloc(containers, cap * sizeof(struct container_info));
+          if (!tmp) {
+            free(containers);
+            closedir(d);
+            return -1;
+          }
+          containers = tmp;
+        }
 
-    pid_t pid;
-    if (read_and_validate_pid(pidfile, &pid) == 0) {
-      safe_strncpy(containers[count].name, ent->d_name,
-                   sizeof(containers[count].name));
-      char *dot = strrchr(containers[count].name, '.');
-      if (dot)
-        *dot = '\0';
+        safe_strncpy(containers[count].name, ent->d_name,
+                     sizeof(containers[count].name));
+        char *dot = strrchr(containers[count].name, '.');
+        if (dot)
+          *dot = '\0';
 
-      containers[count].pid = pid;
-      size_t nlen = strlen(containers[count].name);
-      if (nlen > max_name_len)
-        max_name_len = nlen;
-      count++;
-    } else if (pid == 0) {
-      /* Stale PID file, nuke it */
-      unlink(pidfile);
-      remove_mount_path(pidfile);
+        containers[count].pid = pid;
+        size_t nlen = strlen(containers[count].name);
+        if (nlen > max_name_len)
+          max_name_len = nlen;
+        count++;
+      } else if (pid == 0) {
+        /* Stale PID file, nuke it */
+        unlink(pidfile);
+        remove_mount_path(pidfile);
+      }
     }
   }
   closedir(d);
 
   if (count == 0) {
     printf("\n(No containers running)\n\n");
+    free(containers);
     return 0;
   }
 
@@ -348,6 +333,7 @@ int show_containers(void) {
   printf("\n");
 #undef PRINT_LINE
 
+  free(containers);
   return 0;
 }
 
