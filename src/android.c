@@ -202,27 +202,23 @@ void android_configure_iptables(void) {
     return;
 
   ds_log("Configuring iptables for container networking...");
-  /* Configure iptables for container networking */
-  char *args_f[] = {"iptables", "-t", "filter", "-F", NULL};
-  run_command_quiet(args_f);
-  char *args_f6[] = {"ip6tables", "-t", "filter", "-F", NULL};
-  run_command_quiet(args_f6);
-  char *args_p[] = {"iptables", "-P", "FORWARD", "ACCEPT", NULL};
-  run_command_quiet(args_p);
-  char *args_masq[] = {"iptables", "-t",          "nat", "-A", "POSTROUTING",
-                       "-s",       "10.0.3.0/24", "!",   "-d", "10.0.3.0/24",
-                       "-j",       "MASQUERADE",  NULL};
-  run_command_quiet(args_masq);
-  char *args_red_tcp[] = {
-      "iptables", "-t", "nat",       "-A",         "OUTPUT",  "-p",
-      "tcp",      "-d", "127.0.0.1", "-m",         "tcp",     "--dport",
-      "1:65535",  "-j", "REDIRECT",  "--to-ports", "1-65535", NULL};
-  run_command_quiet(args_red_tcp);
-  char *args_red_udp[] = {
-      "iptables", "-t", "nat",       "-A",         "OUTPUT",  "-p",
-      "udp",      "-d", "127.0.0.1", "-m",         "udp",     "--dport",
-      "1:65535",  "-j", "REDIRECT",  "--to-ports", "1-65535", NULL};
-  run_command_quiet(args_red_udp);
+
+  char *cmds[][32] = {{"iptables", "-t", "filter", "-F", NULL},
+                      {"ip6tables", "-t", "filter", "-F", NULL},
+                      {"iptables", "-P", "FORWARD", "ACCEPT", NULL},
+                      {"iptables", "-t", "nat", "-A", "POSTROUTING", "-s",
+                       "10.0.3.0/24", "!", "-d", "10.0.3.0/24", "-j",
+                       "MASQUERADE", NULL},
+                      {"iptables", "-t", "nat", "-A", "OUTPUT", "-p", "tcp",
+                       "-d", "127.0.0.1", "-m", "tcp", "--dport", "1:65535",
+                       "-j", "REDIRECT", "--to-ports", "1-65535", NULL},
+                      {"iptables", "-t", "nat", "-A", "OUTPUT", "-p", "udp",
+                       "-d", "127.0.0.1", "-m", "udp", "--dport", "1:65535",
+                       "-j", "REDIRECT", "--to-ports", "1-65535", NULL}};
+
+  for (size_t i = 0; i < sizeof(cmds) / sizeof(cmds[0]); i++) {
+    run_command_quiet(cmds[i]);
+  }
 }
 
 /* ---------------------------------------------------------------------------
