@@ -250,7 +250,11 @@ int start_rootfs(struct ds_config *cfg) {
   struct stat st;
   if (lstat(init_path, &st) != 0) {
     ds_error("Init binary not found: %s", init_path);
-    ds_die("Please ensure the rootfs path is correct and contains /sbin/init.");
+    ds_error(
+        "Please ensure the rootfs path is correct and contains /sbin/init.");
+    if (cfg->is_img_mount)
+      unmount_rootfs_img(cfg->img_mount_point, cfg->foreground);
+    return -1;
   }
 
   /*
@@ -261,7 +265,10 @@ int start_rootfs(struct ds_config *cfg) {
    */
   if (!S_ISLNK(st.st_mode) && access(init_path, X_OK) != 0) {
     ds_error("Init binary is not executable: %s", init_path);
-    ds_die("Ensure it has executable permissions.");
+    ds_error("Ensure it has executable permissions.");
+    if (cfg->is_img_mount)
+      unmount_rootfs_img(cfg->img_mount_point, cfg->foreground);
+    return -1;
   }
 
   cfg->tty_count = DS_MAX_TTYS;
