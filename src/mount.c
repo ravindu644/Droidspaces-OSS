@@ -539,16 +539,35 @@ int mount_rootfs_img(const char *img_path, char *mount_point, size_t mp_size,
   sync();
   usleep(200000); /* 200ms */
 
-  ds_log("Mounting rootfs image %s on %s...", img_path, mount_point);
-
-  /* Mount via loop device */
+  /* Mount via loop device with retries (Critical for Kernel 4.14 stability) */
   char *opts = readonly ? "loop,ro" : "loop";
   char *mount_argv[] = {"mount",     "-o", opts, (char *)(uintptr_t)img_path,
                         mount_point, NULL};
-  if (run_command_quiet(mount_argv) != 0) {
-    ds_error("Failed to mount image %s", img_path);
-    return -1;
+
+  int max_retries = 3;
+  int attempt = 0;
+  while (attempt < max_retries) {
+    if (attempt == 0) {
+      ds_log("Mounting rootfs image %s on %s...", img_path, mount_point);
+    } else {
+      ds_log("Mounting rootfs image %s on %s (Attempt %d/%d)...", img_path,
+             mount_point, attempt + 1, max_retries);
+    }
+
+    if (run_command_quiet(mount_argv) == 0) {
+      return 0; /* Success */
+    }
+
+    attempt++;
+    if (attempt < max_retries) {
+      ds_log("Mount failed, sync and waiting 1s before retry...");
+      sync();
+      sleep(1);
+    }
   }
+
+  ds_error("Failed to mount image %s after %d attempts", img_path, max_retries);
+  return -1;
 
   return 0;
 }
@@ -560,7 +579,9 @@ int unmount_rootfs_img(const char *mount_point, int silent) {
   if (!silent)
     ds_log("Unmounting rootfs image from %s...", mount_point);
 
-  /* 1. Try lazy unmount first (most reliable for detached loop mounts) */
+  /* 1. Flush and try lazy unmount first (most reliable for detached loop
+   * mounts) */
+  sync();
   if (umount2(mount_point, MNT_DETACH) < 0) {
     /* Fallback to shell command with loop detach */
     char *umount_argv[] = {"umount", "-d", "-l", (char *)(uintptr_t)mount_point,
@@ -570,6 +591,7 @@ int unmount_rootfs_img(const char *mount_point, int silent) {
 
   /* 2. Give the kernel a moment to settle the unmount (critical for loop
    * devices) */
+  sync();
   usleep(100000); /* 100ms */
 
   /* 3. Try to remove the directory */

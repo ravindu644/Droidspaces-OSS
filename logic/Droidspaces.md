@@ -6,7 +6,7 @@
 
 Droidspaces is a lightweight, zero-virtualization container runtime designed to run full Linux distributions (Ubuntu, Alpine, etc.) with systemd or openrc as PID 1, natively on Android devices. It achieves process isolation through Linux PID, IPC, MNT, and UTS namespaces — the same kernel primitives used by Docker and LXC — but targets the constrained and idiosyncratic Android kernel environment where many standard container tools refuse to operate.
 
-This document is a complete internal architecture reference for **Droidspaces v4.2.2**. Every struct, every syscall, every mount, and every design decision is documented here with the intent that a future implementer could rewrite this project from scratch without ever reading the original source. Where the implementation is elegant, I say so. Where it is broken or fragile, I say so with equal honesty.
+This document is a complete internal architecture reference for **Droidspaces v4.2.3**. Every struct, every syscall, every mount, and every design decision is documented here with the intent that a future implementer could rewrite this project from scratch without ever reading the original source. Where the implementation is elegant, I say so. Where it is broken or fragile, I say so with equal honesty.
 
 The codebase is approximately **3,300 lines of C** across 12 `.c` files and 1 master header, compiled as a single static binary against musl libc.
 
@@ -72,10 +72,13 @@ src/
 - **Cgroup Isolation & Session Fix (v4.2.0+):** 
     - Implemented unique host-side cgroup trees per container: `/sys/fs/cgroup/droidspaces/<name>`.
     - Fixed `su` and `login` hangs in entered terminals by physically attaching the entering process to the container's host cgroup *before* joining namespaces. This ensures `systemd-logind` correctly identifies the terminal session.
-- **Fast Container Restart (v4.2.2+):**
+- **Fast Container Restart (v4.2.2):**
     - Implemented a filesystem-based coordination marker (`.restart`) to synchronize state between the `restart` command and the background monitor process.
     - Moves the mount reuse check (`.mount` sidecar) to the very beginning of the boot sequence, bypassing expensive name resolution and `e2fsck`.
     - Sanitized PID management to remove filesystem side-effects during status checks and name discovery, ensuring tracking state is preserved for the next boot.
+- **Kernel 4.14 Resilience (v4.2.3):**
+    - Implemented a robust 3-attempt retry loop for rootfs image mounting with `sync` and 1-second settle delays.
+    - Hardened the unmount sequence with extra `sync` calls to ensure asynchronous loop device teardown completes before the next start.
 
 
 ---
@@ -1080,7 +1083,7 @@ If you're rewriting Droidspaces from scratch, here is the checklist of every dec
 7. **Rootfs image mount**: If `-i` provided:
    - Identify host-side mount point at `/mnt/Droidspaces/<name>`.
    - `e2fsck -f -y <img>`
-   - `mount -o loop,ro <img> <mount_point>` (RO is mandatory if `--volatile`).
+   - **Mount with Retry (4.14 resilience)**: Try `mount -o loop,ro <img> <mount_point>`. If it fails, `sync()`, wait 1s, and retry up to 3 times to allow the kernel to release stale loop devices.
 
 8. **Allocate PTYs in the parent** (LXC model):
    - `openpty()` × (1 console + N TTYs)
@@ -1240,4 +1243,4 @@ provide a link to the license, and indicate if changes were made.
 
 **End of Document**
 
-*This document was written by analyzing v4.1.0 of the Droidspaces source code — approximately 3,300 lines of C across 13 files. Every syscall, every mount, and every design decision described here was verified against the actual implementation.*
+*This document was written by analyzing v4.2.3 of the Droidspaces source code — approximately 3,300 lines of C across 13 files. Every syscall, every mount, and every design decision described here was verified against the actual implementation.*
