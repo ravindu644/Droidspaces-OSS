@@ -80,6 +80,10 @@ src/
     - Implemented a robust 3-attempt retry loop for rootfs image mounting with `sync` and 1-second settle delays.
     - Refined UI logs (v4.2.4) to hide attempt counters on the first try and provide cleaner error reporting.
     - Hardened the unmount sequence with extra `sync` calls to ensure asynchronous loop device teardown completes before the next start.
+- **Multi-DNS Support (v4.2.4):**
+    - Refactored `ds_get_dns_servers` to support an arbitrary number of DNS servers (comma or space separated).
+    - Hardened DNS propagation by switching to a rootfs-relative path (`/.dns_servers`) inside the container after `pivot_root`, ensuring persistence even when host paths are obscured.
+    - Added explicit cleanup for the temporary marker file.
 
 
 ---
@@ -404,7 +408,7 @@ Sets hostname (from `--hostname`), writes `/etc/hostname`, and generates `/etc/h
 **The apt/sudo hostname fix:**
 To prevent `apt` warnings and `sudo` resolution delays, Droidspaces explicitly maps the container's hostname to `127.0.1.1` in `/etc/hosts`. This is a critical fix for many Linux distributions where the loopback alias is expected.
 
-It then reads DNS from `.old_root/.dns_servers` (written by `fix_networking_host()` before boot), writes `/run/resolvconf/resolv.conf` (ensuring proper null-termination for system stability), symlinks `/etc/resolv.conf`, and appends Android network groups (`aid_inet`, `aid_net_raw`, `aid_net_admin`) to `/etc/group`.
+It then reads the DNS configuration from `/.dns_servers` (written by `fix_networking_host()` before boot), writes `/run/resolvconf/resolv.conf` (ensuring proper null-termination for system stability), and immediately deletes the temporary `/.dns_servers` file. Finally, it symlinks `/etc/resolv.conf` and appends Android network groups (`aid_inet`, `aid_net_raw`, `aid_net_admin`) to `/etc/group`.
 
 
 **Step 17 — Unmount old root:**
@@ -1167,7 +1171,7 @@ If you're rewriting Droidspaces from scratch, here is the checklist of every dec
 
 34. Setup `/dev/ptmx`: bind mount `/dev/pts/ptmx` → `/dev/ptmx`
 
-35. Configure networking (rootfs side): hostname, DNS, resolv.conf, Android groups
+35. Configure networking (rootfs side): hostname, multi-DNS, resolv.conf, Android groups
 
 36. `umount2("/.old_root", MNT_DETACH)`, `rmdir("/.old_root")`
 
@@ -1189,7 +1193,7 @@ If you're rewriting Droidspaces from scratch, here is the checklist of every dec
 
 41. Read `init_pid` from sync pipe
 
-42. Configure host-side networking (ip_forward, IPv6, DNS file, iptables)
+42. Configure host-side networking (ip_forward, IPv6, multi-DNS file, iptables)
 
 43. Save PID to pidfile
 
