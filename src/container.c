@@ -11,6 +11,12 @@
  * Cleanup
  * ---------------------------------------------------------------------------*/
 
+/* Build a restart marker path from a container name.
+ * Returns the path in 'buf'. Safe against format-truncation. */
+static void restart_marker_path(const char *name, char *buf, size_t size) {
+  snprintf(buf, size, "%s/%s.restart", get_pids_dir(), name);
+}
+
 static void cleanup_container_resources(struct ds_config *cfg, pid_t pid,
                                         int skip_unmount) {
   /* Flush filesystem buffers */
@@ -51,12 +57,24 @@ static void cleanup_container_resources(struct ds_config *cfg, pid_t pid,
       unmount_rootfs_img(mount_point, cfg->foreground);
   }
 
-  /* 5. Remove tracking info and unlink PID files */
-  remove_mount_path(cfg->pidfile);
-  if (cfg->pidfile[0])
-    unlink(cfg->pidfile);
-  if (global_pidfile[0] && strcmp(cfg->pidfile, global_pidfile) != 0)
-    unlink(global_pidfile);
+  /* 5. Remove tracking info and unlink PID files.
+   * For restart (skip_unmount), preserve the .mount sidecar and pidfiles
+   * so start_rootfs() can detect the existing mount and reuse it. */
+  if (!skip_unmount) {
+    remove_mount_path(cfg->pidfile);
+    if (cfg->pidfile[0])
+      unlink(cfg->pidfile);
+    if (global_pidfile[0] && strcmp(cfg->pidfile, global_pidfile) != 0)
+      unlink(global_pidfile);
+
+    /* Also clean up any stale restart marker (edge case: restart was
+     * attempted but the new start never consumed the marker). */
+    if (cfg->container_name[0]) {
+      char marker[PATH_MAX];
+      restart_marker_path(cfg->container_name, marker, sizeof(marker));
+      unlink(marker); /* ignore errors — may not exist */
+    }
+  }
 }
 
 /* ---------------------------------------------------------------------------
@@ -95,10 +113,6 @@ int check_status(struct ds_config *cfg, pid_t *pid_out) {
   pid_t pid = 0;
   if (read_and_validate_pid(cfg->pidfile, &pid) < 0 ||
       (pid > 0 && !is_valid_container_pid(pid))) {
-    if (pid == 0 || (pid > 0 && !is_valid_container_pid(pid))) {
-      /* PID no longer running or not a valid container, cleanup */
-      cleanup_container_resources(cfg, pid, 0);
-    }
     ds_error("Container '%s' is not running or invalid.", cfg->container_name);
     return -1;
   }
@@ -113,6 +127,43 @@ int check_status(struct ds_config *cfg, pid_t *pid_out) {
  * ---------------------------------------------------------------------------*/
 
 int start_rootfs(struct ds_config *cfg) {
+  /* 0. Early restart detection: check for existing mount BEFORE name
+   *    resolution or workspace setup, using the restart marker and
+   *    .mount sidecar to detect a preserved mount from stop(skip_unmount). */
+  int restart_reuse = 0;
+  if (cfg->container_name[0] && cfg->rootfs_img_path[0]) {
+    /* Build restart marker path */
+    char restart_marker[PATH_MAX];
+    restart_marker_path(cfg->container_name, restart_marker,
+                        sizeof(restart_marker));
+
+    if (access(restart_marker, F_OK) == 0) {
+      /* Restart marker present — try to reuse existing mount */
+      unlink(restart_marker); /* consume the marker */
+
+      /* Resolve pidfile so we can read .mount sidecar */
+      if (cfg->pidfile[0] == '\0')
+        resolve_pidfile_from_name(cfg->container_name, cfg->pidfile,
+                                  sizeof(cfg->pidfile));
+
+      char existing_mount[PATH_MAX];
+      if (cfg->pidfile[0] &&
+          read_mount_path(cfg->pidfile, existing_mount,
+                          sizeof(existing_mount)) > 0 &&
+          is_mountpoint(existing_mount)) {
+        ds_log("Reusing existing mount at %s (restart)", existing_mount);
+        safe_strncpy(cfg->rootfs_path, existing_mount,
+                     sizeof(cfg->rootfs_path));
+        cfg->is_img_mount = 1;
+        safe_strncpy(cfg->img_mount_point, cfg->rootfs_path,
+                     sizeof(cfg->img_mount_point));
+        restart_reuse = 1;
+      } else {
+        ds_warn("Restart marker found but mount not active, doing fresh mount");
+      }
+    }
+  }
+
   /* 1. Preparation */
   ensure_workspace();
 
@@ -122,7 +173,7 @@ int start_rootfs(struct ds_config *cfg) {
     ds_warn("--enable-android-storage is only supported on Android hosts. "
             "Skipping.");
 
-  /* 1. Resolve container name first (needed for descriptive mount points) */
+  /* 1b. Resolve container name (needed for descriptive mount points) */
   if (cfg->container_name[0] == '\0') {
     if (cfg->rootfs_img_path[0]) {
       ds_error("--name is mandatory when using a rootfs image.");
@@ -134,12 +185,14 @@ int start_rootfs(struct ds_config *cfg) {
       return -1;
   }
 
-  /* Always find an available name starting from the current base */
-  char final_name[256];
-  if (find_available_name(cfg->container_name, final_name, sizeof(final_name)) <
-      0)
-    ds_die("Too many containers running with similar names");
-  safe_strncpy(cfg->container_name, final_name, sizeof(cfg->container_name));
+  if (!restart_reuse) {
+    /* Find an available name (only needed for fresh starts) */
+    char final_name[256];
+    if (find_available_name(cfg->container_name, final_name,
+                            sizeof(final_name)) < 0)
+      ds_die("Too many containers running with similar names");
+    safe_strncpy(cfg->container_name, final_name, sizeof(cfg->container_name));
+  }
 
   /* If no hostname specified, default to container name */
   if (cfg->hostname[0] == '\0') {
@@ -147,7 +200,7 @@ int start_rootfs(struct ds_config *cfg) {
   }
 
   /* 2. Mount rootfs image if provided (using the resolved name) */
-  if (cfg->rootfs_img_path[0]) {
+  if (cfg->rootfs_img_path[0] && !restart_reuse) {
     if (mount_rootfs_img(cfg->rootfs_img_path, cfg->rootfs_path,
                          sizeof(cfg->rootfs_path), cfg->volatile_mode,
                          cfg->container_name) < 0)
@@ -332,8 +385,17 @@ int start_rootfs(struct ds_config *cfg) {
     while (waitpid(init_pid, &status, 0) < 0 && errno == EINTR)
       ;
 
-    /* Monitor cleans up resources before exiting */
-    cleanup_container_resources(cfg, init_pid, 0);
+    /* Check for restart marker — if present, skip cleanup so the
+     * restart command can reuse the existing mount. */
+    char restart_marker[PATH_MAX];
+    restart_marker_path(cfg->container_name, restart_marker,
+                        sizeof(restart_marker));
+    if (access(restart_marker, F_OK) == 0) {
+      ds_log("Restart marker found, skipping monitor cleanup");
+    } else {
+      /* Normal exit or crash — full cleanup */
+      cleanup_container_resources(cfg, init_pid, 0);
+    }
 
     exit(WEXITSTATUS(status));
   }
@@ -446,10 +508,16 @@ int stop_rootfs(struct ds_config *cfg, int skip_unmount) {
 
   ds_log("Stopping container '%s' (PID %d)...", cfg->container_name, pid);
 
-  /* Cleanup resources that need the process to be alive (like proc/pid/root)
-   */
-  /* Actually, we call the full cleanup at the end, but let's grab rootfs now
-   */
+  /* If this is a restart (skip_unmount), create a restart marker so the
+   * background monitor knows to skip cleanup when the process exits. */
+  if (skip_unmount) {
+    char restart_marker[PATH_MAX];
+    restart_marker_path(cfg->container_name, restart_marker,
+                        sizeof(restart_marker));
+    write_file(restart_marker, "1");
+  }
+
+  /* Grab rootfs path while process is still alive */
   char rootfs[PATH_MAX] = "";
   char root_link[PATH_MAX];
   snprintf(root_link, sizeof(root_link), "/proc/%d/root", pid);

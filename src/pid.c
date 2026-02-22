@@ -104,10 +104,10 @@ int find_available_name(const char *base_name, char *final_name, size_t size) {
     if (access(pidfile, F_OK) != 0)
       return 0;
 
-    /* Check if it's a stale pidfile */
+    /* Check if it's a stale pidfile — reuse the name slot without
+     * unlinking (the next start will overwrite it). */
     pid_t pid;
     if (read_and_validate_pid(pidfile, &pid) < 0) {
-      unlink(pidfile); /* Stale or invalid, consume it */
       return 0;
     }
   }
