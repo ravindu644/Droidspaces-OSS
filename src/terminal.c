@@ -129,7 +129,11 @@ static void handle_sigwinch(int sig) {
 }
 
 int ds_terminal_proxy(int master_fd) {
-  fd_set fds;
+  int epfd = epoll_create1(EPOLL_CLOEXEC);
+  if (epfd < 0)
+    return -1;
+
+  struct epoll_event ev, events[10];
   char buf[8192];
   proxy_master_fd = master_fd;
 
@@ -137,35 +141,65 @@ int ds_terminal_proxy(int master_fd) {
   handle_sigwinch(SIGWINCH);
   signal(SIGWINCH, handle_sigwinch);
 
-  while (1) {
-    FD_ZERO(&fds);
-    FD_SET(STDIN_FILENO, &fds);
-    FD_SET(master_fd, &fds);
+  /* 1. Watch stdin */
+  ev.events = EPOLLIN;
+  ev.data.fd = STDIN_FILENO;
+  if (epoll_ctl(epfd, EPOLL_CTL_ADD, STDIN_FILENO, &ev) < 0) {
+    close(epfd);
+    return -1;
+  }
 
-    if (select(master_fd + 1, &fds, NULL, NULL, NULL) < 0) {
+  /* 2. Watch master PTY */
+  ev.events = EPOLLIN | EPOLLHUP | EPOLLERR;
+  ev.data.fd = master_fd;
+  if (epoll_ctl(epfd, EPOLL_CTL_ADD, master_fd, &ev) < 0) {
+    close(epfd);
+    return -1;
+  }
+
+  int running = 1;
+  while (running) {
+    int nfds = epoll_wait(epfd, events, 10, -1);
+    if (nfds < 0) {
       if (errno == EINTR)
         continue;
       break;
     }
 
-    if (FD_ISSET(STDIN_FILENO, &fds)) {
-      ssize_t n = read(STDIN_FILENO, buf, sizeof(buf));
-      if (n <= 0)
-        break;
-      if (write_all(master_fd, buf, (size_t)n) < 0)
-        break;
-    }
+    for (int i = 0; i < nfds; i++) {
+      int fd = events[i].data.fd;
 
-    if (FD_ISSET(master_fd, &fds)) {
-      ssize_t n = read(master_fd, buf, sizeof(buf));
-      if (n <= 0)
-        break;
-      if (write_all(STDOUT_FILENO, buf, (size_t)n) < 0)
-        break;
+      if (fd == STDIN_FILENO) {
+        ssize_t n = read(STDIN_FILENO, buf, sizeof(buf));
+        if (n <= 0) {
+          running = 0;
+          break;
+        }
+        if (write_all(master_fd, buf, (size_t)n) < 0) {
+          running = 0;
+          break;
+        }
+      } else if (fd == master_fd) {
+        if (events[i].events & (EPOLLHUP | EPOLLERR)) {
+          running = 0;
+          break;
+        }
+        ssize_t n = read(master_fd, buf, sizeof(buf));
+        if (n > 0) {
+          if (write_all(STDOUT_FILENO, buf, (size_t)n) < 0) {
+            running = 0;
+            break;
+          }
+        } else {
+          running = 0;
+          break;
+        }
+      }
     }
   }
 
   signal(SIGWINCH, SIG_DFL);
   proxy_master_fd = -1;
+  close(epfd);
   return 0;
 }
