@@ -77,6 +77,7 @@
 #define DS_MAX_BINDS 16
 #define DS_VOLATILE_SUBDIR "Volatile"
 #define DS_ANDROID_TMPFS_CONTEXT "u:object_r:tmpfs:s0"
+#define DS_ANDROID_VOLD_CONTEXT "u:object_r:vold_data_file:s0"
 
 /* Device nodes to create in container /dev (when using tmpfs) */
 #define DS_CONTAINER_MARKER "droidspaces"

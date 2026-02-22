@@ -539,6 +539,14 @@ int mount_rootfs_img(const char *img_path, char *mount_point, size_t mp_size,
   sync();
   usleep(200000); /* 200ms */
 
+  /* Apply correct SELinux context to the image file on Android
+   * to prevent silent loop mount I/O errors. */
+  if (is_android()) {
+    char *chcon_argv[] = {"chcon", DS_ANDROID_VOLD_CONTEXT,
+                          (char *)(uintptr_t)img_path, NULL};
+    run_command_quiet(chcon_argv);
+  }
+
   /* Mount via loop device with retries (Critical for Kernel 4.14 stability) */
   char *opts = readonly ? "loop,ro" : "loop";
   char *mount_argv[] = {"mount",     "-o", opts, (char *)(uintptr_t)img_path,
