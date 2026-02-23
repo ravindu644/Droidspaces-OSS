@@ -200,22 +200,7 @@ sudo ./droidspaces check
 
 Droidspaces is brand-agnostic and distribution-agnostic. Regardless of your mobile device's brand or your desktop Linux distribution, Droidspaces will work as long as your kernel meets the [required configuration](Documentation/Kernel-Configuration.md).
 
-### Android
-
-| Device | Kernel | Status | Notes |
-|--------|--------|--------|-------|
-| Samsung Galaxy S10 (Exynos) | 4.14.113 | Stable | No nested container support (kernel too old). |
-| Samsung Galaxy A16 5G | 5.15.167 | Stable | Full feature support including nested containers. |
-
-All devices tested with **KernelSU-Next v1.1.1**.
-
-### Linux Desktop
-
-| Distribution | Kernel | Status |
-|-------------|--------|--------|
-| Fedora 42 | 6.17 - 6.19 | Stable |
-| CachyOS | 6.17 - 6.19 | Stable |
-| Arch Linux | 6.17 - 6.19 | Stable |
+For the list of devices and distributions verified by the community, see the [Tested Platforms Guide](Documentation/Platforms.md).
 
 ---
 
@@ -243,6 +228,7 @@ All devices tested with **KernelSU-Next v1.1.1**.
 
 | Document | Description |
 |----------|-------------|
+| [Tested Platforms](Documentation/Platforms.md) | List of verified devices and distributions. |
 | [Feature Deep Dives](Documentation/Features.md) | Detailed explanation of each major feature. |
 | [Troubleshooting](Documentation/Troubleshooting.md) | Common issues and their solutions. |
 | [Uninstallation Guide](Documentation/Uninstallation.md) | How to remove Droidspaces from your system. |
