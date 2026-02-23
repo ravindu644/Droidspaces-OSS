@@ -92,7 +92,7 @@ static void print_header(int page, int total_pages, const char *title) {
     page_str[0] = '\0';
   }
 
-  const char *doc_title = "Droidspaces v3 Documentation";
+  const char *doc_title = "Droidspaces v4 Documentation";
   int doc_title_len = strlen(doc_title);
 
   /* Calculate where "Droidspaces Documentation" should start to be centered in
