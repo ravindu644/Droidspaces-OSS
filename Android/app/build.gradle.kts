@@ -52,12 +52,18 @@ android {
                 storePassword = keystorePassword
                 keyAlias = keyAliasName
                 keyPassword = actualKeyPassword
+                enableV2Signing = true
+                enableV3Signing = true
+                enableV4Signing = true
             }
             create("release") {
                 storeFile = keystoreFile
                 storePassword = keystorePassword
                 keyAlias = keyAliasName
                 keyPassword = actualKeyPassword
+                enableV2Signing = true
+                enableV3Signing = true
+                enableV4Signing = true
             }
         } else {
             // Fallback to default debug keystore if droidspaces.keystore not found or password not set
