@@ -1,0 +1,161 @@
+name: Droidspaces CI
+
+on:
+  push:
+    branches: [ "main", "master" ]
+  pull_request:
+    branches: [ "main", "master" ]
+  workflow_dispatch:
+    inputs:
+      tag_name:
+        description: 'Tag name for the release (e.g., v4.3.1)'
+        required: true
+        default: 'v4.3.1'
+
+jobs:
+  android:
+    name: Build Android App
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up JDK 17
+      uses: actions/setup-java@v4
+      with:
+        java-version: '17'
+        distribution: 'temurin'
+        cache: gradle
+
+    - name: Decode Keystore
+      env:
+        RELEASE_KEYSTORE: ${{ secrets.RELEASE_KEYSTORE }}
+      if: "${{ env.RELEASE_KEYSTORE != '' }}"
+      run: echo "${{ env.RELEASE_KEYSTORE }}" | base64 -d > droidspaces.keystore
+
+    - name: Grant execute permission for gradlew
+      run: chmod +x Android/gradlew
+
+    - name: Build with Gradle
+      env:
+        KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+        KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+        KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+      run: |
+        cd Android
+        ./gradlew assembleRelease \
+          -PKEYSTORE_PASSWORD="${{ secrets.KEYSTORE_PASSWORD }}" \
+          -PKEY_ALIAS="${{ secrets.KEY_ALIAS }}" \
+          -PKEY_PASSWORD="${{ secrets.KEY_PASSWORD }}"
+
+    - name: Rename APK
+      run: |
+        TAG="${{ github.event.inputs.tag_name || 'dev' }}"
+        DATE=$(date +%Y-%m-%d)
+        NEW_NAME="Droidspaces-universal-${TAG}-${DATE}.apk"
+        mv Android/app/build/outputs/apk/release/app-release.apk Android/app/build/outputs/apk/release/${NEW_NAME}
+        echo "Renamed APK to ${NEW_NAME}"
+
+    - name: Upload APK
+      uses: actions/upload-artifact@v4
+      with:
+        name: droidspaces-android-apk
+        path: Android/app/build/outputs/apk/release/*.apk
+
+  backend:
+    name: Build Backend Tarball
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Install dependencies
+      run: |
+        sudo apt update
+        sudo apt install -y build-essential wget tree
+
+    - name: Download Toolchains
+      run: |
+        mkdir -p $HOME/toolchains
+        cd $HOME/toolchains
+        BASE_URL="https://github.com/ravindu644/Droidspaces-OSS/releases/download/compilers"
+        
+        echo "[*] Downloading aarch64 toolchain..."
+        wget -q $BASE_URL/aarch64-linux-musl-cross.tar.gz
+        
+        echo "[*] Downloading armhf toolchain..."
+        wget -q $BASE_URL/arm-linux-musleabihf-cross.tar.gz
+        
+        echo "[*] Downloading x86 toolchain..."
+        wget -q $BASE_URL/i686-linux-musl-cross.tar.gz
+        
+        echo "[*] Downloading x86_64 toolchain..."
+        wget -q $BASE_URL/x86_64-linux-musl-cross.tar.gz
+        
+        echo "[*] Extracting toolchains..."
+        for f in *.tar.gz; do
+          echo "Extracting $f..."
+          tar -xzf "$f"
+        done
+
+        echo "[+] Toolchains ready and added to PATH"
+        tree -L 3 $HOME/toolchains
+
+    - name: Build All Tarball
+      run: make all-tarball
+
+    - name: Upload Tarball
+      uses: actions/upload-artifact@v4
+      with:
+        name: droidspaces-backend-dist
+        path: droidspaces-v*-*.tar.gz
+
+  release:
+    name: Create GitHub Release
+    needs: [android, backend]
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+    
+    - name: Download Artifacts
+      uses: actions/download-artifact@v4
+      with:
+        path: release-assets
+        merge-multiple: true
+
+    - name: Generate Changelog
+      id: changelog
+      run: |
+        PREV_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+        echo "Previous tag: $PREV_TAG"
+        
+        if [ -z "$PREV_TAG" ]; then
+          CHANGELOG=$(git log --oneline --pretty=format:"* %s (%h)")
+        else
+          CHANGELOG=$(git log ${PREV_TAG}..HEAD --oneline --pretty=format:"* %s (%h)")
+        fi
+        
+        {
+          echo "notes<<EOF"
+          echo "$CHANGELOG"
+          echo "EOF"
+        } >> "$GITHUB_OUTPUT"
+
+    - name: Create Release
+      uses: softprops/action-gh-release@v2
+      with:
+        tag_name: ${{ github.event.inputs.tag_name }}
+        name: Droidspaces ${{ github.event.inputs.tag_name }}
+        target_commitish: ${{ github.sha }}
+        body: |
+          ## What's Changed
+          ${{ steps.changelog.outputs.notes }}
+          
+          ---
+          **Automated Release by Droidspaces CI**
+        files: |
+          release-assets/*.apk
+          release-assets/*.tar.gz
