@@ -198,6 +198,8 @@ sudo ./droidspaces check
 
 ## Tested Platforms
 
+Droidspaces is brand-agnostic and distribution-agnostic. Regardless of your mobile device's brand or your desktop Linux distribution, Droidspaces will work as long as your kernel meets the [required configuration](Documentation/Kernel-Configuration.md).
+
 ### Android
 
 | Device | Kernel | Status | Notes |
