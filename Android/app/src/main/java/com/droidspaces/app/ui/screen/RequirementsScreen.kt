@@ -237,8 +237,7 @@ CONFIG_NAMESPACES=y
 CONFIG_PID_NS=y
 CONFIG_UTS_NS=y
 CONFIG_IPC_NS=y
-CONFIG_MNT_NS=y
-CONFIG_CGROUP_NS=y  # Required for Cgroup isolation (v4.1.0+)
+CONFIG_USER_NS=y
 
 # Seccomp support (enables syscall filtering and security hardening)
 CONFIG_SECCOMP=y
@@ -253,10 +252,16 @@ CONFIG_MEMCG=y
 # Device filesystem support (enables hardware access when --hw-access is enabled)
 CONFIG_DEVTMPFS=y
 
+# Overlay filesystem support (required for volatile mode)
+CONFIG_OVERLAY_FS=y
+
 # Firmware loading support (optional, used when --hw-access is enabled)
 CONFIG_FW_LOADER=y
 CONFIG_FW_LOADER_USER_HELPER=y
-CONFIG_FW_LOADER_COMPRESS=y""",
+CONFIG_FW_LOADER_COMPRESS=y
+
+# Disable this on older kernels to make internet work
+CONFIG_ANDROID_PARANOID_NETWORK=n""",
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
                     snackbarHostState = snackbarHostState
                 )
