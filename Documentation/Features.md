@@ -112,6 +112,9 @@ Droidspaces detects this incompatibility at runtime and provides a clear diagnos
 
 ## Hardware Access Mode
 
+> [!CAUTION]
+> Enabling Hardware Access Mode (`--hw-access`) exposes all host devices, including raw block devices, directly to the container. If a malicious process or accidental command targets these devices, it could permanently destroy your partition table, wipe your SD card, or brick your device. The developer(s) of Droidspaces is not responsible for any data loss or hardware damage that occurs as a result of using this feature. **Use at your own risk.**
+
 ### What It Does
 
 The `--hw-access` flag exposes the host's hardware devices to the container by mounting `devtmpfs` instead of a private `tmpfs` at `/dev`.

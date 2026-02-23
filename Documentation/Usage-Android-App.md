@@ -4,9 +4,9 @@ The Droidspaces Android app provides a premium GUI for managing Linux containers
 
 ## Bottom Navigation
 
-- **Home**: Dashboard showing system status, root availability, and backend version.
-- **Containers**: Manager for all installed containers (Start/Stop/Edit/Uninstall).
-- **Panel**: Central hub for managing **Running Containers** and accessing their details.
+- **Home**: A dashboard displaying the number of installed and running containers, root availability status, and the backend version.
+- **Containers**: A dedicated manager for all installed containers (Start, Stop, Edit, and Uninstall).
+- **Panel**: A central hub for managing **Running Containers** and monitoring real-time **System Statistics** (CPU, RAM, Uptime, Temperature, etc.).
 
 ---
 
@@ -17,7 +17,7 @@ This tab lists all your installed environments. Each container has a control car
 - **Play Button**: Start the container and boot the init system.
 - **Stop Button**: Sends a graceful shutdown signal to the container's init.
 - **Cycle Button**: Fast-restart the container.
-- **Terminal Icon (Logs)**: This button **does not open a shell**. It opens a real-time log viewer for the container's start, stop, and restart sequences. Use this to debug why a container isn't booting.
+- **Terminal Icon (Logs)**: This button **does not open a shell**. It provides access to persistent session logs for the container's previous start, stop, and restart sequences.
 
 ---
 
@@ -34,7 +34,7 @@ This screen provides deep introspection into the running environment:
 
 ---
 
-## Entering the Shell (Terminal)
+## Entering the Container's Shell
 
 **Droidspaces does not have a built-in terminal emulator.** This ensures maximum performance and allows you to use your preferred terminal setup.
 

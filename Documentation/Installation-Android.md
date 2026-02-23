@@ -4,14 +4,14 @@ Droidspaces on Android is designed to be a "Zero Terminal" experience. From the 
 
 ## Prerequisites
 
-1. **Rooted device** with [KernelSU-Next v1.1.1](https://github.com/rifsxd/KernelSU-Next) (recommended)
-2. **Compatible kernel** with namespace support enabled (see [Kernel Configuration Guide](Kernel-Configuration.md))
+1. **Rooted device** with supported rooting solutions from [here](../README.md#rooting-requirements)
+2. **Compatible kernel** with Droidspaces support enabled (see [Kernel Configuration Guide](Kernel-Configuration.md))
 
 ## Step 1: Install the App
 
 1. Download the **Droidspaces APK** from the [latest release](https://github.com/ravindu644/Droidspaces-OSS/releases/latest).
 2. Install the APK on your device.
-3. Open the app and **grant root access** when prompted.
+3. **Grant root access** and open the app.
 
 ## Step 2: Automatic Backend Setup
 
