@@ -17,9 +17,10 @@ The configuration requirements are the same for all kernel versions. The differe
 
 ---
 
+<a id="kernel-config"></a>
 ## Required Configuration
 
-Add these options to your kernel's `defconfig` file:
+Save this block as `droidspaces.config` and place it under your kernel's architecture configs folder (e.g., `arch/arm64/configs/`):
 
 ```makefile
 # Minimal Droidspaces Support
@@ -36,6 +37,7 @@ CONFIG_PID_NS=y
 CONFIG_UTS_NS=y
 CONFIG_IPC_NS=y
 CONFIG_USER_NS=y
+CONFIG_CGROUP_NS=y
 
 # Seccomp support (enables syscall filtering and security hardening)
 CONFIG_SECCOMP=y
@@ -50,6 +52,9 @@ CONFIG_MEMCG=y
 # Device filesystem support (enables hardware access when --hw-access is enabled)
 CONFIG_DEVTMPFS=y
 
+# Overlay filesystem support (required for volatile mode)
+CONFIG_OVERLAY_FS=y
+
 # Firmware loading support (optional, used when --hw-access is enabled)
 CONFIG_FW_LOADER=y
 CONFIG_FW_LOADER_USER_HELPER=y
@@ -63,20 +68,20 @@ CONFIG_ANDROID_PARANOID_NETWORK=n
 
 | Config | Purpose |
 |--------|---------|
-| `CONFIG_NAMESPACES` | Master switch for Linux namespace support |
+| `CONFIG_SYSVIPC` | System V IPC. Required for shared memory and semaphores. |
+| `CONFIG_POSIX_MQUEUE` | POSIX message queues. Required by some IPC-dependent tools. |
+| `CONFIG_NAMESPACES` | Master switch for namespace support. Specifically enables Mount namespaces. |
 | `CONFIG_PID_NS` | PID namespace. Gives each container its own process tree. |
 | `CONFIG_UTS_NS` | UTS namespace. Allows each container to have its own hostname. |
-| `CONFIG_IPC_NS` | IPC namespace. Isolates System V IPC and message queues. |
+| `CONFIG_IPC_NS` | IPC namespace. Depends on `SYSVIPC` and `POSIX_MQUEUE` (IPC NS won't appear in `menuconfig` unless these are enabled). |
 | `CONFIG_USER_NS` | User namespace. Required by some distributions even when not directly used. |
 | `CONFIG_SECCOMP` | Seccomp support. Enables the adaptive seccomp shield on legacy kernels. |
 | `CONFIG_SECCOMP_FILTER` | BPF-based seccomp filtering. Required for the seccomp shield. |
-| `CONFIG_CGROUPS` | Control groups. Required for systemd and resource management. |
+| `CONFIG_CGROUPS` | Master switch for Control Groups. Required for systemd, resource management, and Cgroup namespaces. |
 | `CONFIG_CGROUP_DEVICE` | Device access control via cgroups. |
 | `CONFIG_CGROUP_PIDS` | PID limiting via cgroups. Used by systemd for process tracking. |
 | `CONFIG_MEMCG` | Memory controller cgroup. Used by systemd for memory accounting. |
 | `CONFIG_DEVTMPFS` | Device filesystem. Required for `/dev` setup and hardware access mode. |
-| `CONFIG_SYSVIPC` | System V IPC. Required for shared memory and semaphores. |
-| `CONFIG_POSIX_MQUEUE` | POSIX message queues. Required by some IPC-dependent tools. |
 | `CONFIG_ANDROID_PARANOID_NETWORK=n` | Disables Android's paranoid network restrictions which block container networking. |
 
 ---
@@ -87,13 +92,14 @@ CONFIG_ANDROID_PARANOID_NETWORK=n
 
 These kernels are the simplest to configure. The process is straightforward:
 
-### Step 1: Create the Config Fragment
+### Step 1: Prepare the Fragment
 
-Instead of manually editing your `defconfig`, save the configuration block above as a standalone file named `droidspaces.config` and place it in your kernel source's configuration directory:
+Ensure you have saved the configuration block from the [Required Configuration](#kernel-config) section as `droidspaces.config` in your architecture's config directory.
 
 ```bash
 # Example for ARM64
-cp droidspaces.config $KERNEL_ROOT/arch/arm64/configs/droidspaces.config
+# Place it alongside your device's defconfig
+# $KERNEL_ROOT/arch/arm64/configs/droidspaces.config
 ```
 
 ### Step 2: Generate the Configuration
@@ -122,11 +128,11 @@ All checks should pass with green checkmarks.
 
 **Applies to:** Kernel 5.4, 5.10, 5.15, 6.1+
 
-GKI (Generic Kernel Image) devices use the same kernel configuration as non-GKI devices. However, enabling these options on a GKI kernel introduces additional complexity:
+GKI (Generic Kernel Image) devices use the [same kernel configuration](#kernel-config) as non-GKI devices. However, enabling these options on a GKI kernel introduces additional complexity:
 
 ### The ABI Problem
 
-GKI kernels enforce a strict ABI (Application Binary Interface) between the kernel and vendor modules. Adding kernel configuration options like `CONFIG_USER_NS=y` or `CONFIG_CGROUP_PIDS=y` can change the kernel's ABI, breaking compatibility with pre-built vendor modules.
+GKI kernels enforce a strict ABI (Application Binary Interface) between the kernel and vendor modules. Adding kernel configuration options like `CONFIG_SYSVIPC=y` or `CONFIG_CGROUP_DEVICE=y` can change the kernel's ABI, breaking compatibility with pre-built vendor modules.
 
 ### Required Additional Steps
 
@@ -179,9 +185,9 @@ This checks for:
 | MNT namespace | `CONFIG_NAMESPACES=y` | **FATAL**. Containers cannot start. |
 | UTS namespace | `CONFIG_UTS_NS=y` | **FATAL**. Containers cannot start. |
 | IPC namespace | `CONFIG_IPC_NS=y` | **FATAL**. Containers cannot start. |
-| Cgroup namespace | Kernel 4.6+ | Falls back to legacy cgroup bind-mounting. |
+| Cgroup namespace | Kernel 4.6+ and `CONFIG_CGROUPS` | Falls back to legacy cgroup bind-mounting. |
 | devtmpfs | `CONFIG_DEVTMPFS=y` | **FATAL**. Static `/dev` doesn't exist; Droidspaces cannot function. |
-| OverlayFS | Kernel 3.18+ | Volatile mode unavailable. |
+| OverlayFS | `CONFIG_OVERLAY_FS` | Volatile mode unavailable. |
 | Seccomp | `CONFIG_SECCOMP=y` | Seccomp shield disabled; will cause boot crashes on legacy kernels. |
 
 ---
@@ -190,11 +196,11 @@ This checks for:
 
 | Version | Support | Notes |
 |---------|---------|-------|
-| 3.18 | Minimum | Basic support. Some features may be limited. |
-| 4.14 | Stable | Full support with seccomp shield and mount retry logic. |
-| 4.19 | Stable | Last pre-GKI kernel. Reliable. |
-| 5.10 | Recommended | Full feature support, nested containers, modern cgroup v2. |
-| 5.15+ | Ideal | All features, best performance, widest compatibility. |
+| 3.18 | Minimum | Basic support. Some features may be limited. No nested container support. |
+| 4.14 | Stable | Full support with seccomp shield and mount retry logic. No nested container support. |
+| 4.19 | Stable | Last pre-GKI kernel. Reliable. No nested container support (under investigation for future support). |
+| 5.10 | Recommended | Full feature support, including nested containers and modern cgroup v2. |
+| 5.15+ | Ideal | All features, best performance, and widest compatibility. |
 
 ---
 
