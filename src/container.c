@@ -22,7 +22,7 @@ static void cleanup_container_resources(struct ds_config *cfg, pid_t pid,
   /* Flush filesystem buffers */
   sync();
 
-  if (is_android())
+  if (is_android() && !skip_unmount && count_running_containers(NULL, 0) == 0)
     android_optimizations(0);
 
   /* 1. Cleanup firmware path */
