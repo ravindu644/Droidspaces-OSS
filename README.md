@@ -233,7 +233,7 @@ All devices tested with **KernelSU-Next v1.1.1**.
 ## Usage
 
 - [Android App Usage](Documentation/Usage-Android-App.md)
-- [Linux CLI Usage](Documentation/Usage-Linux-CLI.md)
+- [Linux CLI Usage](Documentation/Linux-CLI.md)
 
 ---
 
@@ -243,10 +243,9 @@ All devices tested with **KernelSU-Next v1.1.1**.
 
 | Document | Description |
 |----------|-------------|
-| [CLI Reference](Documentation/CLI-Reference.md) | Complete reference for all commands and flags. |
 | [Feature Deep Dives](Documentation/Features.md) | Detailed explanation of each major feature. |
 | [Troubleshooting](Documentation/Troubleshooting.md) | Common issues and their solutions. |
-| [Kernel Configuration Guide](Documentation/Kernel-Configuration.md) | How to compile a compatible kernel for Android. |
+| [Uninstallation Guide](Documentation/Uninstallation.md) | How to remove Droidspaces from your system. |
 
 ---
 
@@ -254,7 +253,7 @@ All devices tested with **KernelSU-Next v1.1.1**.
 
 Droidspaces is licensed under the [GNU General Public License v3.0](./LICENSE).
 
-Copyright (C) 2026 ravindu644
+Copyright (C) 2026 [ravindu644](https://github.com/ravindu644) and contributors.
 
 ---
 

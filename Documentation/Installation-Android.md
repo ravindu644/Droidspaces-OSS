@@ -45,4 +45,4 @@ You can verify your system status at any time:
 ## Next Steps
 
 - [Android App Usage Guide](Usage-Android-App.md) for management details.
-- [CLI Reference](CLI-Reference.md) for expert command-line access.
+- [Linux CLI Guide](Linux-CLI.md) for expert command-line access.

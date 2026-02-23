@@ -112,6 +112,5 @@ Now you can boot it instantly using:
 
 ## Next Steps
 
-- [Linux CLI Usage Guide](Usage-Linux-CLI.md) for getting started with containers
-- [CLI Reference](CLI-Reference.md) for a complete list of commands and flags
+- [Linux CLI Guide](Linux-CLI.md) for complete command and flag reference
 - [Feature Deep Dives](Features.md) for detailed explanations of each feature
