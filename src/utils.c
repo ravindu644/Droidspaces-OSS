@@ -568,11 +568,11 @@ void check_kernel_recommendation(void) {
                             "some functions might be unstable." C_RESET,
             major, minor, DS_RECOMMENDED_KERNEL_MAJOR,
             DS_RECOMMENDED_KERNEL_MINOR);
-    printf("\n");
+    printf("\r\n");
   }
 }
 
 void print_ds_banner(void) {
   printf(C_CYAN C_BOLD "— Welcome to " C_WHITE DS_PROJECT_NAME
-                       " v" DS_VERSION C_CYAN " ! —" C_RESET "\n\n");
+                       " v" DS_VERSION C_CYAN " ! —" C_RESET "\r\n\r\n");
 }
