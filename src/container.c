@@ -620,8 +620,10 @@ int enter_namespace(pid_t pid) {
           close(ns_fds[j]);
         return -1;
       }
-      ds_warn("Optional namespace %s (%s) is missing: %s", ns_names[i], path,
-              strerror(errno));
+      if (errno != ENOENT) {
+        ds_warn("Optional namespace %s (%s) is missing: %s", ns_names[i], path,
+                strerror(errno));
+      }
     }
   }
 
