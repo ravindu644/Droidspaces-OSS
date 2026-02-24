@@ -102,11 +102,6 @@ int android_seccomp_setup(int is_systemd) {
       .filter = filter,
   };
 
-  /* Set NO_NEW_PRIVS before applying seccomp filter */
-  if (prctl(PR_SET_NO_NEW_PRIVS, 1, 0, 0, 0) < 0) {
-    ds_warn("Failed to set PR_SET_NO_NEW_PRIVS: %s", strerror(errno));
-  }
-
   if (prctl(PR_SET_SECCOMP, SECCOMP_MODE_FILTER, &prog) < 0) {
     ds_warn("Failed to apply Android Seccomp filter: %s", strerror(errno));
     return -1;
