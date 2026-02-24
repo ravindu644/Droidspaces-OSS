@@ -60,20 +60,14 @@ int fix_networking_host(struct ds_config *cfg) {
     write_file("/proc/sys/net/ipv6/conf/default/disable_ipv6", "1");
   }
 
-  /* Get DNS (Custom -> Android props -> Google/Cloudflare) */
-  char dns_buf[1024] = {0};
-  int count = ds_get_dns_servers(cfg->dns_servers, dns_buf, sizeof(dns_buf));
+  /* Get DNS and store it in the config struct to be used after pivot_root */
+  cfg->dns_server_content[0] = '\0';
+  int count =
+      ds_get_dns_servers(cfg->dns_servers, cfg->dns_server_content,
+                         sizeof(cfg->dns_server_content));
 
   if (cfg->dns_servers[0])
     ds_log("Setting up %d custom DNS servers...", count);
-
-  /* Save DNS to temp file in rootfs for use after pivot_root */
-  char dns_path[PATH_MAX];
-  snprintf(dns_path, sizeof(dns_path), "%.4080s/.dns_servers",
-           cfg->rootfs_path);
-  if (write_file(dns_path, dns_buf) < 0) {
-    ds_warn("Failed to write temporary DNS marker: %s", dns_path);
-  }
 
   if (is_android()) {
     /* Android specific NAT and firewall */
@@ -112,26 +106,15 @@ int fix_networking_rootfs(struct ds_config *cfg) {
            hostname);
   write_file("/etc/hosts", hosts_content);
 
-  /* 3. resolv.conf (Android DNS from host via .dns_servers) */
+  /* 3. resolv.conf (from in-memory config passed via cfg struct) */
   mkdir("/run/resolvconf", 0755);
-  char dns_fallback[256];
-  snprintf(dns_fallback, sizeof(dns_fallback), "nameserver %s\nnameserver %s\n",
-           DS_DNS_DEFAULT_1, DS_DNS_DEFAULT_2);
-
-  FILE *dns_fp = fopen("/.dns_servers", "r");
-  if (dns_fp) {
-    char buf[1024];
-    size_t n = fread(buf, 1, sizeof(buf) - 1, dns_fp);
-    fclose(dns_fp);
-    unlink("/.dns_servers"); /* Cleanup the temporary marker */
-    if (n > 0) {
-      buf[n] = '\0'; /* Ensure null-termination */
-      write_file("/run/resolvconf/resolv.conf", buf);
-    } else {
-      write_file("/run/resolvconf/resolv.conf", dns_fallback);
-    }
+  if (cfg->dns_server_content[0]) {
+    write_file("/run/resolvconf/resolv.conf", cfg->dns_server_content);
   } else {
-    /* Fallback/Linux default */
+    /* Fallback if DNS content is empty */
+    char dns_fallback[256];
+    snprintf(dns_fallback, sizeof(dns_fallback), "nameserver %s\nnameserver %s\n",
+             DS_DNS_DEFAULT_1, DS_DNS_DEFAULT_2);
     write_file("/run/resolvconf/resolv.conf", dns_fallback);
   }
 

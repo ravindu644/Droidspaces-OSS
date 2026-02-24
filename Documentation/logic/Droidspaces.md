@@ -91,6 +91,7 @@ src/
     - Moved host-side networking configuration (`fix_networking_host`) to the pre-fork stage to eliminate race conditions between parent and child.
     - Simplified DNS resolution by removing obsolete `getprop`-based logic and centralizing default DNS servers (1.1.1.1, 8.8.8.8) in the master header.
     - Standardized DNS file writing using shared utility helpers.
+- **In-Memory DNS Propagation (v4.4.0):** Resolved a critical bug with volatile rootfs images by replacing file-based DNS marker propagation with a more direct in-memory approach. The host-side process now gathers DNS configuration and stores it in the `ds_config` struct. This is passed to the container process, which then writes the configuration directly to `/run/resolvconf/resolv.conf` after the writable `/run` tmpfs is mounted. This ensures DNS resolution works robustly in all modes.
 
 
 ---
@@ -369,12 +370,12 @@ for (int i = 0; i < cfg->tty_count; i++) {
 ```
 This is the LXC model: PTY slaves allocated in the parent (e.g., `/dev/pts/3`) are bind-mounted to their container targets (e.g., `dev/console`, `dev/tty1`..`dev/tty6`) **before** `pivot_root`. This is critical because after `pivot_root`, the host `/dev/pts/N` paths would no longer be accessible.
 
-**Step 11 — Write UUID marker:**
+**Step 11 — Write internal markers (`/run`):**
 ```c
 write_file("run/<uuid>", "init");
 write_file("run/droidspaces", DS_VERSION);
 ```
-The UUID marker is used by the parent for PID discovery (see Section 5). The `run/droidspaces` file is polled by the parent to confirm the boot sequence has passed `pivot_root`.
+The UUID marker (`run/<uuid>`) is used by the parent for PID discovery (see Section 5). The `run/droidspaces` file is polled by the parent to confirm the boot sequence has passed `pivot_root`.
 
 **Step 12 — Setup cgroups:**
 ```c
@@ -416,7 +417,7 @@ Sets hostname (from `--hostname`), writes `/etc/hostname`, and generates `/etc/h
 **The apt/sudo hostname fix:**
 To prevent `apt` warnings and `sudo` resolution delays, Droidspaces explicitly maps the container's hostname to `127.0.1.1` in `/etc/hosts`. This is a critical fix for many Linux distributions where the loopback alias is expected.
 
-It then reads the DNS configuration from `/.dns_servers` (written by `fix_networking_host()` before boot), writes `/run/resolvconf/resolv.conf` (ensuring proper null-termination for system stability), and immediately deletes the temporary `/.dns_servers` file. Finally, it symlinks `/etc/resolv.conf` and appends Android network groups (`aid_inet`, `aid_net_raw`, `aid_net_admin`) to `/etc/group`.
+It then writes the DNS configuration directly from the in-memory `ds_config` struct to `/run/resolvconf/resolv.conf` (ensuring proper null-termination for system stability). Finally, it symlinks `/etc/resolv.conf` and appends Android network groups (`aid_inet`, `aid_net_raw`, `aid_net_admin`) to `/etc/group`.
 
 
 **Step 17 — Unmount old root:**
@@ -1018,6 +1019,8 @@ struct ds_config {
     char pidfile[PATH_MAX];           /* --pidfile= or auto-resolved */
     char container_name[256];         /* --name= or auto-generated */
     char hostname[256];               /* --hostname= or container_name */
+    char dns_servers[1024];         /* --dns= (comma/space separated) */
+    char dns_server_content[1024];  /* In-memory DNS config for boot */
     char uuid[DS_UUID_LEN + 1];       /* UUID for PID discovery */
 
     /* Flags */

@@ -150,6 +150,7 @@ struct ds_config {
   char container_name[256];       /* --name= or auto-generated */
   char hostname[256];             /* --hostname= or container_name */
   char dns_servers[1024];         /* --dns= (comma/space separated) */
+  char dns_server_content[1024];  /* In-memory DNS config for boot */
 
   /* UUID for PID discovery */
   char uuid[DS_UUID_LEN + 1];
