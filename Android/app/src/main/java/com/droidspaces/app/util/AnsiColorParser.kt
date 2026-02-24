@@ -135,6 +135,23 @@ object AnsiColorParser {
                             49 -> currentBgColor = null
                         }
                     }
+
+                    // Apply bold modifier to colors if both bold and color are set
+                    // This handles compound codes like "1;32m" (bold + green)
+                    if (isBold && currentColor != null) {
+                        // Use bright color variants when bold is applied to standard colors
+                        currentColor = when (currentColor) {
+                            ansiColors[30] -> ansiColors[90]  // Black -> Bright Black (Gray)
+                            ansiColors[31] -> ansiColors[91]  // Red -> Bright Red
+                            ansiColors[32] -> ansiColors[92]  // Green -> Bright Green
+                            ansiColors[33] -> ansiColors[93]  // Yellow -> Bright Yellow
+                            ansiColors[34] -> ansiColors[94]  // Blue -> Bright Blue
+                            ansiColors[35] -> ansiColors[95]  // Magenta -> Bright Magenta
+                            ansiColors[36] -> ansiColors[96]  // Cyan -> Bright Cyan
+                            ansiColors[37] -> ansiColors[97]  // White -> Bright White
+                            else -> currentColor
+                        }
+                    }
                 }
 
                 currentIndex = match.range.last + 1

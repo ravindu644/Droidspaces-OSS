@@ -158,7 +158,11 @@ fun TerminalConsole(
                         val displayMessage = if (processedMessage.isEmpty()) {
                             "\u00A0" // Non-breaking space to make empty lines visible
                         } else {
-                            processedMessage
+                            // Preserve leading spaces by replacing them with non-breaking spaces
+                            // This ensures indentation from backend (like "  Rootfs OS:") is preserved
+                            processedMessage.replace(Regex("""^( +)""")) { match: kotlin.text.MatchResult ->
+                                match.value.replace(" ", "\u00A0")
+                            }
                         }
 
                         if (displayMessage.contains("\u001B[")) {

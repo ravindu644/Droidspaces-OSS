@@ -244,20 +244,9 @@ fun ContainersScreen(
             // Execute command using logger callback pattern (same as installation)
             val success = ContainerOperationExecutor.executeCommand(command, operation, logger)
 
-            // Check if operation was successful (only for start/restart)
-            // No delay needed - logger callbacks ensure all logs are captured synchronously
-            val operationSuccess = if (operation == "start" || operation == "restart") {
-                ContainerOperationExecutor.checkCommandSuccess(
-                    ContainerCommandBuilder.buildStatusCommand(container)
-                )
-            } else {
-                // For stop, check if container is no longer running
-                !ContainerOperationExecutor.checkCommandSuccess(
-                    ContainerCommandBuilder.buildStatusCommand(container)
-                )
-            }
-
-            if (!operationSuccess || !success) {
+            // If the command execution itself succeeded, consider the operation successful
+            // The status check is just for additional verification but shouldn't cause failure
+            if (!success) {
                 lastErrorContainer = container.name
                 logger.e("")
                 logger.e(context.getString(R.string.operation_failed))
@@ -277,6 +266,25 @@ fun ContainersScreen(
                 containerViewModel.refresh()
                 SystemInfoManager.refreshSELinuxStatus()
             } else {
+                // Command execution succeeded - check if we need to add status verification note
+                val operationSuccess = if (operation == "start" || operation == "restart") {
+                    ContainerOperationExecutor.checkCommandSuccess(
+                        ContainerCommandBuilder.buildStatusCommand(container)
+                    )
+                } else {
+                    // For stop, check if container is no longer running
+                    !ContainerOperationExecutor.checkCommandSuccess(
+                        ContainerCommandBuilder.buildStatusCommand(container)
+                    )
+                }
+
+                if (!operationSuccess) {
+                    // Command succeeded but status check failed - add a note but don't treat as failure
+                    logger.w("")
+                    logger.w("Note: Command executed successfully, but container status verification failed")
+                    logger.w("This may be normal during startup/shutdown - check container status manually")
+                }
+
                 logger.i("")
                 logger.i(context.getString(R.string.operation_completed_success))
                 lastErrorContainer = null

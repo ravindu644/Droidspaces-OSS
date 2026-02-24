@@ -7,6 +7,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.delay
 
 /**
  * Executes container operations (start/stop/restart) with TRUE real-time output streaming.
@@ -42,7 +43,8 @@ object ContainerOperationExecutor {
             }
 
             // Track if last line was empty (for final status formatting)
-            var lastLineWasEmpty = false
+            // Use atomic reference since it's accessed from different threads (onAddElement vs main thread)
+            val lastLineWasEmpty = java.util.concurrent.atomic.AtomicBoolean(false)
 
             // Create a CallbackList that streams each output line to the logger in real-time.
             // onAddElement() is called by libsu on the main thread (default executor) as each
@@ -56,14 +58,14 @@ object ContainerOperationExecutor {
                         val trimmed = s.trim()
                         if (trimmed.isEmpty()) {
                             logger.i("")
-                            lastLineWasEmpty = true
+                            lastLineWasEmpty.set(true)
                         } else {
                             if (errorPattern.containsMatchIn(trimmed)) {
                                 logger.e(s) // Log original line to preserve ANSI formatting
                             } else {
                                 logger.i(s) // Log original line to preserve ANSI formatting
                             }
-                            lastLineWasEmpty = false
+                            lastLineWasEmpty.set(false)
                         }
                     }
                 }
@@ -74,8 +76,13 @@ object ContainerOperationExecutor {
             // exec() blocks until the process exits, but callbackList fires per-line.
             val result = Shell.cmd("$command 2>&1").to(callbackList).exec()
 
+            // Small delay to ensure all onAddElement coroutines have completed
+            // This prevents race condition where final status logging doesn't see
+            // the correct lastLineWasEmpty state
+            kotlinx.coroutines.delay(100)
+
             // Log result status - only add newline if last output line wasn't empty
-            if (!lastLineWasEmpty) {
+            if (!lastLineWasEmpty.get()) {
                 logger.i("")
             }
             if (result.isSuccess) {
