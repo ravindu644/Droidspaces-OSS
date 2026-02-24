@@ -84,6 +84,10 @@
 /* Device nodes to create in container /dev (when using tmpfs) */
 #define DS_CONTAINER_MARKER "droidspaces"
 
+/* Default DNS servers */
+#define DS_DNS_DEFAULT_1 "1.1.1.1"
+#define DS_DNS_DEFAULT_2 "8.8.8.8"
+
 /* Colors for output */
 #define C_RESET "\033[0m"
 #define C_RED "\033[1;31m"
@@ -217,7 +221,6 @@ void android_optimizations(int enable);
 void android_set_selinux_permissive(void);
 int android_get_selinux_status(void);
 void android_remount_data_suid(void);
-int android_fill_dns_from_props(char *dns1, char *dns2, size_t size);
 void android_configure_iptables(void);
 void android_setup_paranoid_network_groups(void);
 int android_setup_storage(const char *rootfs_path);

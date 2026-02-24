@@ -308,6 +308,12 @@ int start_rootfs(struct ds_config *cfg) {
   if (pipe(sync_pipe) < 0)
     ds_die("pipe failed: %s", strerror(errno));
 
+  /* 5. Configure host-side networking (NAT, ip_forward, DNS) BEFORE fork.
+   * This eliminates the race condition where the child boots and reads
+   * DNS before the parent has written it. */
+  fix_networking_host(cfg);
+  android_optimizations(1);
+
   /* 4. Fork Monitor Process */
   pid_t monitor_pid = fork();
   if (monitor_pid < 0)
@@ -419,10 +425,6 @@ int start_rootfs(struct ds_config *cfg) {
 
   ds_log("Container started with PID %d (Monitor: %d)", cfg->container_pid,
          monitor_pid);
-
-  /* 5. Configure host-side networking (NAT, ip_forward) */
-  fix_networking_host(cfg);
-  android_optimizations(1);
 
   /* 5b. Android: Remount /data with suid for directory-based containers.
    * This is required for sudo/su to work if the rootfs is on /data. */

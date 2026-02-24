@@ -30,27 +30,13 @@ int ds_get_dns_servers(const char *custom_dns, char *out, size_t size) {
     }
   }
 
-  /* 1. Try Android properties if on Android (if still empty) */
-  if (count == 0 && is_android()) {
-    char dns1[64] = {0}, dns2[64] = {0};
-    android_fill_dns_from_props(dns1, dns2, sizeof(dns1));
-    if (dns1[0]) {
-      strcat(out, "nameserver ");
-      strcat(out, dns1);
-      strcat(out, "\n");
-      count++;
-    }
-    if (dns2[0]) {
-      strcat(out, "nameserver ");
-      strcat(out, dns2);
-      strcat(out, "\n");
-      count++;
-    }
-  }
-
-  /* 2. Global stable fallbacks */
+  /* 1. Global stable fallbacks (defined in droidspace.h) */
   if (count == 0) {
-    strcat(out, "nameserver 1.1.1.1\nnameserver 8.8.8.8\n");
+    char line1[128], line2[128];
+    snprintf(line1, sizeof(line1), "nameserver %s\n", DS_DNS_DEFAULT_1);
+    snprintf(line2, sizeof(line2), "nameserver %s\n", DS_DNS_DEFAULT_2);
+    strcat(out, line1);
+    strcat(out, line2);
     count = 2;
   }
 
@@ -85,10 +71,8 @@ int fix_networking_host(struct ds_config *cfg) {
   char dns_path[PATH_MAX];
   snprintf(dns_path, sizeof(dns_path), "%.4080s/.dns_servers",
            cfg->rootfs_path);
-  FILE *dns_fp = fopen(dns_path, "w");
-  if (dns_fp) {
-    fputs(dns_buf, dns_fp);
-    fclose(dns_fp);
+  if (write_file(dns_path, dns_buf) < 0) {
+    ds_warn("Failed to write temporary DNS marker: %s", dns_path);
   }
 
   if (is_android()) {
@@ -130,6 +114,10 @@ int fix_networking_rootfs(struct ds_config *cfg) {
 
   /* 3. resolv.conf (Android DNS from host via .dns_servers) */
   mkdir("/run/resolvconf", 0755);
+  char dns_fallback[256];
+  snprintf(dns_fallback, sizeof(dns_fallback), "nameserver %s\nnameserver %s\n",
+           DS_DNS_DEFAULT_1, DS_DNS_DEFAULT_2);
+
   FILE *dns_fp = fopen("/.dns_servers", "r");
   if (dns_fp) {
     char buf[1024];
@@ -139,11 +127,12 @@ int fix_networking_rootfs(struct ds_config *cfg) {
     if (n > 0) {
       buf[n] = '\0'; /* Ensure null-termination */
       write_file("/run/resolvconf/resolv.conf", buf);
+    } else {
+      write_file("/run/resolvconf/resolv.conf", dns_fallback);
     }
   } else {
     /* Fallback/Linux default */
-    write_file("/run/resolvconf/resolv.conf",
-               "nameserver 1.1.1.1\nnameserver 8.8.8.8\n");
+    write_file("/run/resolvconf/resolv.conf", dns_fallback);
   }
 
   /* Link /etc/resolv.conf */
