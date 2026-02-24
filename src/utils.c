@@ -572,6 +572,6 @@ void check_kernel_recommendation(void) {
 }
 
 void print_ds_banner(void) {
-  printf(C_CYAN C_BOLD "--- " C_WHITE DS_PROJECT_NAME " v" DS_VERSION C_CYAN
-                       " ---" C_RESET "\n");
+  printf(C_CYAN C_BOLD "— Welcome to " C_WHITE DS_PROJECT_NAME
+                       " v" DS_VERSION C_CYAN " ! —" C_RESET "\n\n");
 }

@@ -80,8 +80,6 @@ int fix_networking_host(struct ds_config *cfg) {
 
   if (cfg->dns_servers[0])
     ds_log("Setting up %d custom DNS servers...", count);
-  else
-    ds_log("Setting up %d default DNS servers...", count);
 
   /* Save DNS to temp file in rootfs for use after pivot_root */
   char dns_path[PATH_MAX];
