@@ -424,6 +424,11 @@ int start_rootfs(struct ds_config *cfg) {
   fix_networking_host(cfg);
   android_optimizations(1);
 
+  /* 5b. Android: Remount /data with suid for directory-based containers.
+   * This is required for sudo/su to work if the rootfs is on /data. */
+  if (is_android() && !cfg->rootfs_img_path[0])
+    android_remount_data_suid();
+
   if (cfg->hw_access)
     ds_log("Hardware access enabled: using host devtmpfs...");
   else
