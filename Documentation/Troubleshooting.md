@@ -206,7 +206,7 @@ chcon u:object_r:vold_data_file:s0 /path/to/rootfs.img
 220: 
 221: ## Modern Distros (Ubuntu/Debian) on Legacy Kernels (3.18 - 4.4)
 222: 
-223: **Symptoms:** Container starts but hangs during boot, fails to start services, or crashes immediately with various syscall errors.
+223: **Symptoms:** Container starts but hangs during boot, fails to start services, or crashes immediately even after a successful bootup.
 224: 
 225: **Cause:** Modern distributions like Ubuntu 22.04+ or Debian 12+ rely on kernel features (seccomp filters, cgroup v2, namespace isolation) that are incomplete or buggy on kernels older than 4.9.
 226: 
@@ -216,7 +216,25 @@ chcon u:object_r:vold_data_file:s0 /path/to/rootfs.img
 230: 
 231: ---
 232: 
-233: ## WiFi/Mobile Data Disconnects
+233: ---
+
+## DNS / Name Resolution Issues
+
+**Symptoms:** Internet works (IPs can be pinged), but domain names fail to resolve. `resolv.conf` is overwritten with "127.0.0.53" or other incorrect settings even after using `--dns`.
+
+**Cause:** `systemd-resolved` is running inside the container and attempting to manage DNS locally, often overwriting the static `/etc/resolv.conf` provided by Droidspaces.
+
+**Solution:** Mask the `systemd-resolved` service to allow the container to use Droidspaces' static DNS configuration:
+
+1. **Via Android App**: Go to **Panel** -> **Container Name** -> **Manage** (Systemd Menu), find `systemd-resolved`, tap the 3-dot icon, and select **Mask**.
+2. **Via Terminal**:
+   ```bash
+   sudo systemctl mask systemd-resolved
+   ```
+
+---
+
+## WiFi/Mobile Data Disconnects
 
 **Symptoms:** WiFi or mobile data permanently stops working on the host device during container start or stop processes. You may be unable to turn them back on without a device reboot.
 
