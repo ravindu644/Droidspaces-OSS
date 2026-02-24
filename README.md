@@ -34,12 +34,12 @@ What makes Droidspaces unique is its **zero-dependency, native execution** on bo
     <td align="center">
       <b>Android Home</b><br>
       <i>Beautiful home screen</i><br>
-      <img src="Documentation/resources/android/home.jpg" width="85%">
+      <img src="Documentation/resources/android/home.jpg" width="80%">
     </td>
     <td align="center">
       <b>Android Containers</b><br>
-      <i>2 containers installed in the container menu</i><br>
-      <img src="Documentation/resources/android/containers.jpg" width="85%">
+      <i>3 containers installed in the container menu</i><br>
+      <img src="Documentation/resources/android/containers.jpg" width="80%">
     </td>
   </tr>
 </table>
