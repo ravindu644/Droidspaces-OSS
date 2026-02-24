@@ -23,23 +23,23 @@ What makes Droidspaces unique is its **zero-dependency, native execution** on bo
 <summary><b>View Project's Screenshots (Linux & Android)</b></summary>
 
 <table align="center">
-  <tr>
+  <tr valign="top">
     <td colspan="2" align="center">
       <b>Linux Showcase</b><br>
       <i>Linux Mint in volatile + --hw-access + foreground mode</i><br>
-      <img src="Documentation/resources/linux/linux-showcase.png" width="90%">
+      <img src="Documentation/resources/linux/linux-showcase.png" width="95%"><br><br>
     </td>
   </tr>
-  <tr>
-    <td align="center">
+  <tr valign="top">
+    <td align="center" width="50%">
       <b>Android Home</b><br>
       <i>Beautiful home screen</i><br>
-      <img src="Documentation/resources/android/home.jpg" width="80%">
+      <img src="Documentation/resources/android/home.jpg" width="90%">
     </td>
-    <td align="center">
+    <td align="center" width="50%">
       <b>Android Containers</b><br>
       <i>3 containers installed in the container menu</i><br>
-      <img src="Documentation/resources/android/containers.jpg" width="80%">
+      <img src="Documentation/resources/android/containers.jpg" width="90%">
     </td>
   </tr>
 </table>
