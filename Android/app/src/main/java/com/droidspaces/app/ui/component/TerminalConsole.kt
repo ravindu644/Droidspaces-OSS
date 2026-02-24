@@ -11,13 +11,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.derivedStateOf
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
+import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
@@ -26,7 +20,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.Dp
 import com.droidspaces.app.util.AnsiColorParser
 
-// LSPatch-style shimmer animation - optimized for GPU rendering
 private val ShimmerColorShades
     @Composable get() = listOf(
         MaterialTheme.colorScheme.secondaryContainer.copy(0.9f),
@@ -42,23 +35,37 @@ fun ShimmerAnimation(
     enabled: Boolean = true,
     content: @Composable ShimmerScope.() -> Unit
 ) {
-    val transition = rememberInfiniteTransition()
+    val transition = rememberInfiniteTransition(label = "shimmer")
     val translateAnim by transition.animateFloat(
         initialValue = 0f,
         targetValue = 1000f,
         animationSpec = infiniteRepeatable(
             tween(durationMillis = 1200, easing = FastOutSlowInEasing),
             RepeatMode.Reverse
-        )
+        ),
+        label = "shimmerTranslate"
     )
 
+    // Smoothly fade shimmer out instead of cutting abruptly.
+    // An instant brush change on isProcessing=false was causing a recomposition
+    // spike that interrupted the scroll animation at the worst possible moment.
+    val shimmerAlpha by animateFloatAsState(
+        targetValue = if (enabled) 1f else 0f,
+        animationSpec = tween(durationMillis = 800, easing = LinearOutSlowInEasing),
+        label = "shimmerAlpha"
+    )
+
+    val shades = ShimmerColorShades
     val brush = Brush.linearGradient(
-        colors = if (enabled) ShimmerColorShades else List(3) { ShimmerColorShades[0] },
+        colors = listOf(
+            shades[0].copy(alpha = shades[0].alpha * shimmerAlpha + shades[0].alpha * (1f - shimmerAlpha) * 0.5f),
+            shades[1].copy(alpha = shades[1].alpha * shimmerAlpha + shades[0].alpha * (1f - shimmerAlpha) * 0.5f),
+            shades[2].copy(alpha = shades[2].alpha * shimmerAlpha + shades[0].alpha * (1f - shimmerAlpha) * 0.5f),
+        ),
         start = Offset(10f, 10f),
         end = Offset(translateAnim, translateAnim)
     )
 
-    // Use Surface wrapper like LSPatch for better graphics acceleration
     Surface(
         modifier = modifier.background(brush),
         border = null,
@@ -69,23 +76,16 @@ fun ShimmerAnimation(
     }
 }
 
-// Extension function to animate scroll to bottom
-suspend fun androidx.compose.foundation.ScrollState.animateScrollToBottom() {
-    animateScrollTo(maxValue)
-}
-
 /**
- * Ultra-optimized terminal console with ANSI color support, smooth rendering,
- * and real-time log streaming. No word wrap with full horizontal scrolling.
+ * Terminal console with ANSI color support, smooth rendering, and real-time log streaming.
  *
- * Features:
- * - ANSI color code parsing and rendering
- * - Smart auto-scroll (only when user is at bottom)
- * - Invisible scrollbars for both vertical and horizontal scrolling
- * - No word wrapping - lines extend horizontally as needed
- * - Better spacing between log lines
- * - Rounded corners without black border
- * - 90% opacity logs with monospace font
+ * Scroll design notes:
+ * - isProcessing is intentionally NOT a LaunchedEffect key. When it flipped false,
+ *   the in-flight spring scroll was cancelled mid-animation, freezing the terminal.
+ * - logs.size + maxValue are sufficient: the final status lines appended by
+ *   ContainerOperationExecutor naturally trigger both keys, so no extra trigger needed.
+ * - userScrolledUp is detected via snapshotFlow which is read-only — no scroll mutation
+ *   conflicts with the write path in the scroll LaunchedEffect.
  */
 @Composable
 fun TerminalConsole(
@@ -94,29 +94,33 @@ fun TerminalConsole(
     modifier: Modifier = Modifier,
     maxHeight: Dp? = null
 ) {
-    // Invisible scrollbars for both directions
     val verticalScrollState = rememberScrollState()
     val horizontalScrollState = rememberScrollState()
 
-    // Track if user was at bottom - only auto-scroll if they were following logs
-    var wasAtBottom by remember { mutableStateOf(true) }
-    var lastLogCount by remember { mutableStateOf(logs.size) }
+    var userScrolledUp by remember { mutableStateOf(false) }
 
-    // Auto-scroll when new logs arrive (if user was at bottom)
-    LaunchedEffect(logs.size) {
-        if (logs.size > lastLogCount && wasAtBottom) {
-            // Scroll to bottom when new logs arrive
-            verticalScrollState.animateScrollTo(verticalScrollState.maxValue)
+    // Read-only observer — never mutates scroll state, so zero conflict with animations
+    LaunchedEffect(verticalScrollState) {
+        snapshotFlow { verticalScrollState.value }
+            .collect { value ->
+                userScrolledUp = value < verticalScrollState.maxValue - 200
+            }
+    }
+
+    // isProcessing intentionally excluded — it was cancelling in-flight animations.
+    // logs.size handles new lines; maxValue handles layout settling after measurement.
+    LaunchedEffect(logs.size, verticalScrollState.maxValue) {
+        if (!userScrolledUp) {
+            verticalScrollState.animateScrollTo(
+                value = verticalScrollState.maxValue,
+                animationSpec = spring(
+                    dampingRatio = Spring.DampingRatioNoBouncy,
+                    stiffness = Spring.StiffnessLow
+                )
+            )
         }
-        lastLogCount = logs.size
     }
 
-    // Track scroll position to determine if user is at bottom
-    LaunchedEffect(verticalScrollState.value) {
-        wasAtBottom = verticalScrollState.value >= verticalScrollState.maxValue - 50 // Small threshold
-    }
-
-    // Pre-compute colors for performance
     val defaultTextColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.9f)
     val errorColor = MaterialTheme.colorScheme.error.copy(alpha = 0.9f)
     val warnColor = MaterialTheme.colorScheme.tertiary.copy(alpha = 0.9f)
@@ -132,72 +136,62 @@ fun TerminalConsole(
         androidx.compose.material3.ProvideTextStyle(
             MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace)
         ) {
-            // Box with both vertical and horizontal scrolling (invisible scrollbars)
             Box(
                 modifier = Modifier
-                    .fillMaxWidth() // Full width for maximum console space
-                    .background(brush = brush, shape = RoundedCornerShape(16.dp)) // Rounded corners without black border
-                    .padding(horizontal = 10.dp, vertical = 16.dp) // Minimal horizontal padding for high DPI screens
-                    .verticalScroll(verticalScrollState) // Invisible vertical scrollbar
-                    .horizontalScroll(horizontalScrollState) // Invisible horizontal scrollbar
+                    .fillMaxWidth()
+                    .background(brush = brush, shape = RoundedCornerShape(16.dp))
+                    .padding(horizontal = 10.dp, vertical = 16.dp)
+                    .verticalScroll(verticalScrollState)
+                    .horizontalScroll(horizontalScrollState)
             ) {
-                // Column for vertical arrangement of log lines
                 Column(
-                verticalArrangement = Arrangement.spacedBy(4.dp) // Better spacing between logs
-            ) {
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
                     logs.forEach { (level, message) ->
-                    // Process message: strip full path, parse ANSI
-                    val annotatedText = remember(message) {
-                        // Strip full path from droidspaces binary
-                        val processedMessage = message.replace(
-                            Regex("""/data/local/Droidspaces/bin/droidspaces"""),
-                            "droidspaces"
-                        )
-
-                        // Handle empty lines - use non-breaking space to ensure they're visible
-                        val displayMessage = if (processedMessage.isEmpty()) {
-                            "\u00A0" // Non-breaking space to make empty lines visible
-                        } else {
-                            // Preserve leading spaces by replacing them with non-breaking spaces
-                            // This ensures indentation from backend (like "  Rootfs OS:") is preserved
-                            processedMessage.replace(Regex("""^( +)""")) { match: kotlin.text.MatchResult ->
-                                match.value.replace(" ", "\u00A0")
-                            }
-                        }
-
-                        if (displayMessage.contains("\u001B[")) {
-                            // Has ANSI codes - parse them
-                            val defaultColor = when (level) {
-                                Log.ERROR -> errorColor
-                                Log.WARN -> warnColor
-                                else -> defaultTextColor
-                            }
-                            AnsiColorParser.parseAnsi(displayMessage, defaultColor)
-                        } else {
-                            // No ANSI codes - simple text with color
-                            androidx.compose.ui.text.AnnotatedString(
-                                text = displayMessage,
-                                spanStyle = androidx.compose.ui.text.SpanStyle(
-                        color = when (level) {
-                                        Log.ERROR -> errorColor
-                                        Log.WARN -> warnColor
-                                        else -> defaultTextColor
-                                    }
-                                )
+                        val annotatedText = remember(message) {
+                            val processedMessage = message.replace(
+                                Regex("""/data/local/Droidspaces/bin/droidspaces"""),
+                                "droidspaces"
                             )
-                        }
-                    }
 
-                        // No word wrap - text can extend horizontally with horizontal scrolling
-                    Text(
-                        text = annotatedText,
-                        style = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace),
-                            softWrap = false, // Word wrap disabled - allows horizontal scrolling
+                            val displayMessage = if (processedMessage.isEmpty()) {
+                                "\u00A0"
+                            } else {
+                                processedMessage.replace(Regex("""^( +)""")) { match: kotlin.text.MatchResult ->
+                                    match.value.replace(" ", "\u00A0")
+                                }
+                            }
+
+                            if (displayMessage.contains("\u001B[")) {
+                                val defaultColor = when (level) {
+                                    Log.ERROR -> errorColor
+                                    Log.WARN -> warnColor
+                                    else -> defaultTextColor
+                                }
+                                AnsiColorParser.parseAnsi(displayMessage, defaultColor)
+                            } else {
+                                androidx.compose.ui.text.AnnotatedString(
+                                    text = displayMessage,
+                                    spanStyle = androidx.compose.ui.text.SpanStyle(
+                                        color = when (level) {
+                                            Log.ERROR -> errorColor
+                                            Log.WARN -> warnColor
+                                            else -> defaultTextColor
+                                        }
+                                    )
+                                )
+                            }
+                        }
+
+                        Text(
+                            text = annotatedText,
+                            style = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace),
+                            softWrap = false,
                             modifier = Modifier
-                                .wrapContentWidth() // Allow text to be as wide as needed
-                                .heightIn(min = 16.dp) // Ensure minimum height for empty lines (matches line spacing)
+                                .wrapContentWidth()
+                                .heightIn(min = 16.dp)
                         )
-        }
+                    }
                 }
             }
         }
