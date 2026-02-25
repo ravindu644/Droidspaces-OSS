@@ -215,12 +215,19 @@ int generate_uuid(char *buf, size_t size) {
  * ---------------------------------------------------------------------------*/
 
 int collect_pids(pid_t **pids_out, size_t *count_out) {
+  if (!pids_out || !count_out)
+    return -1;
+
+  *pids_out = NULL;
+  *count_out = 0;
+
   DIR *d = opendir("/proc");
   if (!d)
     return -1;
 
   size_t cap = 256;
   size_t count = 0;
+
   pid_t *pids = malloc(cap * sizeof(pid_t));
   if (!pids) {
     closedir(d);
@@ -229,11 +236,16 @@ int collect_pids(pid_t **pids_out, size_t *count_out) {
 
   struct dirent *ent;
   while ((ent = readdir(d)) != NULL) {
-    if (ent->d_type != DT_DIR)
-      continue;
+
+    /* Do NOT trust ent->d_type.
+       Some filesystems (including Android /proc) return DT_UNKNOWN. */
+
     char *end;
+    errno = 0;
     long val = strtol(ent->d_name, &end, 10);
-    if (*end != '\0' || val <= 0)
+
+    /* Must be a pure positive number */
+    if (errno != 0 || *end != '\0' || val <= 0)
       continue;
 
     if (count >= cap) {
@@ -246,8 +258,10 @@ int collect_pids(pid_t **pids_out, size_t *count_out) {
       }
       pids = tmp;
     }
+
     pids[count++] = (pid_t)val;
   }
+
   closedir(d);
 
   *pids_out = pids;
