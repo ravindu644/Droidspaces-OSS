@@ -120,12 +120,6 @@ int is_container_running(struct ds_config *cfg, pid_t *pid_out) {
     return 1;
   }
 
-  /* Prune stale pidfile if we explicitly checked it and it's dead */
-  if (pid == 0 && access(cfg->pidfile, F_OK) == 0) {
-    unlink(cfg->pidfile);
-    remove_mount_path(cfg->pidfile);
-  }
-
   return 0;
 }
 
@@ -161,6 +155,10 @@ int count_running_containers(char *first_name, size_t size) {
           safe_strncpy(first_name, clean_name, size);
         }
         count++;
+      } else if (pid == 0 && access(tmp_cfg.pidfile, F_OK) == 0) {
+        /* Explicit pruning during scan */
+        unlink(tmp_cfg.pidfile);
+        remove_mount_path(tmp_cfg.pidfile);
       }
     }
   }
@@ -319,6 +317,10 @@ int show_containers(void) {
         if (nlen > max_name_len)
           max_name_len = nlen;
         count++;
+      } else if (pid == 0 && access(tmp_cfg.pidfile, F_OK) == 0) {
+        /* Explicit pruning during scan */
+        unlink(tmp_cfg.pidfile);
+        remove_mount_path(tmp_cfg.pidfile);
       }
     }
   }

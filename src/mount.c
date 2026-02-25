@@ -582,31 +582,40 @@ int unmount_rootfs_img(const char *mount_point, int silent) {
   if (!mount_point || !mount_point[0])
     return 0;
 
-  if (!silent)
-    ds_log("Unmounting rootfs image from %s...", mount_point);
-
   /* 1. Flush and try lazy unmount first */
   sync();
-  if (umount2(mount_point, MNT_DETACH) < 0) {
-    /* Fallback to shell command if detached unmount failed */
+  if (umount2(mount_point, MNT_DETACH) < 0 && errno != ENOENT) {
+    /* Fallback to shell command if detached unmount failed (handles some loop
+     * edge cases) */
     char *umount_argv[] = {"umount", "-d", "-l", (char *)(uintptr_t)mount_point,
                            NULL};
     run_command_quiet(umount_argv);
   }
 
-  /* 2. Settle loop devices */
+  /* 2. Settle and verify */
   sync();
-  usleep(DS_RETRY_DELAY_US); /* 200ms */
+  usleep(DS_RETRY_DELAY_US);
 
-  /* 3. Try to remove the directory, retry if necessary */
-  int retries = 3;
-  while (retries-- > 0) {
-    if (rmdir(mount_point) == 0 || errno == ENOENT)
-      break;
-    if (is_mountpoint(mount_point)) {
-      umount2(mount_point, MNT_DETACH | MNT_FORCE);
-    }
+  /* 3. If still mounted, force it (stubborn mounts on old kernels) */
+  if (is_mountpoint(mount_point)) {
+    umount2(mount_point, MNT_DETACH | MNT_FORCE);
     usleep(DS_RETRY_DELAY_US / 2);
+  }
+
+  /* 4. Final directory removal and logging */
+  int still_mounted = is_mountpoint(mount_point);
+  if (rmdir(mount_point) == 0) {
+    if (!silent)
+      ds_log("Unmounted rootfs image from %s.", mount_point);
+  } else if (still_mounted == 0) {
+    /* If it's no longer a mountpoint, the image IS detached from the host.
+     * The rmdir might fail if the directory is opened by another process,
+     * but the primary user task (unmounting the image) is done. */
+    if (!silent)
+      ds_log("Unmounted rootfs image from %s.", mount_point);
+  } else if (errno != ENOENT) {
+    if (!silent)
+      ds_warn("Cleanup warning: %s is still busy/mounted.", mount_point);
   }
 
   return 0;

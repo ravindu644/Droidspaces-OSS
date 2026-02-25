@@ -68,16 +68,22 @@ static void cleanup_container_resources(struct ds_config *cfg, pid_t pid,
   }
 
   /* 4. Handle rootfs image unmount */
-  char mount_point[PATH_MAX];
-  if (read_mount_path(cfg->pidfile, mount_point, sizeof(mount_point)) > 0) {
-    if (!skip_unmount) {
-      if (force_cleanup) {
-        /* Force path: detach+force unmount, no sync, no retry loops */
-        umount2(mount_point, MNT_DETACH | MNT_FORCE);
-        rmdir(mount_point); /* best-effort */
-      } else {
-        unmount_rootfs_img(mount_point, cfg->foreground);
-      }
+  char mount_point[PATH_MAX] = "";
+  if (read_mount_path(cfg->pidfile, mount_point, sizeof(mount_point)) <= 0) {
+    /* Fallback: use cfg->img_mount_point if .mount sidecar is gone */
+    if (cfg->img_mount_point[0]) {
+      safe_strncpy(mount_point, cfg->img_mount_point, sizeof(mount_point));
+    }
+  }
+
+  if (mount_point[0] && !skip_unmount) {
+    if (force_cleanup) {
+      /* Force path: detach+force unmount, no sync, no retry loops */
+      umount2(mount_point, MNT_DETACH | MNT_FORCE);
+      rmdir(mount_point); /* best-effort */
+    } else {
+      /* Explicitly call unmount wrapper. It handles its own logging. */
+      unmount_rootfs_img(mount_point, 0);
     }
   }
 
@@ -555,13 +561,14 @@ int stop_rootfs(struct ds_config *cfg, int skip_unmount) {
     write_file(restart_marker, "1");
   }
 
-  /* Grab rootfs path while process is still alive */
-  char rootfs[PATH_MAX] = "";
-  char root_link[PATH_MAX];
-  snprintf(root_link, sizeof(root_link), "/proc/%d/root", pid);
-  ssize_t len = readlink(root_link, rootfs, sizeof(rootfs) - 1);
-  if (len > 0)
-    rootfs[len] = '\0';
+  /* Safe Metadata Capture: Read the mount path from the tracking file (.mount)
+   * into memory before we start the shutdown wait loop. This ensures we have
+   * the correct host path even if the tracking files are deleted by the monitor
+   * or another process during the timeout. */
+  if (cfg->img_mount_point[0] == '\0') {
+    read_mount_path(cfg->pidfile, cfg->img_mount_point,
+                    sizeof(cfg->img_mount_point));
+  }
 
   /* 1. Try graceful shutdown with a "signal bucket" to support multiple init
    * systems:
@@ -618,14 +625,12 @@ int stop_rootfs(struct ds_config *cfg, int skip_unmount) {
     }
   }
 
-  /* 4. Firmware cleanup if we captured rootfs earlier.
+  /* 4. Firmware cleanup.
    * Skip when unkillable — accessing zombie-held rootfs can hang. */
-  if (rootfs[0] && !unkillable)
-    firmware_path_remove_rootfs(rootfs);
+  if (cfg->img_mount_point[0] && !unkillable)
+    firmware_path_remove_rootfs(cfg->img_mount_point);
 
-  /* 5. Complete resource cleanup.
-   * Pass unkillable flag so cleanup skips sync() and uses force/lazy
-   * unmounts to avoid hanging on busy mounts held by zombie processes. */
+  /* 5. Complete resource cleanup. */
   cleanup_container_resources(cfg, 0, skip_unmount, unkillable);
 
   ds_log("Container '%s' stopped.", cfg->container_name);
