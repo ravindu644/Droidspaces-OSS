@@ -6,11 +6,6 @@
  */
 
 #include "droidspace.h"
-#include <linux/audit.h>
-#include <linux/filter.h>
-#include <linux/seccomp.h>
-#include <stddef.h>
-#include <sys/prctl.h>
 
 /* ---------------------------------------------------------------------------
  * Android detection

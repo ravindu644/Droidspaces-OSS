@@ -277,7 +277,7 @@ int check_requirements_detailed(void) {
                "required:\n\n");
 
   print_ds_check("epoll support", "Efficient I/O event notification",
-                 check_fd_feature(epoll_create(1)), "OPT");
+                 check_fd_feature(epoll_create1(0)), "OPT");
 
   sigset_t mask;
   sigemptyset(&mask);

@@ -101,12 +101,6 @@ static int remove_recursive_handler(const char *fpath, const struct stat *sb,
   return r;
 }
 
-#if !defined(_XOPEN_SOURCE) || _XOPEN_SOURCE < 500
-#undef _XOPEN_SOURCE
-#define _XOPEN_SOURCE 500
-#endif
-#include <ftw.h>
-
 int remove_recursive(const char *path) {
   return nftw(path, remove_recursive_handler, 64, FTW_DEPTH | FTW_PHYS);
 }
@@ -523,13 +517,14 @@ int ds_send_fd(int sock, int fd) {
 
 int ds_recv_fd(int sock) {
   struct msghdr msg = {0};
-  char buf[CMSG_SPACE(sizeof(int))];
-  struct iovec io = {.iov_base = buf, .iov_len = sizeof(buf)};
+  char ctrl_buf[CMSG_SPACE(sizeof(int))];
+  char data_buf[2];
+  struct iovec io = {.iov_base = data_buf, .iov_len = sizeof(data_buf)};
 
   msg.msg_iov = &io;
   msg.msg_iovlen = 1;
-  msg.msg_control = buf;
-  msg.msg_controllen = sizeof(buf);
+  msg.msg_control = ctrl_buf;
+  msg.msg_controllen = sizeof(ctrl_buf);
 
   if (recvmsg(sock, &msg, 0) < 0)
     return -1;

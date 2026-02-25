@@ -576,8 +576,6 @@ int mount_rootfs_img(const char *img_path, char *mount_point, size_t mp_size,
 
   ds_error("Failed to mount image %s after %d attempts", img_path, max_retries);
   return -1;
-
-  return 0;
 }
 
 int unmount_rootfs_img(const char *mount_point, int silent) {

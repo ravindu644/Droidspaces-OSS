@@ -21,10 +21,10 @@ int ds_get_dns_servers(const char *custom_dns, char *out, size_t size) {
     safe_strncpy(buf, custom_dns, sizeof(buf));
     char *saveptr;
     char *token = strtok_r(buf, ", ", &saveptr);
-    while (token && (size_t)strlen(out) < size - 64) {
+    while (token && (size_t)strlen(out) < size - 32) {
       char line[128];
       snprintf(line, sizeof(line), "nameserver %s\n", token);
-      strcat(out, line);
+      strncat(out, line, size - strlen(out) - 1);
       count++;
       token = strtok_r(NULL, ", ", &saveptr);
     }
@@ -32,12 +32,10 @@ int ds_get_dns_servers(const char *custom_dns, char *out, size_t size) {
 
   /* 1. Global stable fallbacks (defined in droidspace.h) */
   if (count == 0) {
-    char line1[128], line2[128];
-    snprintf(line1, sizeof(line1), "nameserver %s\n", DS_DNS_DEFAULT_1);
-    snprintf(line2, sizeof(line2), "nameserver %s\n", DS_DNS_DEFAULT_2);
-    strcat(out, line1);
-    strcat(out, line2);
-    count = 2;
+    int n = snprintf(out, size, "nameserver %s\nnameserver %s\n",
+                     DS_DNS_DEFAULT_1, DS_DNS_DEFAULT_2);
+    if (n > 0 && (size_t)n < size)
+      count = 2;
   }
 
   return count;
@@ -62,9 +60,8 @@ int fix_networking_host(struct ds_config *cfg) {
 
   /* Get DNS and store it in the config struct to be used after pivot_root */
   cfg->dns_server_content[0] = '\0';
-  int count =
-      ds_get_dns_servers(cfg->dns_servers, cfg->dns_server_content,
-                         sizeof(cfg->dns_server_content));
+  int count = ds_get_dns_servers(cfg->dns_servers, cfg->dns_server_content,
+                                 sizeof(cfg->dns_server_content));
 
   if (cfg->dns_servers[0])
     ds_log("Setting up %d custom DNS servers...", count);
@@ -113,8 +110,9 @@ int fix_networking_rootfs(struct ds_config *cfg) {
   } else {
     /* Fallback if DNS content is empty */
     char dns_fallback[256];
-    snprintf(dns_fallback, sizeof(dns_fallback), "nameserver %s\nnameserver %s\n",
-             DS_DNS_DEFAULT_1, DS_DNS_DEFAULT_2);
+    snprintf(dns_fallback, sizeof(dns_fallback),
+             "nameserver %s\nnameserver %s\n", DS_DNS_DEFAULT_1,
+             DS_DNS_DEFAULT_2);
     write_file("/run/resolvconf/resolv.conf", dns_fallback);
   }
 

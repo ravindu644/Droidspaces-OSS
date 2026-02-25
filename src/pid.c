@@ -226,10 +226,6 @@ int sync_pidfile(const char *src_pidfile, const char *name) {
  * Status reporting
  * ---------------------------------------------------------------------------*/
 
-/* ---------------------------------------------------------------------------
- * Status reporting
- * ---------------------------------------------------------------------------*/
-
 int show_containers(void) {
   DIR *d = opendir(get_pids_dir());
   if (!d) {

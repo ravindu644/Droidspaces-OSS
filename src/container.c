@@ -896,6 +896,26 @@ static const char *get_architecture(void) {
   return uts.machine;
 }
 
+static void parse_pretty_name(FILE *fp, char *buf, size_t size) {
+  char line[512];
+  while (fgets(line, sizeof(line), fp)) {
+    if (strncmp(line, "PRETTY_NAME=", 12) == 0) {
+      char *val = line + 12;
+      size_t len = strlen(val);
+      while (len > 0 && (val[len - 1] == '\n' || val[len - 1] == '"'))
+        val[--len] = '\0';
+      if (val[0] == '"') {
+        val++;
+        len--;
+      }
+      if (len >= size)
+        len = size - 1;
+      snprintf(buf, size, "%.*s", (int)len, val);
+      return;
+    }
+  }
+}
+
 static void get_container_os_pretty(pid_t pid, char *buf, size_t size) {
   if (!buf || size == 0)
     return;
@@ -909,23 +929,7 @@ static void get_container_os_pretty(pid_t pid, char *buf, size_t size) {
   if (!fp)
     return;
 
-  char line[512];
-  while (fgets(line, sizeof(line), fp)) {
-    if (strncmp(line, "PRETTY_NAME=", 12) == 0) {
-      char *val = line + 12;
-      size_t len = strlen(val);
-      while (len > 0 && (val[len - 1] == '\n' || val[len - 1] == '"'))
-        val[--len] = '\0';
-      if (val[0] == '"') {
-        val++;
-        len--;
-      }
-      if (len >= size)
-        len = size - 1;
-      snprintf(buf, size, "%.*s", (int)len, val);
-      break;
-    }
-  }
+  parse_pretty_name(fp, buf, size);
   fclose(fp);
 }
 
@@ -939,23 +943,7 @@ static void get_os_pretty_from_path(const char *osrelease_path, char *buf,
   if (!fp)
     return;
 
-  char line[512];
-  while (fgets(line, sizeof(line), fp)) {
-    if (strncmp(line, "PRETTY_NAME=", 12) == 0) {
-      char *val = line + 12;
-      size_t len = strlen(val);
-      while (len > 0 && (val[len - 1] == '\n' || val[len - 1] == '"'))
-        val[--len] = '\0';
-      if (val[0] == '"') {
-        val++;
-        len--;
-      }
-      if (len >= size)
-        len = size - 1;
-      snprintf(buf, size, "%.*s", (int)len, val);
-      break;
-    }
-  }
+  parse_pretty_name(fp, buf, size);
   fclose(fp);
 }
 

@@ -6,11 +6,6 @@
  */
 
 #include "droidspace.h"
-#include <signal.h>
-#include <string.h>
-#include <sys/ioctl.h>
-#include <termios.h>
-#include <unistd.h>
 
 /* Get binary name from argv[0], handling paths */
 static const char *get_binary_name(const char *argv0) {

@@ -119,7 +119,7 @@ void build_container_ttys_string(struct ds_tty_info *ttys, int count, char *buf,
   }
 }
 
-static int proxy_master_fd = -1;
+static volatile int proxy_master_fd = -1;
 static void handle_sigwinch(int sig) {
   (void)sig;
   struct winsize ws;

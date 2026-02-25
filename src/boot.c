@@ -28,10 +28,9 @@ int internal_boot(struct ds_config *cfg) {
     android_seccomp_setup(is_systemd);
   }
 
-  /* 2.5 Setup volatile overlay INSIDE the container's mount namespace.
+  /* 3. Setup volatile overlay INSIDE the container's mount namespace.
    * This MUST happen here (not in parent) so the overlay's connection to
    * its lowerdir (e.g. a loop-mounted image) survives mount privatization. */
-  /* 3. Volatile Overlay (Ephemereal mode) */
   if (cfg->volatile_mode) {
     if (setup_volatile_overlay(cfg) < 0) {
       ds_error("Failed to setup volatile overlay.");
@@ -39,20 +38,20 @@ int internal_boot(struct ds_config *cfg) {
     }
   }
 
-  /* 3. Bind mount rootfs to itself (required for pivot_root) */
+  /* 4. Bind mount rootfs to itself (required for pivot_root) */
   if (mount(cfg->rootfs_path, cfg->rootfs_path, NULL, MS_BIND | MS_REC, NULL) <
       0) {
     ds_error("Failed to bind mount rootfs: %s", strerror(errno));
     return -1;
   }
 
-  /* 5. Set working directory to rootfs */
+  /* 5. Set working directory to rootfs (required before pivot_root) */
   if (chdir(cfg->rootfs_path) < 0) {
     ds_error("Failed to chdir to '%s': %s", cfg->rootfs_path, strerror(errno));
     return -1;
   }
 
-  /* 4.1 Read UUID from sync file if not already provided (parity with v2) */
+  /* 6. Read UUID from sync file if not already provided (parity with v2) */
   if (cfg->uuid[0] == '\0') {
     read_file(".droidspaces-uuid", cfg->uuid, sizeof(cfg->uuid));
   }
@@ -63,19 +62,19 @@ int internal_boot(struct ds_config *cfg) {
     }
   }
 
-  /* 5. Prepare .old_root for pivot_root */
+  /* 7. Prepare .old_root for pivot_root */
   if (mkdir(".old_root", 0755) < 0 && errno != EEXIST) {
     ds_error("Failed to create .old_root directory: %s", strerror(errno));
     return -1;
   }
 
-  /* 8. Setup /dev */
+  /* 8. Setup /dev (device nodes, devtmpfs) */
   if (setup_dev(".", cfg->hw_access) < 0) {
     ds_error("Failed to setup /dev.");
     return -1;
   }
 
-  /* 6. Mount virtual filesystems */
+  /* 9. Mount virtual filesystems (proc, sys) */
   if (mkdir("proc", 0755) < 0 && errno != EEXIST) {
     ds_error("Failed to create proc directory: %s", strerror(errno));
     return -1;
@@ -97,7 +96,7 @@ int internal_boot(struct ds_config *cfg) {
     return -1;
   }
 
-  /* 8. Pre-create the cgroup mountpoint while /sys is still RW.
+  /* 10. Pre-create the cgroup mountpoint while /sys is still RW.
    * This allows us to mount cgroups onto it later even after /sys is RO. */
   mkdir_p("sys/fs/cgroup", 0755);
 
@@ -150,12 +149,12 @@ int internal_boot(struct ds_config *cfg) {
     ds_warn("Failed to remount /sys as read-only: %s", strerror(errno));
   }
 
-  /* 9. Setup Cgroups AFTER locking down /sys.
+  /* 11. Setup Cgroups AFTER locking down /sys.
    * Mounting onto a directory on a RO parent is allowed for root, and it
    * ensures the sub-mount (tmpfs) is RW and independent of the parent's RO. */
   setup_cgroups();
 
-  /* Mask the console discovery file to prevent resolution back to host */
+  /* 12. Mask the console discovery file to prevent resolution back to host */
   if (mount("/dev/null", "sys/class/tty/console/active", NULL, MS_BIND, NULL) <
       0) {
     /* File might not exist yet if sysfs is partially populated */
@@ -170,9 +169,8 @@ int internal_boot(struct ds_config *cfg) {
     return -1;
   }
 
-  /* 7. Bind-mount TTYs BEFORE pivot_root so we can still see /dev/pts/N from
-   * host */
-  /* We use relative paths to the current directory (rootfs) */
+  /* 13. Bind-mount TTYs BEFORE pivot_root so we can still see /dev/pts/N
+   * from host. We use relative paths to the current directory (rootfs). */
   if (mount(cfg->console.name, "dev/console", NULL, MS_BIND, NULL) < 0)
     ds_warn("Failed to bind mount console '%s': %s", cfg->console.name,
             strerror(errno));
@@ -184,21 +182,21 @@ int internal_boot(struct ds_config *cfg) {
       ds_warn("Failed to bind mount '%s': %s", tty_target, strerror(errno));
   }
 
-  /* 8. Write UUID marker for PID discovery */
+  /* 14. Write UUID marker for PID discovery */
   char marker[PATH_MAX];
   snprintf(marker, sizeof(marker), "run/%s", cfg->uuid);
   write_file(marker, "init");
   write_file("run/droidspaces", DS_VERSION);
 
-  /* 10. Android-specific storage */
+  /* 15. Android-specific storage */
   if (cfg->android_storage) {
     android_setup_storage(".");
   }
 
-  /* 11. Custom bind mounts */
+  /* 16. Custom bind mounts */
   setup_custom_binds(cfg, ".");
 
-  /* 14. pivot_root */
+  /* 17. pivot_root */
   if (syscall(SYS_pivot_root, ".", ".old_root") < 0) {
     ds_error("pivot_root failed: %s", strerror(errno));
     /* pivot_root might fail if we are on ramfs.
@@ -212,25 +210,25 @@ int internal_boot(struct ds_config *cfg) {
     return -1;
   }
 
-  /* 14. Setup devpts (must be after pivot_root for newinstance) */
+  /* 18. Setup devpts (must be after pivot_root for newinstance) */
   setup_devpts(cfg->hw_access);
 
-  /* 15. Configure rootfs networking (hostname, resolv.conf, etc) */
+  /* 19. Configure rootfs networking (hostname, resolv.conf, etc) */
   fix_networking_rootfs(cfg);
 
-  /* 16. Cleanup .old_root */
+  /* 20. Cleanup .old_root */
   if (umount2("/.old_root", MNT_DETACH) < 0)
     ds_warn("Failed to unmount .old_root: %s", strerror(errno));
   else
     rmdir("/.old_root");
 
-  /* 17. Set container identity for systemd/openrc */
+  /* 21. Set container identity for systemd/openrc */
   write_file("/run/systemd/container", "droidspaces");
 
-  /* 18. Clear environment and set container defaults */
+  /* 22. Clear environment and set container defaults */
   ds_env_boot_setup(cfg);
 
-  /* 19. Redirect standard I/O to /dev/console */
+  /* 23. Redirect standard I/O to /dev/console */
   int console_fd = open("/dev/console", O_RDWR);
   if (console_fd >= 0) {
     ds_terminal_set_stdfds(console_fd);
@@ -257,7 +255,7 @@ int internal_boot(struct ds_config *cfg) {
       close(console_fd);
   }
 
-  /* 21. EXEC INIT */
+  /* 24. EXEC INIT */
   char *argv[] = {"/sbin/init", NULL};
 
   if (execve("/sbin/init", argv, environ) < 0) {

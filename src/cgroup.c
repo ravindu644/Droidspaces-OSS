@@ -133,7 +133,8 @@ static int get_host_cgroups(struct host_cgroup *out, int max) {
         }
       }
     } else {
-      strcpy(out[count].controllers, "unified");
+      safe_strncpy(out[count].controllers, "unified",
+                   sizeof(out[count].controllers));
     }
 
     /* Verify we are not looking at a mount inside Droidspaces itself
@@ -267,9 +268,8 @@ int setup_cgroups(void) {
     if (find_self_cgroup_path(ctrl_for_lookup, self_path, sizeof(self_path)) ==
         0) {
       char host_full_subpath[PATH_MAX * 2];
-      memset(host_full_subpath, 0, sizeof(host_full_subpath));
-      strncpy(host_full_subpath, hosts[i].mountpoint,
-              sizeof(host_full_subpath) - 1);
+      safe_strncpy(host_full_subpath, hosts[i].mountpoint,
+                   sizeof(host_full_subpath));
       strncat(host_full_subpath, self_path,
               sizeof(host_full_subpath) - strlen(host_full_subpath) - 1);
 
