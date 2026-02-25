@@ -104,6 +104,9 @@ for cfg in ${CONFIG_FILES}; do
     enable_android_storage=$(get_config_value "${cfg}" "enable_android_storage")
     enable_hw_access=$(get_config_value "${cfg}" "enable_hw_access")
     selinux_permissive=$(get_config_value "${cfg}" "selinux_permissive")
+    volatile_mode=$(get_config_value "${cfg}" "volatile_mode")
+    bind_mounts=$(get_config_value "${cfg}" "bind_mounts")
+    dns_servers=$(get_config_value "${cfg}" "dns_servers")
     run_at_boot=$(get_config_value "${cfg}" "run_at_boot")
 
     # Skip if run_at_boot is not 1
@@ -152,9 +155,19 @@ for cfg in ${CONFIG_FILES}; do
     cmd="${cmd} --rootfs=$(quote_value "${rootfs_path}")"
     fi
 
-    # Add --hostname if different from name
-    if [ -n "${hostname}" ] && [ "${hostname}" != "${name}" ]; then
+    # Add --hostname if defined (Always pass to prevent conflicts with auto-naming)
+    if [ -n "${hostname}" ]; then
         cmd="${cmd} --hostname=$(quote_value "${hostname}")"
+    fi
+
+    # Add --dns if defined
+    if [ -n "${dns_servers}" ]; then
+        cmd="${cmd} --dns=$(quote_value "${dns_servers}")"
+    fi
+
+    # Add --bind-mount if defined
+    if [ -n "${bind_mounts}" ]; then
+        cmd="${cmd} --bind-mount=$(quote_value "${bind_mounts}")"
     fi
 
     # Add feature flags
@@ -172,6 +185,10 @@ for cfg in ${CONFIG_FILES}; do
 
     if [ "${selinux_permissive}" = "1" ]; then
         cmd="${cmd} --selinux-permissive"
+    fi
+
+    if [ "${volatile_mode}" = "1" ]; then
+        cmd="${cmd} --volatile"
     fi
 
     # Add start command
