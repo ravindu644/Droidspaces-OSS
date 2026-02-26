@@ -70,10 +70,19 @@ int internal_boot(struct ds_config *cfg) {
 
   /* 7. Pre-create standard directories in one loop to reduce syscalls */
   const char *dirs_to_create[] = { ".old_root", "proc", "sys", "run" };
+  int dir_creation_failed = 0;
   for (size_t i = 0; i < sizeof(dirs_to_create)/sizeof(dirs_to_create[0]); i++) {
       if (mkdir(dirs_to_create[i], 0755) < 0 && errno != EEXIST) {
           ds_error("Failed to create '%s': %s", dirs_to_create[i], strerror(errno));
+          /* .old_root is critical for pivot_root, track if it fails */
+          if (strcmp(dirs_to_create[i], ".old_root") == 0) {
+              dir_creation_failed = 1;
+          }
       }
+  }
+  if (dir_creation_failed) {
+      ds_error("Failed to create critical directory .old_root");
+      return -1;
   }
 
   /* 8. Setup /dev (device nodes, devtmpfs) */
