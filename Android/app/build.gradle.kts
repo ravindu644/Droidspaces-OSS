@@ -74,6 +74,13 @@ android {
                 println("WARNING: KEYSTORE_PASSWORD not set in local.properties or gradle.properties, using default debug keystore")
             }
             getByName("debug") {
+                // Use default debug keystore
+                storePassword = "android"
+                keyAlias = "androiddebugkey"
+                keyPassword = "android"
+            }
+            // CRITICAL: Always create 'release' config to prevent CI build failures
+            create("release") {
                 storePassword = "android"
                 keyAlias = "androiddebugkey"
                 keyPassword = "android"
