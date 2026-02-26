@@ -1,0 +1,27 @@
+From 50cb2ccbef7d84852f2600bb4d3e69f6bd736561 Mon Sep 17 00:00:00 2001
+From: ravindu644 <droidcasts@protonmail.com>
+Date: Sun, 22 Feb 2026 22:27:15 +0530
+Subject: [PATCH] [PATCH 2/2] Droidspaces/LXC: fix: restore cgroup file prefix
+ handling for Droidspaces/LXC compatibility
+
+Signed-off-by: ravindu644 <droidcasts@protonmail.com>
+---
+ kernel/cgroup/cgroup.c | 5 +++++
+ 1 file changed, 5 insertions(+)
+
+diff --git a/kernel/cgroup/cgroup.c b/kernel/cgroup/cgroup.c
+index 694b1cc8d..d0d04bff1 100755
+--- a/kernel/cgroup/cgroup.c
++++ b/kernel/cgroup/cgroup.c
+@@ -3496,6 +3496,11 @@ static int cgroup_add_file(struct cgroup_subsys_state *css, struct cgroup *cgrp,
+ 		spin_unlock_irq(&cgroup_file_kn_lock);
+ 	}
+ 
++	if (cft->ss && (cgrp->root->flags & CGRP_ROOT_NOPREFIX) && !(cft->flags & CFTYPE_NO_PREFIX)) {
++				snprintf(name, CGROUP_FILE_NAME_MAX, "%s.%s", cft->ss->name, cft->name);
++				kernfs_create_link(cgrp->kn, name, kn);
++	}
++
+ 	return 0;
+ }
+ 

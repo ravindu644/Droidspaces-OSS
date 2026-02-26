@@ -9,6 +9,21 @@ This guide explains how to compile a Linux kernel with Droidspaces support for A
 
 ---
 
+### Quick Navigation
+
+- [Overview](#overview)
+- [Required Configuration](#kernel-config)
+- [Recommended Kernel Patches](#kernel-patches)
+- [Non-GKI Devices](#non-gki)
+- [GKI Devices](#gki)
+- [Testing Your Kernel](#testing)
+- [Recommended Kernel Versions](#versions)
+- [Nested Containers](#nested)
+- [Additional Resources](#resources)
+
+---
+
+<a id="overview"></a>
 ## Overview
 
 Droidspaces requires specific kernel configuration options to create isolated containers. These options enable Linux namespaces, cgroups, seccomp filtering, and device filesystem support.
@@ -81,10 +96,24 @@ CONFIG_ANDROID_PARANOID_NETWORK=n
 | `CONFIG_CGROUP_PIDS` | PID limiting via cgroups. Used by systemd for process tracking. |
 | `CONFIG_MEMCG` | Memory controller cgroup. Used by systemd for memory accounting. |
 | `CONFIG_DEVTMPFS` | Device filesystem. Required for `/dev` setup and hardware access mode. |
+| `CONFIG_OVERLAY_FS` | Overlay filesystem support. Required for volatile mode. |
 | `CONFIG_ANDROID_PARANOID_NETWORK=n` | Disables Android's paranoid network restrictions which block container networking. |
 
 ---
 
+<a id="kernel-patches"></a>
+## Recommended Kernel Patches
+
+In addition to the configuration options above, it is highly recommended for both GKI and non-GKI users to apply the patches located in the [Documentation/resources/kernel-patches](./resources/kernel-patches/) folder. These patches address critical stability issues and compatibility gaps when running containerized workloads on Android.
+
+Applying these patches helps avoid "weird issues" and kernel panics that can occur under specific networking or resource management conditions.
+
+> [!IMPORTANT]
+> **Note to GKI users:** You can safely skip the `xt_qtaguid` patch (`01.fix_kernel_panic_in_xt_qtaguid.patch`) as this module is not available in GKI kernels.
+
+---
+
+<a id="non-gki"></a>
 ## Non-GKI Devices (Legacy Kernels)
 
 **Applies to:** Kernel 3.18, 4.4, 4.9, 4.14, 4.19
@@ -123,6 +152,7 @@ All checks should pass with green checkmarks.
 
 ---
 
+<a id="gki"></a>
 ## GKI Devices (Modern Kernels)
 
 **Applies to:** Kernel 5.4, 5.10, 5.15, 6.1+
@@ -144,6 +174,7 @@ GKI kernels enforce a strict ABI (Application Binary Interface) between the kern
 
 ---
 
+<a id="testing"></a>
 ## Testing Your Kernel
 
 After flashing a new kernel, verify Droidspaces compatibility:
@@ -191,22 +222,24 @@ This checks for:
 
 ---
 
+<a id="versions"></a>
 ## Recommended Kernel Versions
 
 | Version | Support | Notes |
 |---------|---------|-------|
 | 3.18 - 4.4 | Legacy | **Minimum floor.** Basic namespace support. Modern distros are unstable; Alpine is recommended. Nested containers are technically possible but highly unstable. |
-| 4.9 - 4.19 | Stable | **Hardened.** Full support with adaptive Seccomp shield. Nested containers supported for non-systemd containers (Alpine), but may hit host kernel limitations. |
+| 4.9 - 4.19 | Stable | **Hardened.** Full support with adaptive Seccomp shield. **Ubuntu 22.04 LTS** is highly recommended for these kernels. It has been extensively tested (e.g., on 4.14.113) and handles cgroup slices correctly. Modern systemd-based distros (Arch, Fedora, SuSE) often fail on these older kernels, or may lead to cgroup issues or **Kernel Panics**. |
 | 5.4 - 5.10 | Recommended | **Mainline.** Full feature support, including nested containers and modern Cgroup v2. |
 | 5.15+ | Ideal | **Premium.** All features, best performance, and widest compatibility. |
 
-> [!NOTE]
+> [!WARNING]
 >
 > While Alpine has namespace freedom on legacy kernels, nested tools like Docker may still fail if they require modern host kernel features (like BPF cgroup hooks) that are missing or incompatible on kernels < 5.0.
 >
 
 ---
 
+<a id="nested"></a>
 ## Nested Containers on Legacy Kernels
 
 On legacy kernels (especially Android 4.14 and below), Droidspaces allows nested containerization (e.g., Docker inside Alpine) by selectively disabling the Seccomp shield for non-systemd containers. However, you may still encounter host kernel limitations:
@@ -220,6 +253,7 @@ If you see `bpf_prog_query` errors, try using a legacy `runc` binary or configur
 
 ---
 
+<a id="resources"></a>
 ## Additional Resources
 
 - [Android Kernel Tutorials](https://github.com/ravindu644/Android-Kernel-Tutorials) by ravindu644
