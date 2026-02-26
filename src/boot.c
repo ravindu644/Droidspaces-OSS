@@ -62,10 +62,12 @@ int internal_boot(struct ds_config *cfg) {
     }
   }
 
-  /* 7. Prepare .old_root for pivot_root */
-  if (mkdir(".old_root", 0755) < 0 && errno != EEXIST) {
-    ds_error("Failed to create .old_root directory: %s", strerror(errno));
-    return -1;
+  /* 7. Pre-create standard directories in one loop to reduce syscalls */
+  const char *dirs_to_create[] = { ".old_root", "proc", "sys", "sys/fs/cgroup", "run" };
+  for (size_t i = 0; i < sizeof(dirs_to_create)/sizeof(dirs_to_create[0]); i++) {
+      if (mkdir(dirs_to_create[i], 0755) < 0 && errno != EEXIST) {
+          ds_error("Failed to create '%s': %s", dirs_to_create[i], strerror(errno));
+      }
   }
 
   /* 8. Setup /dev (device nodes, devtmpfs) */
@@ -75,10 +77,6 @@ int internal_boot(struct ds_config *cfg) {
   }
 
   /* 9. Mount virtual filesystems (proc, sys) */
-  if (mkdir("proc", 0755) < 0 && errno != EEXIST) {
-    ds_error("Failed to create proc directory: %s", strerror(errno));
-    return -1;
-  }
   if (domount("proc", "proc", "proc", MS_NOSUID | MS_NODEV | MS_NOEXEC, NULL) <
       0) {
     ds_error("Failed to mount procfs: %s", strerror(errno));
@@ -86,10 +84,6 @@ int internal_boot(struct ds_config *cfg) {
   }
 
   /* Mount /sys */
-  if (mkdir("sys", 0755) < 0 && errno != EEXIST) {
-    ds_error("Failed to create sys directory: %s", strerror(errno));
-    return -1;
-  }
   if (domount("sysfs", "sys", "sysfs", MS_NOSUID | MS_NODEV | MS_NOEXEC, NULL) <
       0) {
     ds_error("Failed to mount sysfs: %s", strerror(errno));
@@ -160,10 +154,6 @@ int internal_boot(struct ds_config *cfg) {
     /* File might not exist yet if sysfs is partially populated */
   }
 
-  if (mkdir("run", 0755) < 0 && errno != EEXIST) {
-    ds_error("Failed to create run directory: %s", strerror(errno));
-    return -1;
-  }
   if (domount("tmpfs", "run", "tmpfs", MS_NOSUID | MS_NODEV, "mode=755") < 0) {
     ds_error("Failed to mount tmpfs at /run: %s", strerror(errno));
     return -1;
