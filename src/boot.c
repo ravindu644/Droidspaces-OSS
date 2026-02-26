@@ -63,7 +63,7 @@ int internal_boot(struct ds_config *cfg) {
   }
 
   /* 7. Pre-create standard directories in one loop to reduce syscalls */
-  const char *dirs_to_create[] = { ".old_root", "proc", "sys", "sys/fs/cgroup", "run" };
+  const char *dirs_to_create[] = { ".old_root", "proc", "sys", "run" };
   for (size_t i = 0; i < sizeof(dirs_to_create)/sizeof(dirs_to_create[0]); i++) {
       if (mkdir(dirs_to_create[i], 0755) < 0 && errno != EEXIST) {
           ds_error("Failed to create '%s': %s", dirs_to_create[i], strerror(errno));
