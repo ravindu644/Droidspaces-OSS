@@ -7,6 +7,7 @@
 
 #include "droidspace.h"
 #include <ftw.h>
+#include <time.h>
 
 /* ---------------------------------------------------------------------------
  * String helpers
@@ -187,25 +188,45 @@ int read_file(const char *path, char *buf, size_t size) {
  * ---------------------------------------------------------------------------*/
 
 int generate_uuid(char *buf, size_t size) {
-  if (size < DS_UUID_LEN + 1)
+  if (!buf || size < DS_UUID_LEN + 1)
     return -1;
 
   unsigned char raw[DS_UUID_LEN / 2];
+
+  /* Primary path: /dev/urandom */
   int fd = open("/dev/urandom", O_RDONLY);
-  if (fd < 0) {
-    /* fallback: use pid + time */
-    snprintf(buf, size, "%08x%08x%08x%08x", (unsigned)getpid(),
-             (unsigned)time(NULL), (unsigned)getppid(), (unsigned)rand());
-    return 0;
+  if (fd >= 0) {
+    ssize_t r = read(fd, raw, sizeof(raw));
+    close(fd);
+
+    if (r == (ssize_t)sizeof(raw)) {
+      for (int i = 0; i < (int)sizeof(raw); i++)
+        snprintf(buf + i * 2, 3, "%02x", raw[i]);
+
+      buf[DS_UUID_LEN] = '\0';
+      return 0;
+    }
   }
 
-  ssize_t r = read(fd, raw, sizeof(raw));
-  close(fd);
-  if (r != (ssize_t)sizeof(raw))
-    return -1;
+  /* Fallback path: seeded rand() */
+  static int seeded = 0;
+  if (!seeded) {
+    struct timespec ts;
+    clock_gettime(CLOCK_REALTIME, &ts);
+
+    unsigned int seed =
+        (unsigned int)(ts.tv_nsec ^ ts.tv_sec ^ getpid() ^ getppid());
+
+    srand(seed);
+    seeded = 1;
+  }
+
+  for (int i = 0; i < DS_UUID_LEN / 2; i++)
+    raw[i] = (unsigned char)(rand() & 0xFF);
 
   for (int i = 0; i < (int)sizeof(raw); i++)
     snprintf(buf + i * 2, 3, "%02x", raw[i]);
+
   buf[DS_UUID_LEN] = '\0';
   return 0;
 }
