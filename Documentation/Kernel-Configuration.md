@@ -12,10 +12,10 @@ This guide explains how to compile a Linux kernel with Droidspaces support for A
 ### Quick Navigation
 
 - [Overview](#overview)
-- [Required Configuration](#kernel-config)
+- [Required Kernel Configuration](#kernel-config)
 - [Recommended Kernel Patches](#kernel-patches)
-- [Non-GKI Devices](#non-gki)
-- [GKI Devices](#gki)
+- [Configuring Non-GKI Kernels](#non-gki)
+- [Configuring GKI Kernels](#gki)
 - [Testing Your Kernel](#testing)
 - [Recommended Kernel Versions](#versions)
 - [Nested Containers](#nested)
@@ -33,7 +33,7 @@ The configuration requirements are the same for all kernel versions. The differe
 ---
 
 <a id="kernel-config"></a>
-## Required Configuration
+## Required Kernel Configuration
 
 Save this block as `droidspaces.config` and place it under your kernel's architecture configs folder (e.g., `arch/arm64/configs/`):
 
@@ -114,7 +114,7 @@ Applying these patches helps avoid "weird issues" and kernel panics that can occ
 ---
 
 <a id="non-gki"></a>
-## Non-GKI Devices (Legacy Kernels)
+## Configuring Non-GKI Kernels (Legacy Kernels)
 
 **Applies to:** Kernel 3.18, 4.4, 4.9, 4.14, 4.19
 
@@ -130,7 +130,16 @@ Ensure you have saved the configuration block from the [Required Configuration](
 # $KERNEL_ROOT/arch/arm64/configs/droidspaces.config
 ```
 
-### Step 2: Generate the Configuration
+### Step 2: Apply Recommended Patches (Optional but Recommended)
+
+Before generating the configuration, apply the [recommended kernel patches](#kernel-patches) from the [Documentation/resources/kernel-patches](./resources/kernel-patches/) directory to your kernel source:
+
+```bash
+# General syntax
+patch -p1 < /path/to/filename.patch
+```
+
+### Step 3: Merge Configuration
 
 When generating your initial configuration, provide both your device's `defconfig` and the `droidspaces.config` fragment. The kernel's build system will merge them automatically:
 
@@ -142,7 +151,7 @@ make [BUILD_OPTIONS] <your_device>_defconfig droidspaces.config
 > [!NOTE]
 > Compiling an Android kernel requires setting various environment variables (like `ARCH`, `CC`, `CROSS_COMPILE`, `CLANG_TRIPLE`, etc.) depending on your toolchain. Ensure these are set correctly before running the `make` command.
 
-### Step 3: Flash and Test
+### Step 4: Flash and Test
 
 Flash the compiled kernel image to your device using your preferred method (Odin, fastboot, Heimdall, etc.).
 
@@ -153,7 +162,7 @@ All checks should pass with green checkmarks.
 ---
 
 <a id="gki"></a>
-## GKI Devices (Modern Kernels)
+## Configuring GKI Kernels (Modern Kernels)
 
 **Applies to:** Kernel 5.4, 5.10, 5.15, 6.1+
 
