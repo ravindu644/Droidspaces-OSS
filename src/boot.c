@@ -8,6 +8,12 @@
 #include "droidspace.h"
 
 int internal_boot(struct ds_config *cfg) {
+  /* Defensive check: ensure configuration is valid */
+  if (!cfg) {
+    ds_error("internal_boot received NULL configuration.");
+    return -1;
+  }
+
   /* 1. Isolated mount namespace */
   if (unshare(CLONE_NEWNS) < 0) {
     ds_error("Failed to unshare mount namespace: %s", strerror(errno));
