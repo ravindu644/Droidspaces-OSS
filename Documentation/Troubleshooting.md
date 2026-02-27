@@ -16,6 +16,7 @@ Common issues, their causes, and how to fix them.
 - [DNS / Name Resolution Issues](#dns--name-resolution-issues)
 - [WiFi/Mobile Data Disconnects](#wifimobile-data-disconnects)
 - [SELinux-Induced Rootfs Corruption](#selinux-induced-rootfs-corruption-directory-mode)
+- [Systemd Service Sandboxing Conflicts](#systemd-service-sandboxing-conflicts-legacy-kernels)
 - [Getting Help](#getting-help)
 
 ---
@@ -232,6 +233,40 @@ In this mode, the rootfs is stored as a standalone ext4 image and loop-mounted a
 
 > [!WARNING]
 > While switching to `permissive` mode may seem to fix this, it is **not recommended** as a permanent solution. If the rootfs has already been corrupted by SELinux denials, the damage is often permanent and cannot be undone by simply changing modes.
+
+---
+
+## Systemd Service Sandboxing Conflicts (Legacy Kernels)
+
+**Symptoms:** Services like `redis`, `mysql`, or `apache` fail to start with `exit-code` or `status=226/NAMESPACE`, even though the exact same configuration worked elsewhere.
+
+**Cause:** Modern service files often use advanced systemd sandboxing directives (`PrivateTmp`, `ProtectSystem`, `RestrictNamespaces`). On legacy kernels (3.18 - 4.19), Droidspaces' **Adaptive Seccomp Shield** intercepts these namespace-related syscalls and returns `EPERM` to prevent kernel deadlocks. However, some distributions' versions of systemd treat these errors as fatal and refuse to start the service.
+
+**Solution:** Create a service override to disable the conflicting sandboxing features:
+
+1.  **Identify the service**: e.g., `redis-server`
+2.  **Create the override**:
+    ```bash
+    sudo systemctl edit <service-name>
+    ```
+3.  **Add these lines** (to the empty space provided by the editor):
+    ```ini
+    [Service]
+    # Disable problematic security sandboxing
+    PrivateTmp=no
+    PrivateDevices=no
+    ProtectSystem=no
+    ProtectHome=no
+    RestrictNamespaces=no
+    MemoryDenyWriteExecute=no
+    NoNewPrivileges=no
+    CapabilityBoundingSet=
+    ```
+4.  **Reload and restart**:
+    ```bash
+    sudo systemctl daemon-reload
+    sudo systemctl restart <service-name>
+    ```
 
 ---
 
