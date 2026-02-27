@@ -94,13 +94,13 @@ The entire runtime is a **single static binary** under 150KB, compiled against m
 | **Custom Bind Mounts** | Map host directories into containers at arbitrary mount points. Supports both chained (`-B a:b -B c:d`) and comma-separated (`-B a:b,c:d`) syntax, up to 16 mounts. |
 | **Hardware Access Mode** | Expose host hardware (GPU, cameras, sensors, USB) to the container via devtmpfs. Enables GPU acceleration with Turnip + Zink / Panfrost on supported Android devices. PulseAudio is also supported in Android |
 | **Multiple Containers** | Run unlimited containers simultaneously, each with its own name, PID file, and configuration. Start, stop, enter, and manage them independently. |
-| **Fast Restart** | Near-instant container restarts (under 200ms) by preserving the loop mount and coordinating state between the CLI and the background monitor process. |
+| **Internal `poweroff`, `reboot` support** | Native reboot/poweroff support with automatic state preservation. **ds-monitor** detects container signals and seamlessly re-applies original startup arguments and mounts from disk configuration. |
 | **Android Storage** | Bind-mount `/storage/emulated/0` into the container for direct access to the device's shared storage. |
 | **PTY/Console Support** | Full PTY isolation. Foreground mode provides an interactive console with proper terminal resize handling (binary only with the `-f` flag) |
 | **Multi-DNS Support** | Configure custom DNS servers (comma-separated) that bypass the host's default DNS lookup. |
 | **IPv6 Support** | Enable IPv6 networking in containers with a single flag. |
 | **SELinux Permissive Mode** | Optionally set SELinux to permissive mode during container boot if needed. |
-| **Rootfs Image Support** | Boot containers from ext4 `.img` files with automatic loop mounting, filesystem checks, and SELinux context hardening if needed. **The Android app also supports creating portable containers in rootfs.img mode.** |
+| **Rootfs Image Support** | Boot containers from ext4 `.img` files with automatic loop mounting, filesystem checks, and SELinux context hardening if needed. **The Android app also supports creating portable containers in rootfs.img mode** [ [How to create an ext4 rootfs.img manually ? ](./Documentation/Installation-Linux.md#option-b-create-an-ext4-image-recommended)] |
 | **Auto-Recovery** | Automatic stale PID file cleanup, container scanning for orphaned processes, and robust mount cleanup on exit. |
 | **Cgroup Isolation** | Per-container cgroup hierarchies (`/sys/fs/cgroup/droidspaces/<name>`) with full systemd compatibility. Supports both cgroup v1 and v2. |
 | **Adaptive Seccomp Shield** | Kernel-aware BPF filter that resolves FBE keyring conflicts and prevents VFS deadlocks for **systemd** containers on legacy Android kernels (< 5.0). Automatically grants full namespace freedom to non-systemd containers (Alpine/OpenRC), enabling features like **nested containers/Docker**. |
@@ -155,10 +155,10 @@ Droidspaces supports Android devices running Linux kernel **3.18 and above**:
 
 | Kernel Version | Support Level | Notes |
 |----------------|---------------|-------|
-| 3.18 | Supported | **Legacy.** Basic namespace support. Modern distros (Ubuntu/Debian) are unstable; Alpine is recommended. |
-| 4.4 - 4.19 | Stable | **Hardened.** Full support with adaptive Seccomp shield. |
-| 5.4 - 5.10 | Recommended | **Mainline.** Full features including nested container support. |
-| 5.15+ | Premium | **Full.** Modern Cgroup v2 support and maximum performance. |
+| 3.18 | Supported | **Legacy.** Minimum floor. Basic namespace support. systemd-based distros may be unstable; **Alpine** is recommended. |
+| 4.4 - 4.19 | Stable | **Hardened.** Full support via Adaptive Seccomp Shield. [Distros newer than Ubuntu 22.04-era are not recommended](./Documentation/Troubleshooting.md#modern-distros). |
+| 5.4 - 5.10 | Recommended | **Mainline.** Full feature support including nested containers and Cgroup v2. |
+| 5.15+ | Premium | **Full.** Best performance and maximum compatibility with all modern distributions. |
 
 <a id="rooting-requirements"></a>
 
