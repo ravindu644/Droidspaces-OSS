@@ -175,13 +175,14 @@ struct ds_config {
   char uuid[DS_UUID_LEN + 1];
 
   /* Flags */
-  int foreground;         /* --foreground */
-  int hw_access;          /* --hw-access */
-  int volatile_mode;      /* --volatile */
-  int enable_ipv6;        /* --enable-ipv6 */
-  int android_storage;    /* --enable-android-storage */
-  int selinux_permissive; /* --selinux-permissive */
-  char prog_name[64];     /* argv[0] for logging */
+  int foreground;             /* --foreground */
+  int hw_access;              /* --hw-access */
+  int volatile_mode;          /* --volatile */
+  int enable_ipv6;            /* --enable-ipv6 */
+  int android_storage;        /* --enable-android-storage */
+  int selinux_permissive;     /* --selinux-permissive */
+  int disable_seccomp_filter; /* --disable-seccomp-filter */
+  char prog_name[64];         /* argv[0] for logging */
 
   /* Runtime state */
   char volatile_dir[PATH_MAX];    /* temporary overlay dir */
@@ -261,7 +262,7 @@ void android_remount_data_suid(void);
 void android_configure_iptables(void);
 void android_setup_paranoid_network_groups(void);
 int android_setup_storage(const char *rootfs_path);
-int android_seccomp_setup(int is_systemd);
+int android_seccomp_setup(struct ds_config *cfg);
 
 /* ---------------------------------------------------------------------------
  * mount.c

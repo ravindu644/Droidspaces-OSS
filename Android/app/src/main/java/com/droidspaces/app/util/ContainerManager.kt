@@ -33,7 +33,8 @@ data class ContainerInfo(
     val status: ContainerStatus = ContainerStatus.STOPPED,
     val pid: Int? = null,
     val useSparseImage: Boolean = false,
-    val sparseImageSizeGB: Int? = null
+    val sparseImageSizeGB: Int? = null,
+    val disableSeccompFilter: Boolean = false
 ) {
     val isRunning: Boolean
         get() = status == ContainerStatus.RUNNING
@@ -61,6 +62,7 @@ data class ContainerInfo(
         if (sparseImageSizeGB != null) {
             appendLine("sparse_image_size_gb=$sparseImageSizeGB")
         }
+        appendLine("disable_seccomp_filter=${if (disableSeccompFilter) "1" else "0"}")
     }
 }
 
@@ -216,7 +218,8 @@ object ContainerManager {
                 runAtBoot = configMap["run_at_boot"] == "1",
                 status = ContainerStatus.STOPPED,
                 useSparseImage = useSparseImage,
-                sparseImageSizeGB = sparseImageSizeGB
+                sparseImageSizeGB = sparseImageSizeGB,
+                disableSeccompFilter = configMap["disable_seccomp_filter"] == "1"
             )
         } catch (e: Exception) {
             return null

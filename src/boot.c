@@ -30,8 +30,7 @@ int internal_boot(struct ds_config *cfg) {
    * On legacy kernels, this neutralizes broken sandboxing logic in systemd
    * that triggers VFS deadlocks in grab_super(). */
   if (is_android()) {
-    int is_systemd = is_systemd_rootfs(cfg->rootfs_path);
-    android_seccomp_setup(is_systemd);
+    android_seccomp_setup(cfg);
   }
 
   /* 3. Setup volatile overlay INSIDE the container's mount namespace.

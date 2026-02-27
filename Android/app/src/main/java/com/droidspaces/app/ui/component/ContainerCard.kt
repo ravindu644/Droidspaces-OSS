@@ -217,6 +217,7 @@ fun ContainerCard(
             if (container.selinuxPermissive) options.add(context.getString(R.string.selinux_option))
             if (container.runAtBoot) options.add(context.getString(R.string.run_at_boot_option))
             if (container.volatileMode) options.add(context.getString(R.string.volatile_option))
+            if (container.disableSeccompFilter) options.add(context.getString(R.string.seccomp_bypass_option))
 
             if (options.isNotEmpty()) {
                 Text(

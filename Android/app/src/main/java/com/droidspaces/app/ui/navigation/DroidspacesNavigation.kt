@@ -292,8 +292,9 @@ fun DroidspacesNavigation(
                 initialBindMounts = viewModel.bindMounts,
                 initialDnsServers = viewModel.dnsServers,
                 initialRunAtBoot = viewModel.runAtBoot,
-                onNext = { enableIPv6, enableAndroidStorage, enableHwAccess, selinuxPermissive, volatileMode, bindMounts, dnsServers, runAtBoot ->
-                    viewModel.setConfig(enableIPv6, enableAndroidStorage, enableHwAccess, selinuxPermissive, volatileMode, bindMounts, dnsServers, runAtBoot)
+                initialDisableSeccompFilter = viewModel.disableSeccompFilter,
+                onNext = { enableIPv6, enableAndroidStorage, enableHwAccess, selinuxPermissive, volatileMode, bindMounts, dnsServers, runAtBoot, disableSeccompFilter ->
+                    viewModel.setConfig(enableIPv6, enableAndroidStorage, enableHwAccess, selinuxPermissive, volatileMode, bindMounts, dnsServers, runAtBoot, disableSeccompFilter)
                     navController.navigate(Screen.SparseImageConfig.route)
                 },
                 onBack = {

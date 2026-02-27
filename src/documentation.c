@@ -342,7 +342,7 @@ static void print_page(int page, const char *bin) {
     printf("  %s --name=featureful --rootfs-img=/path/to/rootfs.img \\\n", bin);
     printf("      --hw-access --enable-android-storage --enable-ipv6 \\\n");
     printf("      --selinux-permissive --hostname=feature-box \\\n");
-    printf("      --volatile --foreground start\n\n");
+    printf("      --disable-seccomp-filter --volatile --foreground start\n\n");
 
     printf("%sComplex command execution with pipes and redirection:%s\n", bold,
            reset);

@@ -61,6 +61,7 @@ fun EditContainerScreen(
     var bindMounts by remember { mutableStateOf(container.bindMounts) }
     var dnsServers by remember { mutableStateOf(container.dnsServers) }
     var runAtBoot by remember { mutableStateOf(container.runAtBoot) }
+    var disableSeccompFilter by remember { mutableStateOf(container.disableSeccompFilter) }
 
     // Track the "saved" baseline values - updated after each successful save
     var savedHostname by remember { mutableStateOf(container.hostname) }
@@ -72,11 +73,13 @@ fun EditContainerScreen(
     var savedBindMounts by remember { mutableStateOf(container.bindMounts) }
     var savedDnsServers by remember { mutableStateOf(container.dnsServers) }
     var savedRunAtBoot by remember { mutableStateOf(container.runAtBoot) }
+    var savedDisableSeccompFilter by remember { mutableStateOf(container.disableSeccompFilter) }
 
     // Navigation and internal UI states
     var showFilePicker by remember { mutableStateOf(false) }
     var showDestDialog by remember { mutableStateOf(false) }
     var tempSrcPath by remember { mutableStateOf("") }
+    var showSeccompWarning by remember { mutableStateOf(false) }
 
     // Loading and error states
     var isSaving by remember { mutableStateOf(false) }
@@ -94,7 +97,8 @@ fun EditContainerScreen(
             volatileMode != savedVolatileMode ||
             bindMounts != savedBindMounts ||
             dnsServers != savedDnsServers ||
-            runAtBoot != savedRunAtBoot
+            runAtBoot != savedRunAtBoot ||
+            disableSeccompFilter != savedDisableSeccompFilter
         }
     }
 
@@ -122,7 +126,8 @@ fun EditContainerScreen(
                     volatileMode = volatileMode,
                     bindMounts = bindMounts,
                     dnsServers = dnsServers,
-                    runAtBoot = runAtBoot
+                    runAtBoot = runAtBoot,
+                    disableSeccompFilter = disableSeccompFilter
                 )
 
                 // Update config file
@@ -142,6 +147,7 @@ fun EditContainerScreen(
                         savedBindMounts = bindMounts
                         savedDnsServers = dnsServers
                         savedRunAtBoot = runAtBoot
+                        savedDisableSeccompFilter = disableSeccompFilter
 
                         // Refresh container list and SELinux status using ViewModel
                         containerViewModel.refresh()
@@ -204,6 +210,38 @@ fun EditContainerScreen(
             },
             dismissButton = {
                 TextButton(onClick = { showDestDialog = false }) {
+                    Text(context.getString(R.string.cancel))
+                }
+            }
+        )
+    }
+
+    if (showSeccompWarning) {
+        AlertDialog(
+            onDismissRequest = { 
+                showSeccompWarning = false
+                disableSeccompFilter = false
+            },
+            title = { Text(context.getString(R.string.seccomp_bypass_warning_title)) },
+            text = { Text(context.getString(R.string.seccomp_bypass_warning_message)) },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        disableSeccompFilter = true
+                        showSeccompWarning = false
+                    },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.error
+                    )
+                ) {
+                    Text(context.getString(R.string.ok))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { 
+                    showSeccompWarning = false
+                    disableSeccompFilter = false
+                }) {
                     Text(context.getString(R.string.cancel))
                 }
             }
@@ -429,6 +467,21 @@ fun EditContainerScreen(
                 onCheckedChange = {
                     clearFocus()
                     volatileMode = it
+                }
+            )
+
+            ToggleCard(
+                icon = Icons.Default.ShieldMoon,
+                title = context.getString(R.string.disable_seccomp_filter),
+                description = context.getString(R.string.disable_seccomp_filter_description),
+                checked = disableSeccompFilter,
+                onCheckedChange = { checked ->
+                    clearFocus()
+                    if (checked) {
+                        showSeccompWarning = true
+                    } else {
+                        disableSeccompFilter = false
+                    }
                 }
             )
 

@@ -31,16 +31,12 @@ static int parse_bool(const char *val, const char *key_name) {
   if (!val)
     return 0;
 
-  if (strcasecmp(val, "1") == 0 ||
-      strcasecmp(val, "true") == 0 ||
-      strcasecmp(val, "yes") == 0 ||
-      strcasecmp(val, "on") == 0)
+  if (strcasecmp(val, "1") == 0 || strcasecmp(val, "true") == 0 ||
+      strcasecmp(val, "yes") == 0 || strcasecmp(val, "on") == 0)
     return 1;
 
-  if (strcasecmp(val, "0") == 0 ||
-      strcasecmp(val, "false") == 0 ||
-      strcasecmp(val, "no") == 0 ||
-      strcasecmp(val, "off") == 0)
+  if (strcasecmp(val, "0") == 0 || strcasecmp(val, "false") == 0 ||
+      strcasecmp(val, "no") == 0 || strcasecmp(val, "off") == 0)
     return 0;
 
   ds_warn("Config: Invalid boolean value '%s' for key '%s' (defaulting to 0)",
@@ -175,6 +171,8 @@ int ds_config_load(const char *config_path, struct ds_config *cfg) {
       cfg->foreground = parse_bool(val, key);
     } else if (strcmp(key, "pidfile") == 0) {
       safe_strncpy(cfg->pidfile, val, sizeof(cfg->pidfile));
+    } else if (strcmp(key, "disable_seccomp_filter") == 0) {
+      cfg->disable_seccomp_filter = parse_bool(val, key);
     }
   }
 
@@ -195,6 +193,7 @@ static const char *KNOWN_KEYS[] = {"name",
                                    "foreground",
                                    "bind_mounts",
                                    "dns_servers",
+                                   "disable_seccomp_filter",
                                    NULL};
 
 /* Linked list to store unknown key-value pairs from existing config */
@@ -300,6 +299,7 @@ int ds_config_save(const char *config_path, struct ds_config *cfg) {
   fprintf(f_out, "selinux_permissive=%d\n", cfg->selinux_permissive);
   fprintf(f_out, "volatile_mode=%d\n", cfg->volatile_mode);
   fprintf(f_out, "foreground=%d\n", cfg->foreground);
+  fprintf(f_out, "disable_seccomp_filter=%d\n", cfg->disable_seccomp_filter);
 
   if (cfg->dns_servers[0])
     fprintf(f_out, "dns_servers=%s\n", cfg->dns_servers);

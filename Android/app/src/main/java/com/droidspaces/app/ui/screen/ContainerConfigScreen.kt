@@ -32,6 +32,7 @@ fun ContainerConfigScreen(
     initialBindMounts: List<BindMount> = emptyList(),
     initialDnsServers: String = "",
     initialRunAtBoot: Boolean = false,
+    initialDisableSeccompFilter: Boolean = false,
     onNext: (
         enableIPv6: Boolean,
         enableAndroidStorage: Boolean,
@@ -40,7 +41,8 @@ fun ContainerConfigScreen(
         volatileMode: Boolean,
         bindMounts: List<BindMount>,
         dnsServers: String,
-        runAtBoot: Boolean
+        runAtBoot: Boolean,
+        disableSeccompFilter: Boolean
     ) -> Unit,
     onBack: () -> Unit
 ) {
@@ -52,12 +54,14 @@ fun ContainerConfigScreen(
     var bindMounts by remember { mutableStateOf(initialBindMounts) }
     var dnsServers by remember { mutableStateOf(initialDnsServers) }
     var runAtBoot by remember { mutableStateOf(initialRunAtBoot) }
+    var disableSeccompFilter by remember { mutableStateOf(initialDisableSeccompFilter) }
     val context = LocalContext.current
 
     // Internal UI States
     var showFilePicker by remember { mutableStateOf(false) }
     var showDestDialog by remember { mutableStateOf(false) }
     var tempSrcPath by remember { mutableStateOf("") }
+    var showSeccompWarning by remember { mutableStateOf(false) }
 
     if (showFilePicker) {
         FilePickerDialog(
@@ -105,6 +109,38 @@ fun ContainerConfigScreen(
         )
     }
 
+    if (showSeccompWarning) {
+        AlertDialog(
+            onDismissRequest = { 
+                showSeccompWarning = false
+                disableSeccompFilter = false
+            },
+            title = { Text(context.getString(R.string.seccomp_bypass_warning_title)) },
+            text = { Text(context.getString(R.string.seccomp_bypass_warning_message)) },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        disableSeccompFilter = true
+                        showSeccompWarning = false
+                    },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.error
+                    )
+                ) {
+                    Text(context.getString(R.string.ok))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { 
+                    showSeccompWarning = false
+                    disableSeccompFilter = false
+                }) {
+                    Text(context.getString(R.string.cancel))
+                }
+            }
+        )
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -123,7 +159,7 @@ fun ContainerConfigScreen(
             ) {
                 Button(
                     onClick = {
-                        onNext(enableIPv6, enableAndroidStorage, enableHwAccess, selinuxPermissive, volatileMode, bindMounts, dnsServers, runAtBoot)
+                        onNext(enableIPv6, enableAndroidStorage, enableHwAccess, selinuxPermissive, volatileMode, bindMounts, dnsServers, runAtBoot, disableSeccompFilter)
                     },
                     modifier = Modifier
                         .fillMaxWidth()
@@ -213,6 +249,20 @@ fun ContainerConfigScreen(
                 description = context.getString(R.string.volatile_mode_description),
                 checked = volatileMode,
                 onCheckedChange = { volatileMode = it }
+            )
+
+            ToggleCard(
+                icon = Icons.Default.ShieldMoon,
+                title = context.getString(R.string.disable_seccomp_filter),
+                description = context.getString(R.string.disable_seccomp_filter_description),
+                checked = disableSeccompFilter,
+                onCheckedChange = { checked ->
+                    if (checked) {
+                        showSeccompWarning = true
+                    } else {
+                        disableSeccompFilter = false
+                    }
+                }
             )
 
             ToggleCard(

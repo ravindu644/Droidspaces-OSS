@@ -133,6 +133,7 @@
     <string name="selinux_option">SELinux</string>
     <string name="run_at_boot_option">Run at Boot</string>
     <string name="volatile_option">Volatile</string>
+    <string name="seccomp_bypass_option">Bypass Seccomp</string>
 
     <!-- Container Details Screen -->
     <string name="container_info">Container Info</string>
@@ -167,6 +168,10 @@
     <string name="failed_to_update_config">Failed to update configuration</string>
     <string name="volatile_mode">Volatile Mode</string>
     <string name="volatile_mode_description">RAM-only mode (changes vanish after stop)</string>
+    <string name="disable_seccomp_filter">Bypass Seccomp Filter</string>
+    <string name="disable_seccomp_filter_description">Bypass kernel-level security filters in legacy kernels</string>
+    <string name="seccomp_bypass_warning_title">Security Warning</string>
+    <string name="seccomp_bypass_warning_message">Disabling the Seccomp filter may trigger KERNEL DEADLOCKS on legacy Android kernels (below Kernel 5.0) when running systemd containers.\n\nOnly enable this option if you are sure about what you are doing.</string>
     <string name="bind_mounts">Bind Mounts</string>
     <string name="bind_mounts_description">Mount host directories or files</string>
     <string name="add_bind_mount">Add Bind Mount</string>

@@ -113,6 +113,8 @@ int main(int argc, char **argv) {
       {"conf", required_argument, 0, 'C'},
       {"config", required_argument, 0, 'C'},
       {"help", no_argument, 0, 'v'},
+      {"disable-seccomp-filter", no_argument, 0, 'y'},
+      {"disable-seccomp", no_argument, 0, 'y'},
       {0, 0, 0, 0}};
 
   extern int opterr;
@@ -127,7 +129,7 @@ int main(int argc, char **argv) {
   const char *discovered_cmd = NULL;
   int temp_optind = optind;
   int opt;
-  while ((opt = getopt_long(argc, argv, "+r:i:n:p:h:d:fHISPvVB:C:",
+  while ((opt = getopt_long(argc, argv, "+r:i:n:p:h:d:fHISPvVB:C:y",
                             long_options, NULL)) != -1) {
     if (opt == 'C') {
       safe_strncpy(cfg.config_file, optarg, sizeof(cfg.config_file));
@@ -145,7 +147,7 @@ int main(int argc, char **argv) {
     /* Auto-detect config from CLI rootfs arguments (preview only) */
     char temp_r[PATH_MAX] = {0}, temp_i[PATH_MAX] = {0};
     int t_optind = optind;
-    while ((opt = getopt_long(argc, argv, "+r:i:n:p:h:d:fHISPvVB:C:",
+    while ((opt = getopt_long(argc, argv, "+r:i:n:p:h:d:fHISPvVB:C:y",
                               long_options, NULL)) != -1) {
       if (opt == 'r')
         safe_strncpy(temp_r, optarg, sizeof(temp_r));
@@ -165,7 +167,7 @@ int main(int argc, char **argv) {
   /* Re-parse CLI to apply overrides on top of loaded configuration */
   int strict = (discovered_cmd && (strcmp(discovered_cmd, "run") == 0));
   const char *optstring =
-      strict ? "+r:i:n:p:h:d:fHISPvVB:C:" : "r:i:n:p:h:d:fHISPvVB:C:";
+      strict ? "+r:i:n:p:h:d:fHISPvVB:C:y" : "r:i:n:p:h:d:fHISPvVB:C:y";
 
   while ((opt = getopt_long(argc, argv, optstring, long_options, NULL)) != -1) {
     switch (opt) {
@@ -208,6 +210,9 @@ int main(int argc, char **argv) {
       break;
     case 'V':
       cfg.volatile_mode = 1;
+      break;
+    case 'y':
+      cfg.disable_seccomp_filter = 1;
       break;
     case 'C':
       /* Already handled in first pass, but included here for consistency */

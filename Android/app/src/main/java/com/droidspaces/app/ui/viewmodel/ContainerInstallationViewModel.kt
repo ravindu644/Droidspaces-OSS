@@ -46,6 +46,9 @@ class ContainerInstallationViewModel : ViewModel() {
     var runAtBoot: Boolean by mutableStateOf(false)
         private set
 
+    var disableSeccompFilter: Boolean by mutableStateOf(false)
+        private set
+
     var useSparseImage: Boolean by mutableStateOf(false)
         private set
 
@@ -74,7 +77,8 @@ class ContainerInstallationViewModel : ViewModel() {
         volatileMode: Boolean,
         bindMounts: List<BindMount>,
         dnsServers: String,
-        runAtBoot: Boolean
+        runAtBoot: Boolean,
+        disableSeccompFilter: Boolean
     ) {
         this.enableIPv6 = enableIPv6
         this.enableAndroidStorage = enableAndroidStorage
@@ -84,6 +88,7 @@ class ContainerInstallationViewModel : ViewModel() {
         this.bindMounts = bindMounts
         this.dnsServers = dnsServers
         this.runAtBoot = runAtBoot
+        this.disableSeccompFilter = disableSeccompFilter
     }
 
     fun buildConfig(): ContainerInfo? {
@@ -108,7 +113,8 @@ class ContainerInstallationViewModel : ViewModel() {
             runAtBoot = runAtBoot,
             status = ContainerStatus.STOPPED, // Default status for new container
             useSparseImage = useSparseImage,
-            sparseImageSizeGB = if (useSparseImage) sparseImageSizeGB else null
+            sparseImageSizeGB = if (useSparseImage) sparseImageSizeGB else null,
+            disableSeccompFilter = disableSeccompFilter
         )
     }
 
@@ -124,6 +130,7 @@ class ContainerInstallationViewModel : ViewModel() {
         bindMounts = emptyList()
         dnsServers = ""
         runAtBoot = false
+        disableSeccompFilter = false
         useSparseImage = false
         sparseImageSizeGB = 8
     }

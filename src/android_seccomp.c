@@ -32,13 +32,25 @@
  * 3. Systemd containers on legacy kernels -> Apply the shield to block
  *    namespace creation (falling back to host namespaces to avoid deadlock).
  */
-int android_seccomp_setup(int is_systemd) {
+int android_seccomp_setup(struct ds_config *cfg) {
   int major = 0, minor = 0;
   if (get_kernel_version(&major, &minor) < 0)
     return -1;
 
   if (major >= 5)
     return 0;
+
+  int is_systemd = is_systemd_rootfs(cfg->rootfs_path);
+
+  if (cfg->disable_seccomp_filter) {
+    ds_warn("!!! [ WARNING: Android Seccomp Shield DISABLED ] !!!");
+    ds_warn("The Adaptive Seccomp Shield has been manually disabled.");
+    ds_warn("Legacy kernel (%d.%d) detected. Without the shield, systemd",
+            major, minor);
+    ds_warn("sandboxing (PrivateTmp, etc.) may trigger KERNEL DEADLOCKS.");
+    ds_warn("Use this only if you know exactly what you are doing.");
+    return 0;
+  }
 
   ds_log("Legacy kernel (%d.%d) detected: Applying Android compatibility "
          "shield...",
