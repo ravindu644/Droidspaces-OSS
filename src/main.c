@@ -315,8 +315,6 @@ int main(int argc, char **argv) {
     return 1;
   }
 
-  if (strcmp(cmd, "show") == 0)
-    return show_containers();
   if (strcmp(cmd, "docs") == 0) {
     print_documentation(argv[0]);
     return 0;
@@ -327,6 +325,8 @@ int main(int argc, char **argv) {
     ds_die("Root privileges required for '%s'", cmd);
   ensure_workspace();
 
+  if (strcmp(cmd, "show") == 0)
+    return show_containers();
   if (strcmp(cmd, "scan") == 0)
     return scan_containers();
 
