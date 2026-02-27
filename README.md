@@ -100,7 +100,7 @@ The entire runtime is a **single static binary** under 150KB, compiled against m
 | **Multi-DNS Support** | Configure custom DNS servers (comma-separated) that bypass the host's default DNS lookup. |
 | **IPv6 Support** | Enable IPv6 networking in containers with a single flag. |
 | **SELinux Permissive Mode** | Optionally set SELinux to permissive mode during container boot if needed. |
-| **Rootfs Image Support** | Boot containers from ext4 `.img` files with automatic loop mounting, filesystem checks, and SELinux context hardening if needed. **The Android app also supports creating portable containers in rootfs.img mode.** |
+| **Rootfs Image Support** | Boot containers from ext4 `.img` files with automatic loop mounting, filesystem checks, and SELinux context hardening if needed. **The Android app also supports creating portable containers in rootfs.img mode** [ [How to create an ext4 rootfs.img manually ? ](./Documentation/Installation-Linux.md#option-b-create-an-ext4-image-recommended)] |
 | **Auto-Recovery** | Automatic stale PID file cleanup, container scanning for orphaned processes, and robust mount cleanup on exit. |
 | **Cgroup Isolation** | Per-container cgroup hierarchies (`/sys/fs/cgroup/droidspaces/<name>`) with full systemd compatibility. Supports both cgroup v1 and v2. |
 | **Adaptive Seccomp Shield** | Kernel-aware BPF filter that resolves FBE keyring conflicts and prevents VFS deadlocks for **systemd** containers on legacy Android kernels (< 5.0). Automatically grants full namespace freedom to non-systemd containers (Alpine/OpenRC), enabling features like **nested containers/Docker**. |
@@ -155,10 +155,10 @@ Droidspaces supports Android devices running Linux kernel **3.18 and above**:
 
 | Kernel Version | Support Level | Notes |
 |----------------|---------------|-------|
-| 3.18 | Supported | **Legacy.** Basic namespace support. Modern distros (Ubuntu/Debian) are unstable; Alpine is recommended. |
-| 4.4 - 4.19 | Stable | **Hardened.** Full support with adaptive Seccomp shield. |
-| 5.4 - 5.10 | Recommended | **Mainline.** Full features including nested container support. |
-| 5.15+ | Premium | **Full.** Modern Cgroup v2 support and maximum performance. |
+| 3.18 | Supported | **Legacy.** Minimum floor. Basic namespace support. systemd-based distros may be unstable; **Alpine** is recommended. |
+| 4.4 - 4.19 | Stable | **Hardened.** Full support via Adaptive Seccomp Shield. [Distros newer than Ubuntu 22.04-era are not recommended](./Documentation/Troubleshooting.md#modern-distros). |
+| 5.4 - 5.10 | Recommended | **Mainline.** Full feature support including nested containers and Cgroup v2. |
+| 5.15+ | Premium | **Full.** Best performance and maximum compatibility with all modern distributions. |
 
 <a id="rooting-requirements"></a>
 
