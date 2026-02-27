@@ -166,15 +166,25 @@ int android_setup_storage(const char *rootfs_path) {
   /* Create target directories inside rootfs: storage/, storage/emulated/,
    * storage/emulated/0 */
   char path[PATH_MAX];
+  int ret;
 
-  snprintf(path, sizeof(path), "%s/storage", rootfs_path);
-  mkdir(path, 0755);
+  ret = snprintf(path, sizeof(path), "%s/storage", rootfs_path);
+  if (ret < 0 || (size_t)ret >= sizeof(path))
+    return -1;
+  if (mkdir(path, 0755) < 0 && errno != EEXIST)
+    return -1;
 
-  snprintf(path, sizeof(path), "%s/storage/emulated", rootfs_path);
-  mkdir(path, 0755);
+  ret = snprintf(path, sizeof(path), "%s/storage/emulated", rootfs_path);
+  if (ret < 0 || (size_t)ret >= sizeof(path))
+    return -1;
+  if (mkdir(path, 0755) < 0 && errno != EEXIST)
+    return -1;
 
-  snprintf(path, sizeof(path), "%s/storage/emulated/0", rootfs_path);
-  mkdir(path, 0755);
+  ret = snprintf(path, sizeof(path), "%s/storage/emulated/0", rootfs_path);
+  if (ret < 0 || (size_t)ret >= sizeof(path))
+    return -1;
+  if (mkdir(path, 0755) < 0 && errno != EEXIST)
+    return -1;
 
   ds_log("Mounting Android internal storage to /storage/emulated/0...");
   if (mount(storage_src, path, NULL, MS_BIND | MS_REC, NULL) < 0) {
