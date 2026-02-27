@@ -180,7 +180,7 @@ static int is_cgroup_ns_active(void) {
  * 2. If Cgroup Namespace is active (Linux 4.6+), mount hierarchies directly.
  * 3. Otherwise (Legacy), bind-mount the container's subset from the host.
  */
-int setup_cgroups(void) {
+int setup_cgroups(int is_systemd) {
   if (access("sys/fs/cgroup", F_OK) != 0) {
     if (mkdir_p("sys/fs/cgroup", 0755) < 0)
       return -1;
@@ -196,6 +196,7 @@ int setup_cgroups(void) {
 
   int in_ns = is_cgroup_ns_active();
   int is_pure_v2 = 0;
+  int systemd_setup_done = 0;
 
   for (int i = 0; i < n; i++) {
     char container_mp[PATH_MAX];
@@ -216,6 +217,10 @@ int setup_cgroups(void) {
           suffix = hosts[i].controllers;
       }
     }
+
+    /* Track if this is the systemd hierarchy */
+    int is_systemd_hierarchy = (strcmp(suffix, "systemd") == 0 ||
+                                strstr(hosts[i].controllers, "name=systemd"));
 
     snprintf(container_mp, sizeof(container_mp), "sys/fs/cgroup/%s", suffix);
     if (suffix[0] != '\0') {
@@ -248,12 +253,13 @@ int setup_cgroups(void) {
       }
 
       if (mount("cgroup", container_mp, fstype, flags, actual_opts) == 0) {
-        /* Success - skip bind mount logic */
+        if (is_systemd_hierarchy || hosts[i].version == 2)
+          systemd_setup_done = 1;
         goto symlink_v1;
       }
     }
 
-    /* LEGACY PATH: Manual bind-mount isolation (for kernels < 4.6) */
+    /* LEGACY PATH: Manual bind-mount isolation */
     char self_path[PATH_MAX];
     const char *ctrl_for_lookup =
         (hosts[i].version == 2) ? NULL : hosts[i].controllers;
@@ -274,7 +280,10 @@ int setup_cgroups(void) {
               sizeof(host_full_subpath) - strlen(host_full_subpath) - 1);
 
       unsigned long flags = MS_BIND | MS_REC | MS_NOSUID | MS_NODEV | MS_NOEXEC;
-      domount(host_full_subpath, container_mp, NULL, flags, NULL);
+      if (domount(host_full_subpath, container_mp, NULL, flags, NULL) == 0) {
+        if (is_systemd_hierarchy || hosts[i].version == 2)
+          systemd_setup_done = 1;
+      }
     }
 
   symlink_v1:
@@ -297,6 +306,25 @@ int setup_cgroups(void) {
         free(it);
       }
     }
+  }
+
+  /* 2. FORCED SYSTEMD SUPPORT: If we are booting a systemd rootfs but no
+   * systemd hierarchy was found on the host, we MUST create one manually. */
+  if (is_systemd && !systemd_setup_done && !is_pure_v2) {
+    mkdir("sys/fs/cgroup/systemd", 0755);
+    if (mount("cgroup", "sys/fs/cgroup/systemd", "cgroup",
+              MS_NOSUID | MS_NODEV | MS_NOEXEC, "none,name=systemd") < 0) {
+      ds_error("Failed to mount systemd cgroup: %s", strerror(errno));
+      return -1;
+    }
+    systemd_setup_done = 1;
+  }
+
+  /* If it's a systemd container and we still don't have a systemd cgroup, fail
+   * early. */
+  if (is_systemd && !systemd_setup_done) {
+    ds_error("Systemd cgroup setup failed. Systemd containers cannot boot.");
+    return -1;
   }
 
   /* Final isolation: Remount /sys/fs/cgroup as Read-Only.

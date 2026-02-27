@@ -274,7 +274,7 @@ int is_mountpoint(const char *path);
  * cgroup.c
  * ---------------------------------------------------------------------------*/
 
-int setup_cgroups(void);
+int setup_cgroups(int is_systemd);
 int ds_cgroup_attach(pid_t target_pid);
 
 /* ---------------------------------------------------------------------------

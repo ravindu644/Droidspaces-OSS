@@ -69,20 +69,21 @@ int internal_boot(struct ds_config *cfg) {
   }
 
   /* 7. Pre-create standard directories in one loop to reduce syscalls */
-  const char *dirs_to_create[] = { ".old_root", "proc", "sys", "run" };
+  const char *dirs_to_create[] = {".old_root", "proc", "sys", "run"};
   int dir_creation_failed = 0;
-  for (size_t i = 0; i < sizeof(dirs_to_create)/sizeof(dirs_to_create[0]); i++) {
-      if (mkdir(dirs_to_create[i], 0755) < 0 && errno != EEXIST) {
-          ds_error("Failed to create '%s': %s", dirs_to_create[i], strerror(errno));
-          /* .old_root is critical for pivot_root, track if it fails */
-          if (strcmp(dirs_to_create[i], ".old_root") == 0) {
-              dir_creation_failed = 1;
-          }
+  for (size_t i = 0; i < sizeof(dirs_to_create) / sizeof(dirs_to_create[0]);
+       i++) {
+    if (mkdir(dirs_to_create[i], 0755) < 0 && errno != EEXIST) {
+      ds_error("Failed to create '%s': %s", dirs_to_create[i], strerror(errno));
+      /* .old_root is critical for pivot_root, track if it fails */
+      if (strcmp(dirs_to_create[i], ".old_root") == 0) {
+        dir_creation_failed = 1;
       }
+    }
   }
   if (dir_creation_failed) {
-      ds_error("Failed to create critical directory .old_root");
-      return -1;
+    ds_error("Failed to create critical directory .old_root");
+    return -1;
   }
 
   /* 8. Setup /dev (device nodes, devtmpfs) */
@@ -161,7 +162,11 @@ int internal_boot(struct ds_config *cfg) {
   /* 11. Setup Cgroups AFTER locking down /sys.
    * Mounting onto a directory on a RO parent is allowed for root, and it
    * ensures the sub-mount (tmpfs) is RW and independent of the parent's RO. */
-  setup_cgroups();
+  int is_systemd = is_systemd_rootfs(cfg->rootfs_path);
+  if (setup_cgroups(is_systemd) < 0) {
+    ds_error("Failed to setup container cgroups.");
+    return -1;
+  }
 
   /* 12. Mask the console discovery file to prevent resolution back to host */
   if (mount("/dev/null", "sys/class/tty/console/active", NULL, MS_BIND, NULL) <
