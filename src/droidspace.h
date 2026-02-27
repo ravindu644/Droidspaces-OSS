@@ -197,6 +197,7 @@ struct ds_config {
   /* Configuration persistence */
   char config_file[PATH_MAX];
   int config_file_specified;
+  int config_file_existed;
 
   /* Terminal (console + ttys) */
   struct ds_tty_info console;

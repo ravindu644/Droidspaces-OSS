@@ -87,12 +87,16 @@ int ds_config_add_bind(struct ds_config *cfg, const char *src,
 int ds_config_load(const char *config_path, struct ds_config *cfg) {
   FILE *f = fopen(config_path, "re");
   if (!f) {
-    if (errno == ENOENT)
+    if (errno == ENOENT) {
+      cfg->config_file_existed = 0;
       return 0; /* Optional config */
+    }
     ds_error("Failed to open config file '%s': %s", config_path,
              strerror(errno));
     return -1;
   }
+
+  cfg->config_file_existed = 1;
 
   char line[2048];
   int line_num = 0;
@@ -306,7 +310,10 @@ int ds_config_save(const char *config_path, struct ds_config *cfg) {
     return -1;
   }
 
-  ds_log("Configuration persisted to " C_BOLD "%s" C_RESET, config_path);
+  if (!cfg->config_file_existed) {
+    ds_log("Configuration persisted to " C_BOLD "%s" C_RESET, config_path);
+    cfg->config_file_existed = 1;
+  }
   return 0;
 }
 

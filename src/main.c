@@ -335,6 +335,14 @@ int main(int argc, char **argv) {
     if (ds_config_validate(&cfg) < 0)
       return 1;
 
+    if (validate_kernel_version() < 0)
+      return 1;
+    if (check_requirements() < 0)
+      return 1;
+
+    print_ds_banner();
+    check_kernel_recommendation();
+
     if (cfg.config_file[0]) {
       /* Resolve mandatory name/hostname early for saving */
       if (cfg.container_name[0] == '\0' && cfg.rootfs_path[0]) {
@@ -347,14 +355,6 @@ int main(int argc, char **argv) {
       ds_config_save(cfg.config_file, &cfg);
     }
 
-    if (validate_kernel_version() < 0)
-      return 1;
-
-    if (check_requirements() < 0)
-      return 1;
-
-    print_ds_banner();
-    check_kernel_recommendation();
     return start_rootfs(&cfg);
   }
 
@@ -381,6 +381,14 @@ int main(int argc, char **argv) {
     if (ds_config_validate(&cfg) < 0)
       return 1;
 
+    if (validate_kernel_version() < 0)
+      return 1;
+    if (check_requirements() < 0)
+      return 1;
+
+    print_ds_banner();
+    check_kernel_recommendation();
+
     if (cfg.config_file[0]) {
       /* Resolve mandatory name/hostname early for saving */
       if (cfg.container_name[0] == '\0' && cfg.rootfs_path[0]) {
@@ -393,13 +401,6 @@ int main(int argc, char **argv) {
       ds_config_save(cfg.config_file, &cfg);
     }
 
-    if (validate_kernel_version() < 0)
-      return 1;
-    if (check_requirements() < 0)
-      return 1;
-
-    print_ds_banner();
-    check_kernel_recommendation();
     return restart_rootfs(&cfg);
   }
 
