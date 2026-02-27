@@ -6,6 +6,7 @@
  */
 
 #include "droidspace.h"
+#include <stdarg.h>
 
 /* Get binary name from argv[0], handling paths */
 static const char *get_binary_name(const char *argv0) {
@@ -33,6 +34,54 @@ static const char *page_titles[] = {
 
 /* Total number of pages */
 #define TOTAL_PAGES 5
+
+/* Pager state */
+static int g_current_line = 0;
+static int g_scroll_offset = 0;
+static int g_visible_height = 0;
+static int g_total_lines = 0;
+static int g_dry_run = 0;
+
+/* Pager-aware printf */
+static void p_printf(const char *fmt, ...) {
+  va_list args;
+  char buf[4096];
+
+  va_start(args, fmt);
+  int len = vsnprintf(buf, sizeof(buf), fmt, args);
+  va_end(args);
+
+  if (len < 0)
+    return;
+
+  /* Count lines in the output */
+  char *line_start = buf;
+  char *newline;
+  while ((newline = strchr(line_start, '\n')) != NULL) {
+    if (!g_dry_run) {
+      if (g_current_line >= g_scroll_offset &&
+          g_current_line < g_scroll_offset + g_visible_height) {
+        /* Print the line including its newline */
+        fwrite(line_start, 1, (newline - line_start) + 1, stdout);
+      }
+    }
+    g_current_line++;
+    g_total_lines++;
+    line_start = newline + 1;
+  }
+
+  /* Handle trailing content without newline */
+  if (*line_start != '\0') {
+    if (!g_dry_run) {
+      if (g_current_line >= g_scroll_offset &&
+          g_current_line < g_scroll_offset + g_visible_height) {
+        printf("%s", line_start);
+      }
+    }
+    /* Note: We don't increment line count for partial lines in this simple
+     * pager */
+  }
+}
 
 /* Clear screen completely - more aggressive clearing */
 static void clear_screen_completely(void) {
@@ -123,13 +172,15 @@ static void print_header(int page, int total_pages, const char *title) {
       printf(" ");
   }
 
-  printf("%s\n", RESET_TERMINAL);
+  printf("%s", RESET_TERMINAL);
 }
 
 /* Print page content */
 static void print_page(int page, const char *bin) {
   const char *bold = BOLD;
   const char *reset = RESET_TERMINAL;
+
+#define printf p_printf
 
   switch (page) {
   case 0: /* Basic Usage */
@@ -369,10 +420,7 @@ static void print_page(int page, const char *bin) {
     printf("10. Foreground mode attaches terminal to container console\n\n");
     break;
   }
-
-  /* Print navigation hint */
-  printf("\n");
-  printf("%s[←] Previous  [→] Next  [q] Quit%s\n", bold, reset);
+#undef printf
 }
 
 /* Read arrow key (escape sequence) */
@@ -388,6 +436,10 @@ static int read_arrow_key(void) {
     if (seq[1] == '[') {
       if (read(STDIN_FILENO, &seq[2], 1) != 1)
         return 0;
+      if (seq[2] == 'A')
+        return -2; /* Up arrow */
+      if (seq[2] == 'B')
+        return 2; /* Down arrow */
       if (seq[2] == 'D')
         return -1; /* Left arrow */
       if (seq[2] == 'C')
@@ -417,6 +469,10 @@ void print_documentation(const char *argv0) {
     /* Not a TTY - print all documentation non-interactively */
     for (int i = 0; i < TOTAL_PAGES; i++) {
       printf("\n");
+      /* Non-interactive: just use regular printf through a wrapper */
+      g_dry_run = 0;
+      g_scroll_offset = 0;
+      g_visible_height = 9999;
       print_page(i, bin);
     }
     return;
@@ -430,10 +486,7 @@ void print_documentation(const char *argv0) {
   }
 
   new_tios = old_tios;
-  /* Set raw mode: disable echo, canonical mode, but allow signals for SIGWINCH
-   */
   new_tios.c_lflag &= ~(ICANON | ECHO);
-  /* Don't disable ISIG - we need SIGWINCH for terminal resize */
   new_tios.c_cc[VMIN] = 1;
   new_tios.c_cc[VTIME] = 0;
 
@@ -442,73 +495,97 @@ void print_documentation(const char *argv0) {
     return;
   }
 
-  /* Setup SIGWINCH handler for terminal resize */
   struct sigaction sa;
   sa.sa_handler = handle_sigwinch;
   sigemptyset(&sa.sa_mask);
   sa.sa_flags = 0;
-  if (sigaction(SIGWINCH, &sa, NULL) < 0) {
-    ds_warn("Failed to setup SIGWINCH handler: %s", strerror(errno));
-  }
+  sigaction(SIGWINCH, &sa, NULL);
 
-  /* Set unbuffered output for immediate display */
   setvbuf(stdout, NULL, _IONBF, 0);
-
-  /* Clear screen before starting */
-  clear_screen_completely();
-  printf("%s", HIDE_CURSOR);
-  fflush(stdout);
 
   int current_page = 0;
   int running = 1;
-  g_terminal_resized = 0;
+  g_scroll_offset = 0;
 
   while (running) {
-    /* Check if terminal was resized */
-    if (g_terminal_resized) {
-      g_terminal_resized = 0;
-    }
+    struct winsize ws;
+    ioctl(STDOUT_FILENO, TIOCGWINSZ, &ws);
+    int width = ws.ws_col > 0 ? ws.ws_col : 80;
+    int height = ws.ws_row > 0 ? ws.ws_row : 24;
 
-    /* Clear screen and redraw */
-    clear_screen_completely();
+    /* Leave room for header (1) and navigation hint (2) */
+    g_visible_height = height - 3;
+    if (g_visible_height < 1)
+      g_visible_height = 1;
 
-    /* Print header */
-    print_header(current_page, TOTAL_PAGES, page_titles[current_page]);
-
-    /* Print page content */
+    /* 1. Dry run to calculate total lines */
+    g_dry_run = 1;
+    g_total_lines = 0;
+    g_current_line = 0;
     print_page(current_page, bin);
 
-    /* Flush output */
+    /* Clamp scroll offset */
+    if (g_scroll_offset > g_total_lines - g_visible_height)
+      g_scroll_offset = g_total_lines - g_visible_height;
+    if (g_scroll_offset < 0)
+      g_scroll_offset = 0;
+
+    /* 2. Actual render */
+    clear_screen_completely();
+    printf("%s", HIDE_CURSOR);
+
+    /* Draw Header at row 1 */
+    printf("\033[1;1H");
+    print_header(current_page, TOTAL_PAGES, page_titles[current_page]);
+
+    /* Draw content from row 2 */
+    printf("\033[2;1H");
+    g_dry_run = 0;
+    g_current_line = 0;
+    print_page(current_page, bin);
+
+    /* Draw Navigation Hint at the very bottom */
+    printf("\033[%d;1H%s", height, REVERSE);
+    char hint[256];
+    snprintf(hint, sizeof(hint),
+             " [←/→] Prev/Next   [↑/↓] Scroll (%d/%d)   [q] Quit",
+             g_scroll_offset + 1, g_total_lines);
+    printf("%s", hint);
+    for (int i = strlen(hint); i < width; i++)
+      printf(" ");
+    printf("%s", RESET_TERMINAL);
+
     fflush(stdout);
 
-    /* Read user input */
     int key = read_arrow_key();
-
     switch (key) {
-    case -1: /* Left arrow - previous page */
+    case -1: /* Left */
       if (current_page > 0) {
         current_page--;
+        g_scroll_offset = 0;
       }
       break;
-    case 1: /* Right arrow - next page */
+    case 1: /* Right */
       if (current_page < TOTAL_PAGES - 1) {
         current_page++;
+        g_scroll_offset = 0;
       }
       break;
-    case 'q': /* Quit */
-      running = 0;
+    case -2: /* Up */
+      if (g_scroll_offset > 0)
+        g_scroll_offset--;
       break;
-    default:
-      /* Ignore other keys, but check for resize on next iteration */
+    case 2: /* Down */
+      if (g_scroll_offset < g_total_lines - g_visible_height)
+        g_scroll_offset++;
+      break;
+    case 'q':
+      running = 0;
       break;
     }
   }
 
-  /* Restore terminal settings */
   tcsetattr(STDIN_FILENO, TCSAFLUSH, &old_tios);
   printf("%s", SHOW_CURSOR);
-  fflush(stdout);
-
-  /* Clear screen completely one final time */
   clear_screen_completely();
 }
