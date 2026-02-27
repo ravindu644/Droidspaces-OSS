@@ -92,9 +92,20 @@ for cfg in ${CONFIG_FILES}; do
     fi
 
     container_count=$((container_count + 1))
-    
+
     # Use name for log, fall back to dirname if missing
     display_name="${name:-$(basename "$(dirname "${cfg}")")}"
+
+    # Verify if container is already running before starting
+    if [ -n "${name}" ]; then
+        current_pid=$("${DROIDSPACE_BINARY}" --name="${name}" pid 2>/dev/null)
+        if [ "${current_pid}" != "NONE" ]; then
+            log "SKIPPING: Container '${display_name}' is already running (PID: ${current_pid})"
+            success_count=$((success_count + 1))
+            continue
+        fi
+    fi
+
     log "Starting container: ${display_name}"
 
     # Execute using the new --config flag (Binary handles all parsing/validation)
