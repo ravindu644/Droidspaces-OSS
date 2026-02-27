@@ -137,6 +137,13 @@ x86:
 	if [ -n "$$CROSS_CC" ]; then $(MAKE) $(BINARY_NAME) CC=$$CROSS_CC; \
 	else echo "Error: i686-linux-musl-gcc not found. Run ./install-musl.sh x86"; exit 1; fi
 
+ANDROID_ASSETS_DIR = Android/app/src/main/assets/binaries
+
+sync-android:
+	@if [ -d "$(ANDROID_ASSETS_DIR)" ]; then \
+		cp -r $(OUT_DIR)/* $(ANDROID_ASSETS_DIR)/ && echo "[+] Synced binaries to Android assets"; \
+	fi
+
 all-build:
 	@echo "[*] Building for all architectures..."
 	@rm -rf $(OUT_DIR)
@@ -144,6 +151,7 @@ all-build:
 	@$(MAKE) --no-print-directory aarch64 && mv $(OUT_DIR)/$(BINARY_NAME) $(OUT_DIR)/$(BINARY_NAME)-aarch64 || echo "✗ aarch64 failed"
 	@$(MAKE) --no-print-directory armhf && mv $(OUT_DIR)/$(BINARY_NAME) $(OUT_DIR)/$(BINARY_NAME)-armhf || echo "✗ armhf failed"
 	@$(MAKE) --no-print-directory x86 && mv $(OUT_DIR)/$(BINARY_NAME) $(OUT_DIR)/$(BINARY_NAME)-x86 || echo "✗ x86 failed"
+	@$(MAKE) --no-print-directory sync-android
 	@echo "[+] All architectures built successfully in $(OUT_DIR)/"
 
 tarball:
@@ -172,6 +180,7 @@ all-tarball: all-build
 	echo "[*] Creating unified distribution: $$TARBALL..."; \
 	tar -czf $$TARBALL -C $$TEMP_DIR $$ROOT_DIR; \
 	rm -rf $$TEMP_DIR; \
+	$(MAKE) --no-print-directory sync-android; \
 	echo "[+] Created: $$TARBALL ($$(du -h $$TARBALL | cut -f1))"
 
 clean:
