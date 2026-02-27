@@ -215,14 +215,8 @@ int start_rootfs(struct ds_config *cfg) {
       return -1;
   }
 
-  if (!restart_reuse) {
-    /* Find an available name (only needed for fresh starts) */
-    char final_name[256];
-    if (find_available_name(cfg->container_name, final_name,
-                            sizeof(final_name)) < 0)
-      ds_die("Too many containers running with similar names");
-    safe_strncpy(cfg->container_name, final_name, sizeof(cfg->container_name));
-  }
+  /* Note: Name uniqueness is now enforced in main.c to ensure quiet failure
+   * before the banner. */
 
   /* If no hostname specified, default to container name */
   if (cfg->hostname[0] == '\0') {

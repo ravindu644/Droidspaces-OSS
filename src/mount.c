@@ -53,15 +53,22 @@ static int find_available_mountpoint(const char *name, char *mount_path,
 
   if (access(mount_path, F_OK) == 0) {
     if (is_mountpoint(mount_path)) {
-      /* This is a stale mount point from a previous crashed run.
-       * (We know it's stale because start_rootfs ensures the container name
-       * itself is unique among currently running containers). */
+      if (is_mount_in_use(mount_path)) {
+        ds_error("Mount point '%s' is already in use by another container.",
+                 mount_path);
+        ds_error("Stop the other container first or choose a different name.");
+        return -1;
+      }
+
+      /* This is a stale mount point from a previous crashed run. */
       ds_warn("Found stale mount at %s, cleaning up...", mount_path);
       if (umount2(mount_path, MNT_DETACH) < 0) {
         /* If detach fails, try unmount -d to clean loop device */
         char *umount_argv[] = {"umount", "-d", "-l", mount_path, NULL};
         run_command_quiet(umount_argv);
       }
+      /* Wait a bit for umount to settle */
+      usleep(100000);
     }
     return 0;
   }

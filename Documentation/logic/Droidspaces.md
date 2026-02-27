@@ -234,7 +234,7 @@ Before any forking, `start_rootfs()` in `container.c` performs:
 4. **Container Naming (Sync Transition):** 
    - If no `--name` is provided, Droidspaces auto-generates one from `/etc/os-release`.
    - **MANDATORY**: If using a rootfs image (`-i`), the `--name` flag is now mandatory to ensure the host-side infrastructure is predictable.
-   - Duplicate names are resolved with a numeric suffix (e.g., `ubuntu-1`) via `find_available_name()`.
+   - **Strict Uniqueness (v4.5.0+)**: Droidspaces enforces strict container name uniqueness. Attempting to start a container with a name that's already in use will fail. The previous behavior of automatic suffix incrementing (e.g., `ubuntu-1`) has been removed to prevent data corruption.
    - **Note**: The name is finalized **before** any mounting occurs.
 5. **Rootfs image mount:** If `-i` provided, `mount_rootfs_img()` is called:
    - It runs `e2fsck -f -y` to ensure filesystem integrity.
@@ -516,10 +516,29 @@ The discovered PID is written to a pidfile at `<workspace>/Pids/<name>.pid`:
 - Android: `/data/local/Droidspaces/Pids/ubuntu-24.04.pid`
 - Linux: `/var/lib/Droidspaces/Pids/ubuntu-24.04.pid`
 
-**Strict Naming Rules (v3.2.0+):**
-- **Image Mode**: `--name` is now **mandatory** for containers starting from an image (`-i`). This ensures host-side infrastructure (like `/mnt/Droidspaces/<name>`) is perfectly descriptive.
-- **Rootfs Mode**: If no name is provided, it is auto-generated from `/etc/os-release`.
-- **Synchronization**: The final container name (resolved via `find_available_name()`) is used consistently for the PID file, the hostname, and the host-side mount point.
+**Strict Naming Rules (v4.5.0+):**
+- **Uniqueness**: Droidspaces enforces strict container name uniqueness. One container per name.
+- **Image Mode**: `--name` is mandatory for image-based containers.
+- **Stale Cleanup**: If a name is not in use by a running container but has a stale pidfile or mount point, Droidspaces automatically cleans them up before starting.
+- **Error Handling**: If a container with the same name is already running, the start operation fails with a clear error message.
+
+---
+
+## 5.7 Container Name Uniqueness (v4.5.0+)
+
+**Previous behavior (removed):**
+- Automatic suffix incrementing (ubuntu, ubuntu-1, ubuntu-2)
+- Multiple containers with similar names sharing the same rootfs.img (risk of corruption)
+
+**New behavior:**
+- One container per name
+- Clear error if name is in use
+- Automatic cleanup of stale mount points and pidfiles
+
+**Why this changed:**
+- Prevents data corruption when the same rootfs.img is mounted twice
+- Eliminates confusion from similar container names
+- Protects against accidental duplicate starts (e.g. Android boot module bugs)
 
 ---
 

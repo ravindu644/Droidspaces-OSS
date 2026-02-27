@@ -339,6 +339,7 @@ pid_t find_container_init_pid(const char *uuid);
 int sync_pidfile(const char *src_pidfile, const char *name);
 int show_containers(void);
 int scan_containers(void);
+int is_mount_in_use(const char *path);
 
 /* ---------------------------------------------------------------------------
  * boot.c

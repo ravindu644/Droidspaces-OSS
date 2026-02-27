@@ -340,18 +340,29 @@ int main(int argc, char **argv) {
     if (check_requirements() < 0)
       return 1;
 
+    /* 1. Resolve mandatory name/hostname early for collision check */
+    if (cfg.container_name[0] == '\0' && cfg.rootfs_path[0]) {
+      generate_container_name(cfg.rootfs_path, cfg.container_name,
+                              sizeof(cfg.container_name));
+    }
+    if (cfg.hostname[0] == '\0' && cfg.container_name[0]) {
+      safe_strncpy(cfg.hostname, cfg.container_name, sizeof(cfg.hostname));
+    }
+
+    /* 2. Check for collisions before showing the banner */
+    char final_name[256];
+    if (find_available_name(cfg.container_name, final_name,
+                            sizeof(final_name)) < 0) {
+      ds_error("Container name '%s' is already in use by a running container.",
+               cfg.container_name);
+      ds_error("Please stop it first or choose a different name with --name.");
+      return 1;
+    }
+
     print_ds_banner();
     check_kernel_recommendation();
 
     if (cfg.config_file[0]) {
-      /* Resolve mandatory name/hostname early for saving */
-      if (cfg.container_name[0] == '\0' && cfg.rootfs_path[0]) {
-        generate_container_name(cfg.rootfs_path, cfg.container_name,
-                                sizeof(cfg.container_name));
-      }
-      if (cfg.hostname[0] == '\0' && cfg.container_name[0]) {
-        safe_strncpy(cfg.hostname, cfg.container_name, sizeof(cfg.hostname));
-      }
       ds_config_save(cfg.config_file, &cfg);
     }
 
@@ -386,18 +397,19 @@ int main(int argc, char **argv) {
     if (check_requirements() < 0)
       return 1;
 
+    /* 1. Resolve mandatory name/hostname early for saving */
+    if (cfg.container_name[0] == '\0' && cfg.rootfs_path[0]) {
+      generate_container_name(cfg.rootfs_path, cfg.container_name,
+                              sizeof(cfg.container_name));
+    }
+    if (cfg.hostname[0] == '\0' && cfg.container_name[0]) {
+      safe_strncpy(cfg.hostname, cfg.container_name, sizeof(cfg.hostname));
+    }
+
     print_ds_banner();
     check_kernel_recommendation();
 
     if (cfg.config_file[0]) {
-      /* Resolve mandatory name/hostname early for saving */
-      if (cfg.container_name[0] == '\0' && cfg.rootfs_path[0]) {
-        generate_container_name(cfg.rootfs_path, cfg.container_name,
-                                sizeof(cfg.container_name));
-      }
-      if (cfg.hostname[0] == '\0' && cfg.container_name[0]) {
-        safe_strncpy(cfg.hostname, cfg.container_name, sizeof(cfg.hostname));
-      }
       ds_config_save(cfg.config_file, &cfg);
     }
 

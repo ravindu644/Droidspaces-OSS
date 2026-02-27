@@ -62,22 +62,17 @@ int find_available_name(const char *base_name, char *final_name, size_t size) {
   char pidfile[PATH_MAX];
   safe_strncpy(final_name, base_name, size);
 
-  for (int i = 0; i < DS_MAX_CONTAINERS; i++) {
-    if (i > 0)
-      snprintf(final_name, size, "%s-%d", base_name, i);
+  resolve_pidfile_from_name(final_name, pidfile, sizeof(pidfile));
+  if (access(pidfile, F_OK) != 0)
+    return 0;
 
-    resolve_pidfile_from_name(final_name, pidfile, sizeof(pidfile));
-    if (access(pidfile, F_OK) != 0)
-      return 0;
-
-    /* Check if it's a stale pidfile — reuse the name slot without
-     * unlinking (the next start will overwrite it). */
-    pid_t pid;
-    if (read_and_validate_pid(pidfile, &pid) < 0) {
-      return 0;
-    }
+  /* Check if it's a stale pidfile — if so, it's available for reuse. */
+  pid_t pid;
+  if (read_and_validate_pid(pidfile, &pid) < 0) {
+    return 0;
   }
-  return -1;
+
+  return -1; /* Name in use by active container */
 }
 
 static int is_pid_file(const char *name) {
@@ -520,4 +515,33 @@ int scan_containers(void) {
         untracked_found, orphaned_found);
 
   return 0;
+}
+
+int is_mount_in_use(const char *path) {
+  DIR *d = opendir(get_pids_dir());
+  if (!d)
+    return 0;
+
+  struct dirent *ent;
+  int in_use = 0;
+  while ((ent = readdir(d)) != NULL) {
+    if (!is_pid_file(ent->d_name))
+      continue;
+
+    char pf[PATH_MAX];
+    snprintf(pf, sizeof(pf), "%s/%s", get_pids_dir(), ent->d_name);
+
+    pid_t p;
+    if (read_and_validate_pid(pf, &p) == 0) {
+      char mpath[PATH_MAX];
+      if (read_mount_path(pf, mpath, sizeof(mpath)) > 0) {
+        if (strcmp(mpath, path) == 0) {
+          in_use = 1;
+          break;
+        }
+      }
+    }
+  }
+  closedir(d);
+  return in_use;
 }
