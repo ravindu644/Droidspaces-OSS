@@ -26,6 +26,28 @@ static char *trim_whitespace(char *str) {
   return str;
 }
 
+/* Strict boolean parser: accepts 0/1, true/false, yes/no, on/off */
+static int parse_bool(const char *val, const char *key_name) {
+  if (!val)
+    return 0;
+
+  if (strcasecmp(val, "1") == 0 ||
+      strcasecmp(val, "true") == 0 ||
+      strcasecmp(val, "yes") == 0 ||
+      strcasecmp(val, "on") == 0)
+    return 1;
+
+  if (strcasecmp(val, "0") == 0 ||
+      strcasecmp(val, "false") == 0 ||
+      strcasecmp(val, "no") == 0 ||
+      strcasecmp(val, "off") == 0)
+    return 0;
+
+  ds_warn("Config: Invalid boolean value '%s' for key '%s' (defaulting to 0)",
+          val, key_name);
+  return 0;
+}
+
 static void parse_bind_mounts(const char *value, struct ds_config *cfg) {
   char *copy = strdup(value);
   if (!copy)
@@ -126,34 +148,31 @@ int ds_config_load(const char *config_path, struct ds_config *cfg) {
     } else if (strcmp(key, "rootfs_path") == 0) {
       if (strstr(val, ".img")) {
         safe_strncpy(cfg->rootfs_img_path, val, sizeof(cfg->rootfs_img_path));
-        /* Only clear rootfs_path if we are switching FROM directory mode.
-         * In image mode, rootfs_path holds the active mount point. */
         if (!cfg->is_img_mount)
           cfg->rootfs_path[0] = '\0';
         cfg->is_img_mount = 1;
       } else {
         safe_strncpy(cfg->rootfs_path, val, sizeof(cfg->rootfs_path));
-        /* Only clear rootfs_img_path if we are switching FROM image mode. */
         if (cfg->is_img_mount)
           cfg->rootfs_img_path[0] = '\0';
         cfg->is_img_mount = 0;
       }
     } else if (strcmp(key, "enable_ipv6") == 0) {
-      cfg->enable_ipv6 = atoi(val);
+      cfg->enable_ipv6 = parse_bool(val, key);
     } else if (strcmp(key, "enable_android_storage") == 0) {
-      cfg->android_storage = atoi(val);
+      cfg->android_storage = parse_bool(val, key);
     } else if (strcmp(key, "enable_hw_access") == 0) {
-      cfg->hw_access = atoi(val);
+      cfg->hw_access = parse_bool(val, key);
     } else if (strcmp(key, "selinux_permissive") == 0) {
-      cfg->selinux_permissive = atoi(val);
+      cfg->selinux_permissive = parse_bool(val, key);
     } else if (strcmp(key, "volatile_mode") == 0) {
-      cfg->volatile_mode = atoi(val);
+      cfg->volatile_mode = parse_bool(val, key);
     } else if (strcmp(key, "bind_mounts") == 0) {
       parse_bind_mounts(val, cfg);
     } else if (strcmp(key, "dns_servers") == 0) {
       safe_strncpy(cfg->dns_servers, val, sizeof(cfg->dns_servers));
     } else if (strcmp(key, "foreground") == 0) {
-      cfg->foreground = atoi(val);
+      cfg->foreground = parse_bool(val, key);
     } else if (strcmp(key, "pidfile") == 0) {
       safe_strncpy(cfg->pidfile, val, sizeof(cfg->pidfile));
     }
