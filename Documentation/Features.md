@@ -288,8 +288,9 @@ On kernels 4.19 and below, systemd's service sandboxing (`PrivateTmp=yes`, `Prot
 
 ### Adaptive Behavior
 
-- **Kernel < 5.0:** Full seccomp shield is active (both keyring and namespace protections)
-- **Kernel >= 5.0:** Shield is completely skipped. Modern kernels handle these cases natively, and disabling the filter allows full-featured operation including Docker and nested containers.
+- **Kernel < 5.0:** Full seccomp shield is active (both keyring and namespace protections).
+    - **Nested Containers**: Works on legacy kernels *only if* the base container is NOT systemd-based (e.g., using **Alpine Linux**). This allows Docker or other nested runtimes to manage their own namespaces without conflict.
+- **Kernel >= 5.0:** Shield is completely skipped. Modern kernels handle these cases natively, and disabling the filter allows full-featured, native operation for all distributions, including nested containers.
 
 ---
 

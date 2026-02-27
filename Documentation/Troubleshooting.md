@@ -2,9 +2,40 @@
 
 Common issues, their causes, and how to fix them.
 
+### Quick Navigation
+- [Modern Distros (Arch, Fedora, etc.) Failure on Legacy Kernels](#modern-distros-arch-fedora-etc-failure-on-legacy-kernels)
+- ["Required key not available" (ENOKEY)](#required-key-not-available-enokey)
+- [Mount Errors on Kernel 4.14](#mount-errors-on-kernel-414)
+- [OverlayFS Not Supported (f2fs)](#overlayfs-not-supported-f2fs)
+- [Container Won't Stop](#container-wont-stop)
+- [PTY Issues (Login Hangs)](#pty-issues-login-hangs)
+- [Container Name Conflicts](#container-name-conflicts)
+- [Systemd Hangs on Older Kernels](#systemd-hangs-on-older-kernels)
+- ["Not a TTY" Errors](#not-a-tty-errors)
+- [Rootfs Image I/O Errors on Android](#rootfs-image-io-errors-on-android)
+- [DNS / Name Resolution Issues](#dns--name-resolution-issues)
+- [WiFi/Mobile Data Disconnects](#wifimobile-data-disconnects)
+- [SELinux-Induced Rootfs Corruption](#selinux-induced-rootfs-corruption-directory-mode)
+- [Getting Help](#getting-help)
+
 ---
 
-## "Required key not available" (ENOKEY)
+<a id="modern-distros"></a>
+## Modern Distros (Arch, Fedora, etc.) Failure on Legacy Kernels
+
+This is not a bug with Droidspaces; it is a limitation of the specific distribution's `systemd` version. Modern distributions like Arch Linux, Fedora, or OpenSUSE use very recent versions of `systemd` that require kernel features missing in older versions. On legacy kernels (3.18, 4.4, 4.9, 4.14, 4.19), these distros will either fail to boot with an "Unsupported Kernel" message in the foreground boot screen or crash during initialization.
+
+**Cause:** The host kernel is too old to support the cgroup and namespace requirements of modern `systemd`.
+
+**Solution:**
+- Use **Alpine Linux** (extremely stable on legacy kernels).
+- Use **Ubuntu 22.04 LTS** (extensively tested and stable on Android kernels as old as 4.14).
+
+**Warning:** Using Distros newer than Ubuntu 22.04-era (e.g., 24.04) on legacy kernels often results in buggy cgroup hierarchies, resource leaks, kernel panics, or `rootfs.img` corruption.
+
+---
+
+## "Required key not available"
 
 **Symptoms:** The container crashes or filesystem operations fail with "Required key not available" errors. Most commonly seen on Android devices with File-Based Encryption (FBE).
 
@@ -18,6 +49,8 @@ If you're still seeing this error:
 - Verify your Droidspaces binary is up to date (v4.2.4+)
 - Run `droidspaces check` to verify seccomp support
 - Ensure `CONFIG_SECCOMP=y` and `CONFIG_SECCOMP_FILTER=y` are in your kernel config
+- Move to **rootfs.img mode** (recommended on Android to isolate filesystem keys)
+- **Advanced**: Decrypt the `/data` partition by surgically editing the `fstab` file in `boot`/`vendor`/`vendor_boot` partitions (requires advanced Android modding knowledge)
 
 ---
 
@@ -60,26 +93,7 @@ droidspaces --name=test --rootfs-img=/data/rootfs.img --volatile start
 
 **Cause:** The container's init system may not be responding to shutdown signals, or processes inside the container are blocking the shutdown.
 
-**Solution:**
-
-1. Try stopping normally first:
-   ```bash
-   droidspaces --name=mycontainer stop
-   ```
-
-2. If that hangs, kill the process directly:
-   ```bash
-   # Find the container PID
-   droidspaces --name=mycontainer status
-   
-   # Force kill
-   kill -9 <PID>
-   ```
-
-3. Clean up any leftover state:
-   ```bash
-   droidspaces scan
-   ```
+**Solution:** Restart the Device.
 
 ---
 
@@ -95,36 +109,6 @@ If you're still experiencing issues:
 - Update to the latest Droidspaces version
 - Try entering as root first: `droidspaces --name=mycontainer enter`
 - Check if the container is fully booted: `droidspaces --name=mycontainer status`
-
----
-
-## Bind Mount Permission Errors
-
-**Symptoms:** Files in bind-mounted directories are not accessible or writable from inside the container, or the bind mount silently fails.
-
-**Cause:** Several possible causes:
-- The host source path doesn't exist (Droidspaces skips the mount with a warning)
-- SELinux is blocking access to the mounted path
-- File ownership doesn't match inside the container
-
-**Solution:**
-
-1. Verify the host path exists before starting:
-   ```bash
-   ls -la /path/to/host/directory
-   ```
-
-2. If SELinux is the issue, try running with `--selinux-permissive`:
-   ```bash
-   droidspaces --name=mycontainer --rootfs=/path/to/rootfs \
-     --bind-mount=/host/path:/container/path \
-     --selinux-permissive start
-   ```
-
-3. Check file ownership inside the container:
-   ```bash
-   droidspaces --name=mycontainer run ls -la /container/path
-   ```
 
 ---
 
@@ -149,13 +133,11 @@ If you're still experiencing issues:
    droidspaces --name=mycontainer-2 --rootfs=/path/to/rootfs start
    ```
 
-Note: Droidspaces auto-resolves name conflicts by appending a numeric suffix (e.g., `ubuntu-24.04` becomes `ubuntu-24.04-1`).
-
 ---
 
-## System Hangs on Older Kernels
+## Systemd Hangs on Older Kernels
 
-**Symptoms:** The entire system hangs or becomes unresponsive when starting a container on kernel 4.9 or 4.14.
+**Symptoms:** The entire systemd hangs or becomes unresponsive when starting a container on legacy kernels (3.18, 4.4, 4.9, 4.14, 4.19).
 
 **Cause:** systemd's service sandboxing (`PrivateTmp=yes`, `ProtectSystem=yes`) triggers a race condition in the kernel's VFS `grab_super` path on legacy kernels.
 
@@ -202,22 +184,6 @@ chcon u:object_r:vold_data_file:s0 /path/to/rootfs.img
 
 ---
 
----
-220: 
-221: ## Modern Distros (Ubuntu/Debian) on Legacy Kernels (3.18 - 4.4)
-222: 
-223: **Symptoms:** Container starts but hangs during boot, fails to start services, or crashes immediately even after a successful bootup.
-224: 
-225: **Cause:** Modern distributions like Ubuntu 22.04+ or Debian 12+ rely on kernel features (seccomp filters, cgroup v2, namespace isolation) that are incomplete or buggy on kernels older than 4.9.
-226: 
-227: **Solution:** 
-228: - Use **Alpine Linux** for these devices; it is minimalist and highly compatible with legacy kernels.
-229: - If you must use a modern distro, consider finding or compiling a newer kernel (4.14+) for your device.
-230: 
-231: ---
-232: 
-233: ---
-
 ## DNS / Name Resolution Issues
 
 **Symptoms:** Internet works (IPs can be pinged), but domain names fail to resolve. `resolv.conf` is overwritten with "127.0.0.53" or other incorrect settings even after using `--dns`.
@@ -247,6 +213,25 @@ chcon u:object_r:vold_data_file:s0 /path/to/rootfs.img
    ```bash
    sudo systemctl mask systemd-networkd
    ```
+
+---
+
+## SELinux-Induced Rootfs Corruption (Directory Mode)
+
+**Symptoms:** Symbolic link sizes changing unexpectedly (e.g., `dpkg` warnings about `libstdc++.so.6`), shared library load failures (`LD_LIBRARY_PATH` issues), or random binary crashes.
+
+**Cause:** On Android, the `/data/local/Droidspaces/Containers` directory often receives a generic SELinux context. This causes the kernel to block or silently interfere with advanced filesystem operations (like creating certain symlinks or special files) when running in **Directory-based mode** (`--rootfs=/path/to/dir`). Because every file and symlink inside the directory tree is exposed directly to the host filesystem, Android's SELinux policy can relabel or restrict individual entries, corrupting the internal Linux filesystem's expected layout.
+
+**Recommended Solution:** Move to **rootfs.img mode** (`--rootfs-img=/path/to/rootfs.img`).  
+
+In this mode, the rootfs is stored as a standalone ext4 image and loop-mounted at runtime. SELinux xattr labels for files inside the image are encapsulated within the image's own filesystem metadata, so Android's policy engine cannot relabel or conflict with them. This avoids the core problem of the host assigning a generic context to every file in the directory tree.
+
+> [!Note]
+>
+> SELinux enforcement still applies at the process level - the container process's domain and access to the loop device or mount point remain subject to host policy. The `.img` mode does not create a fully SELinux-transparent environment, but it does eliminate host-side interference with the internal filesystem's structure and extended attributes.
+
+> [!WARNING]
+> While switching to `permissive` mode may seem to fix this, it is **not recommended** as a permanent solution. If the rootfs has already been corrupted by SELinux denials, the damage is often permanent and cannot be undone by simply changing modes.
 
 ---
 

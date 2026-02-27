@@ -8,7 +8,7 @@ This document lists the hardware and distributions where Droidspaces has been ve
 
 | Device | Kernel | Root Method | Kernel Source | Status | Notes |
 |--------|--------|-------------|---------------|--------|-------|
-| Samsung Galaxy S10 (Exynos) | 4.14.113 | KernelSU-Next v1.1.1 | [Repository](https://github.com/ravindu644/samsung_exynos9820_stock/tree/pure-stock) | Stable | No nested container support (kernel too old). |
+| Samsung Galaxy S10 (Exynos) | 4.14.113 | KernelSU-Next v1.1.1 | [Repository](https://github.com/ravindu644/samsung_exynos9820_stock/tree/pure-stock) | Stable | Limited nested support (Alpine only; kernel too old for systemd-based nesting). |
 | Samsung Galaxy A16 5G | 5.15.167 | KernelSU-Next v1.1.1 | [Repository](https://github.com/ravindu644/android_kernel_a166p) | Stable | Full feature support including nested containers. |
 
 ---

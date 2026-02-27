@@ -236,14 +236,15 @@ This checks for:
 
 | Version | Support | Notes |
 |---------|---------|-------|
-| 3.18 - 4.4 | Legacy | **Minimum floor.** Basic namespace support. Modern distros are unstable; Alpine is recommended. Nested containers are technically possible but highly unstable. |
-| 4.9 - 4.19 | Stable | **Hardened.** Full support with adaptive Seccomp shield. **Ubuntu 22.04 LTS** is highly recommended for these kernels. It has been extensively tested (e.g., on 4.14.113) and handles cgroup slices correctly. Modern systemd-based distros (Arch, Fedora, SuSE) often fail on these older kernels, or may lead to cgroup issues or **Kernel Panics**. |
+| 3.18 | Legacy | **Minimum floor.** Basic namespace support. Modern distros are unstable or won't even boot; **Alpine** is recommended. |
+| 4.4 - 4.19 | Stable | **Hardened.** Full support with adaptive Seccomp shield. **Ubuntu 22.04 LTS** is highly recommended for these kernels. It has been extensively tested (e.g., on 4.14.113) and handles cgroup slices correctly. Modern systemd-based distros (Arch, Fedora, SuSE) often fail on these older kernels, or may lead to cgroup issues or **Kernel Panics** [[ref](./Troubleshooting.md#modern-distros)]. |
 | 5.4 - 5.10 | Recommended | **Mainline.** Full feature support, including nested containers and modern Cgroup v2. |
 | 5.15+ | Ideal | **Premium.** All features, best performance, and widest compatibility. |
 
+<a id="nested-warning"></a>
 > [!WARNING]
 >
-> While Alpine has namespace freedom on legacy kernels, nested tools like Docker may still fail if they require modern host kernel features (like BPF cgroup hooks) that are missing or incompatible on kernels < 5.0.
+> Nested tools like Docker require namespace freedom that Droidspaces must restrict for **systemd-based** containers on legacy kernels (< 5.0) to prevent deadlocks. Therefore, nested containerization on these kernels is only supported when using a non-systemd base (e.g., **Alpine Linux**). Even then, they may fail if they require modern host kernel features (like BPF cgroup hooks) that are missing on old kernels.
 >
 
 ---

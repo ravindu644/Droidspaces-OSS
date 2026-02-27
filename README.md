@@ -103,7 +103,7 @@ The entire runtime is a **single static binary** under 150KB, compiled against m
 | **Rootfs Image Support** | Boot containers from ext4 `.img` files with automatic loop mounting, filesystem checks, and SELinux context hardening if needed. **The Android app also supports creating portable containers in rootfs.img mode.** |
 | **Auto-Recovery** | Automatic stale PID file cleanup, container scanning for orphaned processes, and robust mount cleanup on exit. |
 | **Cgroup Isolation** | Per-container cgroup hierarchies (`/sys/fs/cgroup/droidspaces/<name>`) with full systemd compatibility. Supports both cgroup v1 and v2. |
-| **Adaptive Seccomp Shield** | Kernel-aware BPF filter that resolves FBE keyring conflicts and prevents VFS deadlocks for **systemd** containers on legacy Android kernels (< 5.0). Automatically grants full namespace freedom to non-systemd containers (Alpine/OpenRC) for improved feature support. |
+| **Adaptive Seccomp Shield** | Kernel-aware BPF filter that resolves FBE keyring conflicts and prevents VFS deadlocks for **systemd** containers on legacy Android kernels (< 5.0). Automatically grants full namespace freedom to non-systemd containers (Alpine/OpenRC), enabling features like **nested containers/Docker**. |
 
 ---
 
@@ -138,7 +138,7 @@ The entire runtime is a **single static binary** under 150KB, compiled against m
 | Binary Size | 10MB+ (plus dependencies) | Under 150KB per architecture. |
 | Android Optimizations | None. Not designed for Android. | Yes. SELinux handling, FBE keyring management, storage integration, networking fixes |
 | Termux Required | Often. Used as the execution environment. | Never. Runs directly as a native binary. |
-| Nested Containers | Complex setup required. | Supported natively on 5.x+. On legacy kernels (< 5.0), supported in non-systemd containers (Alpine) with kernel-level caveats. |
+| Nested Containers | Complex setup required. | Supported natively on 5.x+. On legacy kernels (< 5.0), supported *only* in non-systemd containers (Alpine) with kernel-level caveats. |
 | Init System | LXC = yes, Docker = no. | Always. systemd/OpenRC as PID 1 by default. |
 
 ---
@@ -155,8 +155,8 @@ Droidspaces supports Android devices running Linux kernel **3.18 and above**:
 
 | Kernel Version | Support Level | Notes |
 |----------------|---------------|-------|
-| 3.18 - 4.4 | Supported | **Legacy.** Basic namespace support. Modern distros (Ubuntu/Debian) are unstable; Alpine is recommended. |
-| 4.9 - 4.19 | Stable | **Hardened.** Full support with adaptive Seccomp shield. |
+| 3.18 | Supported | **Legacy.** Basic namespace support. Modern distros (Ubuntu/Debian) are unstable; Alpine is recommended. |
+| 4.4 - 4.19 | Stable | **Hardened.** Full support with adaptive Seccomp shield. |
 | 5.4 - 5.10 | Recommended | **Mainline.** Full features including nested container support. |
 | 5.15+ | Premium | **Full.** Modern Cgroup v2 support and maximum performance. |
 
@@ -168,9 +168,8 @@ Your device must be rooted. The following rooting methods have been tested:
 
 | Root Method | Status | Notes |
 |-------------|--------|-------|
-| **KernelSU-Next v1.1.1** | Fully Supported | Tested and stable. Recommended. |
+| **KernelSU-Next** | Fully Supported | Tested and stable. Recommended. |
 | **APatch** | Not Supported | Init system fails to start. |
-| **RKSU** | Under Investigation | Hangs during container start/stop/restart.|
 | **Magisk** | Planned | Testing has not yet been conducted. |
 
 <a id="kernel-requirements"></a>
@@ -255,7 +254,6 @@ For the list of devices and distributions verified by the community, see the [Te
 
 | Document | Description |
 |----------|-------------|
-| [Tested Platforms](Documentation/Platforms.md) | List of verified devices and distributions. |
 | [Feature Deep Dives](Documentation/Features.md) | Detailed explanation of each major feature. |
 | [Troubleshooting](Documentation/Troubleshooting.md) | Common issues and their solutions. |
 | [Uninstallation Guide](Documentation/Uninstallation.md) | How to remove Droidspaces from your system. |
