@@ -83,7 +83,7 @@ static void cleanup_container_resources(struct ds_config *cfg, pid_t pid,
       rmdir(mount_point); /* best-effort */
     } else {
       /* Explicitly call unmount wrapper. It handles its own logging. */
-      unmount_rootfs_img(mount_point, 0);
+      unmount_rootfs_img(mount_point, cfg->foreground);
     }
   }
 
@@ -352,6 +352,7 @@ int start_rootfs(struct ds_config *cfg) {
   if (monitor_pid == 0) {
     /* MONITOR PROCESS */
     close(sync_pipe[0]);
+    sync_pipe[0] = -1;
     if (setsid() < 0 && errno != EPERM) {
       /* Fatal only if it's not EPERM (which means already leader) */
       ds_error("setsid failed: %s", strerror(errno));
@@ -360,10 +361,11 @@ int start_rootfs(struct ds_config *cfg) {
     prctl(PR_SET_NAME, "[ds-monitor]", 0, 0, 0);
 
     /* Unshare namespaces - Monitor enters new UTS, IPC, and optionally Cgroup
-     * namespaces immediately. PID namespace unshare means only CHILDREN of the
-     * monitor will be in the new PID NS. Node: we no longer unshare MNT here so
-     * monitor can cleanup host mounts. */
-    int ns_flags = CLONE_NEWUTS | CLONE_NEWIPC | CLONE_NEWPID;
+     * namespaces immediately. PID namespace is NOT unshared here because
+     * unshare(CLONE_NEWPID) can only be called once per process. Instead,
+     * each boot/reboot cycle forks an intermediate that creates a fresh
+     * PID namespace. */
+    int ns_flags = CLONE_NEWUTS | CLONE_NEWIPC;
 
     /* Adaptive Cgroup Namespace (introduced in Linux 4.6) */
     if (access("/proc/self/ns/cgroup", F_OK) == 0) {
@@ -393,27 +395,110 @@ int start_rootfs(struct ds_config *cfg) {
     if (unshare(ns_flags) < 0)
       ds_die("unshare failed: %s", strerror(errno));
 
-    /* Fork Container Init (PID 1 inside) */
-    pid_t init_pid = fork();
-    if (init_pid < 0)
-      exit(EXIT_FAILURE);
+    int stdio_redirected = 0;
 
-    if (init_pid == 0) {
-      /* CONTAINER INIT */
-      close(sync_pipe[1]);
-      /* internal_boot will handle its own stdfds. */
-      exit(internal_boot(cfg));
+    /* ── Reboot-aware boot loop ──
+     * Each iteration forks an intermediate child that creates a fresh PID
+     * namespace (unshare(CLONE_NEWPID)) and then forks the container init.
+     * This is necessary because unshare(CLONE_NEWPID) can only be called
+     * once per process, and PID namespaces die when their init (PID 1) exits.
+     *
+     * Process tree per iteration:
+     *   ds-monitor → intermediate → init (PID 1 inside container)
+     *
+     * When init calls reboot(2), the kernel sends SIGHUP to the intermediate.
+     * The intermediate re-raises SIGHUP so the monitor also sees it and
+     * loops back to create a fresh namespace. */
+  reboot_loop:;
+    /* Safety Check: Ensure no other container with the same name is running.
+     * This is critical during reboot cycles to prevent resource collisions.
+     * If found, we force kill it to ensure a clean slate for the new boot. */
+    pid_t existing_pid = 0;
+    if (is_container_running(cfg, &existing_pid)) {
+      /* Do not kill ourselves if we somehow end up in the pidfile */
+      if (existing_pid != getpid()) {
+        kill(existing_pid, SIGKILL);
+        usleep(100000); /* 100ms for kernel cleanup */
+      }
     }
 
-    /* Write child PID to sync pipe so parent knows it */
-    write(sync_pipe[1], &init_pid, sizeof(pid_t));
-    close(sync_pipe[1]);
+    pid_t mid_pid = fork();
+    if (mid_pid < 0)
+      exit(EXIT_FAILURE);
+
+    if (mid_pid == 0) {
+      /* ── INTERMEDIATE PROCESS ──
+       * Create a fresh PID namespace for this boot cycle. */
+      if (unshare(CLONE_NEWPID) < 0) {
+        ds_error("unshare(CLONE_NEWPID) failed: %s", strerror(errno));
+        _exit(EXIT_FAILURE);
+      }
+
+      pid_t init_pid = fork();
+      if (init_pid < 0)
+        _exit(EXIT_FAILURE);
+
+      if (init_pid == 0) {
+        /* CONTAINER INIT (PID 1 inside namespace) */
+        close(sync_pipe[1]);
+        _exit(internal_boot(cfg));
+      }
+
+      /* Send init PID to monitor via sync pipe (first boot only) */
+      if (sync_pipe[1] >= 0) {
+        write(sync_pipe[1], &init_pid, sizeof(pid_t));
+        close(sync_pipe[1]);
+        sync_pipe[1] = -1;
+      } else {
+        /* Reboot cycle — sync pipe already closed, parent is gone/sleeping.
+         * Update PID file directly so droidspaces show/status report the
+         * correct PID after an in-container reboot. */
+        char pid_str[32];
+        snprintf(pid_str, sizeof(pid_str), "%d", init_pid);
+        write_file_atomic(cfg->pidfile, pid_str);
+
+        /* Also update global pidfile if different */
+        char global_pf[PATH_MAX];
+        resolve_pidfile_from_name(cfg->container_name, global_pf,
+                                  sizeof(global_pf));
+        if (strcmp(cfg->pidfile, global_pf) != 0)
+          write_file_atomic(global_pf, pid_str);
+      }
+
+      /* Wait for init to exit */
+      int init_status;
+      while (waitpid(init_pid, &init_status, 0) < 0 && errno == EINTR)
+        ;
+
+      /* Re-raise init's termination signal so monitor sees the same signal.
+       * This propagates SIGHUP (reboot) and SIGINT (shutdown) upward. */
+      if (WIFSIGNALED(init_status)) {
+        int sig = WTERMSIG(init_status);
+        signal(sig, SIG_DFL);
+        raise(sig);
+        /* If raise didn't kill us, exit abnormally */
+        _exit(128 + sig);
+      }
+
+      _exit(WIFEXITED(init_status) ? WEXITSTATUS(init_status) : EXIT_FAILURE);
+    }
+
+    /* ── MONITOR continues here ──
+     * On first boot, send the init PID to the parent.
+     * On reboot cycles, update PID file on disk directly.
+     * Note: the init PID was sent by the intermediate above. */
+
+    /* Close sync pipe write end from monitor side (intermediate handles it) */
+    if (sync_pipe[1] >= 0) {
+      close(sync_pipe[1]);
+      sync_pipe[1] = -1;
+    }
 
     /* Ensure monitor is not sitting inside any mount point */
     chdir("/");
 
-    /* Stdio handling for monitor in background mode */
-    if (!cfg->foreground) {
+    /* Stdio handling for monitor in background mode (first boot only) */
+    if (!cfg->foreground && !stdio_redirected) {
       int devnull = open("/dev/null", O_RDWR);
       if (devnull >= 0) {
         dup2(devnull, 0);
@@ -421,12 +506,82 @@ int start_rootfs(struct ds_config *cfg) {
         dup2(devnull, 2);
         close(devnull);
       }
+      stdio_redirected = 1;
     }
 
-    /* Wait for child to exit */
+    /* Wait for intermediate (which waits for init) */
     int status;
-    while (waitpid(init_pid, &status, 0) < 0 && errno == EINTR)
+    pid_t init_pid_on_reboot = -1;
+    while (waitpid(mid_pid, &status, 0) < 0 && errno == EINTR)
       ;
+
+    /* ── Reboot detection ──
+     * When PID 1 inside a PID namespace calls reboot(2), the kernel:
+     *   LINUX_REBOOT_CMD_RESTART  → sends SIGHUP to intermediate (parent)
+     *   LINUX_REBOOT_CMD_HALT     → sends SIGINT to intermediate
+     *   LINUX_REBOOT_CMD_POWER_OFF→ sends SIGINT to intermediate
+     * The intermediate re-raises the signal, so we see it here too. */
+    if (WIFSIGNALED(status) && WTERMSIG(status) == SIGHUP) {
+      if (cfg->foreground) {
+        printf("\n" C_WHITE "Droidspaces v%s : Container " C_GREEN
+               "%s" C_RESET C_WHITE " is now Rebooting...." C_RESET "\n\n",
+               DS_VERSION, cfg->container_name);
+        fflush(stdout);
+      } else {
+        ds_log("Container '%s' requested reboot — restarting...",
+               cfg->container_name);
+      }
+
+      /* 1. Read the new Init PID from the pidfile updated by intermediate */
+      FILE *pf = fopen(cfg->pidfile, "r");
+      if (pf) {
+        if (fscanf(pf, "%d", &init_pid_on_reboot) != 1)
+          init_pid_on_reboot = -1;
+        fclose(pf);
+      }
+      if (init_pid_on_reboot > 0)
+        cfg->container_pid = init_pid_on_reboot;
+
+      /* 2. Generate a fresh UUID for the new boot cycle */
+      generate_uuid(cfg->uuid, sizeof(cfg->uuid));
+      if (!cfg->volatile_mode && cfg->rootfs_path[0]) {
+        char uuid_sync[PATH_MAX];
+        snprintf(uuid_sync, sizeof(uuid_sync), "%.4060s/.droidspaces-uuid",
+                 cfg->rootfs_path);
+        write_file(uuid_sync, cfg->uuid);
+      }
+
+      /* 3. Reload configuration from disk if available.
+       * We use a merge strategy: start with the current config (including CLI
+       * overrides and runtime state) and apply any changes found in the file.
+       */
+      if (cfg->config_file[0]) {
+        struct ds_config reboot_cfg = *cfg;
+        if (ds_config_load(cfg->config_file, &reboot_cfg) == 0) {
+          /* If DNS servers changed, refresh the derived content */
+          if (strcmp(cfg->dns_servers, reboot_cfg.dns_servers) != 0) {
+            reboot_cfg.dns_server_content[0] = '\0';
+            ds_get_dns_servers(reboot_cfg.dns_servers,
+                               reboot_cfg.dns_server_content,
+                               sizeof(reboot_cfg.dns_server_content));
+          }
+
+          /* Apply merged config */
+          *cfg = reboot_cfg;
+        }
+      }
+
+      goto reboot_loop;
+    }
+
+    /* Not a reboot — normal shutdown or crash */
+    if (WIFSIGNALED(status)) {
+      int sig = WTERMSIG(status);
+      if (sig != SIGINT) {
+        ds_warn("Container '%s' terminated by signal %d", cfg->container_name,
+                sig);
+      }
+    }
 
     /* Check for restart marker — if present, skip cleanup so the
      * restart command can reuse the existing mount. */
@@ -436,11 +591,12 @@ int start_rootfs(struct ds_config *cfg) {
     if (access(restart_marker, F_OK) == 0) {
       ds_log("Restart marker found, skipping monitor cleanup");
     } else {
-      /* Normal exit or crash — full cleanup */
-      cleanup_container_resources(cfg, init_pid, 0, 0);
+      /* Normal exit or crash — full cleanup.
+       * Pass 0 for PID to indicate we don't need /proc scanning in cleanup. */
+      cleanup_container_resources(cfg, 0, 0, 0);
     }
 
-    exit(WEXITSTATUS(status));
+    exit(WIFEXITED(status) ? WEXITSTATUS(status) : 0);
   }
 
   /* PARENT PROCESS */
@@ -633,7 +789,8 @@ int stop_rootfs(struct ds_config *cfg, int skip_unmount) {
   /* 5. Complete resource cleanup. */
   cleanup_container_resources(cfg, 0, skip_unmount, unkillable);
 
-  ds_log("Container '%s' stopped.", cfg->container_name);
+  if (!cfg->foreground)
+    ds_log("Container '%s' stopped.", cfg->container_name);
   return 0;
 }
 

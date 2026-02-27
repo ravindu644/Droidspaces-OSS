@@ -92,6 +92,11 @@ src/
     - Simplified DNS resolution by removing obsolete `getprop`-based logic and centralizing default DNS servers (1.1.1.1, 8.8.8.8) in the master header.
     - Standardized DNS file writing using shared utility helpers.
 - **In-Memory DNS Propagation (v4.4.0):** Resolved a critical bug with volatile rootfs images by replacing file-based DNS marker propagation with a more direct in-memory approach. The host-side process now gathers DNS configuration and stores it in the `ds_config` struct. This is passed to the container process, which then writes the configuration directly to `/run/resolvconf/resolv.conf` after the writable `/run` tmpfs is mounted. This ensures DNS resolution works robustly in all modes.
+- **Automatic Container Reboot (v4.4.x):** 
+    - Implemented a persistent reboot loop in the `[ds-monitor]` process that detects `reboot` signals (`SIGHUP` from the kernel) and automatically re-forks the container.
+    - Upgraded the process hierarchy to a 3-level tree (Monitor → Intermediate → Init) to ensure fresh PID namespace allocation on every reboot boat.
+    - Implemented automated PID file synchronization: the intermediate process now directly updates `.pid` and tracking files during reboot cycles, ensuring `droidspaces show` and the Android app always reflect the current PID.
+
 
 
 ---
@@ -147,59 +152,73 @@ Here's the high-level flow from `start` to `stop`, distilled to its essence:
                           │    (LXC model)       │
                           └──────────┬──────────┘
                                      │
-                           fork()    │
-                ┌────────────────────┼───────────────────┐
-                │ PARENT             │ MONITOR           │
-                │                    │ PROCESS           │
-                │                    │                   │
-                │                    ▼                   │
-                │               setsid()                 │
-                │          migrate to sub-cgroup         │
-                │     unshare(PID|UTS|IPC|CGROUP)        │
-                │                    │                   │
-                │               fork()│                   │
-                │         ┌──────────┼──────────┐        │
-                │         │          │ PID 1    │        │
-                │         │          │          │        │
-                │         │          ▼          │        │
-                │         │   internal_boot()   │        │
-                │         │     │ unshare(MNT)  │        │
-                │         │     │ mount(/ PRIV) │        │
-                │         │     │ setup_volatile│        │
-                │         │     │ setup_binds   │        │
-                │         │     │ setup_dev     │        │
-                │         │     │ setup_cgroups │        │
-                │         │     │ pivot_root    │        │
-                │         │     │ networking    │        │
-                │         │     │ umount .old   │        │
-                │         │     │ execve(init)  │        │
-                │         │     ▼               │        │
-                │         │ waitpid(init)       │        │
-                │         │ cleanup_resources() │        │
-                │         └─────────────────────┘        │
-                │                                        │
-                ▼                                        │
-      read init_pid from sync_pipe                       │
-      find_and_save_pid()                                │
-                │                                        │
-        ┌───────┴────────┐                               │
-        │ FOREGROUND?    │                               │
-        ├────YES─────┐   │                               │
-        │            ▼   │                               │
-        │  console_monitor_loop()                        │
-        │  (epoll stdin↔pty_master)                      │
-        │                │                               │
-        ├────NO──────┐   │                               │
-        │            ▼   │                               │
-        │  show_info()                                   │
-        │  parent exits                                  │
-        │  monitor holds PTY FDs via waitpid()           │
-        └────────────────┘                               │
+                            fork()    │
+                 ┌────────────────────┼───────────────────┐
+                 │ PARENT             │ MONITOR           │
+                 │                    │ PROCESS           │
+                 │                    │                   │
+                 │                    ▼                   │
+                 │               setsid()                 │
+                 │          migrate to sub-cgroup         │
+                 │     unshare(UTS|IPC|CGROUP)            │
+                 │                    │                   │
+                 │        ┌───────────▼───────────┐       │
+                 │        │ REBOOT LOOP (Monitor) │       │
+                 │        └───────────┬───────────┘       │
+                 │                    │                   │
+                 │            fork()  ▼                   │
+                 │        ┌───────────────────────┐       │
+                 │        │ INTERMEDIATE PROCESS  │       │
+                 │        │ unshare(CLONE_NEWPID) │       │
+                 │        │ update_pid_files()    │       │
+                 │        └───────────┬───────────┘       │
+                 │                    │                   │
+                 │            fork()  ▼                   │
+                 │        ┌───────────────────────┐       │
+                 │        │    CONTAINER INIT     │       │
+                 │        │        (PID 1)        │       │
+                 │        │   internal_boot()     │       │
+                 │        │     │ unshare(MNT)    │       │
+                 │        │     │ setup_dev       │       │
+                 │        │     │ pivot_root      │       │
+                 │        │     │ execve(init)    │       │
+                 │        └───────────┬───────────┘       │
+                 │                    │                   │
+                 │         waitpid(init) exits            │
+                 │         (SIGHUP = REBOOT)              │
+                 │                    │                   │
+                 │        ┌───────────▼───────────┐       │
+                 │        │   RESTART? (SIGHUP)   │       │
+                 │        ├─────── YES ───────────┘       │
+                 │        │ (Re-entry to loop)            │
+                 │        │                               │
+                 │        ├─────── NO ────────────┐       │
+                 │        ▼                       │       │
+                 │  cleanup_resources()           │       │
+                 │  monitor exits                 │       │
+                 └────────────────────────────────┘       │
+                                                          │
+       read init_pid from sync_pipe                       │
+       find_and_save_pid()                                │
+                 │                                        │
+         ┌───────┴────────┐                               │
+         │ FOREGROUND?    │                               │
+         ├────YES─────┐   │                               │
+         │            ▼   │                               │
+         │  console_monitor_loop()                        │
+         │  (epoll stdin↔pty_master)                      │
+         │                │                               │
+         ├────NO──────┐   │                               │
+         │            ▼   │                               │
+         │  show_info()                                   │
+         │  parent exits                                  │
+         │  monitor holds PTY FDs via waitpid()           │
+         └────────────────┘                               │
 ```
 
-**Key insight:** The monitor process (`[ds-monitor]`) creates the namespace via `unshare()`, then forks the container init (PID 1). The monitor stays alive via `waitpid()` on init — it holds all PTY master FDs open for the lifetime of the container. When init exits, the monitor checks for a **restart marker**; if absent, it calls `cleanup_container_resources()`.
+**Key insight:** The monitor process (`[ds-monitor]`) creates the hardware-level namespaces (`UTS`, `IPC`, `CGROUP`), then enters a persistent reboot loop. On each iteration, it forks an **intermediate process** that creates the `PID` namespace. This 3-level hierarchy allows the container's PID 1 to die (triggering a reboot) while the monitor stays alive to re-fork it into a fresh PID namespace, all while preserving the open PTY masters and host-side mounts.
 
-**The parent** receives the init PID from the monitor via a sync pipe, saves it to the pidfile, and either enters the foreground console loop or exits after displaying status info.
+**The parent** receives the init PID from the intermediate via a sync pipe on first boot (or updates it directly from the intermediate on subsequent reboots), saves it to the pidfile, and either enters the foreground console loop or exits after displaying status info.
 
 ---
 
@@ -233,44 +252,32 @@ Before any forking, `start_rootfs()` in `container.c` performs:
 
 ### 4.2 Fork Architecture
 
-The parent forks a **monitor process**, not an intermediate throwaway:
+The parent forks a **monitor process** (`[ds-monitor]`), which manages the container's hardware state and lifecycle. To support in-container reboots and fresh PID namespaces, Droidspaces uses a 3-level fork architecture:
 
-```c
-pid_t monitor_pid = fork();
-if (monitor_pid == 0) {
-    /* MONITOR PROCESS */
-    setsid();
-    prctl(PR_SET_NAME, "[ds-monitor]", 0, 0, 0);
-    unshare(CLONE_NEWUTS | CLONE_NEWIPC | CLONE_NEWPID);
-    
-    pid_t init_pid = fork();
-    if (init_pid == 0) {
-        /* CONTAINER INIT (PID 1) */
-        exit(internal_boot(cfg, -1));
-    }
-    
-    /* Send init_pid to parent via sync pipe */
-    write(sync_pipe[1], &init_pid, sizeof(pid_t));
-    
-    /* Wait for init to exit, then cleanup */
-    waitpid(init_pid, &status, 0);
-    cleanup_container_resources(cfg, init_pid, 0);
-    exit(WEXITSTATUS(status));
-}
-```
+1.  **Monitor Process**:
+    - Calls `setsid()` and migrates to the container's cgroup.
+    - Calls `unshare(CLONE_NEWUTS | CLONE_NEWIPC | CLONE_NEWCGROUP)`.
+    - Enters a `while(1)` loop. Each iteration represents a container boot cycle.
+    - On termination, cleans up loop mounts and workspace directories.
 
-**Namespace allocation split:**
-- `CLONE_NEWUTS | CLONE_NEWIPC | CLONE_NEWPID` — called in the monitor via `unshare()`
-- `CLONE_NEWUTS | CLONE_NEWIPC | CLONE_NEWPID | CLONE_NEWCGROUP` — called in the monitor via `unshare()`.
-    
-**The Cgroup "Jail" Trick (v4.2.0+):**
-To achieve isolation on kernels with cgroup namespace support (4.6+), Droidspaces must be in a non-root cgroup *before* calling `unshare`. 
-1.  Creates `/sys/fs/cgroup/droidspaces/<name>`.
-2.  Moves itself into that container-specific cgroup (`cgroup.procs`).
-3.  Calls `unshare(CLONE_NEWCGROUP)`.
-Result: Inside the container, `/sys/fs/cgroup` points to the container's private subtree on the host. This prevents name collisions between concurrent containers and ensures that `systemd` inside the container sees a clean, isolated hierarchy.
+2.  **Intermediate Process**:
+    - Forked by the Monitor inside the reboot loop.
+    - Calls `unshare(CLONE_NEWPID)` to create a fresh PID namespace for its children.
+    - Updates the container's PID file and tracking system (important for reboot cycles where the parent is gone).
+    - Sends the Init PID to the Monitor/Parent.
+    - Waits for the Init process and exits with its status.
 
-This split is deliberate: the monitor retains the host mount namespace so it can perform cleanup (unmounting rootfs images, removing pidfiles, and clearing volatile overlays) after the container exits. The container init gets its own private mount namespace inside `internal_boot()`.
+3.  **Container Init (PID 1)**:
+    - Forked by the Intermediate process.
+    - Becomes PID 1 in the new namespace.
+    - Calls `internal_boot()` to finalize the environment and `execve("/sbin/init")`.
+
+**Reboot Logic (SIGHUP Detection):**
+When the init process exits, the Intermediate process reaps it and exits. The Monitor process then receives the exit status. According to Linux kernel behavior, when the last process in a PID namespace exits, the next process to fork in that namespace would fail (or it would be destroyed). More importantly, the kernel sends a `SIGHUP` to the *parent* of the PID namespace's init when the namespace is being destroyed due to the init process dying. Droidspaces leverages this:
+- If `waitpid` in the Monitor returns an exit status indicating a reboot, or if the runtime detects a restart request, it simply continues the loop.
+- The next iteration forks a **new Intermediate**, which calls `unshare(CLONE_NEWPID)` again, creating a brand-new, clean PID namespace for the next Init.
+
+This architecture ensures that hardware resources (PTY masters, image mounts) remain stable in the Monitor while the "software" container state is completely reset.
 
 ### 4.3 Volatile Mode (OverlayFS Implementation)
 

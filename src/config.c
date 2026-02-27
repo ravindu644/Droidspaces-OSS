@@ -34,8 +34,6 @@ static void parse_bind_mounts(const char *value, struct ds_config *cfg) {
   char *saveptr;
   char *token = strtok_r(copy, ",", &saveptr);
 
-  cfg->bind_count = 0;
-
   while (token && cfg->bind_count < DS_MAX_BINDS) {
     char *sep = strchr(token, ':');
     if (sep) {
@@ -128,9 +126,17 @@ int ds_config_load(const char *config_path, struct ds_config *cfg) {
     } else if (strcmp(key, "rootfs_path") == 0) {
       if (strstr(val, ".img")) {
         safe_strncpy(cfg->rootfs_img_path, val, sizeof(cfg->rootfs_img_path));
+        /* Only clear rootfs_path if we are switching FROM directory mode.
+         * In image mode, rootfs_path holds the active mount point. */
+        if (!cfg->is_img_mount)
+          cfg->rootfs_path[0] = '\0';
         cfg->is_img_mount = 1;
       } else {
         safe_strncpy(cfg->rootfs_path, val, sizeof(cfg->rootfs_path));
+        /* Only clear rootfs_img_path if we are switching FROM image mode. */
+        if (cfg->is_img_mount)
+          cfg->rootfs_img_path[0] = '\0';
+        cfg->is_img_mount = 0;
       }
     } else if (strcmp(key, "enable_ipv6") == 0) {
       cfg->enable_ipv6 = atoi(val);
