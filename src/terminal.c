@@ -119,24 +119,26 @@ void build_container_ttys_string(struct ds_tty_info *ttys, int count, char *buf,
   buf[0] = '\0';
 
   for (int i = 0; i < count; i++) {
-    int written;
+    const char *name = ttys[i].name;
+    size_t len = strlen(name);
+
+    /* Add space between entries */
+    if (i > 0) {
+      if (offset + 1 >= size)
+        break;
+      buf[offset++] = ' ';
+    }
+
+    /* Copy name safely */
+    if (offset + len >= size) {
+      len = size - offset - 1;
+    }
+
+    memcpy(buf + offset, name, len);
+    offset += len;
 
     if (offset >= size - 1)
       break;
-
-    written = snprintf(buf + offset, size - offset, "%s%s",
-                       (i > 0) ? " " : "",
-                       ttys[i].name);
-
-    if (written < 0)
-      break;
-
-    if ((size_t)written >= size - offset) {
-      offset = size - 1;
-      break;
-    }
-
-    offset += (size_t)written;
   }
 
   buf[offset] = '\0';
