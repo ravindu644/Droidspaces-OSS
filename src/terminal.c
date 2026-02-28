@@ -111,12 +111,35 @@ int ds_setup_tios(int fd, struct termios *old) {
 
 void build_container_ttys_string(struct ds_tty_info *ttys, int count, char *buf,
                                  size_t size) {
+  size_t offset = 0;
+
+  if (size == 0)
+    return;
+
   buf[0] = '\0';
+
   for (int i = 0; i < count; i++) {
-    if (i > 0)
-      strncat(buf, " ", size - strlen(buf) - 1);
-    strncat(buf, ttys[i].name, size - strlen(buf) - 1);
+    int written;
+
+    if (offset >= size - 1)
+      break;
+
+    written = snprintf(buf + offset, size - offset, "%s%s",
+                       (i > 0) ? " " : "",
+                       ttys[i].name);
+
+    if (written < 0)
+      break;
+
+    if ((size_t)written >= size - offset) {
+      offset = size - 1;
+      break;
+    }
+
+    offset += (size_t)written;
   }
+
+  buf[offset] = '\0';
 }
 
 static volatile int proxy_master_fd = -1;
