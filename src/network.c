@@ -63,7 +63,8 @@ int fix_networking_host(struct ds_config *cfg) {
   int count = ds_get_dns_servers(cfg->dns_servers, cfg->dns_server_content,
                                  sizeof(cfg->dns_server_content));
 
-  if (cfg->dns_servers[0])
+  /* avoid NULL dereference */
+  if (cfg->dns_servers && cfg->dns_servers[0])
     ds_log("Setting up %d custom DNS servers...", count);
 
   if (is_android()) {
