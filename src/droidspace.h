@@ -100,6 +100,12 @@
 #define DS_SYSTEMD_CONTAINER_MARKER "/run/systemd/container"
 #define DS_DROIDSPACES_MARKER "/run/droidspaces"
 
+/* X11 Socket Paths (Host-side relative to /.old_root or absolute) */
+#define DS_X11_PATH_DESKTOP "/.old_root/tmp/.X11-unix"
+#define DS_X11_PATH_TERMUX                                                     \
+  "/.old_root/data/data/com.termux/files/usr/tmp/.X11-unix"
+#define DS_X11_CONTAINER_DIR "/tmp/.X11-unix"
+
 /* File Extensions */
 #define DS_EXT_PID ".pid"
 #define DS_EXT_MOUNT ".mount"

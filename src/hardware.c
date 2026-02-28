@@ -282,38 +282,43 @@ static int setup_gpu_groups(gid_t *gpu_gids, int gid_count) {
 static int setup_x11_socket(void) {
   const char *x11_source = NULL;
 
-  /* Detect platform and find X11 socket */
+  /* Detect platform and find X11 socket.
+   * NOTE: This function is called AFTER pivot_root, so we must use
+   * /.old_root to access the real host filesystem (via headers). */
   if (is_android()) {
     /* Android — check for Termux X11 */
-    if (access("/data/data/com.termux/files/usr/tmp/.X11-unix", F_OK) == 0) {
-      x11_source = "/data/data/com.termux/files/usr/tmp/.X11-unix";
-      ds_log("Detected Termux X11 socket");
+    ds_log("Checking for Termux X11 at %s...", DS_X11_PATH_TERMUX);
+    if (access(DS_X11_PATH_TERMUX, F_OK) == 0) {
+      x11_source = DS_X11_PATH_TERMUX;
+      ds_log("Found Termux X11 socket");
+    } else {
+      ds_warn("Termux X11 socket not found at default path");
     }
   } else {
-    /* Desktop Linux — access host /tmp via PID 1's root after pivot_root */
-    if (access("/proc/1/root/tmp/.X11-unix", F_OK) == 0) {
-      x11_source = "/proc/1/root/tmp/.X11-unix";
+    /* Desktop Linux — access host /tmp via /.old_root */
+    if (access(DS_X11_PATH_DESKTOP, F_OK) == 0) {
+      x11_source = DS_X11_PATH_DESKTOP;
+      ds_log("Found Desktop X11 socket at %s", DS_X11_PATH_DESKTOP);
     }
   }
 
-  if (!x11_source)
-    return 0; /* No X11, not an error */
+  if (!x11_source) {
+    ds_warn("X11 support skipped: No host X11 socket detected");
+    return 0;
+  }
 
-  /* Create directory in container with permissive mode */
-  mkdir_p("/tmp", 0777);
-  mkdir_p("/tmp/.X11-unix", 0777);
+  /* Ensure /tmp subdirectories exist in the container */
+  mkdir_p("/tmp", 01777);
+  mkdir_p(DS_X11_CONTAINER_DIR, 01777);
 
-  /* Set 777 permissions explicitly (required for Termux — runs as non-root
-   * UID) */
-  chmod("/tmp/.X11-unix", 0777);
-
-  /* Bind mount from source */
-  if (mount(x11_source, "/tmp/.X11-unix", NULL, MS_BIND | MS_REC, NULL) < 0) {
+  /* Bind mount the socket directory from host */
+  if (mount(x11_source, DS_X11_CONTAINER_DIR, NULL, MS_BIND | MS_REC, NULL) <
+      0) {
     ds_warn("Failed to bind mount X11 socket: %s", strerror(errno));
     return -1;
   }
+  ds_log("X11 socket directory bind-mounted successfully");
 
-  ds_log("X11 socket mounted: %s -> /tmp/.X11-unix", x11_source);
   return 0;
 }
 
