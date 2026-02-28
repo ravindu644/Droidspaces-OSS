@@ -203,25 +203,18 @@ int start_rootfs(struct ds_config *cfg) {
     ds_warn("--enable-android-storage is only supported on Android hosts. "
             "Skipping.");
 
-  /* 1b. Resolve container name (needed for descriptive mount points) */
-  if (cfg->container_name[0] == '\0') {
-    if (cfg->rootfs_img_path[0]) {
-      ds_error("--name is mandatory when using a rootfs image.");
+  /* 1b. Name Uniqueness Check
+   * We no longer auto-generate or increment names. The name must be provided
+   * by the user and it must be unique. */
+  if (!restart_reuse) {
+    pid_t existing_pid = 0;
+    if (is_container_running(cfg, &existing_pid)) {
+      ds_error("Container name '%s' is already in use by PID %d.",
+               cfg->container_name, existing_pid);
+      if (cfg->is_img_mount)
+        unmount_rootfs_img(cfg->img_mount_point, cfg->foreground);
       return -1;
     }
-
-    if (generate_container_name(cfg->rootfs_path, cfg->container_name,
-                                sizeof(cfg->container_name)) < 0)
-      return -1;
-  }
-
-  if (!restart_reuse) {
-    /* Find an available name (only needed for fresh starts) */
-    char final_name[256];
-    if (find_available_name(cfg->container_name, final_name,
-                            sizeof(final_name)) < 0)
-      ds_die("Too many containers running with similar names");
-    safe_strncpy(cfg->container_name, final_name, sizeof(cfg->container_name));
   }
 
   /* If no hostname specified, default to container name */

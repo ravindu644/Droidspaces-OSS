@@ -63,8 +63,23 @@ int find_available_name(const char *base_name, char *final_name, size_t size) {
   safe_strncpy(final_name, base_name, size);
 
   for (int i = 0; i < DS_MAX_CONTAINERS; i++) {
-    if (i > 0)
-      snprintf(final_name, size, "%s-%d", base_name, i);
+    if (i > 0) {
+      size_t base_len = strlen(base_name);
+      char suffix[16];
+      int suffix_len = snprintf(suffix, sizeof(suffix), "-%d", i);
+
+      if (base_len + suffix_len < size) {
+        memcpy(final_name, base_name, base_len);
+        memcpy(final_name + base_len, suffix, suffix_len);
+        final_name[base_len + suffix_len] = '\0';
+      } else {
+        /* Truncate base_name to fit the suffix */
+        size_t max_base = size - suffix_len - 1;
+        memcpy(final_name, base_name, max_base);
+        memcpy(final_name + max_base, suffix, suffix_len);
+        final_name[size - 1] = '\0';
+      }
+    }
 
     resolve_pidfile_from_name(final_name, pidfile, sizeof(pidfile));
     if (access(pidfile, F_OK) != 0)

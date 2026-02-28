@@ -353,6 +353,11 @@ int ds_config_validate(struct ds_config *cfg) {
     errors++;
   }
 
+  if (!cfg->container_name[0]) {
+    ds_error("Container name is mandatory (--name).");
+    errors++;
+  }
+
   if (!cfg->rootfs_path[0] && !cfg->rootfs_img_path[0]) {
     ds_error("No rootfs target specified (requires -r or -i).");
     errors++;

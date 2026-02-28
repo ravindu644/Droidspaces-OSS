@@ -14,6 +14,26 @@ int internal_boot(struct ds_config *cfg) {
     return -1;
   }
 
+  /* 0. Boot Guard: Ensure name is present and unique.
+   * This is a critical security check to prevent anonymous or conflicting
+   * containers from booting, even if the CLI checks were bypassed. */
+  if (!cfg->container_name[0]) {
+    ds_error("CRITICAL: Boot aborted — container name is empty.");
+    return -1;
+  }
+
+  pid_t existing_pid = 0;
+  if (is_container_running(cfg, &existing_pid)) {
+    /* If we find ourselves in the pidfile, it's not a conflict, it's just us
+     * being tracked early (which is fine). */
+    if (existing_pid != getpid()) {
+      ds_error(
+          "CRITICAL: Boot aborted — name '%s' is already in use by PID %d.",
+          cfg->container_name, existing_pid);
+      return -1;
+    }
+  }
+
   /* 1. Isolated mount namespace */
   if (unshare(CLONE_NEWNS) < 0) {
     ds_error("Failed to unshare mount namespace: %s", strerror(errno));
