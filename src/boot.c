@@ -91,7 +91,17 @@ int internal_boot(struct ds_config *cfg) {
     return -1;
   }
 
-  /* 9. Mount virtual filesystems (proc, sys) */
+  /* 9. Scan host GPU device GIDs (BEFORE pivot_root — need host /dev) */
+  gid_t gpu_gids[DS_MAX_GPU_GROUPS];
+  int gpu_gid_count = 0;
+  if (cfg->hw_access) {
+    ds_log("Setting up hardware access...");
+    gpu_gid_count = scan_host_gpu_gids(gpu_gids, DS_MAX_GPU_GROUPS);
+  } else {
+    ds_log("Hardware access disabled: using isolated tmpfs...");
+  }
+
+  /* 10. Mount virtual filesystems (proc, sys) */
   if (domount("proc", "proc", "proc", MS_NOSUID | MS_NODEV | MS_NOEXEC, NULL) <
       0) {
     ds_error("Failed to mount procfs: %s", strerror(errno));
@@ -226,19 +236,29 @@ int internal_boot(struct ds_config *cfg) {
   /* 19. Configure rootfs networking (hostname, resolv.conf, etc) */
   fix_networking_rootfs(cfg);
 
-  /* 20. Cleanup .old_root */
+  /* 20. Setup GPU groups and X11 socket (AFTER pivot_root) */
+  setup_hardware_access(cfg, gpu_gids, gpu_gid_count);
+
+  /* Log bind mounts and boot (after hw-access logs for clean ordering) */
+  if (cfg->bind_count > 0)
+    ds_log("Setting up %d custom bind mount(s)...", cfg->bind_count);
+  ds_log("Booting '%s' (init: /sbin/init)...", cfg->container_name);
+  printf("\r\n");
+  fflush(stdout);
+
+  /* 21. Cleanup .old_root */
   if (umount2("/.old_root", MNT_DETACH) < 0)
     ds_warn("Failed to unmount .old_root: %s", strerror(errno));
   else
     rmdir("/.old_root");
 
-  /* 21. Set container identity for systemd/openrc */
+  /* 22. Set container identity for systemd/openrc */
   write_file(DS_SYSTEMD_CONTAINER_MARKER, "droidspaces");
 
-  /* 22. Clear environment and set container defaults */
+  /* 23. Clear environment and set container defaults */
   ds_env_boot_setup(cfg);
 
-  /* 23. Redirect standard I/O to /dev/console */
+  /* 24. Redirect standard I/O to /dev/console */
   int console_fd = open("/dev/console", O_RDWR);
   if (console_fd >= 0) {
     ds_terminal_set_stdfds(console_fd);
@@ -265,7 +285,7 @@ int internal_boot(struct ds_config *cfg) {
       close(console_fd);
   }
 
-  /* 24. EXEC INIT */
+  /* 25. EXEC INIT */
   char *argv[] = {"/sbin/init", NULL};
 
   if (execve("/sbin/init", argv, environ) < 0) {

@@ -398,6 +398,14 @@ static void print_page(int page, const char *bin) {
     printf("  %s --name=broken info\n", bin);
     printf("  %s --name=broken stop\n", bin);
     printf("  %s --name=broken --rootfs=/path/to/rootfs restart\n\n", bin);
+
+    printf("%sGPU Passthrough with X11 (Android + Termux X11):%s\n", bold,
+           reset);
+    printf("  %s --name=gpu --rootfs=/path/to/rootfs --hw-access start\n", bin);
+    printf("  %s --name=gpu enter\n", bin);
+    printf("  export DISPLAY=:0\n");
+    printf("  glxgears  # Hardware-accelerated rendering\n");
+    printf("  (GPU groups and X11 socket are auto-configured)\n\n");
     break;
 
   case 4: /* Notes */
@@ -417,7 +425,11 @@ static void print_page(int page, const char *bin) {
         "8. The scan command can detect containers started outside the tool\n");
     printf("9. All commands require root privileges except: check, show, docs, "
            "version\n");
-    printf("10. Foreground mode attaches terminal to container console\n\n");
+    printf("10. Foreground mode attaches terminal to container console\n");
+    printf("11. With --hw-access, GPU device groups are auto-created in the\n");
+    printf("    container's /etc/group and root is added to each group.\n");
+    printf("    X11 socket is auto-mounted (Termux X11 on Android,\n");
+    printf("    /tmp/.X11-unix on desktop Linux).\n\n");
     break;
   }
 #undef printf

@@ -611,20 +611,9 @@ int start_rootfs(struct ds_config *cfg) {
   if (is_android() && !cfg->rootfs_img_path[0])
     android_remount_data_suid();
 
-  if (cfg->hw_access)
-    ds_log("Hardware access enabled: using host devtmpfs...");
-  else
-    ds_log("Hardware access disabled: using isolated tmpfs /dev...");
-
-  /* Log volatile mode before boot message */
+  /* Log volatile mode */
   if (cfg->volatile_mode)
     ds_log("Entering volatile mode (OverlayFS)...");
-
-  /* Log bind mounts before boot message */
-  if (cfg->bind_count > 0)
-    ds_log("Setting up %d custom bind mount(s)...", cfg->bind_count);
-
-  ds_log("Booting '%s' (init: /sbin/init)...", cfg->container_name);
 
   /* 6. Save PID file */
   char pid_str[32];
@@ -647,8 +636,7 @@ int start_rootfs(struct ds_config *cfg) {
 
   /* 6. Foreground or background finish */
   if (cfg->foreground) {
-    /* Visual separation before container output */
-    printf("\n");
+
     int ret = console_monitor_loop(cfg->console.master, monitor_pid,
                                    cfg->container_pid);
     return ret;

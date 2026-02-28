@@ -81,6 +81,7 @@
 #define DS_VOLATILE_SUBDIR "Volatile"
 #define DS_ANDROID_TMPFS_CONTEXT "u:object_r:tmpfs:s0"
 #define DS_ANDROID_VOLD_CONTEXT "u:object_r:vold_data_file:s0"
+#define DS_MAX_GPU_GROUPS 32
 
 /* Device nodes to create in container /dev (when using tmpfs) */
 #define DS_CONTAINER_MARKER "droidspaces"
@@ -293,6 +294,14 @@ int is_mountpoint(const char *path);
 
 int setup_cgroups(int is_systemd);
 int ds_cgroup_attach(pid_t target_pid);
+
+/* ---------------------------------------------------------------------------
+ * hardware.c
+ * ---------------------------------------------------------------------------*/
+
+int scan_host_gpu_gids(gid_t *gids, int max_gids);
+int setup_hardware_access(struct ds_config *cfg, gid_t *gpu_gids,
+                          int gid_count);
 
 /* ---------------------------------------------------------------------------
  * network.c
