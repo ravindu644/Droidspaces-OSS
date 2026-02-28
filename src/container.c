@@ -943,7 +943,7 @@ int show_info(struct ds_config *cfg, int trust_cfg_pid) {
   /* Host info */
   const char *host = is_android() ? "Android" : "Linux";
   const char *arch = get_architecture();
-  printf("\n" C_GREEN "Host:" C_RESET " %s %s\n", host, arch);
+  printf(C_GREEN "Host:" C_RESET " %s %s\n", host, arch);
 
   /* Case 1: No container name specified */
   if (cfg->container_name[0] == '\0') {
