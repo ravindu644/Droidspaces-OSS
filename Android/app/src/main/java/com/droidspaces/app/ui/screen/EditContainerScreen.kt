@@ -39,6 +39,8 @@ import com.droidspaces.app.ui.component.FilePickerDialog
 import com.droidspaces.app.util.BindMount
 import com.droidspaces.app.util.Constants
 import androidx.compose.ui.text.style.TextOverflow
+import com.droidspaces.app.ui.component.SettingsRowCard
+import com.droidspaces.app.ui.component.EnvironmentVariablesDialog
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
@@ -62,6 +64,7 @@ fun EditContainerScreen(
     var bindMounts by remember { mutableStateOf(container.bindMounts) }
     var dnsServers by remember { mutableStateOf(container.dnsServers) }
     var runAtBoot by remember { mutableStateOf(container.runAtBoot) }
+    var envFileContent by remember { mutableStateOf(container.envFileContent ?: "") }
 
     // Track the "saved" baseline values - updated after each successful save
     var savedHostname by remember { mutableStateOf(container.hostname) }
@@ -74,6 +77,7 @@ fun EditContainerScreen(
     var savedBindMounts by remember { mutableStateOf(container.bindMounts) }
     var savedDnsServers by remember { mutableStateOf(container.dnsServers) }
     var savedRunAtBoot by remember { mutableStateOf(container.runAtBoot) }
+    var savedEnvFileContent by remember { mutableStateOf(container.envFileContent ?: "") }
 
     // Navigation and internal UI states
     var showFilePicker by remember { mutableStateOf(false) }
@@ -97,7 +101,8 @@ fun EditContainerScreen(
             volatileMode != savedVolatileMode ||
             bindMounts != savedBindMounts ||
             dnsServers != savedDnsServers ||
-            runAtBoot != savedRunAtBoot
+            runAtBoot != savedRunAtBoot ||
+            envFileContent != savedEnvFileContent
         }
     }
 
@@ -126,7 +131,8 @@ fun EditContainerScreen(
                     volatileMode = volatileMode,
                     bindMounts = bindMounts,
                     dnsServers = dnsServers,
-                    runAtBoot = runAtBoot
+                    runAtBoot = runAtBoot,
+                    envFileContent = if (envFileContent.isBlank()) null else envFileContent
                 )
 
                 // Update config file
@@ -147,6 +153,7 @@ fun EditContainerScreen(
                         savedBindMounts = bindMounts
                         savedDnsServers = dnsServers
                         savedRunAtBoot = runAtBoot
+                        savedEnvFileContent = envFileContent
 
                         // Refresh container list and SELinux status using ViewModel
                         containerViewModel.refresh()
@@ -212,6 +219,20 @@ fun EditContainerScreen(
                     Text(context.getString(R.string.cancel))
                 }
             }
+        )
+    }
+
+    var showEnvDialog by remember { mutableStateOf(false) }
+
+    if (showEnvDialog) {
+        EnvironmentVariablesDialog(
+            initialContent = envFileContent,
+            onConfirm = { newContent ->
+                envFileContent = newContent
+                showEnvDialog = false
+            },
+            onDismiss = { showEnvDialog = false },
+            confirmLabel = context.getString(R.string.save_changes)
         )
     }
 
@@ -457,6 +478,30 @@ fun EditContainerScreen(
                 onCheckedChange = {
                     clearFocus()
                     runAtBoot = it
+                }
+            )
+
+            // Environment Variables Row
+            fun countEnvVars(content: String): Int {
+                return content.lines()
+                    .map { it.trim() }
+                    .count { it.isNotEmpty() && !it.startsWith("#") && it.contains("=") }
+            }
+
+            val envCount = countEnvVars(envFileContent)
+            val envSubtitle = if (envCount > 0) {
+                context.getString(R.string.environment_variables_configured, envCount)
+            } else {
+                context.getString(R.string.not_configured)
+            }
+
+            SettingsRowCard(
+                title = context.getString(R.string.environment_variables),
+                subtitle = envSubtitle,
+                icon = Icons.Default.Code,
+                onClick = {
+                    clearFocus()
+                    showEnvDialog = true
                 }
             )
 

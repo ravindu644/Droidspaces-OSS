@@ -185,6 +185,10 @@
     <string name="optional">Optional</string>
     <string name="error_dns_servers_invalid">DNS servers list contains invalid characters</string>
     <string name="max_dns_servers_reached">Maximum %1$d DNS servers reached</string>
+    <string name="environment_variables">Environment Variables</string>
+    <string name="environment_variables_configured">%1$d variable(s) configured</string>
+    <string name="not_configured">Not configured</string>
+    <string name="environment_variables_hint"># Paste your environment variables here\n# One per line, KEY=VALUE format\n# Lines starting with # are ignored\n\nDISPLAY=:0\nPULSE_SERVER=tcp:127.0.0.1:4713\nXDG_RUNTIME_DIR=/run/user/0\nLIBGL_ALWAYS_SOFTWARE=1</string>
 
     <!-- Container Name Screen -->
     <string name="container_setup">Container Setup</string>

@@ -34,7 +34,8 @@ data class ContainerInfo(
     val status: ContainerStatus = ContainerStatus.STOPPED,
     val pid: Int? = null,
     val useSparseImage: Boolean = false,
-    val sparseImageSizeGB: Int? = null
+    val sparseImageSizeGB: Int? = null,
+    val envFileContent: String? = null
 ) {
     val isRunning: Boolean
         get() = status == ContainerStatus.RUNNING
@@ -62,6 +63,9 @@ data class ContainerInfo(
         appendLine("use_sparse_image=${if (useSparseImage) "1" else "0"}")
         if (sparseImageSizeGB != null) {
             appendLine("sparse_image_size_gb=$sparseImageSizeGB")
+        }
+        if (envFileContent != null) {
+            appendLine("env_file=${Constants.CONTAINERS_BASE_PATH}/${ContainerManager.sanitizeContainerName(name)}/.env")
         }
     }
 }
@@ -219,10 +223,24 @@ object ContainerManager {
                 runAtBoot = configMap["run_at_boot"] == "1",
                 status = ContainerStatus.STOPPED,
                 useSparseImage = useSparseImage,
-                sparseImageSizeGB = sparseImageSizeGB
+                sparseImageSizeGB = sparseImageSizeGB,
+                envFileContent = loadEnvFileContent(containerName)
             )
         } catch (e: Exception) {
             return null
+        }
+    }
+
+    /**
+     * Load .env file content for a container.
+     */
+    private fun loadEnvFileContent(containerName: String): String? {
+        val envFilePath = "${getContainerDirectory(containerName)}/.env"
+        val readResult = Shell.cmd("cat \"$envFilePath\" 2>/dev/null").exec()
+        return if (readResult.isSuccess && readResult.out.isNotEmpty()) {
+            readResult.out.joinToString("\n")
+        } else {
+            null
         }
     }
 
@@ -303,6 +321,18 @@ object ContainerManager {
 
             // Build new config content using the shared method
             val configContent = newConfig.toConfigContent()
+
+            // Handle .env file
+            val envFilePath = "${getContainerDirectory(containerName)}/.env"
+            if (newConfig.envFileContent.isNullOrBlank()) {
+                Shell.cmd("rm -f \"$envFilePath\"").exec()
+            } else {
+                val tempEnvFile = File("${context.cacheDir}/.env_${sanitizedName}")
+                tempEnvFile.writeText(newConfig.envFileContent + "\n")
+                Shell.cmd("cp \"${tempEnvFile.absolutePath}\" \"$envFilePath\"").exec()
+                Shell.cmd("chmod 644 \"$envFilePath\"").exec()
+                tempEnvFile.delete()
+            }
 
             // Write config to temp file first (app can write to cache dir)
             // Use sanitizedName to avoid issues with spaces in filename

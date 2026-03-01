@@ -20,6 +20,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import com.droidspaces.app.util.BindMount
 import com.droidspaces.app.ui.component.FilePickerDialog
 import com.droidspaces.app.util.Constants
+import com.droidspaces.app.ui.component.SettingsRowCard
+import com.droidspaces.app.ui.component.EnvironmentVariablesDialog
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -33,6 +35,7 @@ fun ContainerConfigScreen(
     initialBindMounts: List<BindMount> = emptyList(),
     initialDnsServers: String = "",
     initialRunAtBoot: Boolean = false,
+    initialEnvFileContent: String = "",
     onNext: (
         enableIPv6: Boolean,
         enableAndroidStorage: Boolean,
@@ -42,7 +45,8 @@ fun ContainerConfigScreen(
         volatileMode: Boolean,
         bindMounts: List<BindMount>,
         dnsServers: String,
-        runAtBoot: Boolean
+        runAtBoot: Boolean,
+        envFileContent: String?
     ) -> Unit,
     onBack: () -> Unit
 ) {
@@ -55,6 +59,7 @@ fun ContainerConfigScreen(
     var bindMounts by remember { mutableStateOf(initialBindMounts) }
     var dnsServers by remember { mutableStateOf(initialDnsServers) }
     var runAtBoot by remember { mutableStateOf(initialRunAtBoot) }
+    var envFileContent by remember { mutableStateOf(initialEnvFileContent) }
     val context = LocalContext.current
 
     // Internal UI States
@@ -108,6 +113,19 @@ fun ContainerConfigScreen(
         )
     }
 
+    var showEnvDialog by remember { mutableStateOf(false) }
+
+    if (showEnvDialog) {
+        EnvironmentVariablesDialog(
+            initialContent = envFileContent,
+            onConfirm = { newContent ->
+                envFileContent = newContent
+                showEnvDialog = false
+            },
+            onDismiss = { showEnvDialog = false }
+        )
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -126,7 +144,7 @@ fun ContainerConfigScreen(
             ) {
                 Button(
                     onClick = {
-                        onNext(enableIPv6, enableAndroidStorage, enableHwAccess, if (enableHwAccess) true else enableTermuxX11, selinuxPermissive, volatileMode, bindMounts, dnsServers, runAtBoot)
+                        onNext(enableIPv6, enableAndroidStorage, enableHwAccess, if (enableHwAccess) true else enableTermuxX11, selinuxPermissive, volatileMode, bindMounts, dnsServers, runAtBoot, if (envFileContent.isBlank()) null else envFileContent)
                     },
                     modifier = Modifier
                         .fillMaxWidth()
@@ -233,6 +251,29 @@ fun ContainerConfigScreen(
                 description = context.getString(R.string.run_at_boot_description),
                 checked = runAtBoot,
                 onCheckedChange = { runAtBoot = it }
+            )
+
+            // Environment Variables Row
+            fun countEnvVars(content: String): Int {
+                return content.lines()
+                    .map { it.trim() }
+                    .count { it.isNotEmpty() && !it.startsWith("#") && it.contains("=") }
+            }
+
+            val envCount = countEnvVars(envFileContent)
+            val envSubtitle = if (envCount > 0) {
+                context.getString(R.string.environment_variables_configured, envCount)
+            } else {
+                context.getString(R.string.not_configured)
+            }
+
+            SettingsRowCard(
+                title = context.getString(R.string.environment_variables),
+                subtitle = envSubtitle,
+                icon = Icons.Default.Code,
+                onClick = {
+                    showEnvDialog = true
+                }
             )
 
             // Bind Mounts Section

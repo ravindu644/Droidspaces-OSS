@@ -111,6 +111,18 @@ fun InstallationSummaryScreen(
                     if (config.volatileMode) SummaryItem("Volatile Mode", "Enabled", Icons.Default.AutoDelete)
                     if (config.runAtBoot) SummaryItem("Run at Boot", "Enabled", Icons.Default.PowerSettingsNew)
 
+                    fun countEnvVars(content: String?): Int {
+                        if (content.isNullOrBlank()) return 0
+                        return content.lines()
+                            .map { it.trim() }
+                            .count { it.isNotEmpty() && !it.startsWith("#") && it.contains("=") }
+                    }
+
+                    val envCount = countEnvVars(config.envFileContent)
+                    if (envCount > 0) {
+                        SummaryItem("Environment Variables", "$envCount configured", Icons.Default.Code)
+                    }
+
                     if (config.bindMounts.isNotEmpty()) {
                         config.bindMounts.forEach { mount ->
                             SummaryItem("Bind Mount", "${mount.src} → ${mount.dest}", Icons.Default.Link)
@@ -119,7 +131,8 @@ fun InstallationSummaryScreen(
 
                     if (!config.enableIPv6 && !config.enableAndroidStorage &&
                         !config.enableHwAccess && !config.selinuxPermissive && 
-                        !config.volatileMode && config.bindMounts.isEmpty() && !config.runAtBoot) {
+                        !config.volatileMode && config.bindMounts.isEmpty() && 
+                        !config.runAtBoot && config.envFileContent.isNullOrBlank()) {
                         Text(
                             text = "No additional options enabled",
                             style = MaterialTheme.typography.bodySmall,
