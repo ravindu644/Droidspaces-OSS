@@ -1,94 +1,149 @@
 /*
  * Droidspaces — Hardware Access Module
  *
- * GPU group auto-detection, permission setup, and X11 socket mounting.
+ * This module manages GPU acceleration and hardware device nodes. To keep your
+ * system stable, we exclusively use "render nodes" (/dev/dri/renderD*) for GPU
+ * access.
  *
- * Inspired by: https://github.com/shedowe19 's original implementation
+ * Why? Because render nodes allow multiple processes (like Droidspaces and your
+ * host's X11/Wayland) to share the GPU safely. "Card nodes" (/dev/dri/card*)
+ * are avoided because they require exclusive control (DRM master), and trying
+ * to share them often leads to driver hangs or kernel panics on desktop Linux.
+ *
+ * This approach gives you full OpenGL, Vulkan, and video acceleration while
+ * ensuring your host system stays rock solid. It's the same industry standard
+ * used by major container projects like Docker and Podman.
  *
  * Copyright (C) 2026 ravindu644 <droidcasts@protonmail.com>
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
 #include "droidspace.h"
+#include <dirent.h>
 
 #ifndef TMPFS_MAGIC
 #define TMPFS_MAGIC 0x01021994
 #endif
 
+/*
+ * add_gpu_gid()
+ *
+ * Helper to stat a device and add its group ID if it's unique.
+ */
+static void add_gpu_gid(const char *path, gid_t *gids, int *count,
+                        int max_gids) {
+  struct stat st;
+  if (stat(path, &st) < 0)
+    return;
+
+  gid_t gid = st.st_gid;
+  if (gid == 0)
+    return;
+
+  for (int i = 0; i < *count; i++) {
+    if (gids[i] == gid)
+      return;
+  }
+
+  if (*count < max_gids) {
+    gids[(*count)++] = gid;
+    ds_log("GPU device %-30s → GID %d", path, (int)gid);
+  }
+}
+
+/*
+ * scan_gpu_dir()
+ *
+ * Dynamically scan a directory for device nodes matching a prefix.
+ */
+static void scan_gpu_dir(const char *dir_path, const char *prefix, gid_t *gids,
+                         int *count, int max_gids) {
+  DIR *dir = opendir(dir_path);
+  if (!dir)
+    return;
+
+  struct dirent *entry;
+  char full_path[PATH_MAX];
+
+  while ((entry = readdir(dir)) != NULL) {
+    /* Skip . and .. */
+    if (entry->d_name[0] == '.')
+      continue;
+
+    /* Restricted to character devices only */
+    if (entry->d_type != DT_CHR && entry->d_type != DT_UNKNOWN)
+      continue;
+
+    if (prefix && strncmp(entry->d_name, prefix, strlen(prefix)) != 0)
+      continue;
+
+    snprintf(full_path, sizeof(full_path), "%s/%s", dir_path, entry->d_name);
+    add_gpu_gid(full_path, gids, count, max_gids);
+  }
+
+  closedir(dir);
+}
 
 /*
  * scan_host_gpu_gids()
  *
  * Scan known GPU device paths on the HOST and collect unique non-root GIDs.
+ * Uses dynamic discovery where possible to avoid hardcoded path fragility.
  * Must be called BEFORE pivot_root while /dev still refers to the host.
  *
  * Returns: number of unique GIDs found (0 = no GPU devices)
  */
 int scan_host_gpu_gids(gid_t *gids, int max_gids) {
-  const char *gpu_devices[] = {
-      /* DRI (Intel, AMD, Mesa) */
-      "/dev/dri/renderD128", "/dev/dri/renderD129", "/dev/dri/renderD130",
-      "/dev/dri/card0", "/dev/dri/card1", "/dev/dri/card2",
+  int count = 0;
 
-      /* NVIDIA Proprietary Driver */
-      "/dev/nvidia0", "/dev/nvidia1", "/dev/nvidia2", "/dev/nvidiactl",
-      "/dev/nvidia-uvm", "/dev/nvidia-uvm-tools", "/dev/nvidia-modeset",
-      "/dev/nvidia-caps/nvidia-cap1", "/dev/nvidia-caps/nvidia-cap2",
+  /* 1. Dynamic Scanning (Render Nodes, NVIDIA, V4L2, etc.) */
+  scan_gpu_dir("/dev/dri", "renderD", gids, &count, max_gids);
+  scan_gpu_dir("/dev", "nvidia", gids, &count, max_gids);
+  scan_gpu_dir("/dev", "video", gids, &count, max_gids);
+  scan_gpu_dir("/dev/nvidia-caps", NULL, gids, &count, max_gids);
+  scan_gpu_dir("/dev", "mali", gids, &count, max_gids);
+  scan_gpu_dir("/dev", "kgsl", gids, &count, max_gids);
+  scan_gpu_dir("/dev/dma_heap", NULL, gids, &count, max_gids);
 
-      /* ARM Mali */
-      "/dev/mali0", "/dev/mali", "/dev/mali1",
+  /* 2. Static Comprehensive List (IPC, Compute, Tegra/PVR specific) */
+  const char *static_devices[] = {
+      /* Android IPC (Critical for Android containers/hosts) */
+      "/dev/binder", "/dev/vndbinder", "/dev/hwbinder",
 
-      /* Qualcomm Adreno */
-      "/dev/kgsl-3d0", "/dev/kgsl", "/dev/genlock",
+      /* Legacy Android Memory Allocators */
+      "/dev/ion", "/dev/ashmem",
 
-      /* AMD Compute */
+      /* ARM Mali / Adreno aliases */
+      "/dev/mali", "/dev/genlock",
+
+      /* AMD ROCm Compute */
       "/dev/kfd",
 
-      /* PowerVR */
-      "/dev/pvr_sync",
+      /* PowerVR (IMG GPU) */
+      "/dev/pvrsrvkm", "/dev/pvr_sync",
 
-      /* NVIDIA Tegra */
-      "/dev/nvhost-ctrl", "/dev/nvhost-gpu", "/dev/nvmap",
+      /* Tegra (Comprehensive stack) */
+      "/dev/nvhost-ctrl", "/dev/nvhost-gpu", "/dev/nvhost-ctrl-gpu",
+      "/dev/nvhost-as-gpu", "/dev/nvhost-dbg-gpu", "/dev/nvhost-prof-gpu",
+      "/dev/nvhost-tsg", "/dev/nvhost-tsg-gpu", "/dev/nvhost-vic",
+      "/dev/nvhost-nvdec", "/dev/nvhost-nvdec1", "/dev/nvhost-nvenc",
+      "/dev/nvhost-msenc", "/dev/nvmap",
 
-      /* DMA Heaps (Modern Android) */
-      "/dev/dma_heap/system", "/dev/dma_heap/linux,cma",
-      "/dev/dma_heap/reserved", "/dev/dma_heap/qcom,system",
+      /* WSL2 (DirectX Proxy) */
+      "/dev/dxg",
 
-      /* Sync devices */
+      /* Async Sync */
       "/dev/sw_sync",
 
       NULL};
 
-  int count = 0;
-
-  for (int i = 0; gpu_devices[i] != NULL; i++) {
-    struct stat st;
-    if (stat(gpu_devices[i], &st) < 0)
-      continue;
-
-    gid_t gid = st.st_gid;
-
-    /* Skip root group (0) — no special group needed */
-    if (gid == 0)
-      continue;
-
-    /* De-duplicate: check if we already have this GID */
-    int duplicate = 0;
-    for (int j = 0; j < count; j++) {
-      if (gids[j] == gid) {
-        duplicate = 1;
-        break;
-      }
-    }
-
-    if (!duplicate && count < max_gids) {
-      gids[count++] = gid;
-      ds_log("GPU device %-30s → GID %d", gpu_devices[i], (int)gid);
-    }
+  for (int i = 0; static_devices[i] != NULL; i++) {
+    add_gpu_gid(static_devices[i], gids, &count, max_gids);
   }
 
-  if (count > 0)
-    ds_log("Discovered %d unique GPU group(s) on host", count);
+  if (count > 0) {
+    ds_log("Discovered %d unique GPU/Hardware group(s)", count);
+  }
 
   return count;
 }
@@ -342,7 +397,8 @@ int setup_unified_tmpfs(void) {
 
   /* Detect Termux SELinux context (including categories) */
   char context[256] = {0};
-  if (get_selinux_context("/data/data/com.termux", context, sizeof(context)) < 0) {
+  if (get_selinux_context("/data/data/com.termux", context, sizeof(context)) <
+      0) {
     safe_strncpy(context, "u:object_r:app_data_file:s0", sizeof(context));
   }
 
@@ -351,7 +407,8 @@ int setup_unified_tmpfs(void) {
   snprintf(mount_opts, sizeof(mount_opts), "size=256M,mode=1777,uid=%d,gid=%d",
            (int)st.st_uid, (int)st.st_gid);
 
-  if (mount("tmpfs", termux_tmp, "tmpfs", MS_NOSUID | MS_NODEV, mount_opts) != 0) {
+  if (mount("tmpfs", termux_tmp, "tmpfs", MS_NOSUID | MS_NODEV, mount_opts) !=
+      0) {
     ds_warn("Failed to create unified /tmp: %s", strerror(errno));
     return -1;
   }
@@ -389,14 +446,14 @@ int setup_x11_and_virgl_sockets(struct ds_config *cfg) {
     /* Desktop Linux path */
     const char *x11_source = DS_X11_PATH_DESKTOP;
     if (access(x11_source, F_OK) == 0) {
-      ds_log("Found Desktop X11 socket at %s", x11_source);
       mkdir_p("/tmp", 01777);
       mkdir_p(DS_X11_CONTAINER_DIR, 01777);
-      if (mount(x11_source, DS_X11_CONTAINER_DIR, NULL, MS_BIND | MS_REC, NULL) < 0) {
+      if (mount(x11_source, DS_X11_CONTAINER_DIR, NULL, MS_BIND | MS_REC,
+                NULL) < 0) {
         ds_warn("Failed to bind mount X11 socket: %s", strerror(errno));
         return -1;
       }
-      ds_log("X11 socket directory bind-mounted successfully");
+      ds_log("Bridged host's X11 unix socket with container");
     } else {
       ds_warn("X11 support skipped: No host X11 socket detected");
     }
@@ -404,7 +461,8 @@ int setup_x11_and_virgl_sockets(struct ds_config *cfg) {
   }
 
   /* Android path: bridge Termux /tmp into container's /tmp */
-  const char *bridge_source = DS_TERMUX_TMP_OLDROOT;  /* FIX: Use explicit macro */
+  const char *bridge_source =
+      DS_TERMUX_TMP_OLDROOT; /* FIX: Use explicit macro */
   const char *container_tmp = "/tmp";
 
   /* Verify source exists */
@@ -418,10 +476,28 @@ int setup_x11_and_virgl_sockets(struct ds_config *cfg) {
   /* Ensure container /tmp exists */
   mkdir_p(container_tmp, 01777);
 
-  /* Bind mount entire /tmp (includes .X11-unix and .virgl_test) */
-  if (mount(bridge_source, container_tmp, NULL, MS_BIND, NULL) != 0) {
-    ds_warn("Failed to bridge /tmp sockets: %s", strerror(errno));
-    return 0; /* Non-fatal */
+  /* Targeted mount for .X11-unix specifically */
+  char source_x11[PATH_MAX], target_x11[PATH_MAX];
+  snprintf(source_x11, sizeof(source_x11), "%s/.X11-unix", bridge_source);
+  snprintf(target_x11, sizeof(target_x11), "%s/.X11-unix", container_tmp);
+
+  if (access(source_x11, F_OK) == 0) {
+    mkdir_p(target_x11, 01777);
+    if (mount(source_x11, target_x11, NULL, MS_BIND, NULL) != 0) {
+      ds_warn("Failed to bridge X11 socket: %s", strerror(errno));
+    }
+  }
+
+  /* Targeted mount for .virgl_test specifically */
+  char source_virgl[PATH_MAX], target_virgl[PATH_MAX];
+  snprintf(source_virgl, sizeof(source_virgl), "%s/.virgl_test", bridge_source);
+  snprintf(target_virgl, sizeof(target_virgl), "%s/.virgl_test", container_tmp);
+
+  if (access(source_virgl, F_OK) == 0) {
+    mkdir_p(target_virgl, 01777);
+    if (mount(source_virgl, target_virgl, NULL, MS_BIND, NULL) != 0) {
+      ds_warn("Failed to bridge VirGL socket: %s", strerror(errno));
+    }
   }
 
   /* Ensure permissions are correct */
