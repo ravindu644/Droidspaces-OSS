@@ -26,12 +26,204 @@
 #endif
 
 /*
+ * is_dangerous_node()
+ *
+ * Checks if a device node name is "dangerous" (part of the host display stack
+ * or a privileged DRM master node) and should be blocked from container access.
+ */
+int is_dangerous_node(const char *name) {
+  /* Tier 1: DRM card nodes and control nodes */
+  if ((strncmp(name, "card", 4) == 0 &&
+       (name[4] == '\0' || isdigit(name[4]))) ||
+      (strncmp(name, "controlD", 8) == 0 &&
+       (name[8] == '\0' || isdigit(name[8])))) {
+    return 1;
+  }
+
+  /* Tier 2: NVIDIA Proprietary Master & Modeset Nodes */
+  if (strcmp(name, "nvidiactl") == 0 || strcmp(name, "nvidia-modeset") == 0)
+    return 1;
+  /* Block raw GPU nodes /dev/nvidia0, nvidia1, etc. */
+  if (strncmp(name, "nvidia", 6) == 0 && isdigit(name[6]))
+    return 1;
+  /* Block NVIDIA capability nodes */
+  if (strncmp(name, "nvidia-cap", 10) == 0)
+    return 1;
+
+  /* Tier 3 & 4: VGA Arbiter and Framebuffers */
+  if (strcmp(name, "vga_arbiter") == 0)
+    return 1;
+  if (strncmp(name, "fb", 2) == 0 && isdigit(name[2]))
+    return 1;
+
+  /* Tier 5: Host TTY nodes
+   *
+   * SAFE (pass through - legitimate dev/embedded devices):
+   *   ttyUSB*  USB-to-serial adapters (FTDI, CH340, CP2102, PL2303)
+   *   ttyACM*  USB CDC ACM (Arduino, ESP32-C3/S2, Pi Pico, STM32, Heimdall)
+   *   ttyAMA*  ARM AMBA UART (Raspberry Pi GPIO serial, ARM SoC hardware UART)
+   *   ttyTHS*  NVIDIA Tegra high-speed UART (Jetson boards)
+   *   ttymxc*  NXP i.MX UART (embedded SBCs)
+   *
+   * DANGEROUS (block - host console/modem paths):
+   *   ttyN     VT masters: DRM Master handover risk on VT switch
+   *   ttyS*    x86 hardware serial console (COM1/COM2)
+   *   ttyGS*   USB gadget serial (host-side gadget controller)
+   *   ttyHSL*  Qualcomm high-speed UART (modem console)
+   *   ttyMSM*  Qualcomm MSM serial console
+   *
+   * Unknown tty* nodes fall through as safe (dev-friendly default). */
+  if (strncmp(name, "tty", 3) == 0) {
+    /* Safe: check before any block rule */
+    if (strncmp(name, "ttyUSB", 6) == 0 || strncmp(name, "ttyACM", 6) == 0 ||
+        strncmp(name, "ttyAMA", 6) == 0 || strncmp(name, "ttyTHS", 6) == 0 ||
+        strncmp(name, "ttymxc", 6) == 0)
+      return 0;
+    /* Dangerous: VT masters */
+    if (isdigit(name[3]))
+      return 1;
+    /* Dangerous: explicit host console and modem prefixes */
+    if (strncmp(name, "ttyS", 4) == 0 ||   /* x86 hardware serial console */
+        strncmp(name, "ttyGS", 5) == 0 ||  /* USB gadget serial            */
+        strncmp(name, "ttyHSL", 6) == 0 || /* Qualcomm HS-UART             */
+        strncmp(name, "ttyMSM", 6) == 0)   /* Qualcomm MSM console         */
+      return 1;
+    /* Unknown tty* falls through - safe default for future devices */
+  }
+
+  /* Tier 6: MediaTek Modem & Legacy BSD PTYs */
+  if (strncmp(name, "ccci", 4) == 0 || strncmp(name, "umts_", 5) == 0)
+    return 1;
+  if (strncmp(name, "pty", 3) == 0) /* BSD PTY masters */
+    return 1;
+
+  /* Tier 7: Input Injection & RF Kill */
+  if (strcmp(name, "uinput") == 0 || strcmp(name, "rfkill") == 0)
+    return 1;
+
+  /* Tier 8: TEE, Connectivity & Power Management (Android/MTK) */
+  if (strncmp(name, "tz", 2) == 0 || strncmp(name, "trusty", 6) == 0 ||
+      strncmp(name, "gz_", 3) == 0 || strncmp(name, "tee", 3) == 0)
+    return 1; /* TrustZone / TEE / Secure OS */
+  if (strncmp(name, "conn", 4) == 0 || strcmp(name, "mtk_sec") == 0)
+    return 1; /* MediaTek Connectivity & Security */
+  if (strncasecmp(name, "mt_pmic", 7) == 0)
+    return 1; /* Power Management IC */
+  if (strcmp(name, "tuihw") == 0 || strcmp(name, "wlan") == 0)
+    return 1;
+
+  /* Tier 9: Legacy Clutter */
+  if (strncmp(name, "ram", 3) == 0 && isdigit(name[3]))
+    return 1; /* Legacy RAM disks */
+
+  /* Tier 10: Core virtualized nodes (should be unlinked and recreated) */
+  if (strcmp(name, "console") == 0 || strcmp(name, "tty") == 0 ||
+      strcmp(name, "full") == 0 || strcmp(name, "null") == 0 ||
+      strcmp(name, "zero") == 0 || strcmp(name, "random") == 0 ||
+      strcmp(name, "urandom") == 0 || strcmp(name, "ptmx") == 0 ||
+      strcmp(name, "initctl") == 0)
+    return 1;
+
+  /* Systemic Hardening (Phase 12) */
+  /* Tier 10: Direct Host Access */
+  if (strcmp(name, "mem") == 0 || strcmp(name, "kmem") == 0 ||
+      strcmp(name, "port") == 0)
+    return 1;
+  /* Tier 11: DisplayPort Aux */
+  if (strncmp(name, "drm_dp_aux", 10) == 0)
+    return 1;
+  /* Tier 12: Virtual Consoles */
+  if (strncmp(name, "vcs", 3) == 0)
+    return 1;
+  /* Tier 13: Watchdogs */
+  if (strncmp(name, "watchdog", 8) == 0)
+    return 1;
+  /* Tier 14: DMA/Memory Gaps */
+  if (strcmp(name, "udmabuf") == 0 || strcmp(name, "snapshot") == 0)
+    return 1;
+  /* Tier 15: TPM (KVM preserved for VMs) */
+  if (strncmp(name, "tpm", 3) == 0)
+    return 1;
+  /* Tier 16: MTK STP Combo Chip Bus (BT/GPS/WiFi transport) */
+  if (strncmp(name, "stp", 3) == 0)
+    return 1;
+
+  /* Tier 17: MTK Audio IPI / SCP IPC - known exploitable attack surface */
+  if (strcmp(name, "audio_ipi") == 0 || strcmp(name, "scp_audio_ipi") == 0 ||
+      strcmp(name, "vow") == 0 || strcmp(name, "vcp") == 0)
+    return 1;
+
+  /* Tier 18: eMMC Replay-Protected Memory Block - stores DRM/boot keys */
+  if (strncmp(name, "rpmb", 4) == 0)
+    return 1;
+
+  /* Tier 19: MTK Multimedia Profiler + Event Tracer (CMDQ-class IOCTL risk) */
+  if (strcmp(name, "mmp") == 0 || strcmp(name, "met") == 0)
+    return 1;
+
+  /* Tier 20: MTK Co-Processor Firmware IPC Channels */
+  if (strcmp(name, "mcupm") == 0 || strcmp(name, "sspm") == 0 ||
+      strcmp(name, "scp") == 0)
+    return 1;
+
+  /* Tier 21: MTK AED kernel exception daemon nodes */
+  if (strncmp(name, "aed", 3) == 0 && (name[3] == '\0' || isdigit(name[3])))
+    return 1;
+
+  /* Tier 22: Persistent RAM log writer (survives reboots, destroys host
+   * diagnostics) */
+  if (strncmp(name, "pmsg", 4) == 0)
+    return 1;
+
+  /* Tier 23: MTK Display Pipeline Sync (display-critical fence driver) */
+  if (strcmp(name, "mdp_sync") == 0 || strcmp(name, "fmt_sync") == 0 ||
+      strcmp(name, "mtk_mdp") == 0 || strcmp(name, "mml_pq") == 0 ||
+      strcmp(name, "sec_display_debug") == 0)
+    return 1;
+
+  /* Tier 24: GPS co-processor shared memory + power control */
+  if (strcmp(name, "gps_emi") == 0 || strcmp(name, "gps_pwr") == 0)
+    return 1;
+
+  /* Tier 25: Secure elements, biometrics, DRM key nodes */
+  if (strcmp(name, "goodix_fp") == 0 || strcmp(name, "k250a") == 0 ||
+      strcmp(name, "drm_wv") == 0 || strcmp(name, "sec-nfc") == 0)
+    return 1;
+
+  /* Tier 26: MTK debug/tracing nodes */
+  if (strcmp(name, "eara-io") == 0 || strcmp(name, "RT_Monitor") == 0)
+    return 1;
+  if (strncmp(name, "wmt", 3) == 0) /* wmtdetect, wmtWifi, wmtNfc, etc. */
+    return 1;
+
+  /* Tier 27: MTK firmware log exporters */
+  if (strncmp(name, "fw_log_", 7) == 0 || strcmp(name, "sa_log_wifi") == 0)
+    return 1;
+
+  /* Tier 28: MTK Network Offload & USB IP Accelerators
+   * sipa_*: bypasses netfilter at hardware offload layer.
+   * mddp: MTK Distributed Data Path offload control. */
+  if (strncmp(name, "sipa_", 5) == 0 || strcmp(name, "mddp") == 0 ||
+      strcmp(name, "usip") == 0)
+    return 1;
+
+  return 0;
+}
+
+/*
  * add_gpu_gid()
  *
  * Helper to stat a device and add its group ID if it's unique.
  */
 static void add_gpu_gid(const char *path, gid_t *gids, int *count,
                         int max_gids) {
+  /* Defense in Depth: Always check against the dangerous node blocklist */
+  const char *name = strrchr(path, '/');
+  name = name ? name + 1 : path;
+  if (is_dangerous_node(name)) {
+    return;
+  }
+
   struct stat st;
   if (stat(path, &st) < 0)
     return;
@@ -76,6 +268,11 @@ static void scan_gpu_dir(const char *dir_path, const char *prefix, gid_t *gids,
 
     if (prefix && strncmp(entry->d_name, prefix, strlen(prefix)) != 0)
       continue;
+
+    /* Defense in Depth: Skip dangerous nodes during GID scanning */
+    if (is_dangerous_node(entry->d_name)) {
+      continue;
+    }
 
     snprintf(full_path, sizeof(full_path), "%s/%s", dir_path, entry->d_name);
     add_gpu_gid(full_path, gids, count, max_gids);

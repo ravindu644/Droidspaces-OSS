@@ -115,6 +115,82 @@ int bind_mount(const char *src, const char *tgt) {
   return domount(src, tgt, NULL, MS_BIND | MS_REC, NULL);
 }
 
+/*
+ * prune_host_devices()
+ *
+ * Scans the mounted /dev (devtmpfs) and unlinks dangerous nodes to isolate
+ * the container from the host's display server, consoles, and GPU masters.
+ */
+static void prune_host_devices(const char *dev_path) {
+  DIR *dir = opendir(dev_path);
+  if (!dir)
+    return;
+
+  struct dirent *entry;
+  char path[PATH_MAX];
+
+  while ((entry = readdir(dir)) != NULL) {
+    const char *name = entry->d_name;
+    int should_unlink = 0;
+
+    if (is_dangerous_node(name)) {
+      should_unlink = 1;
+    }
+
+    if (should_unlink) {
+      snprintf(path, sizeof(path), "%.3800s/%s", dev_path, name);
+      /* Use force_unlink to handle potential bind-mount stale artifacts */
+      umount2(path, MNT_DETACH);
+      force_unlink(path);
+      continue;
+    }
+
+    /* Subdirectory scanning for Tiers 1 and 2 (caps) */
+    if (strcmp(name, "dri") == 0 || strcmp(name, "nvidia-caps") == 0) {
+      snprintf(path, sizeof(path), "%.3800s/%s", dev_path, name);
+      DIR *subdir = opendir(path);
+      if (subdir) {
+        struct dirent *subentry;
+        while ((subentry = readdir(subdir)) != NULL) {
+          int sub_unlink = 0;
+          const char *subname = subentry->d_name;
+
+          if (is_dangerous_node(subname)) {
+            sub_unlink = 1;
+          }
+
+          if (sub_unlink) {
+            char subpath[PATH_MAX];
+            snprintf(subpath, sizeof(subpath), "%.3800s/%s", path, subname);
+            unlink(subpath);
+          }
+        }
+        closedir(subdir);
+
+        /* Special case: Handle /dev/dri/by-path symlinks */
+        if (strcmp(name, "dri") == 0) {
+          char bp_path[PATH_MAX];
+          snprintf(bp_path, sizeof(bp_path), "%.3800s/by-path", path);
+          DIR *bp_dir = opendir(bp_path);
+          if (bp_dir) {
+            while ((subentry = readdir(bp_dir)) != NULL) {
+              if (strstr(subentry->d_name, "-card")) {
+                char bppath[PATH_MAX];
+                snprintf(bppath, sizeof(bppath), "%.3800s/%s", bp_path,
+                         subentry->d_name);
+                unlink(bppath);
+              }
+            }
+            closedir(bp_dir);
+          }
+        }
+      }
+    }
+  }
+
+  closedir(dir);
+}
+
 /* ---------------------------------------------------------------------------
  * /dev setup
  * ---------------------------------------------------------------------------*/
@@ -133,16 +209,9 @@ int setup_dev(const char *rootfs, int hw_access) {
                 "mode=755") == 0) {
       /* Clean up conflicting nodes from the shared devtmpfs.
        * We MUST immediately recreate them in create_devices() as REAL
-       * character devices to prevent host breakage. */
-      const char *conflicts[] = {"console", "tty",     "full", "null", "zero",
-                                 "random",  "urandom", "ptmx", NULL};
-      for (int i = 0; conflicts[i]; i++) {
-        char path[PATH_MAX];
-        snprintf(path, sizeof(path), "%.4080s/%s", dev_path, conflicts[i]);
-        /* Unmount if it was somehow bind-mounted */
-        umount2(path, MNT_DETACH);
-        force_unlink(path);
-      }
+       * character devices to prevent host breakage. This also performs
+       * DRM master and host display isolation. */
+      prune_host_devices(dev_path);
     } else {
       ds_warn("Failed to mount devtmpfs, falling back to tmpfs");
       if (domount("none", dev_path, "tmpfs", MS_NOSUID | MS_NOEXEC,
@@ -222,9 +291,8 @@ int create_devices(const char *rootfs, int hw_access) {
   /* 4. Create tty1...N nodes (mount targets for PTYs) */
   for (int i = 1; i <= DS_MAX_TTYS; i++) {
     snprintf(path, sizeof(path), "%s/dev/tty%d", rootfs, i);
-    if (access(path, F_OK) != 0) {
-      write_file(path, "");
-    }
+    force_unlink(path);
+    write_file(path, "");
     chmod(path, 0666);
   }
   /* Standard symlinks */

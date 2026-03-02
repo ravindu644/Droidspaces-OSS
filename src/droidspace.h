@@ -423,6 +423,7 @@ void print_documentation(const char *argv0);
  * check.c
  * ---------------------------------------------------------------------------*/
 
+int is_dangerous_node(const char *name);
 int check_requirements(void);
 int check_requirements_detailed(void);
 
