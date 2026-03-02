@@ -64,9 +64,9 @@ static int check_ns(int flag, const char *name) {
 
   if (p == 0) {
     if (unshare(flag) < 0) {
-      exit(1);
+      _exit(1);
     }
-    exit(0);
+    _exit(0);
   }
 
   int status;

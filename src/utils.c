@@ -531,7 +531,7 @@ static int internal_run(char *const argv[], int quiet) {
       }
     }
     execvp(argv[0], argv);
-    exit(127); /* exec failed */
+    _exit(127); /* exec failed */
   }
 
   int status;

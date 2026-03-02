@@ -213,11 +213,7 @@ int start_rootfs(struct ds_config *cfg) {
     if (is_container_running(cfg, &existing_pid)) {
       ds_error("Container name '%s' is already in use by PID %d.",
                cfg->container_name, existing_pid);
-      if (cfg->is_img_mount)
-        unmount_rootfs_img(cfg->img_mount_point, cfg->foreground);
-      free_config_env_vars(cfg);
-      free_config_binds(cfg);
-      return -1;
+      goto cleanup;
     }
   }
 
@@ -231,9 +227,7 @@ int start_rootfs(struct ds_config *cfg) {
     if (mount_rootfs_img(cfg->rootfs_img_path, cfg->rootfs_path,
                          sizeof(cfg->rootfs_path), cfg->volatile_mode,
                          cfg->container_name) < 0) {
-      free_config_env_vars(cfg);
-      free_config_binds(cfg);
-      return -1;
+      goto cleanup;
     }
     cfg->is_img_mount = 1;
     safe_strncpy(cfg->img_mount_point, cfg->rootfs_path,
@@ -248,11 +242,7 @@ int start_rootfs(struct ds_config *cfg) {
 
   /* 3. Early pre-flight for volatile mode (before any host changes) */
   if (check_volatile_mode(cfg) < 0) {
-    if (cfg->is_img_mount)
-      unmount_rootfs_img(cfg->img_mount_point, cfg->foreground);
-    free_config_env_vars(cfg);
-    free_config_binds(cfg);
-    return -1;
+    goto cleanup;
   }
 
   generate_uuid(cfg->uuid, sizeof(cfg->uuid));
@@ -296,9 +286,7 @@ int start_rootfs(struct ds_config *cfg) {
     ds_error("Init binary not found: %s", init_path);
     ds_error(
         "Please ensure the rootfs path is correct and contains /sbin/init.");
-    if (cfg->is_img_mount)
-      unmount_rootfs_img(cfg->img_mount_point, cfg->foreground);
-    return -1;
+    goto cleanup;
   }
 
   /*
@@ -373,7 +361,7 @@ int start_rootfs(struct ds_config *cfg) {
     if (setsid() < 0 && errno != EPERM) {
       /* Fatal only if it's not EPERM (which means already leader) */
       ds_error("setsid failed: %s", strerror(errno));
-      exit(EXIT_FAILURE);
+      _exit(EXIT_FAILURE);
     }
     prctl(PR_SET_NAME, "[ds-monitor]", 0, 0, 0);
 
@@ -414,13 +402,13 @@ int start_rootfs(struct ds_config *cfg) {
     /* Fork Container Init (PID 1 inside) */
     pid_t init_pid = fork();
     if (init_pid < 0)
-      exit(EXIT_FAILURE);
+      _exit(EXIT_FAILURE);
 
     if (init_pid == 0) {
       /* CONTAINER INIT */
       close(sync_pipe[1]);
       /* internal_boot will handle its own stdfds. */
-      exit(internal_boot(cfg));
+      _exit(internal_boot(cfg));
     }
 
     /* Write child PID to sync pipe so parent knows it */
@@ -467,7 +455,7 @@ int start_rootfs(struct ds_config *cfg) {
     free_config_binds(cfg);
     free_config_env_vars(cfg);
 
-    exit(WEXITSTATUS(status));
+    _exit(WEXITSTATUS(status));
   }
 
   /* PARENT PROCESS */
@@ -566,6 +554,11 @@ int start_rootfs(struct ds_config *cfg) {
   return 0;
 
 cleanup:
+  /* Centralized host-side cleanup IF we are returning error.
+   * This ensures image mounts and tracking files are reverted on fatal boot
+   * errors. */
+  cleanup_container_resources(cfg, cfg->container_pid, 0, 1 /* force */);
+
   if (cfg->console.master >= 0) {
     close(cfg->console.master);
     cfg->console.master = -1;
@@ -754,13 +747,16 @@ int enter_rootfs(struct ds_config *cfg, const char *user) {
          user ? user : "root");
 
   int sv[2];
-  if (socketpair(AF_UNIX, SOCK_STREAM, 0, sv) < 0)
+  if (socketpair(AF_UNIX, SOCK_STREAM, 0, sv) < 0) {
+    free_config_env_vars(cfg);
     return -1;
+  }
 
   pid_t child = fork();
   if (child < 0) {
     close(sv[0]);
     close(sv[1]);
+    free_config_env_vars(cfg);
     return -1;
   }
 
@@ -775,16 +771,16 @@ int enter_rootfs(struct ds_config *cfg, const char *user) {
     ds_cgroup_attach(pid);
 
     if (enter_namespace(pid) < 0)
-      exit(EXIT_FAILURE);
+      _exit(EXIT_FAILURE);
 
     /* Allocate TTY INSIDE the container namespaces */
     struct ds_tty_info tty;
     if (ds_terminal_create(&tty) < 0)
-      exit(EXIT_FAILURE);
+      _exit(EXIT_FAILURE);
 
     /* Send master FD back to parent */
     if (ds_send_fd(sv[1], tty.master) < 0)
-      exit(EXIT_FAILURE);
+      _exit(EXIT_FAILURE);
 
     close(tty.master);
     close(sv[1]);
@@ -792,7 +788,7 @@ int enter_rootfs(struct ds_config *cfg, const char *user) {
     /* Must fork again to actually be in the new PID namespace */
     pid_t shell_pid = fork();
     if (shell_pid < 0)
-      exit(EXIT_FAILURE);
+      _exit(EXIT_FAILURE);
     if (shell_pid == 0) {
       /* Establish controlling terminal in the FINAL child process.
        * This is critical: setsid() + TIOCSCTTY must happen in the
@@ -804,16 +800,16 @@ int enter_rootfs(struct ds_config *cfg, const char *user) {
        * causing a hang. This matches how LXC does it in
        * lxc_terminal_prepare_login(). */
       if (ds_terminal_make_controlling(tty.slave) < 0)
-        exit(EXIT_FAILURE);
+        _exit(EXIT_FAILURE);
 
       if (ds_terminal_set_stdfds(tty.slave) < 0)
-        exit(EXIT_FAILURE);
+        _exit(EXIT_FAILURE);
 
       if (tty.slave > STDERR_FILENO)
         close(tty.slave);
 
       if (chdir("/") < 0)
-        exit(EXIT_FAILURE);
+        _exit(EXIT_FAILURE);
 
       /* Apply fixed and user-defined environment */
       ds_env_boot_setup(cfg);
@@ -839,12 +835,12 @@ int enter_rootfs(struct ds_config *cfg, const char *user) {
       }
 
       ds_error("Failed to find any usable shell");
-      exit(EXIT_FAILURE);
+      _exit(EXIT_FAILURE);
     }
     /* Intermediate: close slave fd we no longer need, wait for shell */
     close(tty.slave);
     waitpid(shell_pid, NULL, 0);
-    exit(EXIT_SUCCESS);
+    _exit(EXIT_SUCCESS);
   }
 
   close(sv[1]);
@@ -898,19 +894,21 @@ int run_in_rootfs(struct ds_config *cfg, int argc, char **argv) {
   }
 
   pid_t child = fork();
-  if (child < 0)
+  if (child < 0) {
+    free_config_env_vars(cfg);
     return -1;
+  }
 
   if (child == 0) {
     if (enter_namespace(pid) < 0)
-      exit(EXIT_FAILURE);
+      _exit(EXIT_FAILURE);
 
     pid_t cmd_pid = fork();
     if (cmd_pid < 0)
-      exit(EXIT_FAILURE);
+      _exit(EXIT_FAILURE);
     if (cmd_pid == 0) {
       if (chdir("/") < 0)
-        exit(EXIT_FAILURE);
+        _exit(EXIT_FAILURE);
 
       /* Setup environment */
       ds_env_boot_setup(cfg);
@@ -925,12 +923,12 @@ int run_in_rootfs(struct ds_config *cfg, int argc, char **argv) {
       }
 
       ds_error("Failed to execute command: %s", strerror(errno));
-      exit(EXIT_FAILURE);
+      _exit(EXIT_FAILURE);
     }
 
     int status;
     waitpid(cmd_pid, &status, 0);
-    exit(WIFEXITED(status) ? WEXITSTATUS(status) : EXIT_FAILURE);
+    _exit(WIFEXITED(status) ? WEXITSTATUS(status) : EXIT_FAILURE);
   }
 
   int status;
