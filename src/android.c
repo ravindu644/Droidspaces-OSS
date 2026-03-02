@@ -146,8 +146,9 @@ void android_configure_iptables(void) {
  * ---------------------------------------------------------------------------*/
 
 int android_setup_storage(const char *rootfs_path) {
-  if (!is_android())
+  if (!is_android()) {
     return 0;
+  }
 
   if (!rootfs_path) {
     ds_warn("android_setup_storage called with NULL rootfs_path");

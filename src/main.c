@@ -7,6 +7,8 @@
 
 #include "droidspace.h"
 
+int ds_log_silent = 0;
+
 /* ---------------------------------------------------------------------------
  * Usage / Help
  * ---------------------------------------------------------------------------*/
@@ -210,11 +212,7 @@ int main(int argc, char **argv) {
       cfg.hw_access = 1;
       break;
     case 'X':
-      if (is_android()) {
-        cfg.termux_x11 = 1;
-      } else {
-        ds_warn("--termux-x11 is only applicable on Android. Ignoring.");
-      }
+      cfg.termux_x11 = 1;
       break;
     case 'I':
       cfg.enable_ipv6 = 1;

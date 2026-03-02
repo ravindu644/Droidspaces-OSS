@@ -135,15 +135,22 @@
  * Logging macros
  * ---------------------------------------------------------------------------*/
 
+extern int ds_log_silent;
+
 #define ds_log(fmt, ...)                                                       \
   do {                                                                         \
-    fprintf(stdout, "[" C_GREEN "+" C_RESET "] " fmt "\r\n", ##__VA_ARGS__);   \
-    fflush(stdout);                                                            \
+    if (!ds_log_silent) {                                                      \
+      fprintf(stdout, "[" C_GREEN "+" C_RESET "] " fmt "\r\n", ##__VA_ARGS__); \
+      fflush(stdout);                                                          \
+    }                                                                          \
   } while (0)
 #define ds_warn(fmt, ...)                                                      \
   do {                                                                         \
-    fprintf(stderr, "[" C_YELLOW "!" C_RESET "] " fmt "\r\n", ##__VA_ARGS__);  \
-    fflush(stderr);                                                            \
+    if (!ds_log_silent) {                                                      \
+      fprintf(stderr, "[" C_YELLOW "!" C_RESET "] " fmt "\r\n",                \
+              ##__VA_ARGS__);                                                  \
+      fflush(stderr);                                                          \
+    }                                                                          \
   } while (0)
 #define ds_error(fmt, ...)                                                     \
   do {                                                                         \

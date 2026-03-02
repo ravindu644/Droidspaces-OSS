@@ -341,9 +341,11 @@ int ds_config_save(const char *config_path, struct ds_config *cfg) {
     fprintf(f_out, "pidfile=%s\n", cfg->pidfile);
 
   fprintf(f_out, "enable_ipv6=%d\n", cfg->enable_ipv6);
-  fprintf(f_out, "enable_android_storage=%d\n", cfg->android_storage);
+  if (is_android()) {
+    fprintf(f_out, "enable_android_storage=%d\n", cfg->android_storage);
+    fprintf(f_out, "enable_termux_x11=%d\n", cfg->termux_x11);
+  }
   fprintf(f_out, "enable_hw_access=%d\n", cfg->hw_access);
-  fprintf(f_out, "enable_termux_x11=%d\n", cfg->termux_x11);
   fprintf(f_out, "selinux_permissive=%d\n", cfg->selinux_permissive);
   fprintf(f_out, "volatile_mode=%d\n", cfg->volatile_mode);
   fprintf(f_out, "foreground=%d\n", cfg->foreground);

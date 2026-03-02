@@ -204,6 +204,8 @@ int start_rootfs(struct ds_config *cfg) {
   if (cfg->android_storage && !is_android())
     ds_warn("--enable-android-storage is only supported on Android hosts. "
             "Skipping.");
+  if (cfg->termux_x11 && !is_android())
+    ds_warn("--termux-x11 is only applicable on Android. Skipping.");
 
   /* 1b. Name Uniqueness Check
    * We no longer auto-generate or increment names. The name must be provided
@@ -453,7 +455,9 @@ int start_rootfs(struct ds_config *cfg) {
 
       /* Send init PID to parent via sync pipe (first boot only) */
       if (sync_pipe[1] >= 0) {
-        write(sync_pipe[1], &init_pid, sizeof(pid_t));
+        if (write(sync_pipe[1], &init_pid, sizeof(pid_t)) != sizeof(pid_t)) {
+          /* Reader will detect failure or handle empty/partial read */
+        }
         close(sync_pipe[1]);
         sync_pipe[1] = -1;
       } else {
@@ -519,7 +523,7 @@ int start_rootfs(struct ds_config *cfg) {
     if (WIFEXITED(status) && WEXITSTATUS(status) == DS_REBOOT_EXIT) {
       if (cfg->foreground) {
         printf("\n" C_WHITE "Droidspaces v%s : Container " C_GREEN
-               "%s" C_RESET C_WHITE " is now Rebooting...." C_RESET "\n\n",
+               "%s" C_RESET C_WHITE " is now Rebooting...." C_RESET "\n",
                DS_VERSION, cfg->container_name);
         fflush(stdout);
       } else {
@@ -561,6 +565,9 @@ int start_rootfs(struct ds_config *cfg) {
       }
 
       cfg->reboot_cycle = 1;
+      if (cfg->foreground) {
+        ds_log_silent = 1;
+      }
       goto reboot_loop;
     }
 
