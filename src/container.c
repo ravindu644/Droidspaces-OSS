@@ -101,6 +101,16 @@ int load_config_with_recovery(const char *name, struct ds_config *cfg) {
 
   ensure_workspace();
 
+  /* If config was already explicitly loaded (e.g. via --conf=), skip
+   * reload entirely — CLI overrides are already applied on top of it.
+   * Just ensure pidfile is resolved if missing. */
+  if (cfg->config_file_existed && cfg->config_file[0] != '\0') {
+    if (cfg->pidfile[0] == '\0' && cfg->container_name[0] != '\0')
+      resolve_pidfile_from_name(cfg->container_name, cfg->pidfile,
+                                sizeof(cfg->pidfile));
+    return 0;
+  }
+
   char safe_name[256];
   sanitize_container_name(name, safe_name, sizeof(safe_name));
 
@@ -455,6 +465,12 @@ int start_rootfs(struct ds_config *cfg) {
 
   generate_uuid(cfg->uuid, sizeof(cfg->uuid));
 
+  /* Persist the new UUID to config immediately so disk always matches
+   * the running container. CLI overrides (e.g. -f) are already in cfg
+   * at this point since start_rootfs is called after argument parsing. */
+  if (cfg->config_file[0])
+    ds_config_save(cfg->config_file, cfg);
+
   /* Parse environment file while host paths are reachable (before pivot_root)
    */
   if (cfg->env_file[0] != '\0') {
@@ -469,17 +485,7 @@ int start_rootfs(struct ds_config *cfg) {
              cfg->container_name);
   }
 
-  /* Write UUID sync file for boot sequence
-   * Skip in volatile mode: rootfs.img is mounted RO, and UUID
-   * is already in cfg (survives fork). */
-  if (!cfg->volatile_mode) {
-    char uuid_sync[PATH_MAX];
-    snprintf(uuid_sync, sizeof(uuid_sync), "%.4070s/.droidspaces-uuid",
-             cfg->rootfs_path);
-    write_file(uuid_sync, cfg->uuid);
-  }
-
-  /* 2. Parent-side PTY allocation (LXC Model) */
+  /* 4. Parent-side PTY allocation (LXC Model) */
   /* CRITICAL: Before forking, verify /sbin/init exists in the rootfs */
   char init_path[PATH_MAX];
   char rootfs_norm[PATH_MAX];
@@ -533,7 +539,7 @@ int start_rootfs(struct ds_config *cfg) {
       break;
   }
 
-  /* 3. Resolve target PID file names early so monitor inherits them */
+  /* 5. Resolve target PID file names early so monitor inherits them */
   char global_pidfile[PATH_MAX];
   resolve_pidfile_from_name(cfg->container_name, global_pidfile,
                             sizeof(global_pidfile));
@@ -543,18 +549,18 @@ int start_rootfs(struct ds_config *cfg) {
     safe_strncpy(cfg->pidfile, global_pidfile, sizeof(cfg->pidfile));
   }
 
-  /* 4. Pipe for synchronization */
+  /* 6. Pipe for synchronization */
   int sync_pipe[2];
   if (pipe(sync_pipe) < 0)
     ds_die("pipe failed: %s", strerror(errno));
 
-  /* 5. Configure host-side networking (NAT, ip_forward, DNS) BEFORE fork.
+  /* 7. Configure host-side networking (NAT, ip_forward, DNS) BEFORE fork.
    * This eliminates the race condition where the child boots and reads
    * DNS before the parent has written it. */
   fix_networking_host(cfg);
   android_optimizations(1);
 
-  /* 4. Fork Monitor Process */
+  /* 8. Fork Monitor Process */
   pid_t monitor_pid = fork();
   if (monitor_pid < 0) {
     close(sync_pipe[0]);
@@ -797,8 +803,8 @@ int start_rootfs(struct ds_config *cfg) {
         cfg->container_pid = new_pid;
       }
 
-      /* Generate a fresh UUID for the new boot cycle */
-      generate_uuid(cfg->uuid, sizeof(cfg->uuid));
+      /* Re-write the same UUID to sync file for the next boot cycle.
+       * internal_boot reads this across the pivot_root boundary. */
       if (!cfg->volatile_mode && cfg->rootfs_path[0]) {
         char uuid_sync[PATH_MAX];
         snprintf(uuid_sync, sizeof(uuid_sync), "%.4060s/.droidspaces-uuid",
@@ -863,7 +869,7 @@ int start_rootfs(struct ds_config *cfg) {
   ds_log("Container started with PID %d (Monitor: %d)", cfg->container_pid,
          monitor_pid);
 
-  /* 5b. Android: Remount /data with suid for directory-based containers.
+  /* 9. Android: Remount /data with suid for directory-based containers.
    * This is required for sudo/su to work if the rootfs is on /data. */
   if (is_android() && !cfg->rootfs_img_path[0])
     android_remount_data_suid();
@@ -872,7 +878,7 @@ int start_rootfs(struct ds_config *cfg) {
   if (cfg->volatile_mode)
     ds_log("Entering volatile mode (OverlayFS)...");
 
-  /* 6. Save PID file */
+  /* 10. Save PID file */
   char pid_str[32];
   snprintf(pid_str, sizeof(pid_str), "%d", cfg->container_pid);
 
@@ -891,7 +897,7 @@ int start_rootfs(struct ds_config *cfg) {
   if (cfg->is_img_mount)
     save_mount_path(cfg->pidfile, cfg->img_mount_point);
 
-  /* 6. Foreground or background finish */
+  /* 11. Foreground or background finish */
   if (cfg->foreground) {
 
     if (lock_acquired) {

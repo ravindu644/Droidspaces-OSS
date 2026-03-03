@@ -384,13 +384,6 @@ int main(int argc, char **argv) {
       if (cfg.hostname[0] == '\0' && cfg.container_name[0]) {
         safe_strncpy(cfg.hostname, cfg.container_name, sizeof(cfg.hostname));
       }
-
-      /* Ensure persistent UUID for discovery */
-      if (cfg.uuid[0] == '\0') {
-        generate_uuid(cfg.uuid, sizeof(cfg.uuid));
-      }
-
-      ds_config_save(cfg.config_file, &cfg);
     }
 
     ret = start_rootfs(&cfg);
@@ -448,13 +441,6 @@ int main(int argc, char **argv) {
       if (cfg.hostname[0] == '\0' && cfg.container_name[0]) {
         safe_strncpy(cfg.hostname, cfg.container_name, sizeof(cfg.hostname));
       }
-
-      /* Ensure persistent UUID for discovery */
-      if (cfg.uuid[0] == '\0') {
-        generate_uuid(cfg.uuid, sizeof(cfg.uuid));
-      }
-
-      ds_config_save(cfg.config_file, &cfg);
     }
 
     ret = restart_rootfs(&cfg);
