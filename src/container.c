@@ -8,14 +8,102 @@
 #include "droidspace.h"
 
 /* ---------------------------------------------------------------------------
- * Cleanup
+ * External Command Lock — CLI-only ownership
+ *
+ * The lock represents exactly ONE thing: an external CLI command is actively
+ * managing this container. ONLY the CLI parent creates/removes locks.
+ * The monitor is READ-ONLY for locks.
  * ---------------------------------------------------------------------------*/
 
-/* Build a restart marker path from a container name.
- * Returns the path in 'buf'. Safe against format-truncation. */
-static void restart_marker_path(const char *name, char *buf, size_t size) {
-  snprintf(buf, size, "%.2048s/%.256s.restart", get_pids_dir(), name);
+/* Build lock path with defensive truncation.
+ * Precision: 2048 (pids_dir) + 256 (name) + 5 (.lock) = 2309 < PATH_MAX (4096)
+ * This prevents format-truncation warnings while ensuring paths never overflow.
+ */
+static void get_lock_path(const char *name, char *buf, size_t size) {
+  snprintf(buf, size, "%.2048s/%.256s" DS_EXT_LOCK, get_pids_dir(), name);
 }
+
+/* Create external command lock — ONLY called by CLI parent.
+ * Returns: 0 on success, -1 if lock already held by a live process. */
+static int acquire_external_lock(const char *name) {
+  char lock_path[PATH_MAX];
+  get_lock_path(name, lock_path, sizeof(lock_path));
+
+  /* Check if lock already exists */
+  if (access(lock_path, F_OK) == 0) {
+    /* Lock exists — verify if holder is still alive */
+    char buf[32];
+    if (read_file(lock_path, buf, sizeof(buf)) > 0) {
+      pid_t holder = (pid_t)atoi(buf);
+      if (holder > 0 && holder != getpid() && kill(holder, 0) == 0) {
+        /* Lock holder is alive and NOT us — cannot acquire */
+        ds_warn("Cannot acquire lock: held by process %d", holder);
+        return -1;
+      }
+      /* Stale lock detected */
+      if (holder > 0 && holder != getpid()) {
+        ds_log("Removing stale lock (holder PID %d is dead)", holder);
+      }
+    }
+    /* Remove stale lock */
+    unlink(lock_path);
+  }
+
+  /* Write our PID to lock file */
+  char pid_str[32];
+  snprintf(pid_str, sizeof(pid_str), "%d", getpid());
+  return write_file_atomic(lock_path, pid_str);
+}
+
+/* Release external command lock — ONLY called by CLI parent.
+ * Verifies ownership before removing. */
+static void release_external_lock(const char *name) {
+  char lock_path[PATH_MAX];
+  get_lock_path(name, lock_path, sizeof(lock_path));
+
+  /* Verify we own the lock before removing */
+  char buf[32];
+  if (read_file(lock_path, buf, sizeof(buf)) > 0) {
+    pid_t holder = (pid_t)atoi(buf);
+    if (holder == getpid()) {
+      unlink(lock_path);
+    } else if (holder > 0) {
+      /* This should never happen but log it for debugging */
+      ds_warn("Attempted to release lock owned by PID %d (we are %d)", holder,
+              getpid());
+    }
+  }
+}
+
+/* Check if external command lock exists — called by monitor (READ ONLY).
+ * Returns: 1 if lock exists and holder is alive, 0 otherwise. */
+static int is_external_lock_active(const char *name) {
+  char lock_path[PATH_MAX];
+  get_lock_path(name, lock_path, sizeof(lock_path));
+
+  if (access(lock_path, F_OK) != 0)
+    return 0; /* No lock */
+
+  /* Lock exists — verify holder is alive */
+  char buf[32];
+  if (read_file(lock_path, buf, sizeof(buf)) > 0) {
+    pid_t holder = (pid_t)atoi(buf);
+    if (holder > 0 && kill(holder, 0) == 0)
+      return 1; /* Valid lock */
+
+    /* Stale lock detected */
+    write_monitor_debug_log(name, "Removing stale lock (holder PID %d is dead)",
+                            holder);
+  }
+
+  /* Remove stale lock */
+  unlink(lock_path);
+  return 0;
+}
+
+/* ---------------------------------------------------------------------------
+ * Cleanup
+ * ---------------------------------------------------------------------------*/
 
 static void cleanup_container_resources(struct ds_config *cfg, pid_t pid,
                                         int skip_unmount, int force_cleanup) {
@@ -99,13 +187,9 @@ static void cleanup_container_resources(struct ds_config *cfg, pid_t pid,
     if (global_pidfile[0] && strcmp(cfg->pidfile, global_pidfile) != 0)
       unlink(global_pidfile);
 
-    /* Also clean up any stale restart marker (edge case: restart was
-     * attempted but the new start never consumed the marker). */
-    if (cfg->container_name[0]) {
-      char marker[PATH_MAX];
-      restart_marker_path(cfg->container_name, marker, sizeof(marker));
-      unlink(marker); /* ignore errors — may not exist */
-    }
+    /* Stale lock cleanup is handled by acquire_external_lock and
+     * is_external_lock_active. Monitor only does resource cleanup
+     * if no external lock is active. */
   }
 }
 
@@ -159,39 +243,39 @@ int check_status(struct ds_config *cfg, pid_t *pid_out) {
  * ---------------------------------------------------------------------------*/
 
 int start_rootfs(struct ds_config *cfg) {
-  /* 0. Early restart detection: check for existing mount BEFORE name
-   *    resolution or workspace setup, using the restart marker and
-   *    .mount sidecar to detect a preserved mount from stop(skip_unmount). */
-  int restart_reuse = 0;
+  /* 0. Early restart detection: check for external lock from previous stop
+   *    command to detect a preserved mount for reuse. */
+  int lock_acquired = 0;
   if (cfg->container_name[0] && cfg->rootfs_img_path[0]) {
-    /* Build restart marker path */
-    char restart_marker[PATH_MAX];
-    restart_marker_path(cfg->container_name, restart_marker,
-                        sizeof(restart_marker));
+    char lock_path[PATH_MAX];
+    get_lock_path(cfg->container_name, lock_path, sizeof(lock_path));
 
-    if (access(restart_marker, F_OK) == 0) {
-      /* Restart marker present — try to reuse existing mount */
-      unlink(restart_marker); /* consume the marker */
+    if (access(lock_path, F_OK) == 0) {
+      /* This looks like a restart handoff — take ownership of the lock */
+      if (acquire_external_lock(cfg->container_name) == 0) {
+        lock_acquired = 1;
 
-      /* Resolve pidfile so we can read .mount sidecar */
-      if (cfg->pidfile[0] == '\0')
-        resolve_pidfile_from_name(cfg->container_name, cfg->pidfile,
-                                  sizeof(cfg->pidfile));
+        /* Try to reuse existing mount */
+        if (cfg->pidfile[0] == '\0')
+          resolve_pidfile_from_name(cfg->container_name, cfg->pidfile,
+                                    sizeof(cfg->pidfile));
 
-      char existing_mount[PATH_MAX];
-      if (cfg->pidfile[0] &&
-          read_mount_path(cfg->pidfile, existing_mount,
-                          sizeof(existing_mount)) > 0 &&
-          is_mountpoint(existing_mount)) {
-        ds_log("Reusing existing mount at %s (restart)", existing_mount);
-        safe_strncpy(cfg->rootfs_path, existing_mount,
-                     sizeof(cfg->rootfs_path));
-        cfg->is_img_mount = 1;
-        safe_strncpy(cfg->img_mount_point, cfg->rootfs_path,
-                     sizeof(cfg->img_mount_point));
-        restart_reuse = 1;
-      } else {
-        ds_warn("Restart marker found but mount not active, doing fresh mount");
+        char existing_mount[PATH_MAX];
+        if (cfg->pidfile[0] &&
+            read_mount_path(cfg->pidfile, existing_mount,
+                            sizeof(existing_mount)) > 0 &&
+            is_mountpoint(existing_mount)) {
+          ds_log("Reusing existing mount at %s (restart)", existing_mount);
+          safe_strncpy(cfg->rootfs_path, existing_mount,
+                       sizeof(cfg->rootfs_path));
+          cfg->is_img_mount = 1;
+          safe_strncpy(cfg->img_mount_point, cfg->rootfs_path,
+                       sizeof(cfg->img_mount_point));
+        } else {
+          /* Mount not active — remove invalid lock */
+          release_external_lock(cfg->container_name);
+          lock_acquired = 0;
+        }
       }
     }
   }
@@ -210,7 +294,7 @@ int start_rootfs(struct ds_config *cfg) {
   /* 1b. Name Uniqueness Check
    * We no longer auto-generate or increment names. The name must be provided
    * by the user and it must be unique. */
-  if (!restart_reuse) {
+  if (!lock_acquired) {
     pid_t existing_pid = 0;
     if (is_container_running(cfg, &existing_pid)) {
       ds_error("Container name '%s' is already in use by PID %d.",
@@ -225,7 +309,7 @@ int start_rootfs(struct ds_config *cfg) {
   }
 
   /* 2. Mount rootfs image if provided (using the resolved name) */
-  if (cfg->rootfs_img_path[0] && !restart_reuse) {
+  if (cfg->rootfs_img_path[0] && !lock_acquired) {
     if (mount_rootfs_img(cfg->rootfs_img_path, cfg->rootfs_path,
                          sizeof(cfg->rootfs_path), cfg->volatile_mode,
                          cfg->container_name) < 0) {
@@ -365,6 +449,19 @@ int start_rootfs(struct ds_config *cfg) {
       ds_error("setsid failed: %s", strerror(errno));
       _exit(EXIT_FAILURE);
     }
+
+    /* ── Monitor Hardening ──
+     * Ignore common termination signals to prevent Android's process manager
+     * from ending the supervisor prematurely. Monitor must only die via
+     * SIGKILL or successful container exit. */
+    signal(SIGTERM, SIG_IGN);
+    signal(SIGINT, SIG_IGN);
+    signal(SIGQUIT, SIG_IGN);
+    signal(SIGHUP, SIG_IGN);
+    signal(SIGPIPE, SIG_IGN);
+    signal(SIGUSR1, SIG_IGN);
+    signal(SIGUSR2, SIG_IGN);
+
     prctl(PR_SET_NAME, "[ds-monitor]", 0, 0, 0);
 
     /* Unshare namespaces - Monitor enters new UTS, IPC, and optionally Cgroup
@@ -514,21 +611,54 @@ int start_rootfs(struct ds_config *cfg) {
       stdio_redirected = 1;
     }
 
-    /* Wait for intermediate (which waits for init) */
+    /* MONITOR waits for intermediate to complete */
+
+    /* CRITICAL TIMING: Close sync pipe write end ONLY after intermediate
+     * finishes. This ensures intermediate can write init PID to parent on first
+     * boot. Closing too early causes parent's read() to return EOF, triggering
+     * cleanup that deletes the PID file while container is still booting. See
+     * commit 6f9f99a for details on the boot-at-boot race this prevents. */
+    if (sync_pipe[1] >= 0) {
+      close(sync_pipe[1]);
+      sync_pipe[1] = -1;
+    }
+
     int status;
     while (waitpid(mid_pid, &status, 0) < 0 && errno == EINTR)
       ;
 
-    /* ── Reboot detection (exit code only — zero signal ambiguity) ── */
+    /* Log what monitor saw */
+    if (WIFEXITED(status)) {
+      int code = WEXITSTATUS(status);
+      if (code == DS_REBOOT_EXIT) {
+        write_monitor_debug_log(cfg->container_name,
+                                "Detected internal REBOOT");
+      } else {
+        write_monitor_debug_log(cfg->container_name,
+                                "Detected container SHUTDOWN (exit: %d)", code);
+      }
+    } else if (WIFSIGNALED(status)) {
+      write_monitor_debug_log(cfg->container_name,
+                              "Intermediate killed by signal: %d (%s)",
+                              WTERMSIG(status), strsignal(WTERMSIG(status)));
+    }
+
+    /* ── Reboot detection (internal reboot) ── */
     if (WIFEXITED(status) && WEXITSTATUS(status) == DS_REBOOT_EXIT) {
+      /* Check for external lock — if exists, abort reboot and let CLI handle it
+       */
+      if (is_external_lock_active(cfg->container_name)) {
+        write_monitor_debug_log(
+            cfg->container_name,
+            "External command lock detected — aborting internal reboot");
+        goto monitor_cleanup_and_exit;
+      }
+
       if (cfg->foreground) {
         printf("\n" C_WHITE "Droidspaces v%s : Container " C_GREEN
                "%s" C_RESET C_WHITE " is now Rebooting...." C_RESET "\n",
                DS_VERSION, cfg->container_name);
         fflush(stdout);
-      } else {
-        ds_log("Container '%s' requested reboot — restarting...",
-               cfg->container_name);
       }
 
       /* Synchronize container_pid in Monitor */
@@ -548,10 +678,8 @@ int start_rootfs(struct ds_config *cfg) {
 
       /* Reload configuration from disk if available (merge strategy) */
       if (cfg->config_file[0]) {
-        /* Free old dynamic allocations before reload to avoid leaks */
         free_config_binds(cfg);
         free_config_env_vars(cfg);
-
         struct ds_config reboot_cfg = *cfg;
         if (ds_config_load(cfg->config_file, &reboot_cfg) == 0) {
           if (strcmp(cfg->dns_servers, reboot_cfg.dns_servers) != 0) {
@@ -565,33 +693,27 @@ int start_rootfs(struct ds_config *cfg) {
       }
 
       cfg->reboot_cycle = 1;
-      if (cfg->foreground) {
+      if (cfg->foreground)
         ds_log_silent = 1;
-      }
       goto reboot_loop;
     }
 
-    /* Not a reboot — check for restart marker */
-    char restart_marker[PATH_MAX];
-    /* Use precision to satisfy GCC -Werror=format-truncation while keeping
-     * explicit return value checks for safety. */
-    int n =
-        snprintf(restart_marker, sizeof(restart_marker),
-                 "%.2048s/%.256s.restart", get_pids_dir(), cfg->container_name);
-    if (n >= (int)sizeof(restart_marker)) {
-      ds_warn("Restart marker path truncated: %s", cfg->container_name);
+    /* Not a reboot — check if external command is handling cleanup */
+    if (is_external_lock_active(cfg->container_name)) {
+      write_monitor_debug_log(cfg->container_name,
+                              "External command lock detected — yielding "
+                              "cleanup to CLI");
+      goto monitor_cleanup_and_exit;
     }
 
-    if (access(restart_marker, F_OK) == 0) {
-      ds_log("Restart marker found, skipping monitor cleanup");
-    } else {
-      cleanup_container_resources(cfg, 0, 0, 0);
-    }
+    /* Normal exit — monitor does cleanup */
+    write_monitor_debug_log(cfg->container_name, "Monitor performing cleanup");
+    cleanup_container_resources(cfg, 0, 0, 0);
 
+  monitor_cleanup_and_exit:
     /* Free dynamically allocated configuration members before exit */
     free_config_binds(cfg);
     free_config_env_vars(cfg);
-
     _exit(WIFEXITED(status) ? WEXITSTATUS(status) : 0);
   }
 
@@ -601,6 +723,8 @@ int start_rootfs(struct ds_config *cfg) {
   /* Wait for Monitor to send child PID */
   if (read(sync_pipe[0], &cfg->container_pid, sizeof(pid_t)) != sizeof(pid_t)) {
     ds_error("Monitor failed to send container PID.");
+    if (lock_acquired)
+      release_external_lock(cfg->container_name);
     goto cleanup;
   }
   close(sync_pipe[0]);
@@ -640,6 +764,11 @@ int start_rootfs(struct ds_config *cfg) {
   /* 6. Foreground or background finish */
   if (cfg->foreground) {
 
+    if (lock_acquired) {
+      release_external_lock(cfg->container_name);
+      lock_acquired = 0;
+    }
+
     int ret =
         console_monitor_loop(cfg->console.master, monitor_pid, cfg->pidfile);
     free_config_env_vars(cfg);
@@ -675,6 +804,8 @@ int start_rootfs(struct ds_config *cfg) {
     }
 
     show_info(cfg, 1);
+    if (lock_acquired)
+      release_external_lock(cfg->container_name);
     ds_log("Container '%s' is running in background.", cfg->container_name);
     if (is_android()) {
       ds_log("Use 'su -c \"%s --name='%s' enter\"' to connect.", cfg->prog_name,
@@ -685,6 +816,8 @@ int start_rootfs(struct ds_config *cfg) {
     }
   }
 
+  if (lock_acquired)
+    release_external_lock(cfg->container_name);
   free_config_binds(cfg);
   free_config_env_vars(cfg);
 
@@ -695,6 +828,8 @@ cleanup:
    * This ensures image mounts and tracking files are reverted on fatal boot
    * errors. */
   cleanup_container_resources(cfg, cfg->container_pid, 0, 1 /* force */);
+  if (lock_acquired)
+    release_external_lock(cfg->container_name);
 
   if (cfg->console.master >= 0) {
     close(cfg->console.master);
@@ -717,21 +852,22 @@ cleanup:
 }
 
 int stop_rootfs(struct ds_config *cfg, int skip_unmount) {
+  /* Acquire external command lock FIRST */
+  if (acquire_external_lock(cfg->container_name) != 0) {
+    ds_error("Cannot stop '%s': another command is managing this container",
+             cfg->container_name);
+    ds_error("Wait for the other operation to complete, or use 'droidspaces "
+             "show' to check status");
+    return -1;
+  }
+
   pid_t pid;
   if (check_status(cfg, &pid) < 0) {
+    release_external_lock(cfg->container_name);
     return -1; /* Container not running — signal failure to caller */
   }
 
   ds_log("Stopping container '%s' (PID %d)...", cfg->container_name, pid);
-
-  /* If this is a restart (skip_unmount), create a restart marker so the
-   * background monitor knows to skip cleanup when the process exits. */
-  if (skip_unmount) {
-    char restart_marker[PATH_MAX];
-    restart_marker_path(cfg->container_name, restart_marker,
-                        sizeof(restart_marker));
-    write_file(restart_marker, "1");
-  }
 
   /* Safe Metadata Capture: Read the mount path from the tracking file (.mount)
    * into memory before we start the shutdown wait loop. This ensures we have
@@ -807,6 +943,13 @@ int stop_rootfs(struct ds_config *cfg, int skip_unmount) {
 
   if (!cfg->foreground)
     ds_log("Container '%s' stopped.", cfg->container_name);
+
+  /* Release lock ONLY if this is a final stop.
+   * For restarts (skip_unmount=1), keep lock alive as handoff. */
+  if (!skip_unmount) {
+    release_external_lock(cfg->container_name);
+  }
+
   return 0;
 }
 

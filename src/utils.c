@@ -628,6 +628,40 @@ void check_kernel_recommendation(void) {
   }
 }
 
+void write_monitor_debug_log(const char *name, const char *fmt, ...) {
+  if (!name || !name[0] || !fmt)
+    return;
+
+  char log_dir[PATH_MAX];
+  snprintf(log_dir, sizeof(log_dir), "%.2048s/" DS_LOGS_SUBDIR "/%.256s",
+           get_workspace_dir(), name);
+  mkdir_p(log_dir, 0755);
+
+  char log_path[PATH_MAX];
+  snprintf(log_path, sizeof(log_path), "%.4090s/log", log_dir);
+
+  FILE *f = fopen(log_path, "ae"); /* append + close-on-exec */
+  if (!f)
+    return;
+
+  /* Timestamp */
+  struct timespec ts;
+  clock_gettime(CLOCK_REALTIME, &ts);
+  struct tm tm;
+  localtime_r(&ts.tv_sec, &tm);
+  fprintf(f, "[%04d-%02d-%02d %02d:%02d:%02d.%03ld] [ds-monitor] ",
+          tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday, tm.tm_hour, tm.tm_min,
+          tm.tm_sec, ts.tv_nsec / 1000000);
+
+  va_list ap;
+  va_start(ap, fmt);
+  vfprintf(f, fmt, ap);
+  va_end(ap);
+
+  fputc('\n', f);
+  fclose(f);
+}
+
 void print_ds_banner(void) {
   printf(C_CYAN C_BOLD "— Welcome to " C_WHITE DS_PROJECT_NAME
                        " v" DS_VERSION C_CYAN " ! —" C_RESET "\r\n\r\n");

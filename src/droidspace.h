@@ -80,6 +80,7 @@
 #define DS_MAX_MOUNT_TRIES 1024
 #define DS_BIND_INITIAL_CAP 4
 #define DS_VOLATILE_SUBDIR "Volatile"
+#define DS_LOGS_SUBDIR "Logs"
 #define DS_ANDROID_TMPFS_CONTEXT "u:object_r:tmpfs:s0"
 #define DS_ANDROID_VOLD_CONTEXT "u:object_r:vold_data_file:s0"
 #define DS_MAX_GPU_GROUPS 32
@@ -115,7 +116,7 @@
 /* File Extensions */
 #define DS_EXT_PID ".pid"
 #define DS_EXT_MOUNT ".mount"
-#define DS_EXT_RESTART ".restart"
+#define DS_EXT_LOCK ".lock"
 
 /* Signals */
 #define DS_SIG_STOP (SIGRTMIN + 3)
@@ -273,6 +274,7 @@ int ds_recv_fd(int sock);
 void print_ds_banner(void);
 int is_systemd_rootfs(const char *path);
 void check_kernel_recommendation(void);
+void write_monitor_debug_log(const char *name, const char *fmt, ...);
 
 /* ---------------------------------------------------------------------------
  * config.c
