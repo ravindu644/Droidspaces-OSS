@@ -1084,7 +1084,7 @@ int ds_ipt_add_portforwards(struct ds_config *cfg, const char *container_ip) {
     snprintf(to_dest, sizeof(to_dest), "%s:%u", container_ip,
              pf->container_port);
 
-    ds_log("[IPT] portforward: %s %s -> %s", pf->proto, host_port_str, to_dest);
+    ds_log("portforward: %s %s -> %s", pf->proto, host_port_str, to_dest);
 
     /* PREROUTING DNAT */
     char *dnat[] = {"iptables",         "-t",          "nat", "-I",
@@ -1092,8 +1092,7 @@ int ds_ipt_add_portforwards(struct ds_config *cfg, const char *container_ip) {
                     "--dport",          host_port_str, "-j",  "DNAT",
                     "--to-destination", to_dest,       NULL};
     if (run_command_quiet(dnat) != 0)
-      ds_warn("[IPT] portforward: DNAT insert failed for port %s",
-              host_port_str);
+      ds_warn("portforward: DNAT insert failed for port %s", host_port_str);
 
     /* FORWARD ACCEPT */
     char *fwd[] = {
@@ -1102,8 +1101,7 @@ int ds_ipt_add_portforwards(struct ds_config *cfg, const char *container_ip) {
         "--dport",  cont_port_str, "-j",      "ACCEPT",
         NULL};
     if (run_command_quiet(fwd) != 0)
-      ds_warn("[IPT] portforward: FORWARD insert failed for port %s",
-              cont_port_str);
+      ds_warn("portforward: FORWARD insert failed for port %s", cont_port_str);
   }
 
   return 0;
