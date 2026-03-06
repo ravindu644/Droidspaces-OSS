@@ -95,6 +95,60 @@ static int check_seccomp(void) {
   return (prctl(PR_GET_SECCOMP, 0, 0, 0, 0) >= 0 || errno == EINVAL);
 }
 
+/* ---------------------------------------------------------------------------
++ * Live kernel probes for NAT networking capability
++ *
++ * Mirrors the logic in ds_nl_probe_nat_capability() but split into two
++ * independent functions so check.c can report bridge and veth separately.
++ *
++ * Both probes attempt a real RTM_NEWLINK roundtrip and immediately clean up.
++ * This is accurate even when modules are built-in (=y) rather than loadable
++ * (=m), which is the common case on Android.
++ *
++ * Both require root to open a NETLINK_ROUTE socket — guarded early.
++ * If a stale probe interface from a previous crashed session is present,
++ * its existence already proves kernel support — treated as green.
++ *
+---------------------------------------------------------------------------*/
+static int check_bridge_support(void) {
+  if (!is_root)
+    return 0;
+  ds_nl_ctx_t *ctx = ds_nl_open();
+  if (!ctx)
+    return 0;
+  /* Stale probe interface from a previous crashed session → already proves
+   * support */
+  if (ds_nl_link_exists(ctx, "ds-cap-br0")) {
+    ds_nl_close(ctx);
+    return 1;
+  }
+  int ret = ds_nl_create_bridge(ctx, "ds-cap-br0");
+  if (ret == 0)
+    ds_nl_del_link(ctx, "ds-cap-br0");
+  ds_nl_close(ctx);
+  return (ret == 0);
+}
+
+static int check_veth_support(void) {
+  if (!is_root)
+    return 0;
+  ds_nl_ctx_t *ctx = ds_nl_open();
+  if (!ctx)
+    return 0;
+  /* Stale host-side probe veth from a previous crashed session → already proves
+   * support */
+  if (ds_nl_link_exists(ctx, "ds-cap-h0")) {
+    ds_nl_close(ctx);
+    return 1;
+  }
+  int ret = ds_nl_create_veth(ctx, "ds-cap-h0", "ds-cap-p0");
+  if (ret == 0)
+    ds_nl_del_link(ctx,
+                   "ds-cap-h0"); /* deleting host side also kills the peer */
+  ds_nl_close(ctx);
+  return (ret == 0);
+}
+
 static int check_kernel_version_supported(void) {
   int major = 0, minor = 0;
   if (get_kernel_version(&major, &minor) < 0)
@@ -356,6 +410,13 @@ int check_requirements_detailed(void) {
   print_ds_check("Network namespace",
                  "Network namespace isolation for --net=nat/none",
                  check_ns(CLONE_NEWNET, "net"), "OPT");
+  print_ds_check("Bridge device support",
+                 "Required for --net=nat (bridge mode); bridgeless fallback "
+                 "used if absent",
+                 check_bridge_support(), "OPT");
+  print_ds_check("Veth pair support",
+                 "Required for --net=nat; no fallback exists if absent",
+                 check_veth_support(), "OPT");
 
   /* FINAL SUMMARY */
   check_append("\n" C_BOLD "Summary:" C_RESET "\n");
