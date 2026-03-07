@@ -775,13 +775,13 @@ static int ds_nl_rule_op(ds_nl_ctx_t *ctx, int cmd, uint32_t src_be,
     req.n.nlmsg_flags |= NLM_F_CREATE;
 
   req.r.rtm_family = AF_INET;
-  req.r.rtm_protocol = RTPROT_BOOT;
-  req.r.rtm_scope = RT_SCOPE_UNIVERSE;
-  req.r.rtm_type = RTN_UNICAST;
+  req.r.rtm_protocol = 0; /* res1 in fib_rule_hdr */
+  req.r.rtm_scope = 0;    /* res2 in fib_rule_hdr */
+  req.r.rtm_type = 1;     /* FR_ACT_TO_TBL (1) == RTN_UNICAST */
   req.r.rtm_src_len = src_len;
   req.r.rtm_dst_len = dst_len;
   req.r.rtm_table =
-      (table > 0 && table < 256) ? (uint8_t)table : RT_TABLE_UNSPEC;
+      (table > 0 && table < 256) ? (uint8_t)table : 0; /* RT_TABLE_UNSPEC */
 
   if (src_len > 0)
     nl_addattr(&req.n, (int)sizeof(req), FRA_SRC, &src_be, 4);

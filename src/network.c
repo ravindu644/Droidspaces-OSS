@@ -678,6 +678,15 @@ static void do_upstream_reprobe(void) {
     pthread_mutex_unlock(&g_gw_mutex);
     ds_log("[NET] Route monitor: rule updated → from %s lookup %d (prio 100)",
            DS_DEFAULT_SUBNET, new_table);
+
+    /* Android's netd aggressively disables ip_forward when interfaces go down
+     * or when tethering is halted. Re-enable it whenever we find a valid active
+     * upstream to prevent the container's internet from falling into a black
+     * hole.
+     */
+    if (is_android()) {
+      write_file("/proc/sys/net/ipv4/ip_forward", "1");
+    }
   } else {
     ds_warn("[NET] Route monitor: failed to install new rule for table %d",
             new_table);
@@ -728,9 +737,23 @@ static void *route_monitor_loop(void *arg) {
   struct pollfd pfd = {.fd = sock, .events = POLLIN};
 
   while (!g_stop_monitor) {
-    /* 30-second heartbeat: last resort for devices with broken netlink
-     * notifications (some vendor kernels suppress IFADDR/LINK events). */
-    int pr = poll(&pfd, 1, 30000);
+    /* Enforce IPv4 forwarding in real-time. Since Android kernels do not
+     * broadcast POLLERR/inotify events for /proc/sys/ memory variables,
+     * we must check it periodically. Reading a 1-byte procfs memory flag
+     * takes < 1 microsecond, costing 0% CPU. */
+    if (is_android() && g_current_gw_table > 0) {
+      char val[4] = {0};
+      if (read_file("/proc/sys/net/ipv4/ip_forward", val, sizeof(val)) > 0 &&
+          val[0] == '0') {
+        ds_log("[NET] Route monitor: ip_forward was disabled by Android, "
+               "re-enabling...");
+        write_file("/proc/sys/net/ipv4/ip_forward", "1\n");
+      }
+    }
+
+    /* 1.5-second heartbeat: aggressively re-asserts ip_forward and covers
+     * devices with broken netlink notifications. */
+    int pr = poll(&pfd, 1, 1500);
     if (pr < 0) {
       if (g_stop_monitor)
         break;
