@@ -569,6 +569,52 @@ static int internal_run(char *const argv[], int quiet) {
 int run_command(char *const argv[]) { return internal_run(argv, 0); }
 int run_command_quiet(char *const argv[]) { return internal_run(argv, 1); }
 
+/* run_command_log: runs argv, captures stderr and emits it via ds_log so
+ * iptables error messages are visible in the droidspaces log on failure. */
+int run_command_log(char *const argv[]) {
+  int pipefd[2];
+  if (pipe(pipefd) < 0)
+    return internal_run(argv, 0);
+
+  pid_t pid = fork();
+  if (pid < 0) {
+    close(pipefd[0]);
+    close(pipefd[1]);
+    return -1;
+  }
+
+  if (pid == 0) {
+    close(pipefd[0]);
+    dup2(pipefd[1], STDOUT_FILENO);
+    dup2(pipefd[1], STDERR_FILENO);
+    close(pipefd[1]);
+    execvp(argv[0], argv);
+    _exit(127);
+  }
+
+  close(pipefd[1]);
+
+  char buf[512];
+  FILE *f = fdopen(pipefd[0], "r");
+  if (f) {
+    while (fgets(buf, sizeof(buf), f)) {
+      size_t l = strlen(buf);
+      while (l > 0 && (buf[l - 1] == '\n' || buf[l - 1] == '\r'))
+        buf[--l] = '\0';
+      if (l > 0)
+        ds_log("[IPT] %s", buf);
+    }
+    fclose(f);
+  } else {
+    close(pipefd[0]);
+  }
+
+  int status;
+  if (waitpid(pid, &status, 0) < 0)
+    return -1;
+  return WIFEXITED(status) ? WEXITSTATUS(status) : -1;
+}
+
 /* ---------------------------------------------------------------------------
  * FD Passing (SCM_RIGHTS)
  * ---------------------------------------------------------------------------*/

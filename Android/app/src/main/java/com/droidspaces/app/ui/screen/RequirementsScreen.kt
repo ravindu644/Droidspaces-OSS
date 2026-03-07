@@ -249,6 +249,11 @@ CONFIG_CGROUPS=y
 CONFIG_CGROUP_DEVICE=y
 CONFIG_CGROUP_PIDS=y
 CONFIG_MEMCG=y
+CONFIG_CGROUP_SCHED=y
+CONFIG_FAIR_GROUP_SCHED=y
+CONFIG_CFS_BANDWIDTH=y
+CONFIG_CGROUP_FREEZER=y
+CONFIG_CGROUP_NET_PRIO=y
 
 # Device filesystem support (enables hardware access when --hw-access is enabled)
 CONFIG_DEVTMPFS=y
@@ -298,6 +303,13 @@ CONFIG_NETFILTER_XT_TARGET_MASQUERADE=y
 
 # MSS clamping
 CONFIG_NETFILTER_XT_TARGET_TCPMSS=y
+
+# addrtype match (required for --dst-type LOCAL DNAT port forwarding)
+CONFIG_NETFILTER_XT_MATCH_ADDRTYPE=y
+
+# Conntrack netlink + NAT redirect (required for stateful NAT)
+CONFIG_NF_CONNTRACK_NETLINK=y
+CONFIG_NF_NAT_REDIRECT=y
 
 # Policy routing
 CONFIG_IP_ADVANCED_ROUTER=y

@@ -326,6 +326,7 @@ void firmware_path_add_rootfs(const char *rootfs);
 void firmware_path_remove_rootfs(const char *rootfs);
 int run_command(char *const argv[]);
 int run_command_quiet(char *const argv[]);
+int run_command_log(char *const argv[]);
 int get_selinux_context(const char *path, char *buf, size_t size);
 int set_selinux_context(const char *path, const char *context);
 int ds_send_fd(int sock, int fd);

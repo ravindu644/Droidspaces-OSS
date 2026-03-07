@@ -68,6 +68,7 @@ static void probe_iptables_modules(void) {
                   "ip_conntrack",
                   "xt_conntrack",
                   "nf_nat",
+                  "xt_addrtype", /* required for --dst-type LOCAL DNAT */
                   NULL};
   for (int i = 0; mods[i]; i++) {
     char *a[] = {"modprobe", "-q", mods[i], NULL};
@@ -1058,6 +1059,27 @@ int ds_ipt_remove_ds_rules(void) {
 }
 
 /* ---------------------------------------------------------------------------
+ * Internal: check if xt_addrtype match is available on this kernel.
+ * Reads /proc/net/ip_tables_matches which lists every loaded/built-in match.
+ * Falls back to false if the file is unreadable (e.g. no CONFIG_NETFILTER).
+ * ---------------------------------------------------------------------------*/
+
+static int addrtype_available(void) {
+  FILE *f = fopen("/proc/net/ip_tables_matches", "re");
+  if (!f)
+    return 0;
+  char line[64];
+  while (fgets(line, sizeof(line), f)) {
+    if (strncmp(line, "addrtype", 8) == 0) {
+      fclose(f);
+      return 1;
+    }
+  }
+  fclose(f);
+  return 0;
+}
+
+/* ---------------------------------------------------------------------------
  * Public API: ds_ipt_add_portforwards
  *
  * For each entry in cfg->port_forwards, inserts:
@@ -1086,30 +1108,54 @@ int ds_ipt_add_portforwards(struct ds_config *cfg, const char *container_ip) {
 
     ds_log("portforward: %s %s -> %s", pf->proto, host_port_str, to_dest);
 
-    /* PREROUTING DNAT — restricted to traffic destined for the host itself.
-     * Without --dst-type LOCAL, the rule also matches packets the host is
-     * merely forwarding (e.g. hotspot clients), hijacking their traffic. */
-    char *dnat[] = {"iptables",
-                    "-t",
-                    "nat",
-                    "-I",
-                    "PREROUTING",
-                    "1",
-                    "-p",
-                    pf->proto,
-                    "-m",
-                    "addrtype",
-                    "--dst-type",
-                    "LOCAL",
-                    "--dport",
-                    host_port_str,
-                    "-j",
-                    "DNAT",
-                    "--to-destination",
-                    to_dest,
-                    NULL};
-    if (run_command_quiet(dnat) != 0)
-      ds_warn("portforward: DNAT insert failed for port %s", host_port_str);
+    /* PREROUTING DNAT.
+     * Preferred: -m addrtype --dst-type LOCAL restricts the rule to traffic
+     * destined for the phone itself — prevents hijacking hotspot client flows.
+     * Fallback: omit addrtype on kernels where xt_addrtype is absent (common
+     * on Android 4.14 and below). The rule is broader but still functional. */
+    int use_addrtype = addrtype_available();
+    int dnat_ok = 0;
+
+    if (use_addrtype) {
+      char *dnat[] = {"iptables",
+                      "-t",
+                      "nat",
+                      "-I",
+                      "PREROUTING",
+                      "1",
+                      "-p",
+                      pf->proto,
+                      "-m",
+                      "addrtype",
+                      "--dst-type",
+                      "LOCAL",
+                      "--dport",
+                      host_port_str,
+                      "-j",
+                      "DNAT",
+                      "--to-destination",
+                      to_dest,
+                      NULL};
+      dnat_ok = (run_command_log(dnat) == 0);
+      if (!dnat_ok)
+        ds_warn("portforward: DNAT+addrtype failed for port %s, "
+                "retrying without addrtype",
+                host_port_str);
+    }
+
+    if (!dnat_ok) {
+      /* Fallback: no addrtype match — broader rule, still correct for
+       * single-interface phones. Log a notice so the user is aware. */
+      if (!use_addrtype)
+        ds_log("[IPT] xt_addrtype unavailable — using basic DNAT for port %s",
+               host_port_str);
+      char *dnat_fb[] = {"iptables",         "-t",          "nat", "-I",
+                         "PREROUTING",       "1",           "-p",  pf->proto,
+                         "--dport",          host_port_str, "-j",  "DNAT",
+                         "--to-destination", to_dest,       NULL};
+      if (run_command_log(dnat_fb) != 0)
+        ds_warn("portforward: DNAT insert failed for port %s", host_port_str);
+    }
 
     /* FORWARD ACCEPT */
     char *fwd[] = {
