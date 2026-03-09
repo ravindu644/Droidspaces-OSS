@@ -72,6 +72,12 @@ void print_usage(void) {
   printf("  -C, --conf=PATH           Load configuration from file\n");
   printf("      --reset               Reset config to defaults (keeps "
          "name/rootfs)\n");
+  printf(
+      "      --force-cgroupv2      Use cgroupv2 even on kernels < 5.2.\n"
+      "                            Allows modern systemd on legacy kernels\n"
+      "                            that have cgroupv2 mounted but incomplete\n"
+      "                            controllers. May cause instability.\n"
+      "                            No-op if host lacks cgroupv2 support.\n");
   printf("  --help                    Show this help message\n\n");
 
   printf(C_BOLD "Examples:" C_RESET "\n");
@@ -282,6 +288,14 @@ static void enforce_nat_safety(struct ds_config *cfg, int argc, char **argv) {
   }
 }
 
+static void print_cgroup_status(struct ds_config *cfg) {
+  if (cfg->force_cgroupv1) {
+    ds_warn("Using legacy Cgroup V1 hierarchy (forced by --force-cgroupv1)");
+  } else if (!ds_cgroup_host_is_v2()) {
+    ds_warn("Host does not support Cgroup V2 (falling back to legacy V1)");
+  }
+}
+
 int main(int argc, char **argv) {
   int ret = 0;
   struct ds_config cfg;
@@ -314,6 +328,7 @@ int main(int argc, char **argv) {
       {"net", required_argument, 0, 257},
       {"port", required_argument, 0, 258},
       {"upstream", required_argument, 0, 259},
+      {"force-cgroupv1", no_argument, 0, 260},
       {"reset", no_argument, 0, 256},
       {"help", no_argument, 0, 'v'},
       {0, 0, 0, 0}};
@@ -667,6 +682,10 @@ int main(int argc, char **argv) {
       }
       break;
     }
+    case 260:
+      /* --force-cgroupv1: escape hatch to legacy hierarchy */
+      cfg.force_cgroupv1 = 1;
+      break;
 
     case '?':
       /* Ignore unknown options during override if we already found a cmd */
@@ -758,6 +777,7 @@ int main(int argc, char **argv) {
     enforce_nat_safety(&cfg, argc, argv);
 
     print_ds_banner();
+    print_cgroup_status(&cfg);
     check_kernel_recommendation();
     if (cfg.container_name[0] == '\0' && cfg.rootfs_path[0]) {
       generate_container_name(cfg.rootfs_path, cfg.container_name,
@@ -779,6 +799,7 @@ int main(int argc, char **argv) {
     }
     enforce_nat_safety(&cfg, argc, argv);
     print_ds_banner();
+    print_cgroup_status(&cfg);
     ret = restart_rootfs(&cfg);
     goto cleanup;
   }

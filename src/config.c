@@ -208,6 +208,8 @@ int ds_config_load(const char *config_path, struct ds_config *cfg) {
       cfg->selinux_permissive = parse_bool(val);
     } else if (strcmp(key, "volatile_mode") == 0) {
       cfg->volatile_mode = parse_bool(val);
+    } else if (strcmp(key, "force_cgroupv1") == 0) {
+      cfg->force_cgroupv1 = parse_bool(val);
     } else if (strcmp(key, "bind_mounts") == 0) {
       parse_bind_mounts(val, cfg);
     } else if (strcmp(key, "dns_servers") == 0) {
@@ -398,6 +400,7 @@ int ds_config_save(const char *config_path, struct ds_config *cfg) {
   fprintf(f_out, "enable_hw_access=%d\n", cfg->hw_access);
   fprintf(f_out, "selinux_permissive=%d\n", cfg->selinux_permissive);
   fprintf(f_out, "volatile_mode=%d\n", cfg->volatile_mode);
+  fprintf(f_out, "force_cgroupv1=%d\n", cfg->force_cgroupv1);
   fprintf(f_out, "foreground=%d\n", cfg->foreground);
 
   if (cfg->net_mode == DS_NET_NAT) {

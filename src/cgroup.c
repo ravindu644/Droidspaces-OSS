@@ -63,37 +63,17 @@ static int find_self_cgroup_path(const char *controller, char *buf,
   return found ? 0 : -1;
 }
 
-static struct host_cgroup g_cached_cgroups[32];
-static int g_cached_cgroup_count = -1;
-
 /* Parse /proc/self/mountinfo to discover how the host has mounted cgroups.
  * This is the same approach LXC uses to be "data-driven" rather than guessing.
  */
 static int get_host_cgroups(struct host_cgroup *out, int max) {
-  if (g_cached_cgroup_count >= 0) {
-    int count_to_copy =
-        (g_cached_cgroup_count < max) ? g_cached_cgroup_count : max;
-    memcpy(out, g_cached_cgroups, count_to_copy * sizeof(struct host_cgroup));
-    return count_to_copy;
-  }
-
   FILE *f = fopen("/proc/self/mountinfo", "re");
   if (!f)
     return 0;
 
-  /* Android devices have thousands of bind mounts. Use a large buffer
-   * to swallow the whole file in one or two syscalls instead of 1KB chunks. */
-  char io_buf[65536];
-  setvbuf(f, io_buf, _IOFBF, sizeof(io_buf));
-
   char line[2048];
   int count = 0;
   while (fgets(line, sizeof(line), f) && count < max) {
-    /* Fast path rejection: if it doesn't mention cgroup anywhere, skip it
-     * immediately. */
-    if (!strstr(line, "cgroup"))
-      continue;
-
     /* mountinfo format: mountID parentID devID root mountPoint mountOptions
      * [optionalFields] - fsType mountSource superOptions */
     char *dash = strstr(line, " - ");
@@ -164,12 +144,6 @@ static int get_host_cgroups(struct host_cgroup *out, int max) {
     }
   }
   fclose(f);
-
-  /* Cache the discovered cgroups for future calls */
-  g_cached_cgroup_count = (count < 32) ? count : 32;
-  memcpy(g_cached_cgroups, out,
-         g_cached_cgroup_count * sizeof(struct host_cgroup));
-
   return count;
 }
 
@@ -221,7 +195,17 @@ int ds_cgroup_v2_usable(void) {
   return (major > 5 || (major == 5 && minor >= 2));
 }
 
-int setup_cgroups(int is_systemd) {
+/* Returns 1 if the HOST's /sys/fs/cgroup is a pure cgroupv2 root.
+ * Checked before pivot_root so /sys/fs/cgroup still refers to the host mount.
+ * Public so main.c can validate --force-cgroupv2 before launch. */
+int ds_cgroup_host_is_v2(void) {
+  struct statfs sfs;
+  if (statfs("/sys/fs/cgroup", &sfs) != 0)
+    return 0;
+  return (unsigned long)sfs.f_type == (unsigned long)CGROUP2_SUPER_MAGIC;
+}
+
+int setup_cgroups(int is_systemd, int force_cgroupv1) {
   if (access("sys/fs/cgroup", F_OK) != 0) {
     if (mkdir_p("sys/fs/cgroup", 0755) < 0)
       return -1;
@@ -236,18 +220,22 @@ int setup_cgroups(int is_systemd) {
   int n = get_host_cgroups(hosts, 32);
 
   int in_ns = is_cgroup_ns_active();
-  int v2_ok = ds_cgroup_v2_usable();
+
+  /* CGROUP SELECTION LOGIC:
+   * 1. If --force-cgroupv1 is set -> strictly use V1.
+   * 2. Otherwise, if the host has V2 mounted -> use V2.
+   * 3. Fallback to V1.
+   * This allows forcing V2 even on older kernels (like 4.14) if supported
+   * by the host, while giving an escape hatch to V1. */
+  int v2_active = ds_cgroup_host_is_v2() && !force_cgroupv1;
   int systemd_setup_done = 0;
 
   for (int i = 0; i < n; i++) {
     /* STRICT SEPARATION:
-     * - If Kernel < 5.2  -> Only use Cgroup V1 (skip V2).
-     * - If Kernel >= 5.2 -> Only use Cgroup V2 (skip V1).
-     * This avoids hybrid cgroup "collab" which causes messy hierarchies
-     * and systemd confusion on modern distros. */
-    if (v2_ok && hosts[i].version == 1)
+     * We don't mix V1 and V2 hierarchies in the container. */
+    if (v2_active && hosts[i].version == 1)
       continue;
-    if (!v2_ok && hosts[i].version == 2)
+    if (!v2_active && hosts[i].version == 2)
       continue;
 
     char container_mp[PATH_MAX];
@@ -378,9 +366,9 @@ int setup_cgroups(int is_systemd) {
 
   /* 2. FORCED SYSTEMD SUPPORT: If we are booting a systemd rootfs but no
    * systemd hierarchy was found on the host, we MUST create one manually.
-   * On kernels >= 5.2, we are in Pure V2 mode so we never mount the legacy
-   * V1 systemd hierarchy. */
-  if (is_systemd && !systemd_setup_done && !v2_ok) {
+   * On modern kernels (or if V2 is active), we skip this because systemd
+   * will use the unified hierarchy. */
+  if (is_systemd && !systemd_setup_done && !v2_active) {
     mkdir("sys/fs/cgroup/systemd", 0755);
     if (mount("cgroup", "sys/fs/cgroup/systemd", "cgroup",
               MS_NOSUID | MS_NODEV | MS_NOEXEC, "none,name=systemd") < 0) {

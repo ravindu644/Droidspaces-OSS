@@ -275,7 +275,7 @@ int internal_boot(struct ds_config *cfg) {
   /* 11. Setup Cgroups AFTER locking down /sys.
    * Mounting onto a directory on a RO parent is allowed for root, and it
    * ensures the sub-mount (tmpfs) is RW and independent of the parent's RO. */
-  if (setup_cgroups(is_systemd) < 0) {
+  if (setup_cgroups(is_systemd, cfg->force_cgroupv1) < 0) {
     ds_error("Failed to setup container cgroups.");
     return -1;
   }

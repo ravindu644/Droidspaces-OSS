@@ -248,6 +248,7 @@ struct ds_config {
   int selinux_permissive; /* --selinux-permissive */
   int net_bridgeless;     /* Probe result: no CONFIG_BRIDGE, use PTP NAT */
   int reboot_cycle;       /* 1 if we are in a reboot loop */
+  int force_cgroupv1;     /* --force-cgroupv1: use v1 even if v2 is available */
   char prog_name[64];     /* argv[0] for logging */
 
   /* Runtime state */
@@ -399,7 +400,8 @@ int is_binfmt_misc_supported(void);
  * ---------------------------------------------------------------------------*/
 
 int ds_cgroup_v2_usable(void);
-int setup_cgroups(int is_systemd);
+int ds_cgroup_host_is_v2(void);
+int setup_cgroups(int is_systemd, int force_cgroupv1);
 int ds_cgroup_attach(pid_t target_pid);
 
 /* ---------------------------------------------------------------------------

@@ -165,14 +165,12 @@ int ds_terminal_proxy(int master_fd) {
   struct epoll_event ev, events[10];
   char buf[8192];
 
-  /* Set non-blocking mode on STDIN and master_fd to prevent read() hangs */
-  int stdin_flags = fcntl(STDIN_FILENO, F_GETFL, 0);
-  if (stdin_flags >= 0)
-    fcntl(STDIN_FILENO, F_SETFL, stdin_flags | O_NONBLOCK);
-
-  int master_flags = fcntl(master_fd, F_GETFL, 0);
-  if (master_flags >= 0)
-    fcntl(master_fd, F_SETFL, master_flags | O_NONBLOCK);
+  /* NOTE: Do NOT set O_NONBLOCK on STDIN or master_fd here.
+   * This is an epoll-driven loop — read() is only called after epoll_wait()
+   * signals readability, so it will never block.  O_NONBLOCK causes read() to
+   * return -1 EAGAIN between events, which the n<=0 EOF check then
+   * misinterprets as a hangup, closes master_fd, and sends EIO to the slave
+   * (bash), killing the session. */
 
   /* Propagate initial window size */
   update_terminal_size(master_fd);
@@ -247,10 +245,6 @@ int ds_terminal_proxy(int master_fd) {
 
   sigaction(SIGWINCH, &(struct sigaction){.sa_handler = SIG_DFL}, NULL);
   close(epfd);
-
-  /* Restore original blocking mode on STDIN if changed */
-  if (stdin_flags >= 0)
-    fcntl(STDIN_FILENO, F_SETFL, stdin_flags);
 
   return 0;
 }

@@ -514,10 +514,12 @@ int start_rootfs(struct ds_config *cfg) {
 
     /* Adaptive Cgroup Namespace (introduced in Linux 4.6).
      *
-     * STRICT SEPARATION: Only enable cgroupns on kernels >= 5.2 (Pure V2).
-     * On kernels < 5.2 (Pure V1), we skip cgroupns to ensure setup_cgroups()
+     * CGROUP SELECTION: Only enable cgroupns when V2 is active.
+     * If --force-cgroupv1 is set, we skip cgroupns so setup_cgroups()
      * has full rights to create named V1 hierarchies from the host context. */
-    if (access("/proc/self/ns/cgroup", F_OK) == 0 && ds_cgroup_v2_usable()) {
+    int cg_ns_ok = (access("/proc/self/ns/cgroup", F_OK) == 0) &&
+                   (ds_cgroup_host_is_v2() && !cfg->force_cgroupv1);
+    if (cg_ns_ok) {
       /* To get isolation from a cgroup namespace, we must be in a sub-cgroup
        * BEFORE we unshare. If we are in the root '/', the namespace root
        * will be the host's root, providing zero isolation.
@@ -540,8 +542,9 @@ int start_rootfs(struct ds_config *cfg) {
       }
       ns_flags |= CLONE_NEWCGROUP;
     } else {
-      /* Legacy kernel — skip cgroupns, run in host cgroupns with full
-       * rights so setup_cgroups() can create named v1 hierarchies. */
+      /* Legacy kernel without force flag — skip cgroupns, run in host
+       * cgroupns with full rights so setup_cgroups() can create named
+       * v1 hierarchies. */
     }
 
     if (unshare(ns_flags) < 0)
@@ -1238,26 +1241,23 @@ int enter_rootfs(struct ds_config *cfg, const char *user) {
     if (enter_namespace(pid, cfg) < 0)
       _exit(EXIT_FAILURE);
 
-    /* Must fork again to actually be in the new PID namespace before opening
-     * PTY so that the PTY allocates natively inside the container's PID scope.
-     */
+    /* Allocate TTY INSIDE the container namespaces */
+    struct ds_tty_info tty;
+    if (ds_terminal_create(&tty) < 0)
+      _exit(EXIT_FAILURE);
+
+    /* Send master FD back to parent */
+    if (ds_send_fd(sv[1], tty.master) < 0)
+      _exit(EXIT_FAILURE);
+
+    close(tty.master);
+    close(sv[1]);
+
+    /* Must fork again to actually be in the new PID namespace */
     pid_t shell_pid = fork();
     if (shell_pid < 0)
       _exit(EXIT_FAILURE);
-
     if (shell_pid == 0) {
-      /* Allocate TTY INSIDE the container namespaces */
-      struct ds_tty_info tty;
-      if (ds_terminal_create(&tty) < 0)
-        _exit(EXIT_FAILURE);
-
-      /* Send master FD back to parent on host */
-      if (ds_send_fd(sv[1], tty.master) < 0)
-        _exit(EXIT_FAILURE);
-
-      close(tty.master);
-      close(sv[1]);
-
       /* Establish controlling terminal in the FINAL child process.
        * This is critical: setsid() + TIOCSCTTY must happen in the
        * process that will exec the shell, so that programs like
@@ -1305,8 +1305,8 @@ int enter_rootfs(struct ds_config *cfg, const char *user) {
       ds_error("Failed to find any usable shell");
       _exit(EXIT_FAILURE);
     }
-    /* Intermediate: wait for shell, no resources to hold here */
-    close(sv[1]);
+    /* Intermediate: close slave fd we no longer need, wait for shell */
+    close(tty.slave);
     waitpid(shell_pid, NULL, 0);
     _exit(EXIT_SUCCESS);
   }
