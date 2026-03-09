@@ -70,6 +70,10 @@ fi
 log "Masking systemd-networkd-wait-online..."
 ln -sf /dev/null "$ROOTFS_PATH/etc/systemd/system/systemd-networkd-wait-online.service"
 
+# Mask systemd-machine-id-commit.service
+log "Masking systemd-machine-id-commit..."
+ln -sf /dev/null "$ROOTFS_PATH/etc/systemd/system/systemd-machine-id-commit.service"
+
 # 3. Disable power button handling in systemd-logind to prevent container shutdown
 log "Disabling power button handling in systemd-logind..."
 mkdir -p "$ROOTFS_PATH/etc/systemd/logind.conf.d"
