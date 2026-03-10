@@ -65,6 +65,7 @@ What makes Droidspaces unique is its **zero-dependency, native execution** on bo
 - [Installation](#installation)
 - [Usage](#usage)
 - [Additional Documentation](#additional-documentation)
+- [Credits](#credits)
 
 ---
 
@@ -276,5 +277,18 @@ Copyright (C) 2026 [ravindu644](https://github.com/ravindu644) and contributors.
 
 Contributions are welcome. Please open an issue or pull request on the [GitHub repository](https://github.com/ravindu644/Droidspaces-OSS).
 
-For questions or support, join the [Telegram channel](https://t.me/Droidspaces).
+For questions or support, join the [Telegram channel](http://t.me/Droidspaces).
 
+---
+
+<a id="credits"></a>
+
+## Credits & Acknowledgments
+
+Droidspaces is built upon the incredible work of the open-source community. Special thanks to these projects for their inspiration and contributions:
+
+*   **[LXC](https://github.com/lxc/lxc)** - For the core architectural vision and inspiration for modern Linux containerization.
+*   **[Brutal-Busybox](https://github.com/feravolt/Brutal_busybox)** - For the statically-linked BusyBox binaries used in the Android userspace app to perform certain operations.
+*   **[KernelSU-Next](https://github.com/KernelSU-Next/KernelSU-Next)**, **[MMRL](https://github.com/MMRLApp/MMRL)**, and **[LSPatch](https://github.com/LSPosed/LSPatch)** - For inspiring our modern UI design language and Android user experience.
+
+---
