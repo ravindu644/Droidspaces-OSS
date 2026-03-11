@@ -301,6 +301,28 @@ int start_rootfs(struct ds_config *cfg) {
     }
   }
 
+  /* 0a. Resolve any symlinks in rootfs paths to canonical absolute paths.
+   *     This prevents symlink-based attacks and ensures that all subsequent
+   *     operations use the intended location. */
+  if (cfg->rootfs_path[0]) {
+    char resolved[PATH_MAX];
+    if (realpath(cfg->rootfs_path, resolved) == NULL) {
+      ds_error("Failed to resolve rootfs path '%s': %s", cfg->rootfs_path,
+               strerror(errno));
+      goto cleanup;
+    }
+    safe_strncpy(cfg->rootfs_path, resolved, sizeof(cfg->rootfs_path));
+  }
+  if (cfg->rootfs_img_path[0]) {
+    char resolved[PATH_MAX];
+    if (realpath(cfg->rootfs_img_path, resolved) == NULL) {
+      ds_error("Failed to resolve rootfs image path '%s': %s",
+               cfg->rootfs_img_path, strerror(errno));
+      goto cleanup;
+    }
+    safe_strncpy(cfg->rootfs_img_path, resolved, sizeof(cfg->rootfs_img_path));
+  }
+
   /* 1. Preparation */
   ensure_workspace();
 
