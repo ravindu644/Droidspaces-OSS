@@ -292,13 +292,12 @@ This checks for:
 | Version | Support | Notes |
 |---------|---------|-------|
 | 3.18 | Legacy | **Minimum floor.** Basic namespace support. Modern distros are unstable or won't even boot. |
-| 4.4 - 4.19 | Stable | **Hardened.** Full support. Nested containers (Docker/Podman) are natively supported. If you encounter systemd hangs on specific kernels (like 4.14.113) due to the VFS deadlock bug, manually enable the **Deadlock Shield** in the container config. |
+| 4.4 - 4.19 | Stable | **Hardened.** Full support. Nested containers (Docker/Podman) are natively supported. If you encounter systemd hangs on specific kernels (like 4.14.113) due to the VFS deadlock bug, try enabling the "Deadlock Shield" on App/`--block-nested-namespaces` in CLI, hard reboot your device, and try again. |
 | 5.4 - 5.10 | Recommended | **Mainline.** Full feature support, including nested containers and modern Cgroup v2. |
 | 5.15+ | Ideal | **Premium.** All features, best performance, and widest compatibility. |
 
 ---
-> [!WARNING]
->
+
 <a id="nested"></a>
 ## Nested Containers (Docker, Podman, LXC)
 
@@ -308,8 +307,8 @@ Droidspaces natively supports nested containerization (running Docker, Podman, o
 
 While namespace blocking is removed, legacy host kernels may still present challenges for modern nested tools:
 
-- **Deadlock Shield Trade-off**: If your specific device suffers from the 4.14.113 `grab_super()` VFS deadlock and requires the **Deadlock Shield** to boot systemd, enabling the shield will block the namespace syscalls required by Docker and Podman. You cannot use nested containers if the shield is active.
-- **Networking Incompatibilities**: Modern Docker/Podman rely on `nftables`. Legacy kernels often lack full `nftables` support. **Workaround:** Ensure you are using Droidspaces' **NAT mode**, and switch your container's alternatives configuration to use `iptables-legacy` and `ip6tables-legacy`.
+- **Deadlock Shield Trade-off**: If your specific device suffers from the 4.14.113 `grab_super()` VFS deadlock and requires the **Deadlock Shield** to boot systemd, enabling the shield will block the namespace syscalls required by Docker,LXC and Podman. You cannot use nested containers if the shield is active.
+- **Networking Incompatibilities**: Modern Docker/LXC/Podman rely on `nftables`. Legacy kernels often lack full `nftables` support. **Workaround:** Ensure you are using Droidspaces' **NAT mode**, and switch your container's alternatives configuration to use `iptables-legacy` and `ip6tables-legacy`.
 - **BPF Conflicts**: Modern Docker/runc versions use `BPF_CGROUP_DEVICE` for device management. Legacy kernels lack the required BPF attach types, leading to `Invalid argument` errors.
   - **Workaround:** Configure Docker to use the older `cgroupfs` driver and `vfs` storage driver.
 

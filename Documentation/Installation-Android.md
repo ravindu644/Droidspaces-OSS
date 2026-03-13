@@ -31,16 +31,16 @@ You don't need to manually extract rootfs files. The app handles it:
 4. **Choose your Tarball**: Select the downloaded `.tar.xz` or `.tar.gz` file.
 5. **Configuration Wizard**:
    - **Name**: Give your container a friendly name.
-   - **Features**: Toggle Hardware Access, IPv6, Network Isolation, or Android Storage integration.
-   - **Container Type**: We recommend **Sparse Image** for better performance and stability on Android’s f2fs storage.
-6. **Installation**: The app will extract the tarball and apply **Post-Extraction Fixes** automatically (DNS, Network Metrics, and Safe Udev).
+   - **Features**: Toggle Hardware Access, IPv6, Network Isolation, Android storage integration, etc., according to your needs.
+   - **Container Type**: We recommend **Sparse Image** for better performance and stability on Android’s f2fs storage, as well as to prevent weird SELinux/Keyring issues.
+6. **Installation**: The app will extract the tarball and apply **Post-Extraction Fixes** automatically (DNS, Masking useless/dangerous services, and Safe Udev).
 
 ## Verification & Settings
 
 You can verify your system status at any time:
 1. Go to **Settings** (gear icon) -> **Requirements**.
 2. Tap **Check Requirements**. This runs the full `droidspaces check` suite internally.
-3. **Kernel Config**: If you are a kernel developer, you can find a copyable `defconfig` block on this page to ensure your kernel is perfectly compatible with Droidspaces.
+3. **Kernel Config**: If you are a kernel developer, you can find a copyable `droidspaces.config` defconfig fragmenr on [this page](./Kernel-Configuration.md#required-kernel-configuration) to ensure your kernel is perfectly compatible with Droidspaces.
 
 ## Next Steps
 
