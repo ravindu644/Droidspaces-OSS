@@ -186,6 +186,31 @@ struct ds_net_handshake {
 #define DS_NAT_PREFIX 16
 #endif
 
+/* Android ip rule priorities for DS subnet routing.
+ *
+ * Must be < 10000 so they are evaluated BEFORE Android's VPN rule range
+ * (RULE_PRIORITY_VPN_OVERRIDE_SYSTEM = 10000) - this ensures container
+ * traffic bypasses any active VPN and that return traffic for the container
+ * subnet always resolves via the main table even when a VPN is up.
+ *
+ * Must be > 1000 to avoid colliding with OEM/carrier reserved rules that
+ * some vendors install below 1000.  The previous values (90, 100) were
+ * dangerously close to 0 and triggered route re-evaluation races on
+ * certain OEM kernels.
+ *
+ * DS_RULE_PRIO_TO_SUBNET  - "to 172.28.0.0/16 lookup main"
+ *   Guarantees reply traffic to the container always resolves correctly.
+ *
+ * DS_RULE_PRIO_FROM_SUBNET - "from 172.28.0.0/16 lookup <gw_table>"
+ *   Routes container-originated traffic through the active upstream table.
+ */
+#ifndef DS_RULE_PRIO_TO_SUBNET
+#define DS_RULE_PRIO_TO_SUBNET 6090
+#endif
+#ifndef DS_RULE_PRIO_FROM_SUBNET
+#define DS_RULE_PRIO_FROM_SUBNET 6100
+#endif
+
 /* Bind mount entry */
 struct ds_bind_mount {
   char src[PATH_MAX];
@@ -243,7 +268,7 @@ struct ds_config {
   int hw_access;          /* --hw-access */
   int termux_x11;         /* --termux-x11 (Android only) */
   int volatile_mode;      /* --volatile */
-  int enable_ipv6;        /* --enable-ipv6 */
+  int disable_ipv6;       /* --disable-ipv6 */
   int android_storage;    /* --enable-android-storage */
   int selinux_permissive; /* --selinux-permissive */
   int net_bridgeless;     /* Probe result: no CONFIG_BRIDGE, use PTP NAT */

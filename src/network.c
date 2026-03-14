@@ -149,15 +149,11 @@ int fix_networking_host(struct ds_config *cfg) {
   /* Enable IPv4 forwarding */
   write_file("/proc/sys/net/ipv4/ip_forward", "1");
 
-  /* IPv6 disablement: default disabled for safety.
-   * If --enable-ipv6 was used (bridgeless/host mode), we enable it. */
-  if (cfg->enable_ipv6) {
+  /* Re-enable IPv6 globally unless the user disabled it.
+   * No-op on fresh boots where IPv6 was never disabled. */
+  if (!cfg->disable_ipv6) {
     write_file("/proc/sys/net/ipv6/conf/all/disable_ipv6", "0");
     write_file("/proc/sys/net/ipv6/conf/default/disable_ipv6", "0");
-  } else {
-    /* Hard-disable IPv6 to prevent leakage in NAT mode */
-    write_file("/proc/sys/net/ipv6/conf/all/disable_ipv6", "1");
-    write_file("/proc/sys/net/ipv6/conf/default/disable_ipv6", "1");
   }
 
   /* Get DNS and store it in the config struct to be used after pivot_root */
@@ -206,12 +202,19 @@ static void ds_net_setup_android_routing(ds_nl_ctx_t *ctx,
   parse_cidr(DS_DEFAULT_SUBNET, &subnet_be, &mask_be);
   uint8_t prefix = DS_NAT_PREFIX;
 
-  /* Priority 90: inbound traffic to our subnet always resolves via main table.
-   * Install this even if no upstream is active yet — the monitor will handle
-   * the priority-100 rule once an interface comes up. */
-  int ret = ds_nl_add_rule4(ctx, 0, 0, subnet_be, prefix, RT_TABLE_MAIN, 90);
+  /* DS_RULE_PRIO_TO_SUBNET (6090): inbound traffic to our subnet always
+   * resolves via main table.  Install this even if no upstream is active
+   * yet - the monitor will handle the FROM rule once an interface comes up.
+   *
+   * Priority 6090 is:
+   *   • above Android's VPN rule range (10000–22000) -> checked FIRST, so
+   *     reply-to-container traffic is never hijacked by a VPN's catch-all rule
+   *   • above OEM reserved low-priority rules (typically < 1000) */
+  int ret = ds_nl_add_rule4(ctx, 0, 0, subnet_be, prefix, RT_TABLE_MAIN,
+                            DS_RULE_PRIO_TO_SUBNET);
   if (ret < 0)
-    ds_warn("[NET] Android routing: failed to add 'to subnet' rule (90)");
+    ds_warn("[NET] Android routing: failed to add 'to subnet' rule (%d)",
+            DS_RULE_PRIO_TO_SUBNET);
 
   if (!active_iface[0]) {
     ds_warn("[NET] Android routing: no upstream interface is active yet — "
@@ -222,11 +225,15 @@ static void ds_net_setup_android_routing(ds_nl_ctx_t *ctx,
   ds_log("[NET] Android routing: active upstream %s → table %d", active_iface,
          gw_table);
 
-  /* Priority 100: traffic from our subnet → upstream internet table */
-  ret = ds_nl_add_rule4(ctx, subnet_be, prefix, 0, 0, gw_table, 100);
+  /* DS_RULE_PRIO_FROM_SUBNET (6100): traffic from our subnet → upstream
+   * internet table.  Also above Android's VPN range so container-originated
+   * traffic always routes through the physical uplink, not through any VPN
+   * tunnel (the container has its own isolation layer). */
+  ret = ds_nl_add_rule4(ctx, subnet_be, prefix, 0, 0, gw_table,
+                        DS_RULE_PRIO_FROM_SUBNET);
   if (ret == 0) {
-    ds_log("[NET] Android routing: rule from %s lookup table %d (prio 100)",
-           DS_DEFAULT_SUBNET, gw_table);
+    ds_log("[NET] Android routing: rule from %s lookup table %d (prio %d)",
+           DS_DEFAULT_SUBNET, gw_table, DS_RULE_PRIO_FROM_SUBNET);
     /* Seed the monitor's current table so it knows the baseline */
     pthread_mutex_lock(&g_gw_mutex);
     g_current_gw_table = gw_table;
@@ -307,8 +314,18 @@ int setup_veth_host_side(struct ds_config *cfg, pid_t child_pid) {
 
       if (ds_nl_link_up(ctx, DS_NAT_BRIDGE) < 0)
         ds_warn("[DEBUG] Failed to bring up %s", DS_NAT_BRIDGE);
+
+      /* Disable ICMP redirects on the bridge. */
+      write_file("/proc/sys/net/ipv4/conf/" DS_NAT_BRIDGE "/accept_redirects",
+                 "0");
+      write_file("/proc/sys/net/ipv4/conf/" DS_NAT_BRIDGE "/send_redirects",
+                 "0");
     } else {
       ds_log("[DEBUG] Bridge %s already exists.", DS_NAT_BRIDGE);
+      write_file("/proc/sys/net/ipv4/conf/" DS_NAT_BRIDGE "/accept_redirects",
+                 "0");
+      write_file("/proc/sys/net/ipv4/conf/" DS_NAT_BRIDGE "/send_redirects",
+                 "0");
     }
   } else {
     ds_log("[NET] Bridgeless Fallback: skipping bridge creation.");
@@ -382,6 +399,14 @@ int setup_veth_host_side(struct ds_config *cfg, pid_t child_pid) {
   /* Ensure veth_host is UP (redundant if bridgeless but safe) */
   if (ds_nl_link_up(ctx, veth_host) < 0)
     ds_warn("[NET] Failed to bring up %s", veth_host);
+
+  /* Disable ICMP redirects on the host veth. */
+  {
+    char sysctl_path[128];
+    snprintf(sysctl_path, sizeof(sysctl_path),
+             "/proc/sys/net/ipv4/conf/%s/accept_redirects", veth_host);
+    write_file(sysctl_path, "0");
+  }
 
   /* 6. Move peer veth into container's network namespace */
   char netns_path[PATH_MAX];
@@ -538,7 +563,7 @@ int fix_networking_rootfs(struct ds_config *cfg) {
   const char *hostname = (cfg->hostname[0]) ? cfg->hostname : "localhost";
 
   /* Only strip IPv6 hosts entries when IPv6 is explicitly disabled */
-  if (cfg->enable_ipv6 || cfg->net_mode != DS_NET_NAT) {
+  if (!cfg->disable_ipv6 || cfg->net_mode != DS_NET_NAT) {
     snprintf(hosts_content, sizeof(hosts_content),
              "127.0.0.1\tlocalhost\n"
              "127.0.1.1\t%s\n"
@@ -574,12 +599,23 @@ int fix_networking_rootfs(struct ds_config *cfg) {
     ds_warn("Failed to link /etc/resolv.conf: %s", strerror(errno));
   }
 
-  /* 4. unprivileged ICMP sockets (modern ping fix)
-   * New network namespaces reset ping_group_range to "1 0".
-   * We set it to allow all GIDs so ping works without CAP_NET_RAW. */
+  if (cfg->disable_ipv6 && cfg->net_mode != DS_NET_HOST) {
+    write_file("/proc/sys/net/ipv6/conf/all/disable_ipv6", "1");
+    write_file("/proc/sys/net/ipv6/conf/default/disable_ipv6", "1");
+  } else if (cfg->disable_ipv6 && cfg->net_mode == DS_NET_HOST) {
+    /* In host mode, disabling IPv6 affects the host's netns. Warn and apply. */
+    ds_warn("--disable-ipv6 in host mode disables IPv6 on the host "
+            "network namespace.");
+    write_file("/proc/sys/net/ipv6/conf/all/disable_ipv6", "1");
+    write_file("/proc/sys/net/ipv6/conf/default/disable_ipv6", "1");
+  }
+
+  /* 5. unprivileged ICMP sockets: new network namespaces reset
+   * ping_group_range to "1 0". Allow all GIDs so ping works without
+   * CAP_NET_RAW. */
   write_file("/proc/sys/net/ipv4/ping_group_range", "0 2147483647");
 
-  /* 5. Android Network Groups */
+  /* 6. Android Network Groups */
   if (is_android()) {
     const char *etc_group = "/etc/group";
     if (access(etc_group, F_OK) == 0) {
@@ -743,15 +779,16 @@ static void do_upstream_reprobe(void) {
   (void)mask_be;
 
   if (old_table > 0)
-    ds_nl_del_rule4(ctx, subnet_be, DS_NAT_PREFIX, 0, 0, old_table, 100);
+    ds_nl_del_rule4(ctx, subnet_be, DS_NAT_PREFIX, 0, 0, old_table,
+                    DS_RULE_PRIO_FROM_SUBNET);
 
-  if (ds_nl_add_rule4(ctx, subnet_be, DS_NAT_PREFIX, 0, 0, new_table, 100) ==
-      0) {
+  if (ds_nl_add_rule4(ctx, subnet_be, DS_NAT_PREFIX, 0, 0, new_table,
+                      DS_RULE_PRIO_FROM_SUBNET) == 0) {
     pthread_mutex_lock(&g_gw_mutex);
     g_current_gw_table = new_table;
     pthread_mutex_unlock(&g_gw_mutex);
-    ds_log("[NET] Route monitor: rule updated → from %s lookup %d (prio 100)",
-           DS_DEFAULT_SUBNET, new_table);
+    ds_log("[NET] Route monitor: rule updated → from %s lookup %d (prio %d)",
+           DS_DEFAULT_SUBNET, new_table, DS_RULE_PRIO_FROM_SUBNET);
 
     /* Android's netd aggressively disables ip_forward when interfaces go down
      * or when tethering is halted. Re-enable it whenever we find a valid active
@@ -985,7 +1022,17 @@ void ds_net_cleanup(struct ds_config *cfg, pid_t container_pid) {
     uint32_t subnet, mask;
     parse_cidr(DS_DEFAULT_SUBNET, &subnet, &mask);
 
-    int prios[] = {90, 100, 200, 201};
+    /* Remove DS policy rules at both current and legacy priority values so
+     * an upgrade from an older build that used hardcoded 90/100/200/201 still
+     * cleans up completely.  del_rule4 is idempotent (ENOENT → 0). */
+    int prios[] = {
+        DS_RULE_PRIO_TO_SUBNET,   /* 6090 - current */
+        DS_RULE_PRIO_FROM_SUBNET, /* 6100 - current */
+        90,
+        100,
+        200,
+        201 /* legacy - pre-VPN-fix builds */
+    };
     for (size_t i = 0; i < sizeof(prios) / sizeof(prios[0]); i++) {
       ds_nl_del_rule4(ctx, 0, 0, subnet, DS_NAT_PREFIX, 0, prios[i]);
       ds_nl_del_rule4(ctx, subnet, DS_NAT_PREFIX, 0, 0, 0, prios[i]);

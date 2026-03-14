@@ -51,6 +51,11 @@ void print_usage(void) {
   printf("  -E, --env=PATH            Load environment variables from file\n");
   printf(
       "  -X, --termux-x11          Enable Termux-X11 support (Android only)\n");
+  printf("      --disable-ipv6        Disable IPv6 inside the container.\n"
+         "                            In host mode, this also disables IPv6\n"
+         "                            on the host network - VPN apps may break "
+         "in Android.\n"
+         "                            In NAT/none mode, IPv6 is always off.\n");
   printf("      --net=MODE            Networking mode: host (default), nat, "
          "none\n");
   printf("      --upstream IFACE[,..] Upstream internet interface(s) for nat "
@@ -207,7 +212,7 @@ static int auto_resolve_container_name(struct ds_config *cfg) {
 
 static void enforce_nat_safety(struct ds_config *cfg, int argc, char **argv) {
   int is_nat = (cfg->net_mode == DS_NET_NAT);
-  int is_ipv6 = cfg->enable_ipv6;
+  int is_disable_ipv6 = cfg->disable_ipv6;
 
   /* Nuke config reliance: parse argv directly to guarantee the warning
    * triggers regardless of what ds_config_load() wiped during restart. */
@@ -218,16 +223,14 @@ static void enforce_nat_safety(struct ds_config *cfg, int argc, char **argv) {
       if (strcmp(argv[i], "--net") == 0 && i + 1 < argc &&
           strcmp(argv[i + 1], "nat") == 0)
         is_nat = 1;
-      if (strcmp(argv[i], "-I") == 0 || strcmp(argv[i], "--enable-ipv6") == 0)
-        is_ipv6 = 1;
+      if (strcmp(argv[i], "-I") == 0 || strcmp(argv[i], "--disable-ipv6") == 0)
+        is_disable_ipv6 = 1;
     }
   }
 
-  if (is_nat && is_ipv6) {
-    printf("\n" C_YELLOW C_BOLD
-           "[ WARNING: IPv6 UNSUPPORTED IN NAT MODE ]" C_RESET "\n");
-    ds_log("IPv6 connectivity is currently not supported with --net=nat.");
-    ds_log("IPv6 functionality will be disabled for this session.");
+  if (is_nat && is_disable_ipv6) {
+    ds_log(
+        "IPv6 is already inactive in NAT mode - --disable-ipv6 has no effect.");
   }
 
   if (cfg->net_mode == DS_NET_NAT || cfg->net_mode == DS_NET_NONE) {
@@ -268,8 +271,6 @@ static void enforce_nat_safety(struct ds_config *cfg, int argc, char **argv) {
              "    --upstream wlan0,rmnet0,ccmni1,v4-ccmni1");
     exit(EXIT_FAILURE);
   }
-
-  cfg->enable_ipv6 = 0;
 
   char reason[512];
   int probe = ds_nl_probe_nat_capability(reason, sizeof(reason));
@@ -321,7 +322,7 @@ int main(int argc, char **argv) {
       {"foreground", no_argument, 0, 'f'},
       {"hw-access", no_argument, 0, 'H'},
       {"termux-x11", no_argument, 0, 'X'},
-      {"enable-ipv6", no_argument, 0, 'I'},
+      {"disable-ipv6", no_argument, 0, 'I'},
       {"enable-android-storage", no_argument, 0, 'S'},
       {"selinux-permissive", no_argument, 0, 'P'},
       {"volatile", no_argument, 0, 'V'},
@@ -514,7 +515,7 @@ int main(int argc, char **argv) {
       cfg.termux_x11 = 1;
       break;
     case 'I':
-      cfg.enable_ipv6 = 1;
+      cfg.disable_ipv6 = 1;
       break;
     case 'S':
       cfg.android_storage = 1;

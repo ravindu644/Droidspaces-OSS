@@ -196,8 +196,8 @@ int ds_config_load(const char *config_path, struct ds_config *cfg) {
           cfg->rootfs_img_path[0] = '\0';
         cfg->is_img_mount = 0;
       }
-    } else if (strcmp(key, "enable_ipv6") == 0) {
-      cfg->enable_ipv6 = parse_bool(val);
+    } else if (strcmp(key, "disable_ipv6") == 0) {
+      cfg->disable_ipv6 = parse_bool(val);
     } else if (strcmp(key, "enable_android_storage") == 0) {
       cfg->android_storage = parse_bool(val);
     } else if (strcmp(key, "enable_hw_access") == 0) {
@@ -390,7 +390,7 @@ int ds_config_save(const char *config_path, struct ds_config *cfg) {
       fprintf(f_out, "rootfs_path=%s\n", cfg->rootfs_path);
   }
 
-  fprintf(f_out, "enable_ipv6=%d\n", cfg->enable_ipv6);
+  fprintf(f_out, "disable_ipv6=%d\n", cfg->disable_ipv6);
   if (is_android()) {
     fprintf(f_out, "enable_android_storage=%d\n", cfg->android_storage);
     fprintf(f_out, "enable_termux_x11=%d\n", cfg->termux_x11);

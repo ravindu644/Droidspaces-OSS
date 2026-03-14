@@ -246,8 +246,8 @@ static void print_page(int page, const char *bin) {
            "--enable-android-storage start\n\n",
            bin);
 
-    printf("%sContainer with IPv6 enabled:%s\n", bold, reset);
-    printf("  %s --name=mycontainer --rootfs=/path/to/rootfs --enable-ipv6 "
+    printf("%sContainer with IPv6 disabled:%s\n", bold, reset);
+    printf("  %s --name=mycontainer --rootfs=/path/to/rootfs --disable-ipv6 "
            "start\n\n",
            bin);
 
@@ -281,7 +281,7 @@ static void print_page(int page, const char *bin) {
 
     printf("%sMultiple flags combined:%s\n", bold, reset);
     printf("  %s --name=mycontainer --rootfs=/path/to/rootfs --hw-access "
-           "--enable-ipv6 --hostname=myserver start\n\n",
+           "--hostname=myserver start\n\n",
            bin);
 
     printf("%sContainer with all Android features:%s\n", bold, reset);
@@ -358,7 +358,7 @@ static void print_page(int page, const char *bin) {
 
     printf("%sContainer with maximum features (not secure):%s\n", bold, reset);
     printf("  %s --name=featureful --rootfs-img=/path/to/rootfs.img \\\n", bin);
-    printf("      --hw-access --enable-android-storage --enable-ipv6 \\\n");
+    printf("      --hw-access --enable-android-storage \\\n");
     printf("      --selinux-permissive --hostname=feature-box \\\n");
     printf("      --env=/path/to/env.txt --volatile --foreground start\n\n");
 
@@ -373,7 +373,7 @@ static void print_page(int page, const char *bin) {
 
     printf("%sContainer lifecycle with all operations:%s\n", bold, reset);
     printf("  %s --name=test --rootfs=/path/to/rootfs --hw-access "
-           "--enable-ipv6 start\n",
+           "--hw-access start\n",
            bin);
     printf("  %s --name=test status\n", bin);
     printf("  %s --name=test enter developer\n", bin);
@@ -404,9 +404,7 @@ static void print_page(int page, const char *bin) {
     printf("  %s --name=db --rootfs=/path/to/db-rootfs --hostname=db "
            "--hw-access start\n",
            bin);
-    printf(
-        "  %s --name=app --rootfs-img=/path/to/app.img --enable-ipv6 start\n",
-        bin);
+    printf("  %s --name=app --rootfs-img=/path/to/app.img start\n", bin);
     printf("  %s show\n", bin);
     printf("  %s stop --name=web,db,app\n\n", bin);
 
