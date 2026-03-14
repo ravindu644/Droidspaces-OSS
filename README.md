@@ -278,6 +278,7 @@ For questions or support, join the [Telegram channel](http://t.me/Droidspaces).
 Droidspaces is built upon the incredible work of the open-source community. Special thanks to these projects for their inspiration and contributions:
 
 *   **[LXC](https://github.com/lxc/lxc)** - For the core architectural vision and inspiration for modern Linux containerization.
+*   **[nspawn.sh](https://github.com/nspawn-sh/nspawn.sh)** - Droidspaces v5 independently developed a network namespace logic and Android routing implementation identical to this project. We acknowledge nspawn.sh as the prior work published with this architecture.
 *   **[Brutal-Busybox](https://github.com/feravolt/Brutal_busybox)** - For the statically-linked BusyBox binaries used in the Android userspace app to perform certain operations.
 *   **[KernelSU-Next](https://github.com/KernelSU-Next/KernelSU-Next)**, **[MMRL](https://github.com/MMRLApp/MMRL)**, and **[LSPatch](https://github.com/LSPosed/LSPatch)** - For inspiring our modern UI design language and Android user experience.
 
