@@ -46,8 +46,7 @@ log "Configuring DNS settings..."
 mkdir -p "$ROOTFS_PATH/etc/systemd/resolved.conf.d"
 cat > "$ROOTFS_PATH/etc/systemd/resolved.conf.d/dns.conf" << 'EOF'
 [Resolve]
-DNS=8.8.8.8 8.8.4.4
-FallbackDNS=1.1.1.1
+DNSStubListener=no
 EOF
 
 # 2. Enable systemd-resolved and systemd-networkd by default
