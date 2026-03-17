@@ -1169,10 +1169,12 @@ int stop_rootfs(struct ds_config *cfg, int skip_unmount) {
    * to this).
    * - SIGPWR: Universal power failure signal (often used by LXC/SysVinit for
    * shutdown).
+   * - SIGCONT: Shutdown signal for Void/runit.
    */
   kill(pid, DS_SIG_STOP);
-  kill(pid, SIGTERM);
   kill(pid, SIGPWR);
+  kill(pid, SIGCONT);
+  kill(pid, SIGTERM);
   ds_log("Waiting for graceful shutdown (this may take up to %d seconds)...",
          DS_STOP_TIMEOUT);
 
