@@ -317,9 +317,14 @@ int internal_boot(struct ds_config *cfg) {
               strerror(errno));
     }
 
-    if (domount("sysfs", "sys/devices/virtual/net", "sysfs",
-                MS_NOSUID | MS_NODEV | MS_NOEXEC, NULL) < 0) {
-      ds_warn("Failed to mount sysfs at sys/devices/virtual/net "
+    /* Fix: Instead of mounting a fresh sysfs (which creates a recursive tree),
+     * we bind-mount the existing net devices path from our own sysfs mount.
+     * This keeps the symlink at /sys/class/net/eth0 valid while pinning the
+     * path as an independent mount point that can survive isolation and
+     * provide RW access if needed. */
+    if (mount("sys/devices/virtual/net", "sys/devices/virtual/net", NULL,
+              MS_BIND | MS_REC, NULL) < 0) {
+      ds_warn("Failed to bind-mount network devices in isolated /sys "
               "(networking may be limited)");
     }
   }
