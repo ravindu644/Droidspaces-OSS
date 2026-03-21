@@ -321,7 +321,7 @@ This checks for:
 | MNT namespace | `CONFIG_NAMESPACES=y` | **Fatal.** Containers cannot start. |
 | UTS namespace | `CONFIG_UTS_NS=y` | **Fatal.** Containers cannot start. |
 | IPC namespace | `CONFIG_IPC_NS=y` | **Fatal.** Containers cannot start. |
-| Cgroup namespace | Kernel 4.6+ with `CONFIG_CGROUPS` | Falls back to legacy cgroup bind-mounting. |
+| Cgroup device | `CONFIG_CGROUP_DEVICE=y` | **Fatal.**  Containers cannot start. |
 | devtmpfs | `CONFIG_DEVTMPFS=y` | **Fatal.** Droidspaces cannot set up `/dev`. |
 | OverlayFS | `CONFIG_OVERLAY_FS` | Volatile mode unavailable. |
 | Network namespace | `CONFIG_NET_NS=y` | NAT and None modes unavailable. |
