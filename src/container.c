@@ -1581,33 +1581,7 @@ int run_in_rootfs(struct ds_config *cfg, int argc, char **argv) {
       ds_env_boot_setup(cfg);
       load_etc_environment();
 
-      /* Run the command as root with a proper login context (su -l root -c).
-       * This mirrors enter_rootfs: correct home dir, PATH, and shell env.
-       *
-       * Build a single command string from argv so su -c can receive it.
-       * Each argument is space-separated; arguments with spaces are not
-       * re-quoted here (the caller is responsible for quoting), matching
-       * the existing execvp(argv[0], argv) behaviour. */
-      char cmd_buf[65536] = {0};
-      size_t pos = 0;
-      for (int i = 0; argv[i] != NULL; i++) {
-        if (i > 0 && pos < sizeof(cmd_buf) - 1)
-          cmd_buf[pos++] = ' ';
-        size_t rem = sizeof(cmd_buf) - pos - 1;
-        size_t n = strlen(argv[i]);
-        if (n > rem)
-          n = rem;
-        memcpy(cmd_buf + pos, argv[i], n);
-        pos += n;
-      }
-      cmd_buf[pos] = '\0';
-
-      /* Primary: proper root login via su */
-      char *su_argv[] = {"su", "-l", "root", "-c", cmd_buf, NULL};
-      execve("/bin/su", su_argv, environ);
-      execve("/usr/bin/su", su_argv, environ);
-
-      /* Fallback: su not available - direct exec (no login context) */
+      /* Run the command directly as an alien process (instant results) */
       if (argv[1] == NULL && strchr(argv[0], ' ') != NULL) {
         char *shell_argv[] = {"/bin/sh", "-c", argv[0], NULL};
         execvp("/bin/sh", shell_argv);
