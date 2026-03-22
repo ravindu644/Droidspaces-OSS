@@ -1,5 +1,5 @@
 #!/system/bin/sh
-
+MODDIR=${0%/*}
 # Droidspaces Boot Script
 # Automatically starts containers with run_at_boot=1 on device boot
 
@@ -112,3 +112,6 @@ for cfg in ${CONFIG_FILES}; do
 done
 
 log "Boot auto-start summary: ${container_count} processed, ${success_count} started, ${failed_count} failed"
+string="description=auto-start: ${container_count} processed, ${success_count} started, ${failed_count} failed"
+sed -i "s/^description=.*/$string/g" $MODDIR/module.prop
+log "Update Module description"
