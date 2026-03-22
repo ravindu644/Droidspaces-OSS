@@ -1,8 +1,8 @@
 #!/system/bin/sh
-MODDIR=${0%/*}
+
 # Droidspaces Boot Script
 # Automatically starts containers with run_at_boot=1 on device boot
-
+MODDIR=${0%/*}
 DROIDSPACE_DIR=/data/local/Droidspaces
 LOGS_DIR=${DROIDSPACE_DIR}/Logs
 LOGS_FILE=${LOGS_DIR}/boot-module.log
