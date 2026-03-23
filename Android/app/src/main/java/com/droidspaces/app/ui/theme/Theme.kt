@@ -191,8 +191,8 @@ private object AmoledColorCache {
      * Create AMOLED-optimized color scheme from static (palette-based) scheme.
      * Pre-computes all blends to eliminate runtime calculations.
      *
-     * For AMOLED mode, we use lighter blends for surfaceVariant to ensure cards are visible
-     * against the pure black background. DARK_GREY blended too heavily becomes invisible.
+     * Surfaces use palette-primary-tinted dark tones so the selected accent
+     * is visible even on the AMOLED pure-black background.
      */
     fun createStaticAmoledScheme(palette: ThemePalette): ColorScheme {
         // Return cached if same palette
@@ -201,19 +201,20 @@ private object AmoledColorCache {
         }
 
         val baseScheme = darkColorSchemeFor(palette)
+        val p = palette.primaryDark
 
-        // Pre-compute all blends once
-        // Use lighter blend (0.4f) for surfaceVariant to ensure visibility on black background
-        // This creates a subtle dark gray that's visible but still maintains AMOLED aesthetic
+        // Create palette-tinted dark surface tones instead of generic DARK_GREY
+        val tintedGrey = DARK_GREY.fastBlend(p, 0.25f)
+
         val scheme = baseScheme.copy(
             background = AMOLED_BLACK,
             surface = AMOLED_BLACK,
-            surfaceVariant = DARK_GREY.fastBlend(AMOLED_BLACK, 0.4f), // Lighter blend for visibility
-            surfaceContainer = DARK_GREY.fastBlend(AMOLED_BLACK, 0.45f), // Slightly lighter
-            surfaceContainerLow = DARK_GREY.fastBlend(AMOLED_BLACK, 0.5f),
-            surfaceContainerLowest = DARK_GREY.fastBlend(AMOLED_BLACK, 0.5f),
-            surfaceContainerHigh = DARK_GREY.fastBlend(AMOLED_BLACK, 0.45f), // Slightly lighter
-            surfaceContainerHighest = DARK_GREY.fastBlend(AMOLED_BLACK, 0.5f),
+            surfaceVariant = tintedGrey.fastBlend(AMOLED_BLACK, 0.4f),
+            surfaceContainer = tintedGrey.fastBlend(AMOLED_BLACK, 0.45f),
+            surfaceContainerLow = tintedGrey.fastBlend(AMOLED_BLACK, 0.5f),
+            surfaceContainerLowest = tintedGrey.fastBlend(AMOLED_BLACK, 0.5f),
+            surfaceContainerHigh = tintedGrey.fastBlend(AMOLED_BLACK, 0.45f),
+            surfaceContainerHighest = tintedGrey.fastBlend(AMOLED_BLACK, 0.5f),
         )
 
         cachedPaletteName = palette.name
