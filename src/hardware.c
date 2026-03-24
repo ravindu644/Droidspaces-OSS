@@ -814,6 +814,14 @@ void stop_termux_if_running(void) {
     return; /* Not running, nothing to do */
   }
 
+  /* OPTIMIZATION: Check if the unified bridge is already mounted.
+   * If the Termux /usr/tmp is already a tmpfs, it means the bridge is
+   * already established and we don't need to kill Termux to re-mount it. */
+  struct statfs fs;
+  if (statfs(DS_TERMUX_TMP_DIR, &fs) == 0 && fs.f_type == TMPFS_MAGIC) {
+    return; /* Bridge already exists, skip force-stop */
+  }
+
   ds_log("Stopping Termux to prepare unified /tmp...");
 
   /* Method 1: Use Android Activity Manager to stop app */
