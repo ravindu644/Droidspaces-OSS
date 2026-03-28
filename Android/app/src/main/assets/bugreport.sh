@@ -46,6 +46,14 @@ if [ $? -ne 0 ]; then
     echo "WARNING: dmesg collection failed, continuing without it"
 fi
 
+# Grab last_kmsg
+echo "Collecting last_kmsg..."
+"${BUSYBOX}" tr -d '\0' < /proc/last_kmsg > "${BUGREPORT_DIR}/clean_kmsg.txt" 2>/dev/null
+if [ $? -ne 0 ]; then
+    echo "WARNING: last_kmsg collection failed, continuing without it"
+    rm -f "${BUGREPORT_DIR}/clean_kmsg.txt" 2>/dev/null
+fi
+
 # Grab current logcat buffer
 echo "Collecting logcat..."
 logcat -d > "${BUGREPORT_DIR}/logcat_${DATE_TIME}.log" 2>&1
@@ -78,23 +86,30 @@ done
 # Strip kernel timestamps ([  12.345]) and logcat prefixes from AVC lines,
 # then deduplicate so we don't end up with 200 identical denial lines
 generate_denials() {
+    local out_file="$1"
+    shift
     cat "$@" \
         | "${BUSYBOX}" grep -i "avc:" \
         | "${BUSYBOX}" sed -E 's/^[[:space:]]*\[[[:space:]]*[0-9:.]+\][[:space:]]*//' \
         | "${BUSYBOX}" sed -E 's/^[0-9-]+ [0-9:.]+[[:space:]]+[0-9]+[[:space:]]+[0-9]+[[:space:]]+[A-Z][[:space:]]*//' \
-        | "${BUSYBOX}" sort -u >> "${BUGREPORT_DIR}/avc_denials.txt"
-    "${BUSYBOX}" sort -u "${BUGREPORT_DIR}/avc_denials.txt" \
-        -o "${BUGREPORT_DIR}/avc_denials.txt"
+        | "${BUSYBOX}" sort -u >> "${out_file}"
+    "${BUSYBOX}" sort -u "${out_file}" \
+        -o "${out_file}"
 }
 
 # Pull AVC denials from everything we have - the persistent dmesg.log from
 # the KSU log path is especially useful since it covers the full boot
 echo "Extracting AVC denials..."
 if [ -f "${LOGS_DIR}/dmesg.log" ]; then
-    generate_denials "${LOGS_DIR}/dmesg.log" "${BUGREPORT_DIR}"/*.log
+    generate_denials "${BUGREPORT_DIR}/avc_denials.txt" "${LOGS_DIR}/dmesg.log" "${BUGREPORT_DIR}"/*.log
     cp "${LOGS_DIR}/dmesg.log" "${BUGREPORT_DIR}/boot_dmesg.log" 2>/dev/null
 else
-    generate_denials "${BUGREPORT_DIR}"/*.log
+    generate_denials "${BUGREPORT_DIR}/avc_denials.txt" "${BUGREPORT_DIR}"/*.log
+fi
+
+if [ -f "${BUGREPORT_DIR}/clean_kmsg.txt" ]; then
+    > "${BUGREPORT_DIR}/avc_denials_last_kmsg.txt"
+    generate_denials "${BUGREPORT_DIR}/avc_denials_last_kmsg.txt" "${BUGREPORT_DIR}/clean_kmsg.txt"
 fi
 
 # Grab the live SELinux policy binary - useful for running audit2allow -C
