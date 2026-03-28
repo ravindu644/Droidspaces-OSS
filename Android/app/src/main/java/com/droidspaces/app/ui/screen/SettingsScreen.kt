@@ -38,6 +38,7 @@ import android.net.Uri
 import com.droidspaces.app.R
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.droidspaces.app.ui.component.AccentColorPicker
+import com.droidspaces.app.ui.component.BugReportDialog
 import com.droidspaces.app.ui.component.SwitchItem
 import com.droidspaces.app.ui.theme.ThemePalette
 import com.droidspaces.app.ui.theme.rememberThemeState
@@ -77,6 +78,9 @@ fun SettingsScreen(
 
     // About dialog state
     var showAboutDialog by remember { mutableStateOf(false) }
+
+    // Bug Report dialog state
+    var showBugReportDialog by remember { mutableStateOf(false) }
 
     // Language picker state
     var showLanguageDialog by remember { mutableStateOf(false) }
@@ -334,6 +338,55 @@ fun SettingsScreen(
 
             HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
 
+            // Bug Report Section
+            ListItem(
+                leadingContent = {
+                    Icon(
+                        imageVector = Icons.Default.BugReport,
+                        contentDescription = null,
+                        tint = if (isRootAvailable) {
+                            MaterialTheme.colorScheme.onSurface
+                        } else {
+                            MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+                        }
+                    )
+                },
+                headlineContent = {
+                    Text(
+                        text = context.getString(R.string.generate_bug_report),
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        color = if (isRootAvailable) {
+                            MaterialTheme.colorScheme.onSurface
+                        } else {
+                            MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+                        }
+                    )
+                },
+                supportingContent = {
+                    Text(
+                        text = context.getString(R.string.generate_bug_report_description),
+                        color = if (isRootAvailable) {
+                            MaterialTheme.colorScheme.onSurfaceVariant
+                        } else {
+                            MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.38f)
+                        }
+                    )
+                },
+                modifier = Modifier
+                    .then(
+                        if (isRootAvailable) {
+                            Modifier.clickable {
+                                showBugReportDialog = true
+                            }
+                        } else {
+                            Modifier
+                        }
+                    )
+            )
+
+            HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+
             // About Section
             Text(
                 text = context.getString(R.string.about_section),
@@ -373,6 +426,11 @@ fun SettingsScreen(
     // About Dialog
     if (showAboutDialog) {
         AboutDialog(onDismiss = { showAboutDialog = false })
+    }
+
+    // Bug Report Dialog
+    if (showBugReportDialog) {
+        BugReportDialog(onDismiss = { showBugReportDialog = false })
     }
 
     // Language Picker Dialog

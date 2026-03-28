@@ -93,6 +93,9 @@
     <string name="contributors">Contributors</string>
     <string name="github">GitHub</string>
     <string name="source_code">Source Code</string>
+    <string name="generate_bug_report">Generate a bug report</string>
+    <string name="generate_bug_report_description">Collect system info and logs for debugging</string>
+    <string name="bug_report_title">Bug Report</string>
     <string name="ok">OK</string>
 
     <!-- Containers Screen -->

@@ -28,7 +28,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.droidspaces.app.R
-import com.droidspaces.app.ui.component.ContainerLogViewer
+import com.droidspaces.app.ui.component.TerminalDialog
 import com.droidspaces.app.ui.viewmodel.AppStateViewModel
 import com.droidspaces.app.util.Constants
 import com.droidspaces.app.util.ContainerOperationExecutor
@@ -151,8 +151,8 @@ fun RequirementsScreen(
 
     // Console viewer dialog
     if (showLogViewer) {
-        ContainerLogViewer(
-            containerName = context.getString(R.string.requirements_check_title),
+        TerminalDialog(
+            title = context.getString(R.string.requirements_check_title),
             logs = checkLogs.toList(),
             onDismiss = {
                 showLogViewer = false

@@ -28,16 +28,16 @@ strip_colors() {
 wait_for_network() {
     local timeout=60
     local count=0
-    echo "Waiting for network..."
+    log "Waiting for network..."
     while [ $count -lt $timeout ]; do
         if ip route get 8.8.8.8 2>/dev/null | grep -qv "ds-br0"; then
-            echo "Network is ready (${count}s)"
+            log "Network is ready (${count}s)"
             return 0
         fi
         sleep 1
         count=$((count + 1))
     done
-    echo "WARNING: Network not ready after ${timeout}s, proceeding anyway"
+    log "WARNING: Network not ready after ${timeout}s, proceeding anyway"
     return 1
 }
 

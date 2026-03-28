@@ -25,49 +25,45 @@ import android.widget.Toast
 import com.droidspaces.app.R
 import com.droidspaces.app.util.AnsiColorParser
 
+/**
+ * A generic terminal dialog that displays logs with ANSI support.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ContainerLogViewer(
-    containerName: String,
+fun TerminalDialog(
+    title: String,
     logs: List<Pair<Int, String>>,
     onDismiss: () -> Unit,
-    onClear: () -> Unit = {},
-    isBlocking: Boolean = false // When true, can't dismiss (but close button still visible)
+    onClear: (() -> Unit)? = null,
+    isBlocking: Boolean = false
 ) {
     val context = LocalContext.current
-    var currentLogs by remember(logs) { mutableStateOf(logs) }
-
-    // Update logs when prop changes
-    LaunchedEffect(logs) {
-        currentLogs = logs
-    }
 
     Dialog(
         onDismissRequest = if (isBlocking) { {} } else { onDismiss },
         properties = DialogProperties(
             dismissOnBackPress = !isBlocking,
             dismissOnClickOutside = !isBlocking,
-            usePlatformDefaultWidth = false // Allow full width control
+            usePlatformDefaultWidth = false
         )
     ) {
         Card(
             modifier = Modifier
-                .fillMaxWidth() // Maximum width for terminal space
-                .fillMaxHeight(0.75f) // 75% of screen height
-                .padding(horizontal = 16.dp), // Balanced horizontal padding
-            shape = RoundedCornerShape(28.dp), // Increased corner radius for fancy look
+                .fillMaxWidth()
+                .fillMaxHeight(0.75f)
+                .padding(horizontal = 16.dp),
+            shape = RoundedCornerShape(28.dp),
             colors = CardDefaults.cardColors(
                 containerColor = MaterialTheme.colorScheme.surface
             ),
-            border = null, // Remove black border
-            elevation = CardDefaults.cardElevation(defaultElevation = 0.dp) // Remove elevation shadow
+            elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
         ) {
             Column(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(16.dp)
             ) {
-                // Top bar: Title and Close button (always visible, title truncates)
+                // Top bar: Title and Close button
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -75,19 +71,17 @@ fun ContainerLogViewer(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    // Title with max width constraint to prevent pushing buttons off screen
                     Text(
-                        text = context.getString(R.string.logs_title, containerName),
+                        text = title,
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.SemiBold,
                         modifier = Modifier
                             .weight(1f, fill = false)
                             .padding(end = 12.dp),
-                        maxLines = 2,
+                        maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
 
-                    // Close button - Primary dismiss action, always top-right
                     val closeShape = RoundedCornerShape(12.dp)
                     Surface(
                         modifier = Modifier
@@ -121,61 +115,60 @@ fun ContainerLogViewer(
                     }
                 }
 
-                // Action buttons bar: Clear and Copy (secondary actions)
+                // Action buttons bar
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(bottom = 12.dp),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    // Clear button
-                    val clearShape = RoundedCornerShape(12.dp)
-                    Surface(
-                        modifier = Modifier
-                            .height(40.dp)
-                            .weight(1f)
-                            .clip(clearShape)
-                            .clickable(
-                                enabled = currentLogs.isNotEmpty() && !isBlocking,
-                                onClick = {
-                                    currentLogs = emptyList()
-                                    onClear()
-                                },
-                                indication = rememberRipple(bounded = true),
-                                interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
-                            ),
-                        shape = clearShape,
-                        color = MaterialTheme.colorScheme.surfaceContainerHighest,
-                        tonalElevation = 1.dp
-                    ) {
-                        Row(
+                    // Clear button (optional)
+                    if (onClear != null) {
+                        val clearShape = RoundedCornerShape(12.dp)
+                        Surface(
                             modifier = Modifier
-                                .fillMaxSize()
-                                .padding(horizontal = 16.dp),
-                            horizontalArrangement = Arrangement.Center,
-                            verticalAlignment = Alignment.CenterVertically
+                                .height(40.dp)
+                                .weight(1f)
+                                .clip(clearShape)
+                                .clickable(
+                                    enabled = logs.isNotEmpty() && !isBlocking,
+                                    onClick = onClear,
+                                    indication = rememberRipple(bounded = true),
+                                    interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
+                                ),
+                            shape = clearShape,
+                            color = MaterialTheme.colorScheme.surfaceContainerHighest,
+                            tonalElevation = 1.dp
                         ) {
-                            Icon(
-                                imageVector = Icons.Default.Delete,
-                                contentDescription = context.getString(R.string.clear_logs),
-                                modifier = Modifier.size(18.dp),
-                                tint = if (currentLogs.isNotEmpty() && !isBlocking) {
-                                    MaterialTheme.colorScheme.onSurfaceVariant
-                                } else {
-                                    MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.38f)
-                                }
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(
-                                text = context.getString(R.string.clear_logs),
-                                style = MaterialTheme.typography.labelLarge,
-                                fontWeight = FontWeight.Medium,
-                                color = if (currentLogs.isNotEmpty() && !isBlocking) {
-                                    MaterialTheme.colorScheme.onSurfaceVariant
-                                } else {
-                                    MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.38f)
-                                }
-                            )
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .padding(horizontal = 16.dp),
+                                horizontalArrangement = Arrangement.Center,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Delete,
+                                    contentDescription = context.getString(R.string.clear_logs),
+                                    modifier = Modifier.size(18.dp),
+                                    tint = if (logs.isNotEmpty() && !isBlocking) {
+                                        MaterialTheme.colorScheme.onSurfaceVariant
+                                    } else {
+                                        MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.38f)
+                                    }
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    text = context.getString(R.string.clear_logs),
+                                    style = MaterialTheme.typography.labelLarge,
+                                    fontWeight = FontWeight.Medium,
+                                    color = if (logs.isNotEmpty() && !isBlocking) {
+                                        MaterialTheme.colorScheme.onSurfaceVariant
+                                    } else {
+                                        MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.38f)
+                                    }
+                                )
+                            }
                         }
                     }
 
@@ -187,11 +180,11 @@ fun ContainerLogViewer(
                             .weight(1f)
                             .clip(copyShape)
                             .clickable(
-                                enabled = currentLogs.isNotEmpty(),
+                                enabled = logs.isNotEmpty(),
                                 onClick = {
-                                    val logText = currentLogs.joinToString("\n") { AnsiColorParser.stripAnsi(it.second) }
+                                    val logText = logs.joinToString("\n") { AnsiColorParser.stripAnsi(it.second) }
                                     val clipboard = context.getSystemService(ClipboardManager::class.java)
-                                    val clip = ClipData.newPlainText(context.getString(R.string.container_logs), logText)
+                                    val clip = ClipData.newPlainText("Terminal Logs", logText)
                                     clipboard.setPrimaryClip(clip)
                                     Toast.makeText(context, R.string.logs_copied, Toast.LENGTH_SHORT).show()
                                 },
@@ -213,7 +206,7 @@ fun ContainerLogViewer(
                                 imageVector = Icons.Default.ContentCopy,
                                 contentDescription = context.getString(R.string.copy_logs),
                                 modifier = Modifier.size(18.dp),
-                                tint = if (currentLogs.isNotEmpty()) {
+                                tint = if (logs.isNotEmpty()) {
                                     MaterialTheme.colorScheme.primary
                                 } else {
                                     MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.38f)
@@ -224,7 +217,7 @@ fun ContainerLogViewer(
                                 text = context.getString(R.string.copy_logs),
                                 style = MaterialTheme.typography.labelLarge,
                                 fontWeight = FontWeight.Medium,
-                                color = if (currentLogs.isNotEmpty()) {
+                                color = if (logs.isNotEmpty()) {
                                     MaterialTheme.colorScheme.primary
                                 } else {
                                     MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.38f)
@@ -234,10 +227,10 @@ fun ContainerLogViewer(
                     }
                 }
 
-                // Fancy Terminal Console (same as installation screen)
+                // Terminal Console
                 TerminalConsole(
-                    logs = currentLogs,
-                    isProcessing = isBlocking, // Show shimmer animation when processing
+                    logs = logs,
+                    isProcessing = isBlocking,
                     modifier = Modifier
                         .fillMaxWidth()
                         .weight(1f)
@@ -246,4 +239,3 @@ fun ContainerLogViewer(
         }
     }
 }
-

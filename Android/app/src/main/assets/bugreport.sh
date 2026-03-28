@@ -92,6 +92,7 @@ generate_denials() {
 echo "Extracting AVC denials..."
 if [ -f "${LOGS_DIR}/dmesg.log" ]; then
     generate_denials "${LOGS_DIR}/dmesg.log" "${BUGREPORT_DIR}"/*.log
+    cp "${LOGS_DIR}/dmesg.log" "${BUGREPORT_DIR}/boot_dmesg.log" 2>/dev/null
 else
     generate_denials "${BUGREPORT_DIR}"/*.log
 fi
