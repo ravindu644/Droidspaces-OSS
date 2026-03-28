@@ -26,11 +26,19 @@ strip_colors() {
 }
 
 wait_for_network() {
+    log "Waiting for network..."
+
+    # Fallback for devices without /system/bin/ip
+    if [ ! -x /system/bin/ip ]; then
+        log "WARNING: /system/bin/ip not found, sleeping for 60 seconds as a fallback"
+        sleep 60
+        return 0
+    fi
+
     local timeout=60
     local count=0
-    log "Waiting for network..."
     while [ $count -lt $timeout ]; do
-        if ip route get 8.8.8.8 2>/dev/null | grep -qv "ds-br0"; then
+        if /system/bin/ip route get 8.8.8.8 2>/dev/null | grep -qv "ds-br0"; then
             log "Network is ready (${count}s)"
             return 0
         fi
