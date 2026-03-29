@@ -54,6 +54,18 @@ if [ $? -ne 0 ]; then
     rm -f "${BUGREPORT_DIR}/clean_kmsg.txt" 2>/dev/null
 fi
 
+# Grab pstore (persistent kernel logs from previous crashes)
+echo "Collecting pstore logs..."
+if [ -d /sys/fs/pstore ] && [ "$("${BUSYBOX}" ls -A /sys/fs/pstore 2>/dev/null)" ]; then
+    mkdir -p "${BUGREPORT_DIR}/pstore"
+    for f in /sys/fs/pstore/*; do
+        [ -f "$f" ] || continue
+        "${BUSYBOX}" tr -d '\0' < "$f" > "${BUGREPORT_DIR}/pstore/$("${BUSYBOX}" basename "$f").log" 2>/dev/null
+    done
+else
+    echo "pstore is empty or not supported, skipping"
+fi
+
 # Grab current logcat buffer
 echo "Collecting logcat..."
 logcat -d > "${BUGREPORT_DIR}/logcat_${DATE_TIME}.log" 2>&1
@@ -110,6 +122,11 @@ fi
 if [ -f "${BUGREPORT_DIR}/clean_kmsg.txt" ]; then
     > "${BUGREPORT_DIR}/avc_denials_last_kmsg.txt"
     generate_denials "${BUGREPORT_DIR}/avc_denials_last_kmsg.txt" "${BUGREPORT_DIR}/clean_kmsg.txt"
+fi
+
+if [ -d "${BUGREPORT_DIR}/pstore" ] && [ "$("${BUSYBOX}" ls -A "${BUGREPORT_DIR}/pstore" 2>/dev/null)" ]; then
+    > "${BUGREPORT_DIR}/avc_denials_pstore.txt"
+    generate_denials "${BUGREPORT_DIR}/avc_denials_pstore.txt" "${BUGREPORT_DIR}/pstore"/*.log
 fi
 
 # Grab the live SELinux policy binary - useful for running audit2allow -C
