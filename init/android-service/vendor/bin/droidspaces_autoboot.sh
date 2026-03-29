@@ -30,12 +30,12 @@ wait_for_network() {
 
     # Fallback for devices without /system/bin/ip
     if [ ! -x /system/bin/ip ]; then
-        log "WARNING: /system/bin/ip not found, sleeping for 60 seconds as a fallback"
-        sleep 60
+        log "WARNING: /system/bin/ip not found, sleeping for 25 seconds as a fallback"
+        sleep 25
         return 0
     fi
 
-    local timeout=60
+    local timeout=25
     local count=0
     while [ $count -lt $timeout ]; do
         if /system/bin/ip route get 8.8.8.8 2>/dev/null | grep -qv "ds-br0"; then
