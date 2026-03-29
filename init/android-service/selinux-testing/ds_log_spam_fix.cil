@@ -108,10 +108,6 @@
 (allow droidspacesd sysfs_loop (file (getattr write)))
 (allow droidspacesd sysfs_net (dir (search)))
 (allow droidspacesd sysfs_net (file (open read)))
-(allow droidspacesd sysfs_therm (dir (search)))
-(allow droidspacesd sysfs_therm (file (getattr read)))
-(allow droidspacesd sysfs_usb_nonplat (dir (search)))
-(allow droidspacesd sysfs_usb_nonplat (file (getattr open read)))
 (allow droidspacesd sysfs_zram (dir (search)))
 (allow droidspacesd system_data_file (dir (add_name create getattr open read remove_name search setattr write)))
 (allow droidspacesd system_data_file (file (append create entrypoint execute execute_no_trans getattr ioctl lock map open read rename setattr unlink write)))
@@ -133,7 +129,6 @@
 (allow droidspacesd unlabeled (filesystem (mount)))
 (allow droidspacesd unlabeled (lnk_file (getattr read rename)))
 (allow droidspacesd vendor_init (file (read)))
-(allow droidspacesd vendor_iod (file (read)))
 (allow droidspacesd vendor_toolbox_exec (file (execute_no_trans)))
 (allow droidspacesd vndservicemanager (file (read)))
 (allow droidspacesd vold (file (read)))
@@ -146,8 +141,7 @@
 (allow init droidspacesd (process2 (nosuid_transition)))
 (allow init droidspacesd_exec (file (execute getattr open read)))
 (allow init droidspacesd_exec (lnk_file (getattr read)))
-(allow init init_boot_block_device (lnk_file (relabelto)))
-(allow init system_data_file (file (execute getattr map open read)))
+\(allow init system_data_file (file (execute getattr map open read)))
 
 ; kernel
 (allow kernel device (blk_file (create getattr setattr unlink)))

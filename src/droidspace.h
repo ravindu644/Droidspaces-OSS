@@ -686,7 +686,7 @@ int check_requirements_detailed(void);
  * daemon.c - daemon, client, and probe entry points
  * ---------------------------------------------------------------------------*/
 
-int ds_daemon_run(int foreground);
+int ds_daemon_run(int foreground, char **argv);
 int ds_client_run(int argc, char **argv);
 int ds_daemon_probe(void);
 

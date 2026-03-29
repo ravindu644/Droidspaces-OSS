@@ -662,13 +662,105 @@ static void sigusr2_handler(int sig) {
   g_sigusr2_received = 1;
 }
 
-int ds_daemon_run(int foreground) {
+/*
+ * ds_selinux_transition - re-exec into the droidspacesd SELinux domain.
+ *
+ * When launched from Magisk/KernelSU/APatch post-fs-data, the process runs
+ * under the root manager's domain (e.g. u:r:magisk:s0) rather than our own.
+ * This function writes our target context to /proc/self/attr/exec and re-execs
+ * the same binary with the same argv, causing the kernel to transition into
+ * u:r:droidspacesd:s0 at the exec boundary - exactly what runcon/setexeccon
+ * does internally, with zero libselinux dependency.
+ *
+ * On the second entry (after re-exec) the current context already matches,
+ * so the strcmp short-circuits and we continue normally. The function is also
+ * a no-op on non-Android platforms and when SELinux is not mounted/enforcing.
+ */
+#define DS_SELINUX_CTX "u:r:droidspacesd:s0"
+
+static void ds_selinux_transition(char **argv) {
+  if (!is_android())
+    return;
+
+  /* Read our current SELinux context */
+  char cur[256] = {0};
+  int fd = open("/proc/self/attr/current", O_RDONLY);
+  if (fd < 0)
+    return; /* SELinux not mounted */
+  ssize_t n = read(fd, cur, sizeof(cur) - 1);
+  close(fd);
+  if (n <= 0)
+    return;
+  cur[n] = '\0';
+  /* Trim trailing newline that the kernel appends */
+  char *nl = strchr(cur, '\n');
+  if (nl)
+    *nl = '\0';
+
+  /* Already in the right domain - nothing to do */
+  if (strcmp(cur, DS_SELINUX_CTX) == 0)
+    return;
+
+  /* Set the exec context - the transition fires on the next execv() */
+  fd = open("/proc/self/attr/exec", O_WRONLY);
+  if (fd < 0)
+    return; /* No permission or SELinux disabled - continue in current domain */
+
+  n = write(fd, DS_SELINUX_CTX, strlen(DS_SELINUX_CTX));
+  close(fd);
+  if (n < 0)
+    return;
+
+  /* Re-exec ourselves into the new domain */
+  char self[PATH_MAX];
+  n = readlink("/proc/self/exe", self, sizeof(self) - 1);
+  if (n <= 0)
+    return;
+  self[n] = '\0';
+
+  execv(self, argv);
+  /*
+   * execv() failed - most likely the binary lives on a noexec mount
+   * (e.g. /data on some vendor kernels). Fall back to setcon() which
+   * switches the current process context in-place without a re-exec.
+   * This is less clean than the exec-based transition (open fds are not
+   * re-validated by the kernel) but is safe here because we haven't
+   * opened any sensitive descriptors yet - we are still at the very top
+   * of ds_daemon_run(), before daemonize() or any socket work.
+   *
+   * If setcon() also fails (e.g. the policy doesn't allow dyntransition),
+   * we clear the stale exec context and continue in the current domain.
+   * Since droidspacesd is typepermissive, this is still functional.
+   */
+  {
+    int sfd = open("/proc/self/attr/current", O_WRONLY);
+    if (sfd >= 0) {
+      write(sfd, DS_SELINUX_CTX, strlen(DS_SELINUX_CTX));
+      close(sfd);
+    }
+  }
+  /* Clear the stale exec context regardless of whether setcon worked */
+  fd = open("/proc/self/attr/exec", O_WRONLY);
+  if (fd >= 0) {
+    write(fd, "\0", 1);
+    close(fd);
+  }
+}
+
+#undef DS_SELINUX_CTX
+
+int ds_daemon_run(int foreground, char **argv) {
   ensure_workspace();
 
   if (ds_daemon_probe()) {
     ds_error("Daemon is already running (@%s)", DS_SOCK_NAME);
     return 1;
   }
+
+  /* Transition into our SELinux domain before daemonizing, so the daemon
+   * and all its children run under u:r:droidspacesd:s0 regardless of how
+   * we were launched (init, Magisk, KernelSU, APatch, shell, etc.) */
+  ds_selinux_transition(argv);
 
   daemonize(foreground);
 

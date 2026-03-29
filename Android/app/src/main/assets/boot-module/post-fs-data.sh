@@ -71,6 +71,14 @@ fi
 if [ -f "${DAEMON_MODE_FILE}" ] && [ "$(${BUSYBOX_BINARY} cat "${DAEMON_MODE_FILE}" 2>/dev/null)" = "1" ]; then
     log "Daemon mode enabled, starting Droidspaces daemon..."
 
+    # Relabel the binary to droidspacesd_exec so the kernel's SELinux entrypoint
+    # check passes when droidspaces re-execs itself into u:r:droidspacesd:s0.
+    # Without this, the exec transition gets denied because system_data_file is
+    # not a valid entrypoint for the droidspacesd domain.
+    # This is a no-op if SELinux is disabled or the label is already correct.
+    chcon u:object_r:droidspacesd_exec:s0 "${DROIDSPACE_BINARY}" 2>/dev/null || \
+        log "WARNING: chcon failed - SELinux transition may fall back to setcon path"
+
     if "${DROIDSPACE_BINARY}" daemon >> "${LOGS_FILE}" 2>&1; then
         log "Daemon process launched successfully"
     else

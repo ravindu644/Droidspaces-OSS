@@ -1076,7 +1076,7 @@ int main(int argc, char **argv) {
       ret = 1;
       goto cleanup;
     }
-    ret = ds_daemon_run(cfg.foreground);
+    ret = ds_daemon_run(cfg.foreground, argv);
     goto cleanup;
   }
 

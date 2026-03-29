@@ -1,21 +1,180 @@
-# silences droidspaces and container process ioctl denials (su domain - KernelSU direct)
-allow su su { unix_dgram_socket unix_stream_socket udp_socket } *
-allowxperm su su { unix_dgram_socket unix_stream_socket udp_socket } ioctl *
+# Droidspaces SELinux policy - Magisk/KernelSU/APatch module format
+# Copyright (C) 2026 ravindu644 <droidcasts@protonmail.com>
+# SPDX-License-Identifier: GPL-3.0-or-later
 
-# silences droidspaces and container process ioctl denials (magisk domain - Magisk/APatch)
-allow magisk magisk { unix_dgram_socket unix_stream_socket udp_socket } *
-allowxperm magisk magisk { unix_dgram_socket unix_stream_socket udp_socket } ioctl *
+# Type declarations
+type droidspacesd domain
+type magisk domain
+type droidspacesd_exec exec_type
+permissive droidspacesd
 
-# allows su domain to interact with the container rootfs (which Android sees as unlabeled)
-allow su unlabeled { dir file lnk_file sock_file fifo_file } *
-allowxperm su unlabeled { dir file lnk_file sock_file fifo_file } ioctl *
+# droidspacesd
+allow droidspacesd app_data_file dir { add_name create getattr mounton open read remove_name search setattr write }
+allow droidspacesd app_data_file file { append create getattr ioctl open read relabelfrom setattr write }
+allow droidspacesd app_data_file lnk_file unlink
+allow droidspacesd app_data_file sock_file write
+allow droidspacesd binder_device chr_file { getattr ioctl open read write }
+allow droidspacesd bpfloader bpf prog_run
+allow droidspacesd cgroup dir { create read rmdir setattr }
+allow droidspacesd cgroup file { ioctl read }
+allow droidspacesd cgroup_v2 dir { add_name create read rmdir search setattr write }
+allow droidspacesd cgroup_v2 file { getattr ioctl open read watch write }
+allow droidspacesd cgroup_v2 filesystem remount
+allow droidspacesd configfs filesystem remount
+allow droidspacesd debugfs filesystem remount
+allow droidspacesd debugfs_tracing_debug filesystem remount
+allow droidspacesd device chr_file { getattr ioctl open read write }
+allow droidspacesd device dir { add_name write }
+allow droidspacesd devpts chr_file { getattr ioctl lock open read setattr write }
+allow droidspacesd devpts filesystem mount
+allow droidspacesd dm_device blk_file getattr
+allow droidspacesd droidspacesd bpf prog_load
+allow droidspacesd droidspacesd capability { audit_write chown dac_override dac_read_search fowner fsetid kill net_admin net_raw setgid setpcap setuid sys_admin sys_boot sys_chroot sys_nice sys_ptrace sys_resource }
+allow droidspacesd droidspacesd capability2 bpf
+allow droidspacesd droidspacesd fifo_file { ioctl read write }
+allow droidspacesd droidspacesd file ioctl
+allow droidspacesd droidspacesd icmp_socket { create getopt read setopt write }
+allow droidspacesd droidspacesd key { search write }
+allow droidspacesd droidspacesd netlink_audit_socket { create getattr nlmsg_relay read write }
+allow droidspacesd droidspacesd netlink_generic_socket setopt
+allow droidspacesd droidspacesd netlink_kobject_uevent_socket { bind create getattr getopt read setopt }
+allow droidspacesd droidspacesd netlink_netfilter_socket { bind create getattr getopt setopt }
+allow droidspacesd droidspacesd netlink_route_socket { bind create getattr getopt nlmsg_read nlmsg_readpriv nlmsg_write read setopt write }
+allow droidspacesd droidspacesd packet_socket { bind create read write }
+allow droidspacesd droidspacesd rawip_socket { create getopt setopt write }
+allow droidspacesd droidspacesd shm { create unix_read unix_write }
+allow droidspacesd droidspacesd tcp_socket { accept bind connect create getattr getopt listen read setopt shutdown write }
+allow droidspacesd droidspacesd udp_socket { bind connect create getattr ioctl read setopt write }
+allow droidspacesd droidspacesd unix_dgram_socket ioctl
+allow droidspacesd droidspacesd unix_stream_socket { accept bind connectto create listen setopt }
+allow droidspacesd droidspacesd_exec file { entrypoint execute_no_trans open read }
+allow droidspacesd droidspacesd_exec lnk_file read
+allow droidspacesd fs_bpf dir search
+allow droidspacesd fs_bpf_netd_shared dir search
+allow droidspacesd fs_bpf_netd_shared file read
+allow droidspacesd fuse dir read
+allow droidspacesd fuse filesystem unmount
+allow droidspacesd fusectlfs filesystem remount
+allow droidspacesd hwservicemanager file read
+allow droidspacesd init file read
+allow droidspacesd kernel file read
+allow droidspacesd kernel key link
+allow droidspacesd kernel process setsched
+allow droidspacesd kernel system syslog_mod
+allow droidspacesd keystore file read
+allow droidspacesd labeledfs filesystem { mount unmount }
+allow droidspacesd lmkd file read
+allow droidspacesd logd file read
+allow droidspacesd loop_control_device chr_file { ioctl open read write }
+allow droidspacesd loop_device blk_file { read write }
+allow droidspacesd magisk fd use
+allow droidspacesd net_data_file dir search
+allow droidspacesd net_data_file file { getattr open read }
+allow droidspacesd netd file read
+allow droidspacesd node tcp_socket node_bind
+allow droidspacesd port tcp_socket { name_bind name_connect }
+allow droidspacesd prng_seeder file read
+allow droidspacesd proc file { getattr ioctl open read }
+allow droidspacesd proc_cgroups file { open read }
+allow droidspacesd proc_filesystems file { getattr open read }
+allow droidspacesd proc_kallsyms file { getattr mounton open read }
+allow droidspacesd proc_kmsg file { open read }
+allow droidspacesd proc_net file { getattr open read write }
+allow droidspacesd proc_overcommit_memory file { open read }
+allow droidspacesd proc_pid_max file { getattr ioctl open read }
+allow droidspacesd proc_stat file { open read }
+allow droidspacesd proc_swaps file { getattr open read }
+allow droidspacesd proc_sysrq file getattr
+allow droidspacesd proc_uptime file { open read }
+allow droidspacesd selinuxfs file { open read }
+allow droidspacesd servicemanager binder call
+allow droidspacesd servicemanager file read
+allow droidspacesd statsd file read
+allow droidspacesd su fd use
+allow droidspacesd su file read
+allow droidspacesd sysfs dir { open read }
+allow droidspacesd sysfs file { getattr open read write }
+allow droidspacesd sysfs filesystem remount
+allow droidspacesd sysfs_battery dir search
+allow droidspacesd sysfs_battery file { getattr open read }
+allow droidspacesd sysfs_batteryinfo dir search
+allow droidspacesd sysfs_devices_block file { open write }
+allow droidspacesd sysfs_dm dir search
+allow droidspacesd sysfs_dm file { getattr open read }
+allow droidspacesd sysfs_extcon dir search
+allow droidspacesd sysfs_extcon file { getattr open read }
+allow droidspacesd sysfs_loop dir { open read search }
+allow droidspacesd sysfs_loop file { getattr write }
+allow droidspacesd sysfs_net dir search
+allow droidspacesd sysfs_net file { open read }
+allow droidspacesd sysfs_zram dir search
+allow droidspacesd system_data_file dir { add_name create getattr open read remove_name search setattr write }
+allow droidspacesd system_data_file file { append create entrypoint execute execute_no_trans getattr ioctl lock map open read rename setattr unlink write }
+allow droidspacesd system_data_file lnk_file { getattr read watch }
+allow droidspacesd system_file file { execute execute_no_trans getattr lock map open read }
+allow droidspacesd system_server binder { call transfer }
+allow droidspacesd system_suspend file read
+allow droidspacesd tmpfs chr_file { getattr ioctl link open read rename unlink write }
+allow droidspacesd tmpfs dir { add_name create mounton open read remove_name rename reparent rmdir setattr watch write }
+allow droidspacesd tmpfs fifo_file { create getattr open read unlink write }
+allow droidspacesd tmpfs file { append create execute execute_no_trans getattr ioctl link lock map open read rename setattr unlink watch write }
+allow droidspacesd tmpfs filesystem { mount unmount }
+allow droidspacesd tmpfs lnk_file { create getattr read rename setattr unlink }
+allow droidspacesd tmpfs sock_file { create getattr read unlink watch write }
+allow droidspacesd tombstoned file read
+allow droidspacesd ueventd file read
+allow droidspacesd unlabeled dir { add_name getattr mounton open read remove_name search setattr watch write }
+allow droidspacesd unlabeled file { append create execute execute_no_trans getattr ioctl link lock map open read rename setattr unlink write }
+allow droidspacesd unlabeled filesystem mount
+allow droidspacesd unlabeled lnk_file { getattr read rename }
+allow droidspacesd vendor_init file read
+allow droidspacesd vendor_toolbox_exec file execute_no_trans
+allow droidspacesd vndservicemanager file read
+allow droidspacesd vold file read
+allow droidspacesd vold_data_file blk_file { getattr ioctl open read write }
+allow droidspacesd vold_data_file dir { getattr open read }
+allow droidspacesd vold_data_file file { append execute execute_no_trans getattr ioctl map open read relabelfrom relabelto unlink write }
 
-# allows magisk domain to interact with the container rootfs (which Android sees as unlabeled)
-allow magisk unlabeled { dir file lnk_file sock_file fifo_file } *
-allowxperm magisk unlabeled { dir file lnk_file sock_file fifo_file } ioctl *
+# droidspacesd_exec
+allow droidspacesd_exec droidspacesd_exec file { entrypoint execute execute_no_trans getattr map open read relabelfrom relabelto }
+allow droidspacesd_exec labeledfs filesystem associate
 
-# allows kernel (kdevtmpfs) to create loop device nodes
-# also, allow kernel full access to rootfs image and vold data files
-allow kernel device blk_file { create setattr getattr unlink }
-allow kernel system_data_file file { read write open getattr }
-allow kernel vold_data_file file { read write open getattr }
+# init
+allow init droidspacesd process { noatsecure rlimitinh siginh transition }
+allow init droidspacesd process2 nosuid_transition
+allow init droidspacesd_exec file { execute getattr map open read }
+allow init droidspacesd_exec lnk_file { getattr read }
+allow init system_data_file file { execute getattr map open read }
+
+# kernel
+allow kernel device blk_file { create getattr setattr unlink }
+allow kernel droidspacesd fd use
+allow kernel system_data_file file { getattr open read write }
+allow kernel vold_data_file file { getattr open read write }
+
+# magisk
+allow magisk droidspacesd process { dyntransition noatsecure rlimitinh siginh transition }
+allow magisk droidspacesd process2 nosuid_transition
+allow magisk droidspacesd_exec file { entrypoint execute execute_no_trans getattr map open read relabelfrom relabelto }
+allow magisk system_data_file file entrypoint
+
+# netd
+allow netd proc_net dir add_name
+allow netd proc_net file create
+
+# servicemanager
+allow servicemanager droidspacesd binder { call transfer }
+allow servicemanager droidspacesd dir search
+allow servicemanager droidspacesd file { getattr open read }
+allow servicemanager droidspacesd process getattr
+
+# su
+allow su droidspacesd process { dyntransition noatsecure rlimitinh siginh transition }
+allow su droidspacesd process2 nosuid_transition
+allow su droidspacesd_exec file { entrypoint execute execute_no_trans getattr map open read relabelfrom relabelto }
+allow su system_data_file file entrypoint
+
+# system_server
+allow system_server droidspacesd binder { call transfer }
+allow system_server droidspacesd fd use
+allow system_server droidspacesd fifo_file write
