@@ -114,7 +114,7 @@
 (allow droidspacesd sysfs_usb_nonplat (file (getattr open read)))
 (allow droidspacesd sysfs_zram (dir (search)))
 (allow droidspacesd system_data_file (dir (add_name create getattr open read remove_name search setattr write)))
-(allow droidspacesd system_data_file (file (append create execute execute_no_trans getattr ioctl lock map open read rename setattr unlink write)))
+(allow droidspacesd system_data_file (file (append create entrypoint execute execute_no_trans getattr ioctl lock map open read rename setattr unlink write)))
 (allow droidspacesd system_data_file (lnk_file (getattr read watch)))
 (allow droidspacesd system_file (file (execute execute_no_trans getattr lock map open read)))
 (allow droidspacesd system_server (binder (call transfer)))
