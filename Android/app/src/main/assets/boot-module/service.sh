@@ -92,9 +92,29 @@ while [ "$(getprop sys.boot_completed 2>/dev/null)" != "1" ]; do
     sleep 1
 done
 
-log "Boot completed, waiting 25 seconds for system stability..."
+wait_for_network() {
+    log "Boot completed, waiting for network..."
 
-sleep 25
+    # Fallback for devices without /system/bin/ip
+    if [ ! -x /system/bin/ip ]; then
+        log "WARNING: /system/bin/ip not found, sleeping for 25 seconds as a fallback"
+        sleep 25
+        return 0
+    fi
+
+    local timeout=25
+    local count=0
+    while [ $count -lt $timeout ]; do
+        if /system/bin/ip route get 8.8.8.8 2>/dev/null | grep -qv "ds-br0"; then
+            log "Network is ready (${count}s)"
+            return 0
+        fi
+        sleep 1
+        count=$((count + 1))
+    done
+    log "WARNING: Network not ready after ${timeout}s, proceeding anyway"
+    return 1
+} && wait_for_network
 
 # Check daemon status
 DAEMON_STATUS="⚪ Off"
