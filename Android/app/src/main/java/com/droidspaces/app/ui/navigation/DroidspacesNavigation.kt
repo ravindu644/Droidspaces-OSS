@@ -301,6 +301,7 @@ fun DroidspacesNavigation(
                 initialDisableIPv6 = viewModel.disableIPv6,
                 initialEnableAndroidStorage = viewModel.enableAndroidStorage,
                 initialEnableHwAccess = viewModel.enableHwAccess,
+                initialEnableTermuxX11 = viewModel.enableTermuxX11,
                 initialSelinuxPermissive = viewModel.selinuxPermissive,
                 initialVolatileMode = viewModel.volatileMode,
                 initialBindMounts = viewModel.bindMounts,
