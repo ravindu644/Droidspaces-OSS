@@ -161,13 +161,16 @@ The entire runtime is a **single static binary** under 260KB, compiled against m
 | Feature | Description |
 |---------|-------------|
 | **Init System Support** | Run systemd, OpenRC or any other init system as PID 1. Full service management, journald logging, and proper boot/shutdown sequences. |
+| **Deep Android Integration** | Supports two daemon modes: **Native init.rc** (lowest-level integration with auto-spawn/unkillable persistence) and **Userspace Daemon** (app-togglable, starts via `post-fs-data.sh`, no image modification required). **Both modes bypass root-domain seccomp blocks to ensure stable container lifecycles** [[init.rc Developer Guide](./init/README.md)]. |
 | **Namespace Isolation** | Complete isolation via PID, MNT, UTS, IPC, and Cgroup namespaces. Each container has its own process tree, mount table, hostname, IPC resources, and cgroup hierarchy. |
 | **Network Isolation** | **3 Networking Modes (Host, NAT, None)**. Pure network isolation via `CLONE_NEWNET` (NAT/None modes) or shared host networking (Host mode). Works on both Android and Linux. |
+| **Android GPU Acceleration** | Native hardware acceleration for Qualcomm Adreno GPUs via the Turnip driver. Use our [pre-built rootfs templates](https://github.com/ravindu644/Droidspaces-rootfs-builder/releases/latest) for an out-of-the-box experience. [[More info](./Documentation/GPU-Acceleration.md)] |
+| **Linux GPU Acceleration** | Zero-configuration GPU acceleration for AMD and Intel GPUs on Linux desktop hosts. [[More info](./Documentation/GPU-Acceleration.md)] |
 | **Port Forwarding** | Forward host ports to the container in NAT mode (e.g., `--port 22:22`). Supports TCP and UDP, as well as ranges like `1-500:1-500`. |
 | **Volatile Mode** | Ephemeral containers using OverlayFS. All changes are stored in RAM and discarded on exit. Perfect for testing and development. |
 | **Custom Bind Mounts** | Map host directories into containers at arbitrary mount points. Supports both chained (`-B a:b -B c:d`) and comma-separated (`-B a:b,c:d`) syntax. |
 | **Config File Support** | Load configurations directly from `.config` files using `--conf`. Integrates seamlessly with the CLI overrides (`--reset` is supported) and automatically syncs to the workspace for persistence. |
-| **Hardware Access Mode** | Expose host hardware (GPU, cameras, sensors, USB) to the container via devtmpfs. Enables GPU acceleration with Turnip + Zink / Panfrost on supported Android devices. PulseAudio and Virgl are also supported in Android |
+| **Hardware Access Mode** | Expose host hardware (GPU, cameras, sensors, USB, block devices) directly to your containers with a single configuration toggle. |
 | **Multiple Containers** | Run unlimited containers simultaneously, each with its own name, PID file, and configuration. Start, stop, enter, and manage them independently. |
 | **In-container Reboot Support** | Handles in-container `reboot(2)` syscalls via a strict 3-level PID hierarchy to autonomously reinitialize the container sequence - TL;DR: you can restart the container remotely without touching Droidspaces! |
 | **Android Storage** | Bind-mount `/storage/emulated/0` into the container for direct access to the device's shared storage. |
@@ -206,6 +209,8 @@ The entire runtime is a **single static binary** under 260KB, compiled against m
 
 | Aspect | LXC/Docker | Droidspaces |
 |--------|------------|-------------|
+| **Deep Android Integration** | None. Runs as a foreign process. | **Superior**. Native `init.rc` daemon or `post-fs-data.sh` modes. |
+| **Persistence** | Poor. Easily killed by system. | **Unkillable**. Init-level auto-spawn support. |
 | Dependencies | Many (liblxc, runc, containerd, etc.) | Zero. Single static binary. |
 | Setup Complexity | High. Requires Termux, cross-compiled libraries, manual config files. | Low. Download and install the APK, then run it on Android; download, extract, and run it on Linux. |
 | Older kernels Support | Spotty. Many features break on older kernels. | Full. Adaptive seccomp shield handles kernel quirks. |
@@ -244,8 +249,12 @@ Your device must be rooted. The following rooting methods have been tested:
 | Root Method | Status | Notes |
 |-------------|--------|-------|
 | **KernelSU** | Fully Supported | Tested and stable. **Recommended**. Since Droidspaces requires a custom kernel anyway, we recommend adding KernelSU to your kernel. |
-| **APatch** | Partially Supported. Not Recommended | Init fails to start due to a seccomp block related to the `u:r:magisk:s0` SELinux domain. This happens only on some devices, while some users run Droidspaces with APatch successfully [[more info](https://github.com/ravindu644/Droidspaces-OSS/issues/11#issuecomment-4036688816)]. |
-| **Magisk** | Partially Supported. Not Recommended | Same situation as APatch. Some users succeed, while others do not. [[more info](https://github.com/ravindu644/Droidspaces-OSS/issues/11#issuecomment-4036688816)]|
+| **APatch** | Supported* | Requires enabling **Daemon Mode** in the Droidspaces app and a device reboot to bypass root-domain seccomp restrictions on userspace-initiated runtimes. |
+| **Magisk** | Supported* | Requires enabling **Daemon Mode** in the Droidspaces app and a device reboot to bypass root-domain seccomp restrictions on userspace-initiated runtimes. |
+
+> [!TIP]
+>
+> Daemon Mode moves the container lifecycle management from the app's userspace to a persistent background service.
 
 > [!CAUTION]
 >
