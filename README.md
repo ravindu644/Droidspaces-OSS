@@ -261,6 +261,8 @@ Your device must be rooted. The following rooting methods have been tested:
 > **GrapheneOS is not supported** - because it blocks critical syscalls used for namespace isolation and containerization, making it impossible to run a userspace runtime like Droidspaces even with root access.
 >
 > **SuSFS is not supported** - DO NOT REPORT ANY BUGS WHEN USING SUSFS. If you must use SuSFS with Droidspaces, ensure that "HIDE SUS MOUNTS FOR ALL PROCESSES" is disabled in your SuSFS4KSU settings to avoid container boot failures.
+>
+> **KernelSU OverlayFS Meta module mode is not supported** - Move to Magic Mount mode instead of using OverlayFS due to a strange bug where the Droidspaces boot module causes bootloops for no reason. This is not an issue on our side.
 
 <a id="android-kernel-requirements"></a>
 
