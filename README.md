@@ -278,7 +278,7 @@ See: [Legacy Kernel Configuration](Documentation/Kernel-Configuration.md#configu
 
 ##### GKI (Modern Kernels)
 Covers kernels: **5.4, 5.10, 5.15, 6.1+**. These kernels require additional steps to handle ABI breakage caused by configuration changes.
-See: [Modern GKI Kernel Configuration](Documentation/Kernel-Configuration.md#configuring-gki-kernels-the-all-or-nothing-abi-breakage)
+See: [Modern GKI Kernel Configuration](Documentation/Kernel-Configuration.md#configuring-gki-kernels)
 
 **Next Steps for Kernel Support:**
 - **Check automatically**: Use the built-in requirements checker in the Android app (**Settings** -> **Requirements**).

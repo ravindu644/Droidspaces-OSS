@@ -1,0 +1,40 @@
+From a0aa446ca326b5d26ac1dec057efd8c07d2bcbff Mon Sep 17 00:00:00 2001
+From: lateautumn233 <lateautumn233@foxmail.com>
+Date: Sat, 27 Jan 2024 21:33:24 +0800
+Subject: [GKI PATCH 3/4] GKI 5.10 or lower: use Android ABI padding for POSIX_MQUEUE user_struct
+ fields
+
+Signed-off-by: lateautumn233 <lateautumn233@foxmail.com>
+---
+ include/linux/sched/user.h | 8 +++++++-
+ 1 file changed, 7 insertions(+), 1 deletion(-)
+
+diff --git a/include/linux/sched/user.h b/include/linux/sched/user.h
+index 6d63a5260130..b96fe706b5ef 100644
+--- a/include/linux/sched/user.h
++++ b/include/linux/sched/user.h
+@@ -23,7 +23,7 @@ struct user_struct {
+ #endif
+ #ifdef CONFIG_POSIX_MQUEUE
+ 	/* protected by mq_lock	*/
+-	unsigned long mq_bytes;	/* How many bytes can be allocated to mqueue? */
++	//unsigned long mq_bytes;	/* How many bytes can be allocated to mqueue? */
+ #endif
+ 	unsigned long locked_shm; /* How many pages of mlocked shm ? */
+ 	unsigned long unix_inflight;	/* How many files in flight in unix sockets */
+@@ -44,9 +44,15 @@ struct user_struct {
+ 	/* Miscellaneous per-user rate limit */
+ 	struct ratelimit_state ratelimit;
+ 
++#if defined(CONFIG_POSIX_MQUEUE)
++	ANDROID_KABI_USE(1, unsigned long mq_bytes);
++	ANDROID_KABI_RESERVE(2);
++	ANDROID_OEM_DATA_ARRAY(1, 2);
++#else
+ 	ANDROID_KABI_RESERVE(1);
+ 	ANDROID_KABI_RESERVE(2);
+ 	ANDROID_OEM_DATA_ARRAY(1, 2);
++#endif
+ };
+ 
+ extern int uids_sysfs_init(void);

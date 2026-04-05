@@ -1,0 +1,28 @@
+From 1e2bd2d00cd8641c4a7025e3ffc175716f8475a6 Mon Sep 17 00:00:00 2001
+From: ravindu644 <droidcasts@protonmail.com>
+Date: Sat, 21 Mar 2026 00:17:44 +0530
+Subject: [GKI PATCH 3/4] GKI 5.15+: use Android ABI padding for POSIX_MQUEUE
+ user_struct fields
+
+Signed-off-by: lateautumn233 <lateautumn233@foxmail.com>
+
+Signed-off-by: ravindu644 <droidcasts@protonmail.com>
+---
+ include/linux/sched/user.h | 4 ++++
+ 1 file changed, 4 insertions(+)
+
+diff --git a/include/linux/sched/user.h b/include/linux/sched/user.h
+index 037ebc053..a9259a992 100755
+--- a/include/linux/sched/user.h
++++ b/include/linux/sched/user.h
+@@ -35,7 +35,11 @@ struct user_struct {
+ 	/* Miscellaneous per-user rate limit */
+ 	struct ratelimit_state ratelimit;
+ 
++#if defined(CONFIG_POSIX_MQUEUE)
++	ANDROID_KABI_USE(1, unsigned long mq_bytes);
++#else
+ 	ANDROID_KABI_RESERVE(1);
++#endif
+ 	ANDROID_KABI_RESERVE(2);
+ };
