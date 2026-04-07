@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <plurals name="container_count">
-        <item quantity="other">ច្រើន</item>
+        <item quantity="other">%d កុងតឺន័រ</item>
     </plurals>
 </resources>
