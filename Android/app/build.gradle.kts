@@ -1,5 +1,6 @@
 import java.util.Properties
 import java.io.FileInputStream
+import java.util.Locale
 
 plugins {
     id("com.android.application")
@@ -239,7 +240,7 @@ tasks.register("generateSupportedLocalesList") {
                 // Convert Android qualifier format (pt-rBR) → BCP 47 (pt-BR)
                 // so java.util.Locale can validate it.
                 val bcp47 = suffix.replace(Regex("-r([A-Z])"), "-$1")
-                val locale = java.util.Locale.forLanguageTag(bcp47)
+                val locale = Locale.forLanguageTag(bcp47)
                 // Reject anything that doesn't parse as a real language subtag
                 if (locale.language.isNotEmpty()) suffix else null
             }
