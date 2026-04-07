@@ -1,0 +1,14 @@
+version: 1
+
+components:
+  - name: Strings
+    filemask: Android/app/src/main/res/values-*/strings.xml
+    template: Android/app/src/main/res/values/strings.xml
+    file_format: aresource
+    language_code_style: android
+
+  - name: Plurals
+    filemask: Android/app/src/main/res/values-*/plurals.xml
+    template: Android/app/src/main/res/values/plurals.xml
+    file_format: aresource
+    language_code_style: android
