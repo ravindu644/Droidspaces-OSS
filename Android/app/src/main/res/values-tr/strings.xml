@@ -1,3 +1,21 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="app_name">Droidspaces</string>
+    <string name="welcome_title">Droidspaces\'a hoşgeldin</string>
+    <string name="welcome_subtitle">Android için LXC tarzı linux konteyner yöneticisi!</string>
+    <string name="get_started">Başla</string>
+    <string name="root_check_title">Root Erişimi Kontrolü</string>
+    <string name="checking_root">Root erişimi kontrol ediliyor...</string>
+    <string name="root_granted">Root Erişimi Verilmiş</string>
+    <string name="root_denied">Root Erişimi Reddedilmiş</string>
+    <string name="root_required_message">Konteynerleri yönetmek için root erişimi gerekir.</string>
+    <string name="check_root_access">Root Erişimini Kontrol Et</string>
+    <string name="check_root_access_click">Root erişimini kontrol etmek için aşağıya tıkla</string>
+    <string name="root_available_message">Artık Droidspaces kullanabilirsin</string>
+    <string name="skip">Atla</string>
+    <string name="continue_button">Devam et</string>
+    <string name="home_title">Ana menü</string>
+    <string name="containers">Konteynerler</string>
+    <string name="panel">Panel</string>
+    <string name="settings">Ayarlar</string>
 </resources>
