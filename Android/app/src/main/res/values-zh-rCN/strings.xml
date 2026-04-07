@@ -1,3 +1,28 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="root_check_title">检查root权限</string>
+    <string name="checking_root">正在检查root权限...</string>
+    <string name="root_granted">已授予Root权限</string>
+    <string name="root_denied">Root 权限被拒绝</string>
+    <string name="skip">跳过</string>
+    <string name="continue_button">继续</string>
+    <string name="containers">容器</string>
+    <string name="panel">面板</string>
+    <string name="settings">设置</string>
+    <string name="back">返回</string>
+    <string name="close">关闭</string>
+    <string name="refresh">刷新</string>
+    <string name="search">搜索</string>
+    <string name="clear">清除</string>
+    <string name="container_singular">容器</string>
+    <string name="running">运行中</string>
+    <string name="kernel_requirements_copied">内核所需配置已复制到剪贴板</string>
+    <string name="logs_copied">日志已复制到剪贴板</string>
+    <string name="terminal">终端</string>
+    <string name="open">开启</string>
+    <string name="loading">加载中...</string>
+    <string name="app_name">Droidspaces</string>
+    <string name="check_root_access">检查Root权限</string>
+    <string name="container_plural">容器</string>
+    <string name="backend_not_installed">后端: 未安装</string>
 </resources>
