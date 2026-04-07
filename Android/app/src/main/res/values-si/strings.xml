@@ -345,4 +345,13 @@
     <string name="requirements_for_droidspaces">Droidspaces සඳහා අවශ්‍යතා පරීක්ෂා කරන්න</string>
     <string name="requirements_check_completed_successfully">අවශ්‍යතා පරීක්ෂාව සාර්ථකව නිම කරන ලදී</string>
     <string name="requirements_check_completed_with_errors">අවශ්‍යතා පරීක්ෂාව දෝෂ සහිතව සම්පූර්ණ කර ඇත</string>
+    <string name="kernel_requirements_clipboard_label">කර්නල අවශ්‍යතා</string>
+    <string name="kernel_requirements_copied">කර්නල් අවශ්‍යතාclipboard එකට පිටපත් කරන ලදී</string>
+    <string name="logs_copied">ලොග් clipboard එකට පිටපත් කරන ලදී</string>
+    <string name="terminal">ටර්මිනලය</string>
+    <string name="terminal_card_desc">කන්ටේනරය තුළ ටර්මිනලයක් විවෘත කරන්න</string>
+    <string name="open">විවෘත කරන්න</string>
+    <string name="open_terminal">ටර්මිනලය විවෘත කරන්න</string>
+    <string name="select_user_to_enter">කන්ටේනරයට ඇතුළු වීමට පරිශීලකයා තෝරන්න:</string>
+    <string name="notification_permission_title">Notifications සඳහා අවසරය</string>
 </resources>
