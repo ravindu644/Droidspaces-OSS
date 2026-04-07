@@ -4,7 +4,7 @@ import android.content.Context
 import android.content.res.Configuration
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.core.os.LocaleListCompat
-import java.util.*
+import java.util.Locale
 
 /**
  * Modern LocaleHelper using AppCompatDelegate.setApplicationLocales() API.
@@ -15,30 +15,85 @@ import java.util.*
  * - Automatically recreates activities
  * - Updates all string resources
  * - Works identically across all Android versions
+ *
+ * The list of supported languages is driven entirely by the build-time generated
+ * file assets/supported_locales.txt (written by the generateSupportedLocalesList
+ * Gradle task). Adding a new translation via Weblate automatically makes it
+ * appear in the language picker on the next build — no code changes needed.
  */
 object LocaleHelper {
 
     /**
-     * Get available languages based on supported translations.
-     * Scans res/values-XX folders to build language list.
+     * Read locale codes from the build-generated assets/supported_locales.txt.
+     * Falls back to an empty list if the file is missing (shouldn't happen in
+     * a proper build, but guards against edge cases like running from IDE
+     * before the Gradle task has executed).
      */
-    @Suppress("UNUSED_PARAMETER")
-    fun getAvailableLanguages(context: Context): List<Language> {
-        val languages = mutableListOf<Language>()
+    private fun readSupportedLocaleCodes(context: Context): List<String> {
+        return try {
+            context.assets.open("supported_locales.txt")
+                .bufferedReader()
+                .readLines()
+                .map { it.trim() }
+                .filter { it.isNotEmpty() }
+        } catch (_: Exception) {
+            emptyList()
+        }
+    }
 
-        // Supported languages based on values-XX folders
+    /**
+     * Build a Language object from an Android resource qualifier locale code
+     * (e.g. "pt-rBR", "zh-rCN", "si", "tr").
+     *
+     * Display names are derived automatically via the JVM Locale API so no
+     * manual name strings are needed when new languages are added.
+     */
+    private fun localeCodeToLanguage(code: String): Language {
+        // Convert Android qualifier format (e.g. pt-rBR) → BCP 47 (pt-BR)
+        val bcp47 = code.replace("-r", "-")
+        val locale = Locale.forLanguageTag(bcp47)
+
+        val englishName = if (locale.country.isNotEmpty()) {
+            "${locale.getDisplayLanguage(Locale.ENGLISH)} (${locale.getDisplayCountry(Locale.ENGLISH)})"
+        } else {
+            locale.getDisplayLanguage(Locale.ENGLISH)
+        }.replaceFirstChar { it.uppercaseChar() }
+
+        val nativeName = if (locale.country.isNotEmpty()) {
+            "${locale.getDisplayLanguage(locale)} (${locale.getDisplayCountry(locale)})"
+        } else {
+            locale.getDisplayLanguage(locale)
+        }.replaceFirstChar { it.uppercaseChar() }
+
+        return Language(
+            code = code,
+            displayName = englishName.ifBlank { code },
+            nativeName = nativeName.ifBlank { code }
+        )
+    }
+
+    /**
+     * Get available languages for the in-app language picker.
+     *
+     * The list is built dynamically from assets/supported_locales.txt which is
+     * generated at build time by scanning the project's res/values-* directories.
+     * It is sorted alphabetically by English display name.
+     *
+     * English is always included as the first entry (it is the app's default /
+     * fallback language and does not need a values-en directory).
+     */
+    fun getAvailableLanguages(context: Context): List<Language> {
+        val codes = readSupportedLocaleCodes(context)
+
+        val languages = mutableListOf<Language>()
+        // English is the default; no values-en directory exists, so add it explicitly.
         languages.add(Language("en", "English", "English"))
-        languages.add(Language("es", "Spanish", "Español"))
-        languages.add(Language("pt-rBR", "Portuguese (Brazil)", "Português (Brasil)"))
-        languages.add(Language("ru", "Russian", "Русский"))
-        languages.add(Language("fil", "Filipino", "Filipino"))
-        languages.add(Language("hi", "Hindi", "हिन्दी"))
-        languages.add(Language("ilo-rPH", "Ilocano (Philippines)", "Ilocano"))
-        languages.add(Language("cbk-rPH", "Chavacano (Philippines)", "Chavacano"))
-        languages.add(Language("ceb-rPH", "Cebuano (Philippines)", "Binisaya"))
-        languages.add(Language("pag-rPH", "Pangasinan (Philippines)", "Pangasinan"))
-        languages.add(Language("de", "German", "Deutsch"))
-        languages.add(Language("fr", "French", "Français"))
+
+        codes
+            .filter { it != "en" } // avoid duplicating English if someone adds values-en
+            .map { localeCodeToLanguage(it) }
+            .sortedBy { it.displayName }
+            .forEach { languages.add(it) }
 
         return languages
     }
@@ -122,119 +177,50 @@ object LocaleHelper {
     }
 
     /**
-     * Get supported locales from resources.
-     * Returns list of Locale objects including system default (Locale.ROOT).
+     * Get supported locales as Locale objects.
+     * Returns list including Locale.ROOT first (represents "System Default").
+     * Built dynamically from assets/supported_locales.txt.
      */
     fun getSupportedLocales(context: Context): List<Locale> {
-        val locales = mutableListOf<Locale>()
+        val result = mutableListOf<Locale>()
+        result.add(Locale.ROOT) // System default always first
 
-        // Add system default first
-        locales.add(Locale.ROOT) // Represents "System Default"
+        val codes = readSupportedLocaleCodes(context)
 
-        // Known supported locales
-        val knownLocales = listOf(
-            "en",      // English
-            "es",      // Spanish
-            "pt-rBR",  // Portuguese (Brazil)
-            "ru",      // Russian
-            "fil",     // Tagalog (Filipino)
-            "hi",      // Hindi
-            "ilo-rPH",  // Ilocano (Philippines)
-            "cbk-rPH", // Chavacano (Philippines)
-            "ceb-rPH", // Cebuano (Philippines)
-            "pag-rPH", // Pangasinan (Philippines)
-            "de",      // German
-            "fr"      // French
-        )
+        // Always include English
+        if (codes.none { it == "en" }) result.add(Locale.ENGLISH)
 
-        knownLocales.forEach { localeTag ->
-            try {
-                val locale = when {
-                    localeTag.contains("-r") -> {
-                        val parts = localeTag.split("-r")
-                        Locale.Builder()
-                            .setLanguage(parts[0])
-                            .setRegion(parts[1])
-                            .build()
-                    }
-                    else -> Locale.Builder()
-                        .setLanguage(localeTag)
-                        .build()
-                }
-
-                // Test if this locale has translated resources
-                val config = Configuration(context.resources.configuration)
-                config.setLocale(locale)
-                val localizedContext = context.createConfigurationContext(config)
-
-                // Verify locale is supported by checking if we can get a translated string
-                try {
-                    val testString = localizedContext.getString(com.droidspaces.app.R.string.app_name)
-                    if (locale.language == "en" || testString.isNotEmpty()) {
-                        locales.add(locale)
-                    }
-                } catch (_: Exception) {
-                    // Skip unsupported locales
-                }
-            } catch (_: Exception) {
-                // Skip invalid locales
+        codes
+            .map { code ->
+                val bcp47 = code.replace("-r", "-")
+                Locale.forLanguageTag(bcp47)
             }
-        }
+            .filter { it.language.isNotEmpty() }
+            .sortedBy { it.getDisplayName(it) }
+            .forEach { result.add(it) }
 
-        // Sort by display name (excluding system default)
-        val sortedLocales = locales.drop(1).sortedBy { it.getDisplayName(it) }
-        return mutableListOf<Locale>().apply {
-            add(locales.first()) // System default first
-            addAll(sortedLocales)
-        }
+        return result
     }
 
-    /**
-     * Legacy compatibility: Check if should use system language settings.
-     * With AppCompatDelegate.setApplicationLocales(), this is no longer needed,
-     * but kept for backward compatibility.
-     */
+    // -------------------------------------------------------------------------
+    // Legacy compatibility stubs — kept so existing call sites don't break.
+    // -------------------------------------------------------------------------
+
     @Deprecated("No longer needed with AppCompatDelegate.setApplicationLocales()")
     val useSystemLanguageSettings: Boolean
         get() = false
 
-    /**
-     * Legacy compatibility: Launch system app locale settings.
-     * With AppCompatDelegate.setApplicationLocales(), this is no longer needed,
-     * but kept for backward compatibility.
-     */
     @Deprecated("No longer needed with AppCompatDelegate.setApplicationLocales()")
     @Suppress("UNUSED_PARAMETER")
-    fun launchSystemLanguageSettings(context: Context) {
-        // No-op: AppCompatDelegate handles everything
-    }
+    fun launchSystemLanguageSettings(context: Context) { /* no-op */ }
 
-    /**
-     * Legacy compatibility: Set application locale.
-     * Now uses changeLanguage() internally.
-     */
     @Deprecated("Use changeLanguage() instead", ReplaceWith("changeLanguage(localeTag)"))
-    fun setApplicationLocale(localeTag: String) {
-        changeLanguage(localeTag)
-    }
+    fun setApplicationLocale(localeTag: String) = changeLanguage(localeTag)
 
-    /**
-     * Legacy compatibility: Restart activity.
-     * No longer needed - AppCompatDelegate.setApplicationLocales() handles this automatically.
-     */
     @Deprecated("No longer needed - AppCompatDelegate.setApplicationLocales() handles this automatically")
     @Suppress("UNUSED_PARAMETER")
-    fun restartActivity(context: Context) {
-        // No-op: AppCompatDelegate handles activity recreation automatically
-    }
+    fun restartActivity(context: Context) { /* no-op */ }
 
-    /**
-     * Legacy compatibility: Apply language to context.
-     * No longer needed with AppCompatDelegate.setApplicationLocales().
-     */
     @Deprecated("No longer needed with AppCompatDelegate.setApplicationLocales()")
-    fun applyLanguage(context: Context): Context {
-        // No-op: AppCompatDelegate handles everything automatically
-        return context
-    }
+    fun applyLanguage(context: Context): Context = context
 }
