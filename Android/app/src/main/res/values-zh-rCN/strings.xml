@@ -23,10 +23,8 @@
     <string name="loading">加载中...</string>
     <string name="app_name">Droidspaces</string>
     <string name="check_root_access">检查Root权限</string>
-    <string name="container_plural">容器</string>
     <string name="backend_not_installed">后端: 未安装</string>
     <string name="language">语言</string>
-    <string name="kernel_requirements_clipboard_label">内核要求</string>
     <string name="error_container_name_empty">容器名称不能为空</string>
     <string name="copy_logs">复制日志</string>
     <string name="clear_logs">清除日志</string>
@@ -55,7 +53,6 @@
     <string name="check_root_access_click">点击下方以检查 Root 权限</string>
     <string name="root_available_message">现在可以使用 Droidspaces</string>
     <string name="root_required_message">需要 Root 权限以管理容器。</string>
-    <string name="droidspaces_title">Droidspaces</string>
     <string name="backend_checking">后端：检查中...</string>
     <string name="backend_installed">后端：已安装</string>
     <string name="backend_update_available">后端：可升级</string>
@@ -66,7 +63,6 @@
     <string name="root_unavailable">Root 权限不可用。</string>
     <string name="grant_root_message">请授予 Root 权限以继续使用 Droidspaces！</string>
     <string name="version_label">版本: %1$s</string>
-    <string name="settings_title">设置</string>
     <string name="root_provider_label">Root 实现: %1$s</string>
     <string name="update_available_message">有可用的后端更新，点击此处更新</string>
     <string name="tap_to_install">点击此处安装</string>
@@ -122,7 +118,6 @@
     <string name="ip_address">IP 地址</string>
     <string name="uptime">运行时间</string>
     <string name="unable_to_read_container_info">无法读取容器信息</string>
-    <string name="hostname_label_edit">主机名</string>
     <string name="disable_ipv6_description">在此容器中禁用 IPv6。这可能会导致宿主机的 VPN 应用异常。</string>
     <string name="disable_ipv6_nat_forced">在 NAT 和 None 网络模式下，IPv6 始终被禁用。</string>
     <string name="selinux_permissive">SELinux 宽容模式</string>
@@ -149,7 +144,6 @@
     <string name="bug_report_title">生成报告</string>
     <string name="selinux_option">SELinux</string>
     <string name="storage_option">存储</string>
-    <string name="run_at_boot_option">开机自启动</string>
     <string name="deadlock_shield_option">死锁防护</string>
     <string name="manage">管理</string>
     <string name="changes_take_effect_after_restart">重启后生效</string>

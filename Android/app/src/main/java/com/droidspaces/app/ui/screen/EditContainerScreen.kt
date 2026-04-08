@@ -421,7 +421,7 @@ fun EditContainerScreen(
             OutlinedTextField(
                 value = hostname,
                 onValueChange = { hostname = it },
-                label = { Text(context.getString(R.string.hostname_label_edit)) },
+                label = { Text(context.getString(R.string.hostname)) },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
                 leadingIcon = {

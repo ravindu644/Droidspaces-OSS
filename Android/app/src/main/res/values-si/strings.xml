@@ -23,7 +23,6 @@
     <string name="search">සොයන්න</string>
     <string name="clear">මකන්න</string>
     <string name="container_singular">කන්ටේනර්</string>
-    <string name="container_plural">කන්ටේනර්</string>
     <string name="running">ධාවනය වේ</string>
     <string name="container_count">%1$d කන්ටේනරයක්</string>
     <string name="containers_count">%1$d කන්‍ටේනර්</string>
@@ -45,7 +44,6 @@
     <string name="tap_to_reinstall">නැවත ස්ථාපනය කිරීමට මෙතැන ක්ලික් කරන්න</string>
     <string name="tap_to_install_module">මොඩියුලය ස්ථාපනය කිරීමට මෙතැන ක්ලික් කරන්න</string>
     <string name="device_not_supported">ඔබේ උපාංගය සහාය නොදක්වයි</string>
-    <string name="settings_title">සැකසුම්</string>
     <string name="backend_section">Backend</string>
     <string name="reinstall_backend">Backend එක නැවත ස්ථාපනය කරන්න</string>
     <string name="reinstall_backend_description">Backend එක සහ Boot මොඩියුලය නැවත ස්ථාපනය කරන්න</string>
@@ -116,7 +114,6 @@
     <string name="hw_option">දාඩාංග</string>
     <string name="x11_option">X11</string>
     <string name="selinux_option">SELinux</string>
-    <string name="run_at_boot_option">Run at Boot</string>
     <string name="volatile_option">නෂ්‍ය</string>
     <string name="cgroupv1_option">Cgroup V1</string>
     <string name="deadlock_shield_option">ඩෙඩ්ලොක් ආරක්ෂණය</string>
@@ -134,7 +131,6 @@
     <string name="edit_container_title">කන්ටේනරය සංස්කරණය: %1$s</string>
     <string name="container_is_running">කන්ටේනරය ක්‍රියාත්මක වෙමින් පවතී</string>
     <string name="changes_take_effect_after_restart">වෙනස්කම් යාවත්කාලීන වීමට නැවත පණගැන්වීම අවශ්‍ය වේ</string>
-    <string name="hostname_label_edit">සත්කාරක නාමය</string>
     <string name="disable_ipv6">IPv6 අක්‍රීය කරන්න</string>
     <string name="disable_ipv6_description">මෙම කන්ටේනරය තුළ IPv6 අක්‍රීය කරන්න. IPv6 අක්‍රීය කිරීම නිසා ඇන්ඩ්‍රොයිඩ්හි ක්‍රියාත්මක වන VPN යෙදුම්වලට බාධා ඇති විය හැක.</string>
     <string name="disable_ipv6_nat_forced">NAT සහ None ජාල මාදිලිවලදී සැමවිටම IPv6 අක්‍රීය කර ඇත.</string>
@@ -219,7 +215,6 @@
     <string name="container_information">කන්ටේනරය පිළිබඳ තොරතුරු</string>
     <string name="container_name_label">කන්ටේනරයේ නම *</string>
     <string name="container_name_placeholder">my-container</string>
-    <string name="hostname_label_input">සත්කාරක නාමය</string>
     <string name="hostname_placeholder">පෙරනිමි අගය සඳහා හිස්ව තබන්න</string>
     <string name="hostname_hint">හිස්ව තැබුවහොත්, කන්ටේනරයේ නම සත්කාරක නාමය ලෙස භාවිතා කරනු ඇත</string>
     <string name="container_name_exists">මෙම නමින් යුත් කන්ටේනරයක් දැනටමත් පවතී</string>
@@ -259,22 +254,13 @@
     <string name="systemd_not_available">Systemd සොයාගත නොහැක</string>
     <string name="systemd_not_available_message">මෙම කන්ටේනරයේ systemd ස්ථාපනය කර හෝ ක්‍රියාත්මක වී නොමැත</string>
     <string name="search_services">සේවා සොයන්න...</string>
-    <string name="running_legend">ධාවනය වෙමින්</string>
     <string name="enabled_legend">සක්‍රීය කළ</string>
     <string name="disabled_legend">අක්‍රීය කළ</string>
     <string name="static_legend">ස්ථිතික</string>
     <string name="abnormal_legend">අසාමාන්යය</string>
     <string name="masked_legend">Masked</string>
     <string name="all_legend">සියල්ල</string>
-    <string name="running_status">ධාවනය වෙමින්</string>
-    <string name="enabled_status">සක්‍රීය කළ</string>
-    <string name="static_status">ස්ථිතික</string>
-    <string name="abnormal_status">අසාමාන්‍ය</string>
-    <string name="disabled_status">අක්‍රීය කළ</string>
-    <string name="masked_status">Masked</string>
     <string name="unmask">Unmask</string>
-    <string name="start_service">ආරම්භ කරන්න</string>
-    <string name="stop_service">නවත්වන්න</string>
     <string name="enable_service">සක්‍රීය කරන්න</string>
     <string name="disable_service">අක්‍රීය කරන්න</string>
     <string name="more_options">තවත් විකල්ප</string>
@@ -313,7 +299,6 @@
     <string name="copy_login">ඇතුල්වීම පිටපත් කරන්න</string>
     <string name="processes_title">ක්‍රියාවලි: %1$s</string>
     <string name="no_processes_found">කිසිඳු ක්‍රියාවලියක් හමු නොවීය</string>
-    <string name="saved_label">සුරකින ලදී</string>
     <string name="error_generic">දෝෂයකි</string>
     <string name="comma">,</string>
     <string name="gb_size">%1$dGB</string>
@@ -345,7 +330,6 @@
     <string name="requirements_for_droidspaces">Droidspaces සඳහා අවශ්‍යතා පරීක්ෂා කරන්න</string>
     <string name="requirements_check_completed_successfully">අවශ්‍යතා පරීක්ෂාව සාර්ථකව නිම කරන ලදී</string>
     <string name="requirements_check_completed_with_errors">අවශ්‍යතා පරීක්ෂාව දෝෂ සහිතව සම්පූර්ණ කර ඇත</string>
-    <string name="kernel_requirements_clipboard_label">කර්නල අවශ්‍යතා</string>
     <string name="kernel_requirements_copied">කර්නල් අවශ්‍යතාclipboard එකට පිටපත් කරන ලදී</string>
     <string name="logs_copied">ලොග් clipboard එකට පිටපත් කරන ලදී</string>
     <string name="terminal">ටර්මිනලය</string>
@@ -374,7 +358,6 @@
     <string name="help_card_url">https://github.com/ravindu644/Droidspaces-OSS/blob/main/Documentation/Installation-Android.md</string>
     <string name="reboot_recommended">SELinux නීති ක්රියාත්මක කිරීම සඳහා ස්ථාපනයෙන් පසු ඔබගේ උපාංගය restart කිරීම නිර්දේශ කෙරේ.</string>
     <string name="app_name">Droidspaces</string>
-    <string name="droidspaces_title">Droidspaces</string>
     <string name="process_killed_success">Process %1$d killed</string>
     <string name="failed_to_kill_process">Failed to kill process %1$d</string>
     <string name="kill_process">Kill process</string>

@@ -32,9 +32,7 @@
     <string name="clear">Löschen</string>
 
     <!-- Main Tab Screen -->
-    <string name="droidspaces_title">Droidspaces</string>
     <string name="container_singular">Container</string>
-    <string name="container_plural">Container</string>
     <string name="running">Läuft</string>
     <string name="container_count">%1$d Container</string>
     <string name="containers_count">%1$d Container</string>
@@ -60,7 +58,6 @@
     <string name="device_not_supported">Ihr Gerät wird nicht unterstützt</string>
 
     <!-- Settings Screen -->
-    <string name="settings_title">Einstellungen</string>
     <string name="backend_section">Backend</string>
     <string name="reinstall_backend">Backend neu installieren</string>
     <string name="reinstall_backend_description">Binaries und Boot-Modul neu installieren</string>
@@ -128,7 +125,6 @@
     <string name="storage_option">Speicher</string>
     <string name="hw_option">HW</string>
     <string name="selinux_option">SELinux</string>
-    <string name="run_at_boot_option">Beim Systemstart ausführen</string>
 
     <!-- Container Details Screen -->
     <string name="container_info">Container-Info</string>
@@ -146,7 +142,6 @@
     <string name="edit_container_title">Container bearbeiten: %1$s</string>
     <string name="container_is_running">Container läuft</string>
     <string name="changes_take_effect_after_restart">Änderungen werden nach Neustart wirksam</string>
-    <string name="hostname_label_edit">Hostname</string>
     <string name="disable_ipv6">IPv6 deaktivieren</string>
     <string name="disable_ipv6_description">IPv6 in diesem Container deaktivieren. Das Deaktivieren von IPv6 kann VPN-Apps auf dem Host beeinträchtigen.</string>
     <string name="disable_ipv6_nat_forced">IPv6 ist in den Modi NAT und None immer deaktiviert.</string>
@@ -168,7 +163,6 @@
     <string name="container_information">Container-Informationen</string>
     <string name="container_name_label">Container-Name *</string>
     <string name="container_name_placeholder">mein-container</string>
-    <string name="hostname_label_input">Hostname</string>
     <string name="hostname_placeholder">Leer lassen für Standard</string>
     <string name="hostname_hint">Wenn leer, wird der Container-Name als Hostname verwendet</string>
     <string name="container_name_exists">Ein Container mit diesem Namen existiert bereits</string>
@@ -216,22 +210,13 @@
     <string name="systemd_not_available">Systemd nicht verfügbar</string>
     <string name="systemd_not_available_message">Dieser Container hat kein installiertes oder laufendes systemd</string>
     <string name="search_services">Dienste durchsuchen...</string>
-    <string name="running_legend">Läuft</string>
     <string name="enabled_legend">Aktiviert</string>
     <string name="disabled_legend">Deaktiviert</string>
     <string name="static_legend">Abnormal</string>
     <string name="abnormal_legend">Abnormal</string>
     <string name="masked_legend">Maskiert</string>
     <string name="all_legend">Alle</string>
-    <string name="running_status">Läuft</string>
-    <string name="enabled_status">Aktiv</string>
-    <string name="static_status">Abnormal</string>
-    <string name="abnormal_status">Abnormal</string>
-    <string name="disabled_status">Deaktiviert</string>
-    <string name="masked_status">Maskiert</string>
     <string name="unmask">Unmask</string>
-    <string name="start_service">Start</string>
-    <string name="stop_service">Stopp</string>
     <string name="enable_service">Aktivieren</string>
     <string name="disable_service">Deaktivieren</string>
     <string name="more_options">Mehr Optionen</string>
@@ -287,7 +272,6 @@
     <string name="mem_percent">%1$s%% MEM</string>
 
     <!-- Common -->
-    <string name="saved_label">Gespeichert</string>
     <string name="error_generic">Fehler</string>
     <string name="comma">,</string>
     <string name="gb_size">%1$dGB</string>
@@ -329,6 +313,5 @@
     <string name="requirements_for_droidspaces">Anforderungen für Droidspaces</string>
     <string name="requirements_check_completed_successfully">Anforderungsprüfung erfolgreich abgeschlossen</string>
     <string name="requirements_check_completed_with_errors">Anforderungsprüfung mit Fehlern abgeschlossen</string>
-    <string name="kernel_requirements_clipboard_label">Kernel-Anforderungen</string>
     <string name="kernel_requirements_copied">Kernel-Anforderungen in die Zwischenablage kopiert</string>
 </resources>

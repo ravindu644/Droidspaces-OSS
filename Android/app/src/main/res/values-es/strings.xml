@@ -25,9 +25,7 @@
     <string name="search">Buscar</string>
     <string name="clear">Limpiar</string>
 
-    <string name="droidspaces_title">Droidspaces</string>
     <string name="container_singular">Contenedor</string>
-    <string name="container_plural">Contenedores</string>
     <string name="running">Activo</string>
     <string name="container_count">%1$d contenedor</string>
     <string name="containers_count">%1$d contenedores</string>
@@ -51,7 +49,6 @@
     <string name="tap_to_install_module">Toca para instalar el módulo</string>
     <string name="device_not_supported">Tu dispositivo no está soportado</string>
 
-    <string name="settings_title">Ajustes</string>
     <string name="backend_section">Backend</string>
     <string name="reinstall_backend">Reinstalar Backend</string>
     <string name="reinstall_backend_description">Reinstalar binarios y módulo de arranque</string>
@@ -116,7 +113,6 @@
     <string name="storage_option">Almacenamiento</string>
     <string name="hw_option">HW</string>
     <string name="selinux_option">SELinux</string>
-    <string name="run_at_boot_option">Inicio automático</string>
 
     <string name="container_info">Info del contenedor</string>
     <string name="distribution">Distribución</string>
@@ -132,7 +128,6 @@
     <string name="edit_container_title">Editar contenedor: %1$s</string>
     <string name="container_is_running">El contenedor está en ejecución</string>
     <string name="changes_take_effect_after_restart">Los cambios surtirán efecto tras reiniciar</string>
-    <string name="hostname_label_edit">Hostname</string>
     <string name="disable_ipv6">Deshabilitar IPv6</string>
     <string name="disable_ipv6_description">Deshabilitar IPv6 en este contenedor. Deshabilitar IPv6 puede romper las apps VPN en el host.</string>
     <string name="disable_ipv6_nat_forced">IPv6 siempre está deshabilitado en los modos NAT y None.</string>
@@ -153,7 +148,6 @@
     <string name="container_information">Información del contenedor</string>
     <string name="container_name_label">Nombre del contenedor *</string>
     <string name="container_name_placeholder">mi-contenedor</string>
-    <string name="hostname_label_input">Hostname</string>
     <string name="hostname_placeholder">Vacío para predeterminado</string>
     <string name="hostname_hint">Si está vacío, se usará el nombre del contenedor como hostname</string>
     <string name="container_name_exists">Ya existe un contenedor con este nombre</string>
@@ -197,22 +191,13 @@
     <string name="systemd_not_available">Systemd no disponible</string>
     <string name="systemd_not_available_message">Este contenedor no tiene Systemd instalado o en ejecución</string>
     <string name="search_services">Buscar servicios…</string>
-    <string name="running_legend">En ejecución</string>
     <string name="enabled_legend">Habilitado</string>
     <string name="disabled_legend">Deshabilitado</string>
     <string name="static_legend">Anormal</string>
     <string name="abnormal_legend">Anormal</string>
     <string name="masked_legend">Enmascarado</string>
     <string name="all_legend">Todos</string>
-    <string name="running_status">En ejecución</string>
-    <string name="enabled_status">Habilitado</string>
-    <string name="static_status">Anormal</string>
-    <string name="abnormal_status">Anormal</string>
-    <string name="disabled_status">Deshabilitado</string>
-    <string name="masked_status">Enmascarado</string>
     <string name="unmask">Desenmascarar</string>
-    <string name="start_service">Iniciar</string>
-    <string name="stop_service">Detener</string>
     <string name="enable_service">Habilitar</string>
     <string name="disable_service">Deshabilitar</string>
     <string name="more_options">Más opciones</string>
@@ -262,7 +247,6 @@
     <string name="cpu_percent">%1$s%% CPU</string>
     <string name="mem_percent">%1$s%% MEM</string>
 
-    <string name="saved_label">Guardado</string>
     <string name="error_generic">Error</string>
     <string name="comma">,</string>
     <string name="gb_size">%1$d GB</string>
@@ -299,6 +283,5 @@
     <string name="requirements_for_droidspaces">Requisitos para Droidspaces</string>
     <string name="requirements_check_completed_successfully">Requisitos comprobados con éxito</string>
     <string name="requirements_check_completed_with_errors">Comprobación de requisitos con errores</string>
-    <string name="kernel_requirements_clipboard_label">Requisitos del Kernel</string>
     <string name="kernel_requirements_copied">Requisitos del kernel copiados al portapapeles</string>
 </resources>

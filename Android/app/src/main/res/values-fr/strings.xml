@@ -29,9 +29,7 @@
     <string name="clear">Effacer</string>
 
     <!-- Main Tab Screen -->
-    <string name="droidspaces_title">Droidspaces</string>
     <string name="container_singular">Conteneur</string>
-    <string name="container_plural">Conteneurs</string>
     <string name="running">En cours</string>
     <string name="container_count">%1$d conteneur</string>
     <string name="containers_count">%1$d conteneurs</string>
@@ -57,7 +55,6 @@
     <string name="device_not_supported">Votre appareil n\'est pas pris en charge</string>
 
     <!-- Settings Screen -->
-    <string name="settings_title">Paramètres</string>
     <string name="backend_section">Backend</string>
     <string name="reinstall_backend">Réinstaller le backend</string>
     <string name="reinstall_backend_description">Réinstaller les binaires et le module de démarrage</string>
@@ -125,7 +122,6 @@
     <string name="storage_option">Stockage</string>
     <string name="hw_option">HW</string>
     <string name="selinux_option">SELinux</string>
-    <string name="run_at_boot_option">Démarrer au boot</string>
 
     <!-- Container Details Screen -->
     <string name="container_info">Infos du conteneur</string>
@@ -143,7 +139,6 @@
     <string name="edit_container_title">Modifier le conteneur : %1$s</string>
     <string name="container_is_running">Le conteneur est en cours d\'exécution</string>
     <string name="changes_take_effect_after_restart">Les changements prendront effet après le redémarrage</string>
-    <string name="hostname_label_edit">Nom d\'hôte</string>
     <string name="disable_ipv6">Désactiver IPv6</string>
     <string name="disable_ipv6_description">Désactiver IPv6 dans ce conteneur. La désactivation d\'IPv6 peut casser les applications VPN sur l\'hôte.</string>
     <string name="disable_ipv6_nat_forced">IPv6 est toujours désactivé en mode NAT et None.</string>
@@ -165,7 +160,6 @@
     <string name="container_information">Informations du conteneur</string>
     <string name="container_name_label">Nom du conteneur *</string>
     <string name="container_name_placeholder">mon-conteneur</string>
-    <string name="hostname_label_input">Nom d\'hôte</string>
     <string name="hostname_placeholder">Laisser vide pour la valeur par défaut</string>
     <string name="hostname_hint">Si vide, le nom du conteneur sera utilisé comme nom d\'hôte</string>
     <string name="container_name_exists">Un conteneur avec ce nom existe déjà</string>
@@ -213,22 +207,13 @@
     <string name="systemd_not_available">Systemd non disponible</string>
     <string name="systemd_not_available_message">Ce conteneur n\'a pas systemd installé ou en cours d\'exécution</string>
     <string name="search_services">Rechercher des services...</string>
-    <string name="running_legend">En marche</string>
     <string name="enabled_legend">Activé</string>
     <string name="disabled_legend">Désactivé</string>
     <string name="static_legend">Anormal</string>
     <string name="abnormal_legend">Anormal</string>
     <string name="masked_legend">Masqué</string>
     <string name="all_legend">Tous</string>
-    <string name="running_status">En marche</string>
-    <string name="enabled_status">Activé</string>
-    <string name="static_status">Anormal</string>
-    <string name="abnormal_status">Anormal</string>
-    <string name="disabled_status">Désactivé</string>
-    <string name="masked_status">Masqué</string>
     <string name="unmask">Unmask</string>
-    <string name="start_service">Démarrer</string>
-    <string name="stop_service">Arrêter</string>
     <string name="enable_service">Activer</string>
     <string name="disable_service">Désactiver</string>
     <string name="more_options">Plus d\'options</string>
@@ -284,7 +269,6 @@
     <string name="mem_percent">%1$s%% MEM</string>
 
     <!-- Common -->
-    <string name="saved_label">Enregistré</string>
     <string name="error_generic">Erreur</string>
     <string name="comma">,</string>
     <string name="gb_size">%1$dGB</string>
@@ -326,7 +310,6 @@
     <string name="requirements_for_droidspaces">Exigences pour Droidspaces</string>
     <string name="requirements_check_completed_successfully">Vérification des exigences terminée avec succès</string>
     <string name="requirements_check_completed_with_errors">Vérification des exigences terminée avec des erreurs</string>
-    <string name="kernel_requirements_clipboard_label">Exigences du noyau</string>
     <string name="kernel_requirements_copied">Exigences du noyau copiées dans le presse-papier</string>
 </resources>
 

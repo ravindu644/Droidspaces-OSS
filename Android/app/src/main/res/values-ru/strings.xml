@@ -29,9 +29,7 @@
     <string name="clear">Очистить</string>
 
     <!-- Main Tab Screen -->
-    <string name="droidspaces_title">Droidspaces</string>
     <string name="container_singular">Контейнер</string>
-    <string name="container_plural">Контейнеры</string>
     <string name="running">Запущено</string>
     <string name="container_count">%1$d контейнер</string>
     <string name="containers_count">%1$d контейнеров</string>
@@ -57,7 +55,6 @@
     <string name="device_not_supported">Ваше устройство не поддерживается</string>
 
     <!-- Settings Screen -->
-    <string name="settings_title">Настройки</string>
     <string name="backend_section">Бэкенд</string>
     <string name="reinstall_backend">Переустановить бэкенд</string>
     <string name="reinstall_backend_description">Переустановить бинарные файлы и загрузочный модуль</string>
@@ -125,7 +122,6 @@
     <string name="storage_option">Хранилище</string>
     <string name="hw_option">HW</string>
     <string name="selinux_option">SELinux</string>
-    <string name="run_at_boot_option">Запуск при загрузке</string>
 
     <!-- Container Details Screen -->
     <string name="container_info">Информация о контейнере</string>
@@ -143,7 +139,6 @@
     <string name="edit_container_title">Редактировать контейнер: %1$s</string>
     <string name="container_is_running">Контейнер запущен</string>
     <string name="changes_take_effect_after_restart">Изменения вступят в силу после перезапуска</string>
-    <string name="hostname_label_edit">Имя хоста</string>
     <string name="disable_ipv6">Отключить IPv6</string>
     <string name="disable_ipv6_description">Отключить IPv6 в этом контейнере. Отключение IPv6 может нарушить работу VPN-приложений на хосте.</string>
     <string name="disable_ipv6_nat_forced">IPv6 всегда отключён в режимах NAT и None.</string>
@@ -165,7 +160,6 @@
     <string name="container_information">Информация о контейнере</string>
     <string name="container_name_label">Имя контейнера *</string>
     <string name="container_name_placeholder">мой-контейнер</string>
-    <string name="hostname_label_input">Имя хоста</string>
     <string name="hostname_placeholder">Оставить пустым для значения по умолчанию</string>
     <string name="hostname_hint">Если пусто, будет использовано имя контейнера как имя хоста</string>
     <string name="container_name_exists">Контейнер с таким именем уже существует</string>
@@ -213,22 +207,13 @@
     <string name="systemd_not_available">Systemd недоступен</string>
     <string name="systemd_not_available_message">В этом контейнере не установлен или не запущен systemd</string>
     <string name="search_services">Поиск служб...</string>
-    <string name="running_legend">Запущено</string>
     <string name="enabled_legend">Включено</string>
     <string name="disabled_legend">Отключено</string>
     <string name="static_legend">Аномальное</string>
     <string name="abnormal_legend">Аномальное</string>
     <string name="masked_legend">Замаскировано</string>
     <string name="all_legend">Все</string>
-    <string name="running_status">Запущено</string>
-    <string name="enabled_status">Включено</string>
-    <string name="static_status">Аномальное</string>
-    <string name="abnormal_status">Аномальное</string>
-    <string name="disabled_status">Отключено</string>
-    <string name="masked_status">Замаскировано</string>
     <string name="unmask">Снять маску</string>
-    <string name="start_service">Запустить</string>
-    <string name="stop_service">Остановить</string>
     <string name="enable_service">Включить</string>
     <string name="disable_service">Отключить</string>
     <string name="more_options">Дополнительные опции</string>
@@ -284,7 +269,6 @@
     <string name="mem_percent">%1$s%% Память</string>
 
     <!-- Common -->
-    <string name="saved_label">Сохранено</string>
     <string name="error_generic">Ошибка</string>
     <string name="comma">,</string>
     <string name="gb_size">%1$d ГБ</string>
@@ -326,6 +310,5 @@
     <string name="requirements_for_droidspaces">Требования для Droidspaces</string>
     <string name="requirements_check_completed_successfully">Проверка требований успешно завершена</string>
     <string name="requirements_check_completed_with_errors">Проверка требований завершена с ошибками</string>
-    <string name="kernel_requirements_clipboard_label">Требования к ядру</string>
     <string name="kernel_requirements_copied">Требования к ядру скопированы в буфер обмена</string>
 </resources>

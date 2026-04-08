@@ -29,9 +29,7 @@
     <string name="clear">साफ करें</string>
 
     <!-- Main Tab Screen -->
-    <string name="droidspaces_title">Droidspaces</string>
     <string name="container_singular">कंटेनर</string>
-    <string name="container_plural">कंटेनर</string>
     <string name="running">चल रहा है</string>
     <string name="container_count">%1$d कंटेनर</string>
     <string name="containers_count">%1$d कंटेनर</string>
@@ -57,7 +55,6 @@
     <string name="device_not_supported">आपका डिवाइस समर्थित नहीं है</string>
 
     <!-- Settings Screen -->
-    <string name="settings_title">सेटिंग्स</string>
     <string name="backend_section">बैकएंड</string>
     <string name="reinstall_backend">बैकएंड पुनः इंस्टॉल करें</string>
     <string name="reinstall_backend_description">बाइनरी और बूट मॉड्यूल पुनः इंस्टॉल करें</string>
@@ -125,7 +122,6 @@
     <string name="storage_option">स्टोरेज</string>
     <string name="hw_option">HW</string>
     <string name="selinux_option">SELinux</string>
-    <string name="run_at_boot_option">बूट पर चलाएँ</string>
 
     <!-- Container Details Screen -->
     <string name="container_info">कंटेनर जानकारी</string>
@@ -143,7 +139,6 @@
     <string name="edit_container_title">कंटेनर संपादित करें: %1$s</string>
     <string name="container_is_running">कंटेनर चल रहा है</string>
     <string name="changes_take_effect_after_restart">परिवर्तन पुनः प्रारंभ के बाद प्रभावी होंगे</string>
-    <string name="hostname_label_edit">होस्टनेम</string>
     <string name="disable_ipv6">IPv6 अक्षम करें</string>
     <string name="disable_ipv6_description">इस कंटेनर में IPv6 अक्षम करें। IPv6 अक्षम करने से होस्ट पर VPN ऐप्स टूट सकते हैं।</string>
     <string name="disable_ipv6_nat_forced">NAT और None नेटवर्क मोड में IPv6 हमेशा अक्षम रहता है।</string>
@@ -165,7 +160,6 @@
     <string name="container_information">कंटेनर जानकारी</string>
     <string name="container_name_label">कंटेनर नाम *</string>
     <string name="container_name_placeholder">my-container</string>
-    <string name="hostname_label_input">होस्टनेम</string>
     <string name="hostname_placeholder">डिफ़ॉल्ट के लिए खाली छोड़ें</string>
     <string name="hostname_hint">यदि खाली है, तो कंटेनर नाम को होस्टनेम के रूप में उपयोग किया जाएगा</string>
     <string name="container_name_exists">इस नाम का कंटेनर पहले से मौजूद है</string>
@@ -213,22 +207,13 @@
     <string name="systemd_not_available">Systemd उपलब्ध नहीं है</string>
     <string name="systemd_not_available_message">इस कंटेनर में systemd इंस्टॉल नहीं है या चल नहीं रहा</string>
     <string name="search_services">सेवाएँ खोजें...</string>
-    <string name="running_legend">चल रही</string>
     <string name="enabled_legend">सक्रिय</string>
     <string name="disabled_legend">निष्क्रिय</string>
     <string name="static_legend">असामान्य</string>
     <string name="abnormal_legend">असामान्य</string>
     <string name="masked_legend">मास्क की गई</string>
     <string name="all_legend">सभी</string>
-    <string name="running_status">चल रही</string>
-    <string name="enabled_status">सक्रिय</string>
-    <string name="static_status">असामान्य</string>
-    <string name="abnormal_status">असामान्य</string>
-    <string name="disabled_status">निष्क्रिय</string>
-    <string name="masked_status">मास्क की गई</string>
     <string name="unmask">अनमास्क</string>
-    <string name="start_service">शुरू करें</string>
-    <string name="stop_service">रोकें</string>
     <string name="enable_service">सक्रिय करें</string>
     <string name="disable_service">निष्क्रिय करें</string>
     <string name="more_options">और विकल्प</string>
@@ -284,7 +269,6 @@
     <string name="mem_percent">%1$s%% MEM</string>
 
     <!-- Common -->
-    <string name="saved_label">सहेजा गया</string>
     <string name="error_generic">त्रुटि</string>
     <string name="comma">,</string>
     <string name="gb_size">%1$dGB</string>
@@ -326,6 +310,5 @@
     <string name="requirements_for_droidspaces">Droidspaces के लिए आवश्यकताएँ</string>
     <string name="requirements_check_completed_successfully">आवश्यकता जांच सफलतापूर्वक पूर्ण हुई</string>
     <string name="requirements_check_completed_with_errors">आवश्यकता जांच त्रुटियों के साथ पूर्ण हुई</string>
-    <string name="kernel_requirements_clipboard_label">कर्नेल आवश्यकताएँ</string>
     <string name="kernel_requirements_copied">कर्नेल आवश्यकताएँ क्लिपबोर्ड में कॉपी की गईं</string>
 </resources>

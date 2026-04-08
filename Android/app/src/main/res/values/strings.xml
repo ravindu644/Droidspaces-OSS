@@ -32,9 +32,7 @@
     <string name="clear">Clear</string>
 
     <!-- Main Tab Screen -->
-    <string name="droidspaces_title">Droidspaces</string>
     <string name="container_singular">Container</string>
-    <string name="container_plural">Containers</string>
     <string name="running">Running</string>
     <string name="container_count">%1$d container</string>
     <string name="containers_count">%1$d containers</string>
@@ -60,7 +58,6 @@
     <string name="device_not_supported">Your device is not supported</string>
 
     <!-- Settings Screen -->
-    <string name="settings_title">Settings</string>
     <string name="backend_section">Backend</string>
     <string name="reinstall_backend">Reinstall Backend</string>
     <string name="reinstall_backend_description">Reinstall binaries and boot module</string>
@@ -135,7 +132,6 @@
     <string name="hw_option">HW</string>
     <string name="x11_option">X11</string>
     <string name="selinux_option">SELinux</string>
-    <string name="run_at_boot_option">Run at Boot</string>
     <string name="volatile_option">Volatile</string>
     <string name="cgroupv1_option">Cgroup V1</string>
     <string name="deadlock_shield_option">Deadlock Shield</string>
@@ -157,7 +153,6 @@
     <string name="edit_container_title">Edit Container: %1$s</string>
     <string name="container_is_running">Container is running</string>
     <string name="changes_take_effect_after_restart">Changes will take effect after restart</string>
-    <string name="hostname_label_edit">Hostname</string>
     <string name="disable_ipv6">Disable IPv6</string>
     <string name="disable_ipv6_description">Disable IPv6 in this container. Disabling IPv6 may break VPN apps running in the host.</string>
     <string name="disable_ipv6_nat_forced">IPv6 is always disabled in NAT and None network modes.</string>
@@ -247,7 +242,6 @@
     <string name="container_information">Container Information</string>
     <string name="container_name_label">Container Name *</string>
     <string name="container_name_placeholder">my-container</string>
-    <string name="hostname_label_input">Hostname</string>
     <string name="hostname_placeholder">Leave empty for default</string>
     <string name="hostname_hint">If empty, will use container name as hostname</string>
     <string name="container_name_exists">A container with this name already exists</string>
@@ -295,22 +289,13 @@
     <string name="systemd_not_available">Systemd Not Available</string>
     <string name="systemd_not_available_message">This container does not have systemd installed or running</string>
     <string name="search_services">Search services...</string>
-    <string name="running_legend">Running</string>
     <string name="enabled_legend">Enabled</string>
     <string name="disabled_legend">Disabled</string>
     <string name="static_legend">Static</string>
     <string name="abnormal_legend">Abnormal</string>
     <string name="masked_legend">Masked</string>
     <string name="all_legend">All</string>
-    <string name="running_status">Running</string>
-    <string name="enabled_status">Enabled</string>
-    <string name="static_status">Static</string>
-    <string name="abnormal_status">Abnormal</string>
-    <string name="disabled_status">Disabled</string>
-    <string name="masked_status">Masked</string>
     <string name="unmask">Unmask</string>
-    <string name="start_service">Start</string>
-    <string name="stop_service">Stop</string>
     <string name="enable_service">Enable</string>
     <string name="disable_service">Disable</string>
     <string name="more_options">More options</string>
@@ -366,7 +351,6 @@
     <string name="mem_percent">%1$s%% MEM</string>
 
     <!-- Common -->
-    <string name="saved_label">Saved</string>
     <string name="error_generic">Error</string>
     <string name="comma">,</string>
     <string name="gb_size">%1$dGB</string>
@@ -408,7 +392,6 @@
     <string name="requirements_for_droidspaces">Requirements for Droidspaces</string>
     <string name="requirements_check_completed_successfully">Requirements check completed successfully</string>
     <string name="requirements_check_completed_with_errors">Requirements check completed with errors</string>
-    <string name="kernel_requirements_clipboard_label">Kernel Requirements</string>
     <string name="kernel_requirements_copied">Kernel requirements copied to clipboard</string>
 
     <string name="logs_copied">Logs copied to clipboard</string>

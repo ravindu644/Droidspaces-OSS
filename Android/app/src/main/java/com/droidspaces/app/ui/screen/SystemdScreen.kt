@@ -367,7 +367,7 @@ private fun ColorLegend(
             horizontalArrangement = Arrangement.spacedBy(20.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            LegendItem(ColorGreen, context.getString(R.string.running_legend))
+            LegendItem(ColorGreen, context.getString(R.string.running))
             LegendItem(ColorYellow, context.getString(R.string.enabled_legend))
             LegendItem(ColorRed, context.getString(R.string.disabled_legend))
             LegendItem(ColorAbnormal, context.getString(R.string.abnormal_legend))
@@ -462,7 +462,7 @@ private fun FilterChipsRow(
             .padding(horizontal = 16.dp, vertical = 8.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        FilterChipItem(context.getString(R.string.running_legend), serviceCounts[ServiceFilter.RUNNING] ?: 0, selectedFilter == ServiceFilter.RUNNING, ColorGreen) { onFilterSelected(ServiceFilter.RUNNING) }
+        FilterChipItem(context.getString(R.string.running), serviceCounts[ServiceFilter.RUNNING] ?: 0, selectedFilter == ServiceFilter.RUNNING, ColorGreen) { onFilterSelected(ServiceFilter.RUNNING) }
         FilterChipItem(context.getString(R.string.enabled_legend), serviceCounts[ServiceFilter.ENABLED] ?: 0, selectedFilter == ServiceFilter.ENABLED, ColorYellow) { onFilterSelected(ServiceFilter.ENABLED) }
         FilterChipItem(context.getString(R.string.disabled_legend), serviceCounts[ServiceFilter.DISABLED] ?: 0, selectedFilter == ServiceFilter.DISABLED, ColorRed) { onFilterSelected(ServiceFilter.DISABLED) }
         FilterChipItem(context.getString(R.string.abnormal_legend), serviceCounts[ServiceFilter.ABNORMAL] ?: 0, selectedFilter == ServiceFilter.ABNORMAL, ColorAbnormal) { onFilterSelected(ServiceFilter.ABNORMAL) }
@@ -588,12 +588,12 @@ private fun ServiceCard(
                 ) {
                     Text(
                         text = when (service.status) {
-                            ServiceStatus.ENABLED_RUNNING -> context.getString(R.string.running_status)
-                            ServiceStatus.ENABLED_STOPPED -> context.getString(R.string.enabled_status)
-                            ServiceStatus.STATIC -> context.getString(R.string.static_status)
-                            ServiceStatus.ABNORMAL -> context.getString(R.string.abnormal_status)
-                            ServiceStatus.DISABLED_STOPPED -> context.getString(R.string.disabled_status)
-                            ServiceStatus.MASKED -> context.getString(R.string.masked_status)
+                            ServiceStatus.ENABLED_RUNNING -> context.getString(R.string.running)
+                            ServiceStatus.ENABLED_STOPPED -> context.getString(R.string.enabled_legend)
+                            ServiceStatus.STATIC -> context.getString(R.string.static_legend)
+                            ServiceStatus.ABNORMAL -> context.getString(R.string.abnormal_legend)
+                            ServiceStatus.DISABLED_STOPPED -> context.getString(R.string.disabled_legend)
+                            ServiceStatus.MASKED -> context.getString(R.string.masked_legend)
                         },
                         modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
                         style = MaterialTheme.typography.labelMedium,
@@ -638,7 +638,7 @@ private fun ServiceCard(
                         Button(
                             onClick = {
                                 clearFocus()
-                                onAction(context.getString(R.string.stop_service)) { ContainerSystemdManager.stopService(containerName, service.name) }
+                                onAction(context.getString(R.string.stop)) { ContainerSystemdManager.stopService(containerName, service.name) }
                             },
                             modifier = Modifier.weight(1f),
                             shape = RoundedCornerShape(12.dp),
@@ -648,20 +648,20 @@ private fun ServiceCard(
                         ) {
                             Icon(Icons.Default.Stop, null, Modifier.size(18.dp))
                             Spacer(Modifier.width(6.dp))
-                            Text(context.getString(R.string.stop_service), style = MaterialTheme.typography.labelLarge)
+                            Text(context.getString(R.string.stop), style = MaterialTheme.typography.labelLarge)
                         }
                     } else {
                         Button(
                             onClick = {
                                 clearFocus()
-                                onAction(context.getString(R.string.start_service)) { ContainerSystemdManager.startService(containerName, service.name) }
+                                onAction(context.getString(R.string.start)) { ContainerSystemdManager.startService(containerName, service.name) }
                             },
                             modifier = Modifier.weight(1f),
                             shape = RoundedCornerShape(12.dp)
                         ) {
                             Icon(Icons.Default.PlayArrow, null, Modifier.size(18.dp))
                             Spacer(Modifier.width(6.dp))
-                            Text(context.getString(R.string.start_service), style = MaterialTheme.typography.labelLarge)
+                            Text(context.getString(R.string.start), style = MaterialTheme.typography.labelLarge)
                         }
                     }
 

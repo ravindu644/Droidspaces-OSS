@@ -179,7 +179,7 @@ fun ContainerNameScreen(
                     hostname = it
                     hostnameError = ValidationUtils.validateHostname(it, context).errorMessage
                 },
-                label = { Text(context.getString(R.string.hostname_label_input)) },
+                label = { Text(context.getString(R.string.hostname)) },
                 placeholder = { Text(context.getString(R.string.hostname_placeholder)) },
                 isError = hostnameError != null,
                 supportingText = hostnameError?.let { { Text(it) } } ?: {

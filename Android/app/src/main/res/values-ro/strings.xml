@@ -22,9 +22,7 @@
     <string name="refresh">Reîmprospătează</string>
     <string name="search">Caută</string>
     <string name="clear">Curăță</string>
-    <string name="droidspaces_title">Droidspaces</string>
     <string name="container_singular">Container</string>
-    <string name="container_plural">Containere</string>
     <string name="running">Rulează</string>
     <string name="backend_checking">Backend: Se verifică...</string>
     <string name="backend_installed">Backend: Instalat</string>
@@ -44,7 +42,6 @@
     <string name="tap_to_reinstall">Apasă aici pentru a reinstala</string>
     <string name="tap_to_install_module">Apasă aici pentru a instala modulul</string>
     <string name="device_not_supported">Dispozitivul tău nu este suportat</string>
-    <string name="settings_title">Setări</string>
     <string name="reinstall_backend">Reinstalează backend-ul</string>
     <string name="reinstall_backend_description">Reinstalează binary-urile și modulul de pornire</string>
     <string name="requirements">Necesități</string>
@@ -104,7 +101,6 @@
     <string name="restart">Repornește</string>
     <string name="ipv6_option">Fără IPv6</string>
     <string name="storage_option">Stocare</string>
-    <string name="run_at_boot_option">Rulează la pornirea sistemului</string>
     <string name="volatile_option">Volatil</string>
     <string name="deadlock_shield_option">Scut deadlock</string>
     <string name="container_info">Informații despre container</string>
@@ -120,7 +116,6 @@
     <string name="edit_container_title">Editează container-ul: %1$s</string>
     <string name="container_is_running">Container-ul rulează</string>
     <string name="changes_take_effect_after_restart">Schimbările vor avea loc după repornire</string>
-    <string name="hostname_label_edit">Nume de gazdă</string>
     <string name="disable_ipv6">Dezactivează IPv6</string>
     <string name="disable_ipv6_description">Dezactivează IPv6 în acest container. Dezactivarea a IPv6 poate interfera cu funcționalitatea aplicațiilor VPN care rulează pe gazdă.</string>
     <string name="disable_ipv6_nat_forced">IPv6 este întotdeauna dezactivat în modurile de rețea NAT și Niciunul.</string>
@@ -235,17 +230,11 @@
     <string name="systemd_not_available">Systemd nu este disponibil</string>
     <string name="systemd_not_available_message">Acest container nu are systemd instalat sau în execuție</string>
     <string name="search_services">Caută servicii...</string>
-    <string name="running_legend">Rulează</string>
     <string name="enabled_legend">Activat</string>
     <string name="disabled_legend">Dezactivat</string>
     <string name="abnormal_legend">Anormal</string>
     <string name="masked_legend">Mascat</string>
     <string name="all_legend">Toate</string>
-    <string name="running_status">Rulează</string>
-    <string name="enabled_status">Activat</string>
-    <string name="abnormal_status">Anormal</string>
-    <string name="disabled_status">Dezactivat</string>
-    <string name="masked_status">Mascat</string>
     <string name="unmask">Deblochează (activează)</string>
     <string name="enable_service">Activează</string>
     <string name="disable_service">Dezactivează</string>
@@ -286,7 +275,6 @@
     <string name="process_killed_success">Procesul %1$d a fost oprit</string>
     <string name="failed_to_kill_process">Nu s-a putut opri procesul %1$d</string>
     <string name="kill_process">Oprește procesul</string>
-    <string name="saved_label">Salvat</string>
     <string name="error_generic">Eroare</string>
     <string name="sparse_image_configuration">Configurarea imaginilor sparse</string>
     <string name="storage_configuration">Configurarea stocării</string>
@@ -315,7 +303,6 @@
     <string name="requirements_for_droidspaces">Necesitățile pentru Droidspaces</string>
     <string name="requirements_check_completed_successfully">Verificatul necesităților a fost finalizat cu succes</string>
     <string name="requirements_check_completed_with_errors">Verificatul necesităților a finalizat cu erori</string>
-    <string name="kernel_requirements_clipboard_label">Necesități pentru kernel</string>
     <string name="kernel_requirements_copied">Necesitățile pentru kernel au fost copiate în clipboard</string>
     <string name="logs_copied">Jurnalele au fost copiate în clipboard</string>
     <string name="terminal">Linie de comandă</string>

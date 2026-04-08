@@ -116,7 +116,7 @@ fun SettingsScreen(
             TopAppBar(
                 title = {
                     Text(
-                        text = context.getString(R.string.settings_title),
+                        text = context.getString(R.string.settings),
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Black
                     )

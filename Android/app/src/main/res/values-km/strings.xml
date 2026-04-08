@@ -23,9 +23,7 @@
     <string name="refresh">ផ្ទុកឡើងវិញ</string>
     <string name="search">ស្វែងរក</string>
     <string name="clear">សម្អាត</string>
-    <string name="droidspaces_title">DroidSpaces</string>
     <string name="container_singular">កុងតឺន័រ</string>
-    <string name="container_plural">កុងតឺន័រ</string>
     <string name="running">កំពុងដំណើរការ</string>
     <string name="container_count">%1$d កុងតឺន័រ</string>
     <string name="containers_count">%1$d កុងតឺន័រ</string>
@@ -47,7 +45,6 @@
     <string name="tap_to_reinstall">ចុចទីនេះដើម្បីដំឡើងម្ដងទៀត</string>
     <string name="tap_to_install_module">ចុចទីនេះដើម្បីដំឡើងម៉ូឌុល</string>
     <string name="device_not_supported">ឧបករណ៍របស់អ្នកមិនត្រូវបានគាំទ្រទេ</string>
-    <string name="settings_title">ការកំណត់</string>
     <string name="backend_section">Backend</string>
     <string name="reinstall_backend">ដំឡើង Backend ឡើងវិញ</string>
     <string name="reinstall_backend_description">ដំឡើង Binaries និង Boot Module ឡើងវិញ</string>

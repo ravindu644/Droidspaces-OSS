@@ -25,9 +25,7 @@
     <string name="search">Anapen</string>
     <string name="clear">Buraen</string>
 
-    <string name="droidspaces_title">Droidspaces</string>
     <string name="container_singular">Container</string>
-    <string name="container_plural">Saray Container</string>
     <string name="running">Aandar</string>
     <string name="container_count">%1$d ya container</string>
     <string name="containers_count">%1$d ya saray container</string>
@@ -51,7 +49,6 @@
     <string name="tap_to_install_module">I-tap diya pian i-install so module</string>
     <string name="device_not_supported">Ag suportado so device mo</string>
 
-    <string name="settings_title">Saray Setting</string>
     <string name="backend_section">Backend</string>
     <string name="reinstall_backend">I-reinstall so Backend</string>
     <string name="reinstall_backend_description">I-reinstall iray binary tan boot module</string>
@@ -133,7 +130,6 @@
     <string name="edit_container_title">I-edit so Container: %1$s</string>
     <string name="container_is_running">Aandar so container</string>
     <string name="changes_take_effect_after_restart">Na-apply iray anguman kayari na restart</string>
-    <string name="hostname_label_edit">Hostname</string>
     <string name="disable_ipv6">Iwasan so IPv6</string>
     <string name="disable_ipv6_description">Iwasan so IPv6 ed sayan container. No naiwasan so IPv6, nayarin onlugo iray VPN app ed host.</string>
     <string name="disable_ipv6_nat_forced">Naiwasan lawas so IPv6 ed NAT tan None network mode.</string>
@@ -143,7 +139,6 @@
     <string name="hardware_access_description">Tibukel ya hardware access</string>
     <string name="selinux_permissive">SELinux Permissive</string>
     <string name="selinux_permissive_description">I-set so SELinux ed permissive</string>
-    <string name="run_at_boot_option">Paanadaren ed Boot</string>
     <string name="run_at_boot_description">Igapo so container ed boot</string>
     <string name="saved">Na-save</string>
     <string name="saving">Is-save...</string>
@@ -154,7 +149,6 @@
     <string name="container_information">Impormasyon na Container</string>
     <string name="container_name_label">Ngaran na Container *</string>
     <string name="container_name_placeholder">my-container</string>
-    <string name="hostname_label_input">Hostname</string>
     <string name="hostname_placeholder">Ikaingal ya anggapoy karga parad default</string>
     <string name="hostname_hint">No anggapoy karga, usaren so ngaran na container bilang hostname</string>
     <string name="container_name_exists">Wala lay container ya uusaren to yan ngaran</string>
@@ -198,22 +192,13 @@
     <string name="systemd_not_available">Ag Available so Systemd</string>
     <string name="systemd_not_available_message">Sayan container et anggapoy aka-install o aandar ya systemd</string>
     <string name="search_services">Anapen iray serbisyo...</string>
-    <string name="running_legend">Aandar</string>
     <string name="enabled_legend">Naka-enable</string>
     <string name="disabled_legend">Naka-disable</string>
     <string name="static_legend">Static</string>
     <string name="abnormal_legend">Abnormal</string>
     <string name="masked_legend">Naka-mask</string>
     <string name="all_legend">Amin</string>
-    <string name="running_status">Aandar</string>
-    <string name="enabled_status">Naka-enable</string>
-    <string name="static_status">Static</string>
-    <string name="abnormal_status">Abnormal</string>
-    <string name="disabled_status">Naka-disable</string>
-    <string name="masked_status">Naka-mask</string>
     <string name="unmask">I-unmask</string>
-    <string name="start_service">Igapo</string>
-    <string name="stop_service">Patundaen</string>
     <string name="enable_service">I-enable</string>
     <string name="disable_service">I-disable</string>
     <string name="more_options">Arum ni ray opsyon</string>
@@ -263,7 +248,6 @@
     <string name="cpu_percent">%1$s%% CPU</string>
     <string name="mem_percent">%1$s%% MEM</string>
 
-    <string name="saved_label">Na-save</string>
     <string name="error_generic">Eror</string>
     <string name="comma">,</string>
     <string name="gb_size">%1$dGB</string>
@@ -300,6 +284,5 @@
     <string name="requirements_for_droidspaces">Saray Kaukolan parad Droidspaces</string>
     <string name="requirements_check_completed_successfully">Maong ya asumpal so pan-chek ed saray kaukolan</string>
     <string name="requirements_check_completed_with_errors">Asumpal so pan-chek ed saray kaukolan ya walay error</string>
-    <string name="kernel_requirements_clipboard_label">Saray Kaukolan na Kernel</string>
     <string name="kernel_requirements_copied">Akopya ed clipboard iray kaukolan na kernel</string>
 </resources>

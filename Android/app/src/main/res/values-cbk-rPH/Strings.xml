@@ -25,9 +25,7 @@
     <string name="search">Busca</string>
     <string name="clear">Bura</string>
 
-    <string name="droidspaces_title">Droidspaces</string>
     <string name="container_singular">Container</string>
-    <string name="container_plural">Maga Container</string>
     <string name="running">Ta anda</string>
     <string name="container_count">%1$d container</string>
     <string name="containers_count">%1$d maga container</string>
@@ -51,7 +49,6 @@
     <string name="tap_to_install_module">Toca aqui para instala el module</string>
     <string name="device_not_supported">Hende suportao el de tuyu device</string>
 
-    <string name="settings_title">Configuracion</string>
     <string name="backend_section">Backend</string>
     <string name="reinstall_backend">Instala otra vez el Backend</string>
     <string name="reinstall_backend_description">Instala otra vez el maga binary y boot module</string>
@@ -117,7 +114,6 @@
     <string name="storage_option">Storage</string>
     <string name="hw_option">HW</string>
     <string name="selinux_option">SELinux</string>
-    <string name="run_at_boot_option">Hace anda na Boot</string>
 
     <string name="container_info">Informacion del Container</string>
     <string name="distribution">Distribucion</string>
@@ -133,7 +129,6 @@
     <string name="edit_container_title">Revisa el Container: %1$s</string>
     <string name="container_is_running">Ta anda el container</string>
     <string name="changes_take_effect_after_restart">El maga cambio hay tene efecto despues hace restart</string>
-    <string name="hostname_label_edit">Hostname</string>
     <string name="disable_ipv6">Deshabilitar IPv6</string>
     <string name="disable_ipv6_description">Deshabilitar IPv6 en este container. Puede romper apps VPN en el host.</string>
     <string name="disable_ipv6_nat_forced">IPv6 siempre está deshabilitado en los modos NAT y None.</string>
@@ -154,7 +149,6 @@
     <string name="container_information">Informacion del Container</string>
     <string name="container_name_label">Nombre del Container *</string>
     <string name="container_name_placeholder">mi-container</string>
-    <string name="hostname_label_input">Hostname</string>
     <string name="hostname_placeholder">Deja vacio para default</string>
     <string name="hostname_hint">Si vacio, usa el nombre del container como hostname</string>
     <string name="container_name_exists">Tiene ya container con este nombre</string>
@@ -198,22 +192,13 @@
     <string name="systemd_not_available">Hende Disponible el Systemd</string>
     <string name="systemd_not_available_message">Este container no hay systemd instalao o no hay ta anda</string>
     <string name="search_services">Busca maga servicio...</string>
-    <string name="running_legend">Ta anda</string>
     <string name="enabled_legend">Habilitao</string>
     <string name="disabled_legend">Deshabilitao</string>
     <string name="static_legend">Static</string>
     <string name="abnormal_legend">Abnormal</string>
     <string name="masked_legend">Masked</string>
     <string name="all_legend">Todo</string>
-    <string name="running_status">Ta anda</string>
-    <string name="enabled_status">Habilitao</string>
-    <string name="static_status">Static</string>
-    <string name="abnormal_status">Abnormal</string>
-    <string name="disabled_status">Deshabilitao</string>
-    <string name="masked_status">Masked</string>
     <string name="unmask">Unmask</string>
-    <string name="start_service">Empeza</string>
-    <string name="stop_service">Para</string>
     <string name="enable_service">Habilita</string>
     <string name="disable_service">Deshabilita</string>
     <string name="more_options">Mas opcion</string>
@@ -263,7 +248,6 @@
     <string name="cpu_percent">%1$s%% CPU</string>
     <string name="mem_percent">%1$s%% MEM</string>
 
-    <string name="saved_label">Save</string>
     <string name="error_generic">Error</string>
     <string name="comma">,</string>
     <string name="gb_size">%1$dGB</string>
@@ -300,6 +284,5 @@
     <string name="requirements_for_droidspaces">Maga Requisito para na Droidspaces</string>
     <string name="requirements_check_completed_successfully">Chequeo de maga requisito completo con exito</string>
     <string name="requirements_check_completed_with_errors">Chequeo de maga requisito completo con maga error</string>
-    <string name="kernel_requirements_clipboard_label">Maga Requisito del Kernel</string>
     <string name="kernel_requirements_copied">Maga requisito del kernel ya copia na clipboard</string>
 </resources>

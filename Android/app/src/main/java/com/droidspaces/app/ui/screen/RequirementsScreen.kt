@@ -381,7 +381,7 @@ private fun CodeBox(
                     onClick = {
                         val clipboard = context.getSystemService(ClipboardManager::class.java)
                         val clip = ClipData.newPlainText(
-                            context.getString(R.string.kernel_requirements_clipboard_label),
+                            context.getString(R.string.kernel_requirements),
                             code
                         )
                         clipboard.setPrimaryClip(clip)

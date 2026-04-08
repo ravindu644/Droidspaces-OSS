@@ -25,9 +25,7 @@
     <string name="search">Sapulen</string>
     <string name="clear">Daldalen</string>
 
-    <string name="droidspaces_title">Droidspaces</string>
     <string name="container_singular">Container</string>
-    <string name="container_plural">Dagiti Container</string>
     <string name="running">Agtartaray</string>
     <string name="container_count">%1$d a container</string>
     <string name="containers_count">%1$d a dagiti container</string>
@@ -51,7 +49,6 @@
     <string name="tap_to_install_module">I-tap ditoy tapno i-install ti module</string>
     <string name="device_not_supported">Saan a suportado ti device mo</string>
 
-    <string name="settings_title">Dagiti Setting</string>
     <string name="backend_section">Backend</string>
     <string name="reinstall_backend">I-install manen ti Backend</string>
     <string name="reinstall_backend_description">I-install manen dagiti binary ken boot module</string>
@@ -117,7 +114,6 @@
     <string name="storage_option">Storage</string>
     <string name="hw_option">HW</string>
     <string name="selinux_option">SELinux</string>
-    <string name="run_at_boot_option">Ipataray iti Boot</string>
 
     <string name="container_info">Impormasyon ti Container</string>
     <string name="distribution">Distribusyon</string>
@@ -133,7 +129,6 @@
     <string name="edit_container_title">I-edit ti Container: %1$s</string>
     <string name="container_is_running">Agtartaray ti container</string>
     <string name="changes_take_effect_after_restart">Maipatungpal dagiti nabaliwan kalpasan ti restart</string>
-    <string name="hostname_label_edit">Hostname</string>
     <string name="disable_ipv6">Pararen ti IPv6</string>
     <string name="disable_ipv6_description">Pararen ti IPv6 iti daytoy a container. No mapararemen ti IPv6, mabalin a maputil dagiti VPN app iti host.</string>
     <string name="disable_ipv6_nat_forced">Naparar ti IPv6 iti NAT ken None a network mode.</string>
@@ -154,7 +149,6 @@
     <string name="container_information">Impormasyon ti Container</string>
     <string name="container_name_label">Nagan ti Container *</string>
     <string name="container_name_placeholder">my-container</string>
-    <string name="hostname_label_input">Hostname</string>
     <string name="hostname_placeholder">Ibati nga awan karga para iti default</string>
     <string name="hostname_hint">No awan karga, usaren ti nagan ti container a kas hostname</string>
     <string name="container_name_exists">Adda container nga agtagikua iti daytoy a nagan</string>
@@ -198,22 +192,13 @@
     <string name="systemd_not_available">Saan nga Available ti Systemd</string>
     <string name="systemd_not_available_message">Daytoy a container ket awan ti naka-install wenno agtartaray a systemd</string>
     <string name="search_services">Sapulen dagiti serbisyo...</string>
-    <string name="running_legend">Agtartaray</string>
     <string name="enabled_legend">Naka-enable</string>
     <string name="disabled_legend">Naka-disable</string>
     <string name="static_legend">Static</string>
     <string name="abnormal_legend">Abnormal</string>
     <string name="masked_legend">Naka-mask</string>
     <string name="all_legend">Amin</string>
-    <string name="running_status">Agtartaray</string>
-    <string name="enabled_status">Naka-enable</string>
-    <string name="static_status">Static</string>
-    <string name="abnormal_status">Abnormal</string>
-    <string name="disabled_status">Naka-disable</string>
-    <string name="masked_status">Naka-mask</string>
     <string name="unmask">I-unmask</string>
-    <string name="start_service">Irugi</string>
-    <string name="stop_service">Pasardengen</string>
     <string name="enable_service">I-enable</string>
     <string name="disable_service">I-disable</string>
     <string name="more_options">Dadduma pay nga opsyon</string>
@@ -263,7 +248,6 @@
     <string name="cpu_percent">%1$s%% CPU</string>
     <string name="mem_percent">%1$s%% MEM</string>
 
-    <string name="saved_label">Na-save</string>
     <string name="error_generic">Error</string>
     <string name="comma">,</string>
     <string name="gb_size">%1$dGB</string>
@@ -300,6 +284,5 @@
     <string name="requirements_for_droidspaces">Dagiti Kasapulan para iti Droidspaces</string>
     <string name="requirements_check_completed_successfully">Nagballigi ti panag-tsek kadagiti kasapulan</string>
     <string name="requirements_check_completed_with_errors">Nalpas ti panag-tsek kadagiti kasapulan nga addaan kadagiti error</string>
-    <string name="kernel_requirements_clipboard_label">Dagiti Kasapulan ti Kernel</string>
     <string name="kernel_requirements_copied">Nakopia dagiti kasapulan ti kernel iti clipboard</string>
 </resources>

@@ -241,7 +241,7 @@ fun MainTabScreen(
                         )
                         Text(
                             text = when (selectedTab) {
-                                TabItem.Home -> context.getString(R.string.droidspaces_title)
+                                TabItem.Home -> context.getString(R.string.app_name)
                                 TabItem.Containers -> context.getString(R.string.containers)
                                 TabItem.ControlPanel -> context.getString(R.string.panel)
                             },

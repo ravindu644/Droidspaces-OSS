@@ -29,9 +29,7 @@
     <string name="clear">Limpar</string>
 
     <!-- Main Tab Screen -->
-    <string name="droidspaces_title">Droidspaces</string>
     <string name="container_singular">Container</string>
-    <string name="container_plural">Containers</string>
     <string name="running">Em execução</string>
     <string name="container_count">%1$d container</string>
     <string name="containers_count">%1$d containers</string>
@@ -57,7 +55,6 @@
     <string name="device_not_supported">Seu dispositivo não é suportado</string>
 
     <!-- Settings Screen -->
-    <string name="settings_title">Configurações</string>
     <string name="backend_section">Backend</string>
     <string name="reinstall_backend">Reinstalar Backend</string>
     <string name="reinstall_backend_description">Reinstalar binários e módulo de boot</string>
@@ -125,7 +122,6 @@
     <string name="storage_option">Armazenamento</string>
     <string name="hw_option">HW</string>
     <string name="selinux_option">SELinux</string>
-    <string name="run_at_boot_option">Executar na inicialização</string>
 
     <!-- Container Details Screen -->
     <string name="container_info">Informações do Container</string>
@@ -143,7 +139,6 @@
     <string name="edit_container_title">Editar container: %1$s</string>
     <string name="container_is_running">O container está em execução</string>
     <string name="changes_take_effect_after_restart">As alterações terão efeito após reiniciar</string>
-    <string name="hostname_label_edit">Hostname</string>
     <string name="disable_ipv6">Desabilitar IPv6</string>
     <string name="disable_ipv6_description">Desabilitar IPv6 neste contêiner. Desabilitar o IPv6 pode quebrar apps de VPN no host.</string>
     <string name="disable_ipv6_nat_forced">O IPv6 é sempre desabilitado nos modos NAT e None.</string>
@@ -165,7 +160,6 @@
     <string name="container_information">Informações do Container</string>
     <string name="container_name_label">Nome do Container *</string>
     <string name="container_name_placeholder">meu-container</string>
-    <string name="hostname_label_input">Hostname</string>
     <string name="hostname_placeholder">Deixe vazio para padrão</string>
     <string name="hostname_hint">Se vazio, usará o nome do container como hostname</string>
     <string name="container_name_exists">Já existe um container com este nome</string>
@@ -213,22 +207,13 @@
     <string name="systemd_not_available">Systemd Não Disponível</string>
     <string name="systemd_not_available_message">Este container não tem systemd instalado ou em execução</string>
     <string name="search_services">Pesquisar serviços...</string>
-    <string name="running_legend">Em execução</string>
     <string name="enabled_legend">Habilitado</string>
     <string name="disabled_legend">Desabilitado</string>
     <string name="static_legend">Anormal</string>
     <string name="abnormal_legend">Anormal</string>
     <string name="masked_legend">Mascarado</string>
     <string name="all_legend">Todos</string>
-    <string name="running_status">Em execução</string>
-    <string name="enabled_status">Habilitado</string>
-    <string name="static_status">Anormal</string>
-    <string name="abnormal_status">Anormal</string>
-    <string name="disabled_status">Desabilitado</string>
-    <string name="masked_status">Mascarado</string>
     <string name="unmask">Desmascarar</string>
-    <string name="start_service">Iniciar</string>
-    <string name="stop_service">Parar</string>
     <string name="enable_service">Habilitar</string>
     <string name="disable_service">Desabilitar</string>
     <string name="more_options">Mais opções</string>
@@ -284,7 +269,6 @@
     <string name="mem_percent">%1$s%% MEM</string>
 
     <!-- Common -->
-    <string name="saved_label">Salvo</string>
     <string name="error_generic">Erro</string>
     <string name="comma">,</string>
     <string name="gb_size">%1$d GB</string>
@@ -326,6 +310,5 @@
     <string name="requirements_for_droidspaces">Requisitos para Droidspaces</string>
     <string name="requirements_check_completed_successfully">Verificação de requisitos concluída com sucesso</string>
     <string name="requirements_check_completed_with_errors">Verificação de requisitos concluída com erros</string>
-    <string name="kernel_requirements_clipboard_label">Requisitos do Kernel</string>
     <string name="kernel_requirements_copied">Requisitos do kernel copiados para a área de transferência</string>
 </resources>
