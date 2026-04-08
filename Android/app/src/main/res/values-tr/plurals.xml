@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <plurals name="container_count">
+        <item quantity="one">%d konteyner</item>
+        <item quantity="other">%d konteynerler</item>
+    </plurals>
+</resources>
