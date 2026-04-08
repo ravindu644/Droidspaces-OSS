@@ -36,7 +36,7 @@
     <string name="backend_unknown">Backend: හඳුනාගත නොහැක</string>
     <string name="root_unavailable">Root ප්‍රවේශය ලබාගත නොහැක.</string>
     <string name="grant_root_message">Droidspaces ගවේෂණය කිරීමට Root ප්‍රවේශය ලබා දෙන්න !</string>
-    <string name="version_label">අනුවාදය: %1$s</string>
+    <string name="version_label">සංස්කරණය: %1$s</string>
     <string name="root_provider_label">Root සම්පාදකයා: %1$s</string>
     <string name="unknown">හඳුනාගත නොහැක</string>
     <string name="update_available_message">Backend යාවත්කාලීනයක් පවතී, යාවත්කාලීන කිරීමට මෙතැන ක්ලික් කරන්න</string>
