@@ -4,7 +4,6 @@
     <string name="welcome_title">Добро пожаловать в Droidspaces</string>
     <string name="welcome_subtitle">Менеджер Linux-контейнеров в стиле LXC для Android!</string>
     <string name="get_started">Начать</string>
-
     <!-- Root Check Screen -->
     <string name="root_check_title">Проверка Root-доступа</string>
     <string name="checking_root">Проверка Root-доступа…</string>
@@ -16,7 +15,6 @@
     <string name="root_available_message">Теперь вы можете использовать Droidspaces</string>
     <string name="skip">Пропустить</string>
     <string name="continue_button">Продолжить</string>
-
     <!-- Navigation -->
     <string name="home_title">Главная</string>
     <string name="containers">Контейнеры</string>
@@ -27,13 +25,11 @@
     <string name="refresh">Обновить</string>
     <string name="search">Поиск</string>
     <string name="clear">Очистить</string>
-
     <!-- Main Tab Screen -->
     <string name="container_singular">Контейнер</string>
     <string name="running">Запущено</string>
     <string name="container_count">%1$d контейнер</string>
     <string name="containers_count">%1$d контейнеров</string>
-
     <!-- Droidspaces Status Card -->
     <string name="backend_checking">Backend: Проверка...</string>
     <string name="backend_installed">Backend: Установлен</string>
@@ -53,7 +49,6 @@
     <string name="tap_to_reinstall">Нажмите здесь для переустановки</string>
     <string name="tap_to_install_module">Нажмите здесь для установки модуля</string>
     <string name="device_not_supported">Ваше устройство не поддерживается</string>
-
     <!-- Settings Screen -->
     <string name="backend_section">Бэкенд</string>
     <string name="reinstall_backend">Переустановить бэкенд</string>
@@ -85,7 +80,6 @@
     <string name="contributors">Участники</string>
     <string name="github">GitHub</string>
     <string name="ok">ОК</string>
-
     <!-- Containers Screen -->
     <string name="no_containers_installed">Контейнеры не установлены</string>
     <string name="install_container_description">Установите контейнер с помощью кнопки ниже</string>
@@ -107,7 +101,6 @@
     <string name="view_logs">Просмотр логов</string>
     <string name="edit_container_configuration">Редактировать конфигурацию контейнера</string>
     <string name="uninstall_container_menu">Удалить контейнер</string>
-
     <!-- Container Card -->
     <string name="status_running">ЗАПУЩЕН</string>
     <string name="status_restarting">ПЕРЕЗАПУСК</string>
@@ -122,7 +115,6 @@
     <string name="storage_option">Хранилище</string>
     <string name="hw_option">HW</string>
     <string name="selinux_option">SELinux</string>
-
     <!-- Container Details Screen -->
     <string name="container_info">Информация о контейнере</string>
     <string name="distribution">Дистрибутив</string>
@@ -134,7 +126,6 @@
     <string name="checking">Проверка</string>
     <string name="not_available">Недоступно</string>
     <string name="manage">Управление</string>
-
     <!-- Edit Container Screen -->
     <string name="edit_container_title">Редактировать контейнер: %1$s</string>
     <string name="container_is_running">Контейнер запущен</string>
@@ -154,7 +145,6 @@
     <string name="saving">Сохранение…</string>
     <string name="save_changes">Сохранить изменения</string>
     <string name="failed_to_update_config">Не удалось обновить конфигурацию</string>
-
     <!-- Container Name Screen -->
     <string name="container_setup">Настройка контейнера</string>
     <string name="container_information">Информация о контейнере</string>
@@ -164,12 +154,10 @@
     <string name="hostname_hint">Если пусто, будет использовано имя контейнера как имя хоста</string>
     <string name="container_name_exists">Контейнер с таким именем уже существует</string>
     <string name="next_configuration">Далее: Конфигурация</string>
-
     <!-- Container Config Screen -->
     <string name="configuration_title">Конфигурация</string>
     <string name="container_options">Опции контейнера</string>
     <string name="next_storage">Далее: Хранилище</string>
-
     <!-- Installation Screen -->
     <string name="installation_complete">Установка завершена</string>
     <string name="installation_failed">Установка не удалась</string>
@@ -191,7 +179,6 @@
     <string name="installing_binary">Установка бинарного файла: %1$s</string>
     <string name="granting_permissions">Предоставление разрешений...</string>
     <string name="preparing_installation">Подготовка установки...</string>
-
     <!-- Control Panel Screen -->
     <string name="active_containers">Активные контейнеры</string>
     <string name="no_containers_running">Нет запущенных контейнеров</string>
@@ -200,7 +187,6 @@
     <string name="cpu">CPU</string>
     <string name="ram">RAM</string>
     <string name="temp">Температура</string>
-
     <!-- Systemd Screen -->
     <string name="systemd_services">Службы Systemd</string>
     <string name="fetching_services">Получение служб...</string>
@@ -231,7 +217,6 @@
     <string name="no_static_services">Нет служб с аномальным состоянием</string>
     <string name="no_abnormal_services">Нет служб с аномальным состоянием</string>
     <string name="no_masked_services">Нет замаскированных служб</string>
-
     <!-- System Info Card -->
     <string name="kernel">Ядро</string>
     <string name="selinux_status">Статус SELinux</string>
@@ -239,18 +224,15 @@
     <string name="architecture">Архитектура</string>
     <string name="supported_abis">Поддерживаемые ABI</string>
     <string name="loading">Загрузка…</string>
-
     <!-- Empty State -->
     <string name="backend_not_available">Бэкенд недоступен</string>
     <string name="backend_not_available_description">Бэкенд не установлен или повреждён. Пожалуйста, установите его сначала.</string>
     <string name="root_access_not_available">Root-доступ недоступен</string>
     <string name="root_access_not_available_description">Эта страница отключена, так как root-доступ недоступен</string>
-
     <!-- Dialog Utils -->
     <string name="operation_failed_title">Операция не удалась</string>
     <string name="no_output_available">Нет доступного вывода</string>
     <string name="dismiss">Закрыть</string>
-
     <!-- Container Users Card -->
     <string name="available_users">Доступные пользователи</string>
     <string name="login_command_copied">Команда входа скопирована для пользователя %1$s</string>
@@ -258,14 +240,12 @@
     <string name="no_local_users_found">Локальные пользователи не найдены</string>
     <string name="select_user">Выбрать пользователя</string>
     <string name="copy_login">Копировать команду входа</string>
-
     <!-- Process List Screen -->
 
     <!-- Common -->
     <string name="error_generic">Ошибка</string>
     <string name="comma">,</string>
     <string name="gb_size">%1$d ГБ</string>
-
     <!-- Sparse Image Config Screen -->
     <string name="sparse_image_configuration">Конфигурация sparse images</string>
     <string name="storage_configuration">Конфигурация хранилища</string>
@@ -282,21 +262,17 @@
     <string name="size_gb">Размер (ГБ)</string>
     <string name="enter_size_between_4_512_gb">Введите размер от 4 до 512 ГБ</string>
     <string name="next_summary">Далее: Сводка</string>
-
     <!-- Container Log Viewer -->
     <string name="logs_title">Логи: %1$s</string>
     <string name="clear_logs">Очистить логи</string>
     <string name="copy_logs">Копировать логи</string>
     <string name="container_logs">Логи контейнера</string>
-
     <!-- Validation Error Messages -->
     <string name="error_container_name_empty">Имя контейнера не может быть пустым</string>
     <string name="error_container_name_invalid">Имя контейнера может содержать только латинские буквы, цифры, дефисы (-), подчёркивания (_), точки (.) и пробелы</string>
     <string name="error_hostname_invalid">Имя хоста может содержать только буквы, цифры и дефисы (-)</string>
-
     <!-- Process List -->
     <string name="user_in_parentheses">(%1$s)</string>
-
     <!-- Requirements -->
     <string name="check_requirements">Проверить требования</string>
     <string name="requirements_check_title">Проверка требований</string>

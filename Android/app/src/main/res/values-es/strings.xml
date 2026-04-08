@@ -3,7 +3,6 @@
     <string name="welcome_title">Bienvenido a Droidspaces</string>
     <string name="welcome_subtitle">Gestor de contenedores Linux (estilo LXC) para Android !</string>
     <string name="get_started">Comenzar</string>
-
     <string name="root_check_title">Verificar Acceso Root</string>
     <string name="checking_root">Verificando acceso root…</string>
     <string name="root_granted">Acceso Root Permitido</string>
@@ -14,7 +13,6 @@
     <string name="root_available_message">Ya puedes usar Droidspaces</string>
     <string name="skip">Saltar</string>
     <string name="continue_button">Continuar</string>
-
     <string name="home_title">Inicio</string>
     <string name="containers">Contenedores</string>
     <string name="panel">Panel</string>
@@ -24,12 +22,10 @@
     <string name="refresh">Recargar</string>
     <string name="search">Buscar</string>
     <string name="clear">Limpiar</string>
-
     <string name="container_singular">Contenedor</string>
     <string name="running">Activo</string>
     <string name="container_count">%1$d contenedor</string>
     <string name="containers_count">%1$d contenedores</string>
-
     <string name="backend_checking">Backend: Verificando...</string>
     <string name="backend_installed">Backend: Instalado</string>
     <string name="backend_update_available">Backend: Actualización disponible</string>
@@ -48,7 +44,6 @@
     <string name="tap_to_reinstall">Toca para reinstalar</string>
     <string name="tap_to_install_module">Toca para instalar el módulo</string>
     <string name="device_not_supported">Tu dispositivo no está soportado</string>
-
     <string name="backend_section">Backend</string>
     <string name="reinstall_backend">Reinstalar Backend</string>
     <string name="reinstall_backend_description">Reinstalar binarios y módulo de arranque</string>
@@ -78,7 +73,6 @@
     <string name="contributors">Colaboradores</string>
     <string name="github">GitHub</string>
     <string name="ok">OK</string>
-
     <string name="no_containers_installed">No hay contenedores instalados</string>
     <string name="install_container_description">Instala un contenedor usando el botón de abajo</string>
     <string name="install_container">Instalar contenedor</string>
@@ -99,7 +93,6 @@
     <string name="view_logs">Ver logs</string>
     <string name="edit_container_configuration">Editar configuración del contenedor</string>
     <string name="uninstall_container_menu">Desinstalar contenedor</string>
-
     <string name="status_running">EN EJECUCIÓN</string>
     <string name="status_restarting">REINICIANDO</string>
     <string name="status_stopped">DETENIDO</string>
@@ -113,7 +106,6 @@
     <string name="storage_option">Almacenamiento</string>
     <string name="hw_option">HW</string>
     <string name="selinux_option">SELinux</string>
-
     <string name="container_info">Info del contenedor</string>
     <string name="distribution">Distribución</string>
     <string name="version">Versión</string>
@@ -124,7 +116,6 @@
     <string name="checking">Verificando</string>
     <string name="not_available">No disponible</string>
     <string name="manage">Administrar</string>
-
     <string name="edit_container_title">Editar contenedor: %1$s</string>
     <string name="container_is_running">El contenedor está en ejecución</string>
     <string name="changes_take_effect_after_restart">Los cambios surtirán efecto tras reiniciar</string>
@@ -143,7 +134,6 @@
     <string name="saving">Guardando…</string>
     <string name="save_changes">Guardar cambios</string>
     <string name="failed_to_update_config">Error al actualizar la configuración</string>
-
     <string name="container_setup">Configuración del contenedor</string>
     <string name="container_information">Información del contenedor</string>
     <string name="container_name_label">Nombre del contenedor *</string>
@@ -152,11 +142,9 @@
     <string name="hostname_hint">Si está vacío, se usará el nombre del contenedor como hostname</string>
     <string name="container_name_exists">Ya existe un contenedor con este nombre</string>
     <string name="next_configuration">Siguiente: Configuración</string>
-
     <string name="configuration_title">Configuración</string>
     <string name="container_options">Opciones del contenedor</string>
     <string name="next_storage">Siguiente: Almacenamiento</string>
-
     <string name="installation_complete">Instalación completada</string>
     <string name="installation_failed">Instalación fallida</string>
     <string name="installing_module">Instalando módulo</string>
@@ -177,7 +165,6 @@
     <string name="installing_binary">Instalando binario: %1$s</string>
     <string name="granting_permissions">Otorgando permisos…</string>
     <string name="preparing_installation">Preparando instalación…</string>
-
     <string name="active_containers">Contenedores activos</string>
     <string name="no_containers_running">No hay contenedores en ejecución</string>
     <string name="start_container_first">Inicia un contenedor primero para verlo aquí</string>
@@ -185,7 +172,6 @@
     <string name="cpu">CPU</string>
     <string name="ram">RAM</string>
     <string name="temp">Temp.</string>
-
     <string name="systemd_services">Servicios Systemd</string>
     <string name="fetching_services">Obteniendo servicios…</string>
     <string name="systemd_not_available">Systemd no disponible</string>
@@ -215,35 +201,28 @@
     <string name="no_static_services">No hay servicios con estado anormal</string>
     <string name="no_abnormal_services">No hay servicios con estado anormal</string>
     <string name="no_masked_services">No hay servicios enmascarados</string>
-
     <string name="kernel">Kernel</string>
     <string name="selinux_status">Estado de SELinux</string>
     <string name="android_version">Versión de Android</string>
     <string name="architecture">Arquitectura</string>
     <string name="supported_abis">ABIs compatibles</string>
     <string name="loading">Cargando…</string>
-
     <string name="backend_not_available">Backend no disponible</string>
     <string name="backend_not_available_description">El backend no está instalado o está corrupto. Instálalo primero.</string>
     <string name="root_access_not_available">Acceso root no disponible</string>
     <string name="root_access_not_available_description">Página deshabilitada debido a que no hay acceso root</string>
-
     <string name="operation_failed_title">Operación fallida</string>
     <string name="no_output_available">No hay salida disponible</string>
     <string name="dismiss">Descartar</string>
-
     <string name="available_users">Usuarios disponibles</string>
     <string name="login_command_copied">Comando de inicio copiado para el usuario %1$s</string>
     <string name="refresh_users">Actualizar usuarios</string>
     <string name="no_local_users_found">No se encontraron usuarios locales</string>
     <string name="select_user">Seleccionar usuario</string>
     <string name="copy_login">Copiar login</string>
-
-
     <string name="error_generic">Error</string>
     <string name="comma">,</string>
     <string name="gb_size">%1$d GB</string>
-
     <string name="sparse_image_configuration">Configuración de Imagen Sparse</string>
     <string name="storage_configuration">Configuración de almacenamiento</string>
     <string name="about_sparse_images">Sobre las imágenes Sparse</string>
@@ -259,18 +238,14 @@
     <string name="size_gb">Tamaño (GB)</string>
     <string name="enter_size_between_4_512_gb">Introduce un tamaño entre 4 y 512 GB</string>
     <string name="next_summary">Siguiente: Resumen</string>
-
     <string name="logs_title">Logs: %1$s</string>
     <string name="clear_logs">Limpiar logs</string>
     <string name="copy_logs">Copiar logs</string>
     <string name="container_logs">Logs del contenedor</string>
-
     <string name="error_container_name_empty">El nombre no puede estar vacío</string>
     <string name="error_container_name_invalid">El nombre solo puede contener letras, números, guiones (-), guiones bajos (_), puntos (.) y espacios</string>
     <string name="error_hostname_invalid">El hostname solo puede contener letras, números y guiones (-)</string>
-
     <string name="user_in_parentheses">(%1$s)</string>
-
     <string name="check_requirements">Verificar requisitos</string>
     <string name="requirements_check_title">Comprobación de requisitos</string>
     <string name="requirements_for_droidspaces">Requisitos para Droidspaces</string>

@@ -180,4 +180,5 @@
     <string name="saving">正在保存...</string>
     <string name="save_changes">保存更改</string>
     <string name="static_ip_address">静态 IP 地址</string>
+    <string name="static_ip_description">为此容器设置一个 172.28.x.x 子网内的静态 IPv4 地址。</string>
 </resources>

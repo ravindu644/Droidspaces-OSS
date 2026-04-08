@@ -4,7 +4,6 @@
     <string name="welcome_title">Droidspaces में आपका स्वागत है</string>
     <string name="welcome_subtitle">Android के लिए LXC-शैली का Linux कंटेनर मैनेजर!</string>
     <string name="get_started">शुरू करें</string>
-
     <!-- Root Check Screen -->
     <string name="root_check_title">रूट एक्सेस जांच</string>
     <string name="checking_root">रूट एक्सेस की जांच की जा रही है…</string>
@@ -16,7 +15,6 @@
     <string name="root_available_message">अब आप Droidspaces का उपयोग कर सकते हैं</string>
     <string name="skip">छोड़ें</string>
     <string name="continue_button">जारी रखें</string>
-
     <!-- Navigation -->
     <string name="home_title">होम</string>
     <string name="containers">कंटेनर</string>
@@ -27,13 +25,11 @@
     <string name="refresh">रीफ्रेश</string>
     <string name="search">खोजें</string>
     <string name="clear">साफ करें</string>
-
     <!-- Main Tab Screen -->
     <string name="container_singular">कंटेनर</string>
     <string name="running">चल रहा है</string>
     <string name="container_count">%1$d कंटेनर</string>
     <string name="containers_count">%1$d कंटेनर</string>
-
     <!-- Droidspaces Status Card -->
     <string name="backend_checking">Backend: जांच हो रही है...</string>
     <string name="backend_installed">Backend: स्थापित</string>
@@ -53,7 +49,6 @@
     <string name="tap_to_reinstall">पुनः इंस्टॉल करने के लिए यहां टैप करें</string>
     <string name="tap_to_install_module">मॉड्यूल इंस्टॉल करने के लिए यहां टैप करें</string>
     <string name="device_not_supported">आपका डिवाइस समर्थित नहीं है</string>
-
     <!-- Settings Screen -->
     <string name="backend_section">बैकएंड</string>
     <string name="reinstall_backend">बैकएंड पुनः इंस्टॉल करें</string>
@@ -85,7 +80,6 @@
     <string name="contributors">योगदानकर्ता</string>
     <string name="github">GitHub</string>
     <string name="ok">ठीक है</string>
-
     <!-- Containers Screen -->
     <string name="no_containers_installed">कोई कंटेनर इंस्टॉल नहीं है</string>
     <string name="install_container_description">नीचे दिए गए बटन से कंटेनर इंस्टॉल करें</string>
@@ -107,7 +101,6 @@
     <string name="view_logs">लॉग देखें</string>
     <string name="edit_container_configuration">कंटेनर कॉन्फ़िगरेशन संपादित करें</string>
     <string name="uninstall_container_menu">कंटेनर अनइंस्टॉल करें</string>
-
     <!-- Container Card -->
     <string name="status_running">चल रहा है</string>
     <string name="status_restarting">पुनः प्रारंभ हो रहा है</string>
@@ -122,7 +115,6 @@
     <string name="storage_option">स्टोरेज</string>
     <string name="hw_option">HW</string>
     <string name="selinux_option">SELinux</string>
-
     <!-- Container Details Screen -->
     <string name="container_info">कंटेनर जानकारी</string>
     <string name="distribution">डिस्ट्रिब्यूशन</string>
@@ -134,7 +126,6 @@
     <string name="checking">जांच हो रही है</string>
     <string name="not_available">उपलब्ध नहीं</string>
     <string name="manage">प्रबंधित करें</string>
-
     <!-- Edit Container Screen -->
     <string name="edit_container_title">कंटेनर संपादित करें: %1$s</string>
     <string name="container_is_running">कंटेनर चल रहा है</string>
@@ -154,7 +145,6 @@
     <string name="saving">सहेजा जा रहा है...</string>
     <string name="save_changes">परिवर्तन सहेजें</string>
     <string name="failed_to_update_config">कॉन्फ़िगरेशन अपडेट करने में विफल</string>
-
     <!-- Container Name Screen -->
     <string name="container_setup">कंटेनर सेटअप</string>
     <string name="container_information">कंटेनर जानकारी</string>
@@ -164,12 +154,10 @@
     <string name="hostname_hint">यदि खाली है, तो कंटेनर नाम को होस्टनेम के रूप में उपयोग किया जाएगा</string>
     <string name="container_name_exists">इस नाम का कंटेनर पहले से मौजूद है</string>
     <string name="next_configuration">अगला: कॉन्फ़िगरेशन</string>
-
     <!-- Container Config Screen -->
     <string name="configuration_title">कॉन्फ़िगरेशन</string>
     <string name="container_options">कंटेनर विकल्प</string>
     <string name="next_storage">अगला: स्टोरेज</string>
-
     <!-- Installation Screen -->
     <string name="installation_complete">इंस्टॉलेशन पूर्ण</string>
     <string name="installation_failed">इंस्टॉलेशन विफल</string>
@@ -191,7 +179,6 @@
     <string name="installing_binary">बाइनरी इंस्टॉल की जा रही है: %1$s</string>
     <string name="granting_permissions">अनुमतियाँ दी जा रही हैं...</string>
     <string name="preparing_installation">इंस्टॉलेशन की तैयारी...</string>
-
     <!-- Control Panel Screen -->
     <string name="active_containers">सक्रिय कंटेनर</string>
     <string name="no_containers_running">कोई कंटेनर नहीं चल रहा</string>
@@ -200,7 +187,6 @@
     <string name="cpu">CPU</string>
     <string name="ram">RAM</string>
     <string name="temp">तापमान</string>
-
     <!-- Systemd Screen -->
     <string name="systemd_services">Systemd सेवाएँ</string>
     <string name="fetching_services">सेवाएँ प्राप्त की जा रही हैं...</string>
@@ -231,7 +217,6 @@
     <string name="no_static_services">कोई असामान्य सेवाएँ नहीं</string>
     <string name="no_abnormal_services">कोई असामान्य सेवाएँ नहीं</string>
     <string name="no_masked_services">कोई मास्क की गई सेवाएँ नहीं</string>
-
     <!-- System Info Card -->
     <string name="kernel">कर्नेल</string>
     <string name="selinux_status">SELinux स्थिति</string>
@@ -239,18 +224,15 @@
     <string name="architecture">आर्किटेक्चर</string>
     <string name="supported_abis">समर्थित ABI</string>
     <string name="loading">लोड हो रहा है...</string>
-
     <!-- Empty State -->
     <string name="backend_not_available">बैकएंड उपलब्ध नहीं है</string>
     <string name="backend_not_available_description">Backend स्थापित नहीं है या दूषित है। कृपया इसे पहले स्थापित करें।</string>
     <string name="root_access_not_available">रूट एक्सेस उपलब्ध नहीं है</string>
     <string name="root_access_not_available_description">रूट एक्सेस उपलब्ध न होने के कारण यह पृष्ठ अक्षम है</string>
-
     <!-- Dialog Utils -->
     <string name="operation_failed_title">क्रिया विफल</string>
     <string name="no_output_available">कोई आउटपुट उपलब्ध नहीं</string>
     <string name="dismiss">बंद करें</string>
-
     <!-- Container Users Card -->
     <string name="available_users">उपलब्ध उपयोगकर्ता</string>
     <string name="login_command_copied">उपयोगकर्ता %1$s के लिए लॉगिन कमांड कॉपी किया गया</string>
@@ -258,14 +240,12 @@
     <string name="no_local_users_found">कोई स्थानीय उपयोगकर्ता नहीं मिला</string>
     <string name="select_user">उपयोगकर्ता चुनें</string>
     <string name="copy_login">लॉगिन कॉपी करें</string>
-
     <!-- Process List Screen -->
 
     <!-- Common -->
     <string name="error_generic">त्रुटि</string>
     <string name="comma">,</string>
     <string name="gb_size">%1$dGB</string>
-
     <!-- Sparse Image Config Screen -->
     <string name="sparse_image_configuration">Sparse इमेज कॉन्फ़िगरेशन</string>
     <string name="storage_configuration">स्टोरेज कॉन्फ़िगरेशन</string>
@@ -282,21 +262,17 @@
     <string name="size_gb">आकार (GB)</string>
     <string name="enter_size_between_4_512_gb">4 और 512 GB के बीच आकार दर्ज करें</string>
     <string name="next_summary">अगला: सारांश</string>
-
     <!-- Container Log Viewer -->
     <string name="logs_title">लॉग्स: %1$s</string>
     <string name="clear_logs">लॉग साफ करें</string>
     <string name="copy_logs">लॉग कॉपी करें</string>
     <string name="container_logs">कंटेनर लॉग्स</string>
-
     <!-- Validation Error Messages -->
     <string name="error_container_name_empty">कंटेनर नाम खाली नहीं हो सकता</string>
     <string name="error_container_name_invalid">कंटेनर नाम में केवल अक्षर, अंक, हाइफ़न (-), अंडरस्कोर (_), डॉट (.) और स्पेस हो सकते हैं</string>
     <string name="error_hostname_invalid">होस्टनेम में केवल अक्षर, अंक और डैश (-) हो सकते हैं</string>
-
     <!-- Process List -->
     <string name="user_in_parentheses">(%1$s)</string>
-
     <!-- Requirements -->
     <string name="check_requirements">आवश्यकताएँ जांचें</string>
     <string name="requirements_check_title">आवश्यकता जांच</string>
