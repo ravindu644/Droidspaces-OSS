@@ -222,6 +222,7 @@ fun ContainerCard(
             if (container.volatileMode) options.add(context.getString(R.string.volatile_option))
             if (container.forceCgroupv1) options.add(context.getString(R.string.cgroupv1_option))
             if (container.blockNestedNs) options.add(context.getString(R.string.deadlock_shield_option))
+            if (container.allowUserNs) options.add(context.getString(R.string.user_ns_option))
 
             if (options.isNotEmpty()) {
                 Text(

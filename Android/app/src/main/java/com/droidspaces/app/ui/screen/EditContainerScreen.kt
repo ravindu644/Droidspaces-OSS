@@ -1155,7 +1155,7 @@ fun EditContainerScreen(
             )
 
             ToggleCard(
-                icon = Icons.Default.VerifiedUser,
+                icon = Icons.Default.Person,
                 title = context.getString(R.string.allow_user_ns),
                 description = context.getString(R.string.allow_user_ns_description),
                 checked = allowUserNs,

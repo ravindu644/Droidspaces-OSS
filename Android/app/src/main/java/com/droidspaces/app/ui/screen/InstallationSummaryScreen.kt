@@ -17,6 +17,8 @@ import com.droidspaces.app.R
 import com.droidspaces.app.util.ContainerInfo
 import com.droidspaces.app.util.Constants
 
+import androidx.compose.ui.res.stringResource
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun InstallationSummaryScreen(
@@ -28,10 +30,10 @@ fun InstallationSummaryScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Installation Summary") },
+                title = { Text(stringResource(R.string.installation_setup_summary)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
                     }
                 }
             )
@@ -54,7 +56,7 @@ fun InstallationSummaryScreen(
                 ) {
                     Icon(Icons.Default.InstallMobile, contentDescription = null)
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("Install Container", style = MaterialTheme.typography.labelLarge)
+                    Text(stringResource(R.string.install_container), style = MaterialTheme.typography.labelLarge)
                 }
             }
         }
@@ -68,7 +70,7 @@ fun InstallationSummaryScreen(
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             Text(
-                text = "Review Configuration",
+                text = stringResource(R.string.review_configuration),
                 style = MaterialTheme.typography.headlineSmall,
                 fontWeight = FontWeight.Bold
             )
@@ -85,31 +87,34 @@ fun InstallationSummaryScreen(
                         .padding(20.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    SummaryItem("Tarball", tarballName, Icons.Default.Archive)
-                    SummaryItem("Container Name", config.name, Icons.Default.Storage)
-                    SummaryItem("Hostname", config.hostname, Icons.Default.Computer)
+                    SummaryItem(stringResource(R.string.tarball_label), tarballName, Icons.Default.Archive)
+                    SummaryItem(stringResource(R.string.container_singular), config.name, Icons.Default.Storage)
+                    SummaryItem(stringResource(R.string.hostname), config.hostname, Icons.Default.Computer)
                     if (config.useSparseImage && config.sparseImageSizeGB != null) {
-                        SummaryItem("Storage Type", "Sparse Image (${config.sparseImageSizeGB}GB)", Icons.Default.Storage)
+                        SummaryItem(stringResource(R.string.storage_configuration), "${stringResource(R.string.sparse_image_configuration)} (${config.sparseImageSizeGB}GB)", Icons.Default.Storage)
                     } else {
-                        SummaryItem("Storage Type", "Directory", Icons.Default.Folder)
+                        SummaryItem(stringResource(R.string.storage_configuration), stringResource(R.string.directory_label), Icons.Default.Folder)
                     }
-                    SummaryItem("Installation Path", "${Constants.CONTAINERS_BASE_PATH}/${com.droidspaces.app.util.ContainerManager.sanitizeContainerName(config.name)}", Icons.Default.Folder)
+                    SummaryItem(stringResource(R.string.installation_path_label), "${Constants.CONTAINERS_BASE_PATH}/${com.droidspaces.app.util.ContainerManager.sanitizeContainerName(config.name)}", Icons.Default.Folder)
 
                     HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
 
                     Text(
-                        text = "Options",
+                        text = stringResource(R.string.container_options),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.SemiBold
                     )
 
-                    if (config.disableIPv6) SummaryItem("IPv6", "Disabled", Icons.Default.NetworkCheck)
-                    if (config.enableAndroidStorage) SummaryItem("Android Storage", "Enabled", Icons.Default.Storage)
-                    if (config.enableHwAccess) SummaryItem("Hardware Access", "Enabled", Icons.Default.Devices)
-                    if (config.enableTermuxX11) SummaryItem("Termux X11", "Enabled", painterResource(id = R.drawable.ic_x11))
-                    if (config.selinuxPermissive) SummaryItem("SELinux", "Permissive", Icons.Default.Security)
-                    if (config.volatileMode) SummaryItem("Volatile Mode", "Enabled", Icons.Default.AutoDelete)
-                    if (config.runAtBoot) SummaryItem("Run at Boot", "Enabled", Icons.Default.PowerSettingsNew)
+                    if (config.disableIPv6) SummaryItem(stringResource(R.string.disable_ipv6), stringResource(R.string.enabled_legend), Icons.Default.NetworkCheck)
+                    if (config.enableAndroidStorage) SummaryItem(stringResource(R.string.storage_option), stringResource(R.string.enabled_legend), Icons.Default.Storage)
+                    if (config.enableHwAccess) SummaryItem(stringResource(R.string.hardware_access), stringResource(R.string.enabled_legend), Icons.Default.Devices)
+                    if (config.enableTermuxX11) SummaryItem(stringResource(R.string.x11_option), stringResource(R.string.enabled_legend), painterResource(id = R.drawable.ic_x11))
+                    if (config.selinuxPermissive) SummaryItem(stringResource(R.string.selinux_option), stringResource(R.string.enabled_legend), Icons.Default.Security)
+                    if (config.volatileMode) SummaryItem(stringResource(R.string.volatile_mode), stringResource(R.string.enabled_legend), Icons.Default.AutoDelete)
+                    if (config.runAtBoot) SummaryItem(stringResource(R.string.run_at_boot), stringResource(R.string.enabled_legend), Icons.Default.PowerSettingsNew)
+                    if (config.allowUserNs) SummaryItem(stringResource(R.string.allow_user_ns), stringResource(R.string.enabled_legend), Icons.Default.Person)
+                    if (config.forceCgroupv1) SummaryItem(stringResource(R.string.force_cgroupv1), stringResource(R.string.enabled_legend), Icons.Default.Layers)
+                    if (config.blockNestedNs) SummaryItem(stringResource(R.string.manual_deadlock_shield), stringResource(R.string.enabled_legend), Icons.Default.GppBad)
 
                     fun countEnvVars(content: String?): Int {
                         if (content.isNullOrBlank()) return 0
@@ -120,21 +125,23 @@ fun InstallationSummaryScreen(
 
                     val envCount = countEnvVars(config.envFileContent)
                     if (envCount > 0) {
-                        SummaryItem("Environment Variables", "$envCount configured", Icons.Default.Code)
+                        SummaryItem(stringResource(R.string.environment_variables), stringResource(R.string.environment_variables_configured, envCount), Icons.Default.Code)
                     }
 
                     if (config.bindMounts.isNotEmpty()) {
                         config.bindMounts.forEach { mount ->
-                            SummaryItem("Bind Mount", "${mount.src} → ${mount.dest}", Icons.Default.Link)
+                            SummaryItem(stringResource(R.string.bind_mounts), "${mount.src} → ${mount.dest}", Icons.Default.Link)
                         }
                     }
 
                     if (!config.enableAndroidStorage &&
                         !config.enableHwAccess && !config.selinuxPermissive &&
                         !config.volatileMode && config.bindMounts.isEmpty() &&
-                        !config.runAtBoot && config.envFileContent.isNullOrBlank()) {
+                        !config.runAtBoot && !config.disableIPv6 &&
+                        !config.allowUserNs && !config.forceCgroupv1 &&
+                        !config.blockNestedNs && config.envFileContent.isNullOrBlank()) {
                         Text(
-                            text = "No additional options enabled",
+                            text = stringResource(R.string.no_options_enabled),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
                         )
