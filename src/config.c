@@ -511,7 +511,8 @@ int ds_config_save(const char *config_path, struct ds_config *cfg) {
 
   if (cfg->is_img_mount && cfg->rootfs_img_path[0]) {
     char *abs_path = ds_resolve_path_arg(cfg->rootfs_img_path);
-    fprintf(f_out, "rootfs_path=%s\n", abs_path ? abs_path : cfg->rootfs_img_path);
+    fprintf(f_out, "rootfs_path=%s\n",
+            abs_path ? abs_path : cfg->rootfs_img_path);
     free(abs_path);
   } else if (cfg->rootfs_path[0]) {
     char *abs_path = ds_resolve_path_arg(cfg->rootfs_path);
@@ -529,6 +530,7 @@ int ds_config_save(const char *config_path, struct ds_config *cfg) {
   fprintf(f_out, "volatile_mode=%d\n", cfg->volatile_mode);
   fprintf(f_out, "force_cgroupv1=%d\n", cfg->force_cgroupv1);
   fprintf(f_out, "block_nested_ns=%d\n", cfg->block_nested_ns);
+  fprintf(f_out, "allow_user_ns=%d\n", cfg->allow_user_ns);
   fprintf(f_out, "foreground=%d\n", cfg->foreground);
 
   if (cfg->net_mode == DS_NET_NAT) {
@@ -600,9 +602,6 @@ int ds_config_save(const char *config_path, struct ds_config *cfg) {
       node = node->next;
     }
   }
-
-  fprintf(f_out, "block_nested_ns=%d\n", cfg->block_nested_ns);
-  fprintf(f_out, "allow_user_ns=%d\n", cfg->allow_user_ns);
 
   fclose(f_out);
 
@@ -700,6 +699,7 @@ void apply_reset_config(struct ds_config *cfg, int cli_net_mode_set,
   struct ds_config_line *save_head = cfg->unknown_head;
   struct ds_config_line *save_tail = cfg->unknown_tail;
   int save_block_nested_ns = cfg->block_nested_ns;
+  int save_allow_user_ns = cfg->allow_user_ns;
 
   safe_strncpy(save_name, cfg->container_name, sizeof(save_name));
   safe_strncpy(save_rootfs, cfg->rootfs_path, sizeof(save_rootfs));
@@ -727,6 +727,7 @@ void apply_reset_config(struct ds_config *cfg, int cli_net_mode_set,
   cfg->unknown_head = save_head;
   cfg->unknown_tail = save_tail;
   cfg->block_nested_ns = save_block_nested_ns;
+  cfg->allow_user_ns = save_allow_user_ns;
 
   if (cli_net_mode_set)
     cfg->net_mode = cli_net_mode;

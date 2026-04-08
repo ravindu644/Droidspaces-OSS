@@ -757,6 +757,7 @@ fun ContainerConfigScreen(
                 title = context.getString(R.string.allow_user_ns),
                 description = context.getString(R.string.allow_user_ns_description),
                 checked = allowUserNs,
+                enabled = !blockNestedNs,
                 onCheckedChange = { allowUserNs = it }
             )
 
@@ -805,6 +806,7 @@ fun ContainerConfigScreen(
                 title = context.getString(R.string.manual_deadlock_shield),
                 description = context.getString(R.string.manual_deadlock_shield_description),
                 checked = blockNestedNs,
+                enabled = !allowUserNs,
                 onCheckedChange = { blockNestedNs = it }
             )
 

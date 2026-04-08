@@ -96,8 +96,10 @@ void print_usage(void) {
       "                            Block nested namespace creation inside the\n"
       "                            container (unshare/clone) to fix VFS\n"
       "                            deadlocks on kernels like 4.14.x stock.\n");
-  printf("      --allow-user-ns       Allow user namespace creation (unshare/clone)\n"
-       "                            Useful for Flatpak/Bubblewrap. Reduces security.\n");
+  printf("      --allow-user-ns       Allow user namespace creation "
+         "(unshare/clone)\n"
+         "                            Useful for Flatpak/Bubblewrap. Reduces "
+         "security.\n");
   printf("  --help                    Show this help message\n\n");
 
   printf(C_BOLD "Examples:" C_RESET "\n");
@@ -220,6 +222,20 @@ static int auto_resolve_container_name(struct ds_config *cfg) {
 /* ---------------------------------------------------------------------------
  * Command Dispatch
  * ---------------------------------------------------------------------------*/
+
+/* Mutually exclusive: deadlock shield blocks ALL ns syscalls; allow_user_ns
+ * re-enables them. */
+static int check_ns_flag_collision(struct ds_config *cfg) {
+  if (cfg->block_nested_ns && cfg->allow_user_ns) {
+    ds_error("--block-nested-namespaces and --allow-user-ns are mutually "
+             "exclusive.");
+    ds_log("Deadlock Shield blocks all namespace syscalls; --allow-user-ns "
+           "re-enables user NS.");
+    ds_log("Enable only one of these options.");
+    return -1;
+  }
+  return 0;
+}
 
 static void enforce_nat_safety(struct ds_config *cfg, int argc, char **argv) {
   int is_nat = (cfg->net_mode == DS_NET_NAT);
@@ -986,6 +1002,10 @@ int main(int argc, char **argv) {
       ret = 1;
       goto cleanup;
     }
+    if (check_ns_flag_collision(&cfg) < 0) {
+      ret = 1;
+      goto cleanup;
+    }
     enforce_nat_safety(&cfg, argc, argv);
 
     print_ds_banner();
@@ -1006,6 +1026,10 @@ int main(int argc, char **argv) {
 
   if (strcmp(cmd, "restart") == 0) {
     if (check_requirements_hw(cfg.hw_access, cfg.force_cgroupv1) < 0) {
+      ret = 1;
+      goto cleanup;
+    }
+    if (check_ns_flag_collision(&cfg) < 0) {
       ret = 1;
       goto cleanup;
     }

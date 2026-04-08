@@ -38,10 +38,6 @@ object ContainerCommandBuilder {
         // Config file path
         parts.add("--config=${quote(getConfigPath(container))}")
 
-        if (container.allowUserNs) {
-            parts.add("--allow-user-ns")
-        }
-
         // Command
         parts.add("start")
 
@@ -76,4 +72,3 @@ object ContainerCommandBuilder {
         return "$DROIDSPACES_BINARY_PATH --name=${quote(containerName)} uptime"
     }
 }
-

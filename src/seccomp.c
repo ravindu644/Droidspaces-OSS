@@ -121,34 +121,36 @@ int ds_seccomp_apply_minimal(int hw_access, int allow_user_ns) {
       BPF_STMT(BPF_RET | BPF_K, SECCOMP_RET_ALLOW),
   };
 
+  int len_base = sizeof(filter_base) / sizeof(struct sock_filter);
+  int len_userns = sizeof(filter_userns) / sizeof(struct sock_filter);
+  int len_allow = sizeof(filter_allow) / sizeof(struct sock_filter);
 
-  int filter_len = sizeof(filter_base) / sizeof(struct sock_filter);
-  if (!allow_user_ns) filter_len += sizeof(filter_userns) / sizeof(struct sock_filter);
-  filter_len += sizeof(filter_allow) / sizeof(struct sock_filter);
+  int filter_len = len_base + (allow_user_ns ? 0 : len_userns) + len_allow;
+  struct sock_filter *final_filter =
+      malloc(filter_len * sizeof(struct sock_filter));
+  if (!final_filter)
+    return -1;
 
-  struct sock_filter *final_filter = malloc(filter_len * sizeof(struct sock_filter));
-  if (!final_filter) return -1;
-
-
-  int curr = 0;
-  memcpy(final_filter + curr, filter_base, sizeof(filter_base));
-  curr += sizeof(filter_base) / sizeof(struct sock_filter);
+  struct sock_filter *p = final_filter;
+  memcpy(p, filter_base, sizeof(filter_base));
+  p += len_base;
 
   if (!allow_user_ns) {
-    memcpy(final_filter + curr, filter_userns, sizeof(filter_userns));
-    curr += sizeof(filter_userns) / sizeof(struct sock_filter);
+    memcpy(p, filter_userns, sizeof(filter_userns));
+    p += len_userns;
   } else {
-    ds_log("[SEC] User Namespaces explicitly allowed (--allow-user-ns). Security reduced.");
+    ds_log("[SEC] User Namespaces explicitly allowed (--allow-user-ns). "
+           "Security reduced.");
   }
 
-  memcpy(final_filter + curr, filter_allow, sizeof(filter_allow));
+  memcpy(p, filter_allow, sizeof(filter_allow));
 
-  struct sock_fprog prog = {
-      .len = (unsigned short)filter_len,
-      .filter = final_filter,
-  };
+  struct sock_fprog prog = {.len = (unsigned short)filter_len,
+                            .filter = final_filter};
+  int ret = prctl(PR_SET_SECCOMP, SECCOMP_MODE_FILTER, &prog);
+  free(final_filter);
 
-  if (prctl(PR_SET_SECCOMP, SECCOMP_MODE_FILTER, &prog) < 0) {
+  if (ret < 0) {
     ds_warn("[SEC] Failed to apply minimal seccomp filter: %s",
             strerror(errno));
     return -1;

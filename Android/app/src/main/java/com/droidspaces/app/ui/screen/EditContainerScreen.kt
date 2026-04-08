@@ -1147,6 +1147,7 @@ fun EditContainerScreen(
                 title = context.getString(R.string.manual_deadlock_shield),
                 description = context.getString(R.string.manual_deadlock_shield_description),
                 checked = blockNestedNs,
+                enabled = !allowUserNs,
                 onCheckedChange = {
                     clearFocus()
                     blockNestedNs = it
@@ -1154,10 +1155,11 @@ fun EditContainerScreen(
             )
 
             ToggleCard(
-                icon = Icons.Default.VerifiedUser, // 你也可以换成 Icons.Default.Person
+                icon = Icons.Default.VerifiedUser,
                 title = context.getString(R.string.allow_user_ns),
                 description = context.getString(R.string.allow_user_ns_description),
                 checked = allowUserNs,
+                enabled = !blockNestedNs,
                 onCheckedChange = {
                     clearFocus()
                     allowUserNs = it
