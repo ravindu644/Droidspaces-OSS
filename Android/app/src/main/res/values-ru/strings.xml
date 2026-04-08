@@ -260,13 +260,6 @@
     <string name="copy_login">Копировать команду входа</string>
 
     <!-- Process List Screen -->
-    <string name="processes_title">Процессы: %1$s</string>
-    <string name="no_processes_found">Процессы не найдены</string>
-    <string name="process_killed_success">Процесс %1$d завершён</string>
-    <string name="failed_to_kill_process">Не удалось завершить процесс %1$d</string>
-    <string name="kill_process">Завершить процесс</string>
-    <string name="cpu_percent">%1$s%% CPU</string>
-    <string name="mem_percent">%1$s%% Память</string>
 
     <!-- Common -->
     <string name="error_generic">Ошибка</string>

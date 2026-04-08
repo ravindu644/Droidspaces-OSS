@@ -270,11 +270,6 @@
     <string name="no_local_users_found">Niciun utilizator local nu a fost găsit</string>
     <string name="select_user">Alege utilizatorul</string>
     <string name="copy_login">Copiază login-ul</string>
-    <string name="processes_title">Procese: %1$s</string>
-    <string name="no_processes_found">N-a fost găsit niciun proces</string>
-    <string name="process_killed_success">Procesul %1$d a fost oprit</string>
-    <string name="failed_to_kill_process">Nu s-a putut opri procesul %1$d</string>
-    <string name="kill_process">Oprește procesul</string>
     <string name="error_generic">Eroare</string>
     <string name="sparse_image_configuration">Configurarea imaginilor sparse</string>
     <string name="storage_configuration">Configurarea stocării</string>

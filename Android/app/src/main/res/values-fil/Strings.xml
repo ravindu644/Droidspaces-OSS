@@ -240,13 +240,6 @@
     <string name="select_user">Pumili ng User</string>
     <string name="copy_login">Kopyahin ang login</string>
 
-    <string name="processes_title">Mga Proseso: %1$s</string>
-    <string name="no_processes_found">Walang nakitang proseso</string>
-    <string name="process_killed_success">Prosesong %1$d pinatay</string>
-    <string name="failed_to_kill_process">Nabigong patayin ang proseso %1$d</string>
-    <string name="kill_process">Patayin ang proseso</string>
-    <string name="cpu_percent">%1$s%% CPU</string>
-    <string name="mem_percent">%1$s%% MEM</string>
 
     <string name="error_generic">Error</string>
     <string name="comma">,</string>

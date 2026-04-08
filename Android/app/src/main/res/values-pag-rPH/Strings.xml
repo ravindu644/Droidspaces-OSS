@@ -240,13 +240,6 @@
     <string name="select_user">Manpili na User</string>
     <string name="copy_login">Kopyaen so login</string>
 
-    <string name="processes_title">Saray Proseso: %1$s</string>
-    <string name="no_processes_found">Anggapoy aromog ya proseso</string>
-    <string name="process_killed_success">Apatey so proseso %1$d</string>
-    <string name="failed_to_kill_process">Ag apatey so proseso %1$d</string>
-    <string name="kill_process">Pateyen so proseso</string>
-    <string name="cpu_percent">%1$s%% CPU</string>
-    <string name="mem_percent">%1$s%% MEM</string>
 
     <string name="error_generic">Eror</string>
     <string name="comma">,</string>

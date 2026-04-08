@@ -32,7 +32,6 @@ import com.droidspaces.app.ui.screen.InstallationSummaryScreen
 import com.droidspaces.app.ui.screen.InstallationProgressScreen
 import com.droidspaces.app.ui.screen.EditContainerScreen
 import com.droidspaces.app.ui.screen.ContainerDetailsScreen
-import com.droidspaces.app.ui.screen.ProcessListScreen
 import com.droidspaces.app.ui.screen.SystemdScreen
 import com.droidspaces.app.ui.screen.ContainerTerminalScreen
 import com.droidspaces.app.ui.viewmodel.ContainerInstallationViewModel
@@ -86,9 +85,6 @@ sealed class Screen(val route: String) {
     // Container management screens
     data object ContainerDetails : Screen("container_details/{containerName}") {
         fun createRoute(containerName: String) = "container_details/${Uri.encode(containerName)}"
-    }
-    data object ProcessList : Screen("process_list/{containerName}") {
-        fun createRoute(containerName: String) = "process_list/${Uri.encode(containerName)}"
     }
     data object Systemd : Screen("systemd/{containerName}") {
         fun createRoute(containerName: String) = "systemd/${Uri.encode(containerName)}"
@@ -541,21 +537,6 @@ fun DroidspacesNavigation(
             } ?: LaunchedEffect(Unit) {
                 navController.popBackStack()
             }
-        }
-
-        composable(
-            route = Screen.ProcessList.route,
-            arguments = listOf(
-                navArgument("containerName") { type = NavType.StringType }
-            ),
-            enterTransition = defaultEnterTransition,
-            exitTransition = defaultExitTransition
-        ) { backStackEntry ->
-            val containerName = backStackEntry.arguments?.getString("containerName") ?: ""
-            ProcessListScreen(
-                containerName = containerName,
-                onNavigateBack = { navController.popBackStack() }
-            )
         }
 
         composable(

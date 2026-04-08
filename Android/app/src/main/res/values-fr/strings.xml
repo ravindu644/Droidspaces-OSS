@@ -260,13 +260,6 @@
     <string name="copy_login">Copier la connexion</string>
 
     <!-- Process List Screen -->
-    <string name="processes_title">Processus : %1$s</string>
-    <string name="no_processes_found">Aucun processus trouvé</string>
-    <string name="process_killed_success">Processus %1$d terminé</string>
-    <string name="failed_to_kill_process">Échec de la terminaison du processus %1$d</string>
-    <string name="kill_process">Terminer le processus</string>
-    <string name="cpu_percent">%1$s%% CPU</string>
-    <string name="mem_percent">%1$s%% MEM</string>
 
     <!-- Common -->
     <string name="error_generic">Erreur</string>

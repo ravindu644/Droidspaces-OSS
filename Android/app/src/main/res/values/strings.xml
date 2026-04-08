@@ -342,13 +342,6 @@
     <string name="copy_login">Copy login</string>
 
     <!-- Process List Screen -->
-    <string name="processes_title">Processes: %1$s</string>
-    <string name="no_processes_found">No processes found</string>
-    <string name="process_killed_success">Process %1$d killed</string>
-    <string name="failed_to_kill_process">Failed to kill process %1$d</string>
-    <string name="kill_process">Kill process</string>
-    <string name="cpu_percent">%1$s%% CPU</string>
-    <string name="mem_percent">%1$s%% MEM</string>
 
     <!-- Common -->
     <string name="error_generic">Error</string>

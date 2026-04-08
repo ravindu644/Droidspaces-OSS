@@ -263,13 +263,6 @@
     <string name="copy_login">Login kopieren</string>
 
     <!-- Process List Screen -->
-    <string name="processes_title">Prozesse: %1$s</string>
-    <string name="no_processes_found">Keine Prozesse gefunden</string>
-    <string name="process_killed_success">Prozess %1$d beendet</string>
-    <string name="failed_to_kill_process">Fehler beim Beenden des Prozesses %1$d</string>
-    <string name="kill_process">Prozess beenden</string>
-    <string name="cpu_percent">%1$s%% CPU</string>
-    <string name="mem_percent">%1$s%% MEM</string>
 
     <!-- Common -->
     <string name="error_generic">Fehler</string>

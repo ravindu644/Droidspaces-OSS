@@ -260,13 +260,6 @@
     <string name="copy_login">लॉगिन कॉपी करें</string>
 
     <!-- Process List Screen -->
-    <string name="processes_title">प्रोसेस: %1$s</string>
-    <string name="no_processes_found">कोई प्रोसेस नहीं मिला</string>
-    <string name="process_killed_success">प्रोसेस %1$d समाप्त किया गया</string>
-    <string name="failed_to_kill_process">प्रोसेस %1$d समाप्त करने में विफल</string>
-    <string name="kill_process">प्रोसेस समाप्त करें</string>
-    <string name="cpu_percent">%1$s%% CPU</string>
-    <string name="mem_percent">%1$s%% MEM</string>
 
     <!-- Common -->
     <string name="error_generic">त्रुटि</string>
