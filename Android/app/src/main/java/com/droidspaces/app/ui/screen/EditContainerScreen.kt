@@ -85,6 +85,7 @@ fun EditContainerScreen(
     var portForwards by remember { mutableStateOf(container.portForwards) }
     var forceCgroupv1 by remember { mutableStateOf(container.forceCgroupv1) }
     var blockNestedNs by remember { mutableStateOf(container.blockNestedNs) }
+    var allowUserNs by remember { mutableStateOf(container.allowUserNs) }
     var staticNatIp by remember { mutableStateOf(container.staticNatIp) }
 
     // Track the "saved" baseline values - updated after each successful save
@@ -104,6 +105,7 @@ fun EditContainerScreen(
     var savedPortForwards by remember { mutableStateOf(container.portForwards) }
     var savedForceCgroupv1 by remember { mutableStateOf(container.forceCgroupv1) }
     var savedBlockNestedNs by remember { mutableStateOf(container.blockNestedNs) }
+    var savedAllowUserNs by remember { mutableStateOf(container.allowUserNs) }
     var savedStaticNatIp by remember { mutableStateOf(container.staticNatIp) }
 
     // Navigation and internal UI states
@@ -140,6 +142,7 @@ fun EditContainerScreen(
             portForwards != savedPortForwards ||
             forceCgroupv1 != savedForceCgroupv1 ||
             blockNestedNs != savedBlockNestedNs ||
+            allowUserNs != savedAllowUserNs ||
             staticNatIp != savedStaticNatIp
         }
     }
@@ -176,6 +179,7 @@ fun EditContainerScreen(
                     portForwards = portForwards,
                     forceCgroupv1 = forceCgroupv1,
                     blockNestedNs = blockNestedNs,
+                    allowUserNs = allowUserNs,
                     staticNatIp = staticNatIp
                 )
 
@@ -203,6 +207,7 @@ fun EditContainerScreen(
                         savedPortForwards = portForwards
                         savedForceCgroupv1 = forceCgroupv1
                         savedBlockNestedNs = blockNestedNs
+                        savedAllowUserNs = allowUserNs
                         savedStaticNatIp = staticNatIp
 
                         // Refresh container list and SELinux status using ViewModel
@@ -1145,6 +1150,17 @@ fun EditContainerScreen(
                 onCheckedChange = {
                     clearFocus()
                     blockNestedNs = it
+                }
+            )
+
+            ToggleCard(
+                icon = Icons.Default.VerifiedUser, // 你也可以换成 Icons.Default.Person
+                title = context.getString(R.string.allow_user_ns),
+                description = context.getString(R.string.allow_user_ns_description),
+                checked = allowUserNs,
+                onCheckedChange = {
+                    clearFocus()
+                    allowUserNs = it
                 }
             )
 

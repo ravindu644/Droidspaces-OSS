@@ -54,6 +54,7 @@ fun ContainerConfigScreen(
     initialForceCgroupv1: Boolean = false,
     initialBlockNestedNs: Boolean = false,
     initialEnvFileContent: String = "",
+    initialAllowUserNs: Boolean = false,
     initialUpstreamInterfaces: List<String> = emptyList(),
     initialPortForwards: List<PortForward> = emptyList(),
     onNext: (
@@ -70,6 +71,7 @@ fun ContainerConfigScreen(
         forceCgroupv1: Boolean,
         blockNestedNs: Boolean,
         envFileContent: String?,
+        allowUserNs: Boolean,
         upstreamInterfaces: List<String>,
         portForwards: List<PortForward>
     ) -> Unit,
@@ -88,6 +90,7 @@ fun ContainerConfigScreen(
     var forceCgroupv1 by remember { mutableStateOf(initialForceCgroupv1) }
     var blockNestedNs by remember { mutableStateOf(initialBlockNestedNs) }
     var envFileContent by remember { mutableStateOf(initialEnvFileContent) }
+    var allowUserNs by remember { mutableStateOf(initialAllowUserNs) }
     var upstreamInterfaces by remember { mutableStateOf(initialUpstreamInterfaces) }
     var portForwards by remember { mutableStateOf(initialPortForwards) }
     val context = LocalContext.current
@@ -180,7 +183,7 @@ fun ContainerConfigScreen(
             ) {
                 Button(
                     onClick = {
-                        onNext(netMode, disableIPv6, enableAndroidStorage, enableHwAccess, enableTermuxX11, selinuxPermissive, volatileMode, bindMounts, dnsServers, runAtBoot, forceCgroupv1, blockNestedNs, if (envFileContent.isBlank()) null else envFileContent, upstreamInterfaces, portForwards)
+                        onNext(netMode, disableIPv6, enableAndroidStorage, enableHwAccess, enableTermuxX11, selinuxPermissive, volatileMode, bindMounts, dnsServers, runAtBoot, forceCgroupv1, blockNestedNs, if (envFileContent.isBlank()) null else envFileContent, allowUserNs ,upstreamInterfaces, portForwards)
                     },
                     modifier = Modifier
                         .fillMaxWidth()
@@ -747,6 +750,14 @@ fun ContainerConfigScreen(
                 description = context.getString(R.string.hardware_access_description),
                 checked = enableHwAccess,
                 onCheckedChange = { enableHwAccess = it }
+            )
+
+            ToggleCard(
+                icon = Icons.Default.VerifiedUser,
+                title = context.getString(R.string.allow_user_ns),
+                description = context.getString(R.string.allow_user_ns_description),
+                checked = allowUserNs,
+                onCheckedChange = { allowUserNs = it }
             )
 
             ToggleCard(

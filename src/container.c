@@ -1405,7 +1405,7 @@ int enter_rootfs(struct ds_config *cfg, const char *user) {
      * inherited only via fork/exec from PID 1 - entering processes arrive via
      * setns() and are NOT children of init, so they inherit nothing. */
     ds_log_silent = 1;
-    ds_seccomp_apply_minimal(cfg->hw_access);
+    ds_seccomp_apply_minimal(cfg->hw_access, cfg->allow_user_ns);
     android_seccomp_setup(0, cfg->block_nested_ns);
     ds_apply_capability_hardening(cfg->hw_access);
     ds_log_silent = 0;
@@ -1604,7 +1604,7 @@ int run_in_rootfs(struct ds_config *cfg, int argc, char **argv) {
     /* Apply identical security hardening as internal_boot() and enter_rootfs().
      * Same reasoning: run processes are not children of container PID 1. */
     ds_log_silent = 1;
-    ds_seccomp_apply_minimal(cfg->hw_access);
+    ds_seccomp_apply_minimal(cfg->hw_access, cfg->allow_user_ns);
     android_seccomp_setup(0, cfg->block_nested_ns);
     ds_apply_capability_hardening(cfg->hw_access);
     ds_log_silent = 0;

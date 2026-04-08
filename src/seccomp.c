@@ -22,9 +22,9 @@
  * Blocks direct host kernel takeover vectors (module loading, kexec).
  * Applied unconditionally to all kernels and all modes.
  */
-int ds_seccomp_apply_minimal(int hw_access) {
+int ds_seccomp_apply_minimal(int hw_access, int allow_user_ns) {
   (void)hw_access;
-  struct sock_filter filter[] = {
+  struct sock_filter filter_base[] = {
       /* Validate architecture.
        * KILL on wrong arch - ALLOW was a bypass: on x86-64 a process can
        * invoke 32-bit syscalls via int 0x80, which the kernel reports as
@@ -80,7 +80,9 @@ int ds_seccomp_apply_minimal(int hw_access) {
       BPF_STMT(BPF_RET | BPF_K,
                SECCOMP_RET_ERRNO | (ENOSYS & SECCOMP_RET_DATA)),
 #endif
+  };
 
+  struct sock_filter filter_userns[] = {
       /* unshare(CLONE_NEWUSER) - a new user namespace grants a full capability
        * set within it, enabling further kernel exploits.
        * Block the CLONE_NEWUSER flag only - systemd legitimately calls
@@ -112,14 +114,38 @@ int ds_seccomp_apply_minimal(int hw_access) {
       BPF_JUMP(BPF_JMP | BPF_JSET | BPF_K, 0x10000000 /* CLONE_NEWUSER */, 0,
                1),
       BPF_STMT(BPF_RET | BPF_K, SECCOMP_RET_ERRNO | (EPERM & SECCOMP_RET_DATA)),
+  };
 
+  struct sock_filter filter_allow[] = {
       /* Allow everything else */
       BPF_STMT(BPF_RET | BPF_K, SECCOMP_RET_ALLOW),
   };
 
+
+  int filter_len = sizeof(filter_base) / sizeof(struct sock_filter);
+  if (!allow_user_ns) filter_len += sizeof(filter_userns) / sizeof(struct sock_filter);
+  filter_len += sizeof(filter_allow) / sizeof(struct sock_filter);
+
+  struct sock_filter *final_filter = malloc(filter_len * sizeof(struct sock_filter));
+  if (!final_filter) return -1;
+
+
+  int curr = 0;
+  memcpy(final_filter + curr, filter_base, sizeof(filter_base));
+  curr += sizeof(filter_base) / sizeof(struct sock_filter);
+
+  if (!allow_user_ns) {
+    memcpy(final_filter + curr, filter_userns, sizeof(filter_userns));
+    curr += sizeof(filter_userns) / sizeof(struct sock_filter);
+  } else {
+    ds_log("[SEC] User Namespaces explicitly allowed (--allow-user-ns). Security reduced.");
+  }
+
+  memcpy(final_filter + curr, filter_allow, sizeof(filter_allow));
+
   struct sock_fprog prog = {
-      .len = (unsigned short)(sizeof(filter) / sizeof(filter[0])),
-      .filter = filter,
+      .len = (unsigned short)filter_len,
+      .filter = final_filter,
   };
 
   if (prctl(PR_SET_SECCOMP, SECCOMP_MODE_FILTER, &prog) < 0) {

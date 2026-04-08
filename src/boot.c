@@ -186,7 +186,7 @@ int internal_boot(struct ds_config *cfg) {
   /* Apply Seccomp filters early for host protection.
    * Minimal blocks kexec/module loading for all kernels/modes.
    * Android setup handles keyring compat and manual deadlock shield. */
-  ds_seccomp_apply_minimal(cfg->hw_access);
+  ds_seccomp_apply_minimal(cfg->hw_access, cfg->allow_user_ns);
   android_seccomp_setup(is_systemd, cfg->block_nested_ns);
 
   /* 3. Setup volatile overlay INSIDE the container's mount namespace.
@@ -422,7 +422,7 @@ int internal_boot(struct ds_config *cfg) {
   setup_devpts(cfg->hw_access);
 
   /* Apply jail mask after pivot_root for correct path resolution */
-  ds_apply_jail_mask(cfg->hw_access);
+  ds_apply_jail_mask(cfg->hw_access, cfg->allow_user_ns);
 
   /* 19. Configure rootfs networking (hostname, resolv.conf, etc) */
   fix_networking_rootfs(cfg);

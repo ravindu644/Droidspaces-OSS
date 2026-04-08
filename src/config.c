@@ -445,6 +445,8 @@ int ds_config_load(const char *config_path, struct ds_config *cfg) {
         ds_warn(
             "config: too many port_forwards (max %d) - extra entries ignored",
             DS_MAX_PORT_FORWARDS);
+    } else if (strcmp(key, "allow_user_ns") == 0) {
+      cfg->allow_user_ns = parse_bool(val);
     } else {
       /* Unknown key - preserve verbatim so Android App metadata
        * (run_at_boot, use_sparse_image, sparse_image_size_gb, etc.)
@@ -598,6 +600,9 @@ int ds_config_save(const char *config_path, struct ds_config *cfg) {
       node = node->next;
     }
   }
+
+  fprintf(f_out, "block_nested_ns=%d\n", cfg->block_nested_ns);
+  fprintf(f_out, "allow_user_ns=%d\n", cfg->allow_user_ns);
 
   fclose(f_out);
 

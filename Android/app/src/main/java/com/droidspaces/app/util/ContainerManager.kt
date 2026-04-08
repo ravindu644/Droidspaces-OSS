@@ -47,6 +47,7 @@ data class ContainerInfo(
     val portForwards: List<PortForward> = emptyList(),
     val forceCgroupv1: Boolean = false,
     val blockNestedNs: Boolean = false,
+    val allowUserNs: Boolean = false,
     val staticNatIp: String = ""
 ) {
     val isRunning: Boolean
@@ -84,6 +85,7 @@ data class ContainerInfo(
         appendLine("run_at_boot=${if (runAtBoot) "1" else "0"}")
         appendLine("force_cgroupv1=${if (forceCgroupv1) "1" else "0"}")
         appendLine("block_nested_ns=${if (blockNestedNs) "1" else "0"}")
+        appendLine("allow_user_ns=${if (allowUserNs) "1" else "0"}")
         if (netMode == "nat" && staticNatIp.isNotEmpty()) {
             appendLine("static_nat_ip=$staticNatIp")
         }
@@ -274,6 +276,7 @@ object ContainerManager {
                 portForwards = portForwards,
                 forceCgroupv1 = configMap["force_cgroupv1"] == "1",
                 blockNestedNs = configMap["block_nested_ns"] == "1",
+                allowUserNs = configMap["allow_user_ns"] == "1",
                 staticNatIp = configMap["static_nat_ip"] ?: ""
             )
         } catch (e: Exception) {

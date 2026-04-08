@@ -96,6 +96,8 @@ void print_usage(void) {
       "                            Block nested namespace creation inside the\n"
       "                            container (unshare/clone) to fix VFS\n"
       "                            deadlocks on kernels like 4.14.x stock.\n");
+  printf("      --allow-user-ns       Allow user namespace creation (unshare/clone)\n"
+       "                            Useful for Flatpak/Bubblewrap. Reduces security.\n");
   printf("  --help                    Show this help message\n\n");
 
   printf(C_BOLD "Examples:" C_RESET "\n");
@@ -346,6 +348,7 @@ int main(int argc, char **argv) {
       {"force-cgroupv1", no_argument, 0, 260},
       {"block-nested-namespaces", no_argument, 0, 261},
       {"nat-ip", required_argument, 0, 262},
+      {"allow-user-ns", no_argument, 0, 263},
       {"reset", no_argument, 0, 256},
       {"help", no_argument, 0, 'v'},
       {0, 0, 0, 0}};
@@ -866,6 +869,10 @@ int main(int argc, char **argv) {
       safe_strncpy(cfg.static_nat_ip, optarg, sizeof(cfg.static_nat_ip));
       break;
     }
+
+    case 263:
+      cfg.allow_user_ns = 1;
+      break;
 
     case '?':
       break;

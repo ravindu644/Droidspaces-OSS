@@ -437,6 +437,9 @@ static void print_page(int page, const char *bin) {
     printf("  export DISPLAY=:0\n");
     printf("  glxgears  # Hardware-accelerated rendering\n");
     printf("  (GPU groups and X11 socket are auto-configured)\n\n");
+    printf("%sEnable User Namespaces (Flatpak/Bubblewrap):%s\n", bold, reset);
+    printf("  %s -r rootfs/ --allow-user-ns start\n", bin);
+    printf("  (Warning: Weakens isolation, but required for sandbox-within-sandbox tools)\n\n");
     break;
 
   case 4: /* Notes */

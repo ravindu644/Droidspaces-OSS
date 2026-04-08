@@ -94,6 +94,8 @@
     <string name="generate_bug_report_description">Collect system info and logs for debugging</string>
     <string name="bug_report_title">Bug Report</string>
     <string name="ok">OK</string>
+    <string name="allow_user_ns">Allow User Namespaces</string>
+    <string name="allow_user_ns_description">Enable CLONE_NEWUSER for unprivileged containers (e.g., Flatpak/Bubblewrap). Note: Reduces security.</string>
 
     <!-- Containers Screen -->
     <string name="no_containers_installed">No containers installed</string>

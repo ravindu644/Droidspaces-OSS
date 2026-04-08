@@ -38,6 +38,10 @@ object ContainerCommandBuilder {
         // Config file path
         parts.add("--config=${quote(getConfigPath(container))}")
 
+        if (container.allowUserNs) {
+            parts.add("--allow-user-ns")
+        }
+
         // Command
         parts.add("start")
 

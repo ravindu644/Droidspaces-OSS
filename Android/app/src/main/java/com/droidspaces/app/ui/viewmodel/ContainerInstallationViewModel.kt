@@ -74,6 +74,9 @@ class ContainerInstallationViewModel : ViewModel() {
     var blockNestedNs: Boolean by mutableStateOf(false)
         private set
 
+    var allowUserNs by mutableStateOf(false)
+        private set
+
     fun setTarball(uri: Uri) {
         tarballUri = uri
     }
@@ -103,7 +106,8 @@ class ContainerInstallationViewModel : ViewModel() {
         upstreamInterfaces: List<String>,
         portForwards: List<PortForward>,
         forceCgroupv1: Boolean,
-        blockNestedNs: Boolean
+        blockNestedNs: Boolean,
+        allowUserNs: Boolean
     ) {
         this.netMode = netMode
         this.disableIPv6 = disableIPv6
@@ -120,6 +124,7 @@ class ContainerInstallationViewModel : ViewModel() {
         this.portForwards = portForwards
         this.forceCgroupv1 = forceCgroupv1
         this.blockNestedNs = blockNestedNs
+        this.allowUserNs = allowUserNs
     }
 
     fun buildConfig(): ContainerInfo? {
@@ -151,7 +156,8 @@ class ContainerInstallationViewModel : ViewModel() {
             upstreamInterfaces = upstreamInterfaces,
             portForwards = portForwards,
             forceCgroupv1 = forceCgroupv1,
-            blockNestedNs = blockNestedNs
+            blockNestedNs = blockNestedNs,
+            allowUserNs = allowUserNs
         )
     }
 
@@ -176,6 +182,7 @@ class ContainerInstallationViewModel : ViewModel() {
         portForwards = emptyList()
         forceCgroupv1 = false
         blockNestedNs = false
+        allowUserNs = false
     }
 }
 

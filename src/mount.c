@@ -229,7 +229,7 @@ int bind_mount(const char *src, const char *tgt) {
  * In Hardware Mode (hw_access=1), we preserve most paths to fulfill the
  * "everything possible" requirement for low-level hardware tools.
  */
-int ds_apply_jail_mask(int hw_access) {
+int ds_apply_jail_mask(int hw_access, int allow_user_ns) {
   /* Initialize the shared mask-dir before anything uses it */
   ds_mask_dir_init();
 
@@ -277,6 +277,9 @@ int ds_apply_jail_mask(int hw_access) {
 
   /* Apply universal masks */
   for (int i = 0; universal_masks[i]; i++) {
+    if (allow_user_ns && strncmp(universal_masks[i], "/proc", 5) == 0) {
+      continue;
+    }
     ds_mask_path(universal_masks[i]);
   }
 
@@ -339,28 +342,32 @@ int ds_apply_jail_mask(int hw_access) {
     /* Step 1: Pin the namespace-scoped subtrees as independent mounts BEFORE
      * the parent is locked.  A self-bind creates a new mount entry whose RW
      * status is not inherited from the parent remount below. */
-    const char *rw_holes[] = {"/proc/sys/net", "/proc/sys/kernel/hostname",
-                              "/proc/sys/kernel/domainname", NULL};
-    for (int i = 0; rw_holes[i]; i++) {
-      if (access(rw_holes[i], F_OK) != 0)
-        continue;
-      if (mount(rw_holes[i], rw_holes[i], NULL, MS_BIND | MS_REC, NULL) < 0) {
-        ds_warn("[SEC] Failed to pin RW hole %s: %s", rw_holes[i],
-                strerror(errno));
+    if (!allow_user_ns) {
+      const char *rw_holes[] = {"/proc/sys/net", "/proc/sys/kernel/hostname",
+                                "/proc/sys/kernel/domainname", NULL};
+      for (int i = 0; rw_holes[i]; i++) {
+        if (access(rw_holes[i], F_OK) != 0)
+          continue;
+        if (mount(rw_holes[i], rw_holes[i], NULL, MS_BIND | MS_REC, NULL) < 0) {
+          ds_warn("[SEC] Failed to pin RW hole %s: %s", rw_holes[i],
+                  strerror(errno));
+        }
       }
-    }
 
-    /* Step 2: Lock all of /proc/sys in one remount. */
-    if (access("/proc/sys", F_OK) == 0) {
-      if (mount("/proc/sys", "/proc/sys", NULL,
-                MS_BIND | MS_REMOUNT | MS_RDONLY, NULL) < 0) {
-        /* Kernel < 3.5 fallback: bind first, then remount RO */
-        mount("/proc/sys", "/proc/sys", NULL, MS_BIND | MS_REC, NULL);
-        mount("/proc/sys", "/proc/sys", NULL, MS_BIND | MS_REMOUNT | MS_RDONLY,
-              NULL);
-      }
-      ds_log("[SEC] /proc/sys locked RO (net/hostname/domainname holes "
-             "preserved).");
+      /* Step 2: Lock all of /proc/sys in one remount. */
+      if (access("/proc/sys", F_OK) == 0) {
+        if (mount("/proc/sys", "/proc/sys", NULL,
+                  MS_BIND | MS_REMOUNT | MS_RDONLY, NULL) < 0) {
+          /* Kernel < 3.5 fallback: bind first, then remount RO */
+          mount("/proc/sys", "/proc/sys", NULL, MS_BIND | MS_REC, NULL);
+          mount("/proc/sys", "/proc/sys", NULL, MS_BIND | MS_REMOUNT | MS_RDONLY,
+                NULL);
+        }
+        ds_log("[SEC] /proc/sys locked RO (net/hostname/domainname holes "
+              "preserved).");
+      } 
+    } else {
+      ds_log("[SEC] /proc/sys lockdown skipped for User NS compatibility.");
     }
   }
 
@@ -371,11 +378,17 @@ int ds_apply_jail_mask(int hw_access) {
 
   /* Apply standard mode masks */
   for (int i = 0; standard_masks[i]; i++) {
+    if (allow_user_ns && strncmp(standard_masks[i], "/proc", 5) == 0) {
+      continue;
+    }
     ds_mask_path(standard_masks[i]);
   }
 
   /* Apply standard mode read-only remounts */
   for (int i = 0; standard_ro[i]; i++) {
+    if (allow_user_ns && strncmp(standard_ro[i], "/proc", 5) == 0) {
+      continue;
+    }
     if (access(standard_ro[i], F_OK) == 0) {
       if (mount(standard_ro[i], standard_ro[i], NULL,
                 MS_BIND | MS_REMOUNT | MS_RDONLY, NULL) < 0) {

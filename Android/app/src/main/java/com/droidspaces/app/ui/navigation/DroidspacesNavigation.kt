@@ -306,10 +306,11 @@ fun DroidspacesNavigation(
                 initialForceCgroupv1 = viewModel.forceCgroupv1,
                 initialBlockNestedNs = viewModel.blockNestedNs,
                 initialEnvFileContent = viewModel.envFileContent ?: "",
+                initialAllowUserNs = viewModel.allowUserNs,
                 initialUpstreamInterfaces = viewModel.upstreamInterfaces,
                 initialPortForwards = viewModel.portForwards,
-                onNext = { netMode, disableIPv6, enableAndroidStorage, enableHwAccess, enableTermuxX11, selinuxPermissive, volatileMode, bindMounts, dnsServers, runAtBoot, forceCgroupv1, blockNestedNs, envFileContent, upstreamInterfaces, portForwards ->
-                    viewModel.setConfig(netMode, disableIPv6, enableAndroidStorage, enableHwAccess, enableTermuxX11, selinuxPermissive, volatileMode, bindMounts, dnsServers, runAtBoot, envFileContent, upstreamInterfaces, portForwards, forceCgroupv1, blockNestedNs)
+                onNext = { netMode, disableIPv6, enableAndroidStorage, enableHwAccess, enableTermuxX11, selinuxPermissive, volatileMode, bindMounts, dnsServers, runAtBoot, forceCgroupv1, blockNestedNs, envFileContent, allowUserNs, upstreamInterfaces, portForwards ->
+                    viewModel.setConfig(netMode, disableIPv6, enableAndroidStorage, enableHwAccess, enableTermuxX11, selinuxPermissive, volatileMode, bindMounts, dnsServers, runAtBoot, envFileContent, upstreamInterfaces, portForwards, forceCgroupv1, blockNestedNs, allowUserNs)
                     navController.navigate(Screen.SparseImageConfig.route)
                 },
                 onBack = {
