@@ -165,10 +165,10 @@ static int check_kernel_version_supported(void) {
  * ---------------------------------------------------------------------------*/
 
 int check_requirements(void) {
-  return check_requirements_hw(0);
+  return check_requirements_hw(0, 0);
 }
 
-int check_requirements_hw(int hw_access) {
+int check_requirements_hw(int hw_access, int force_cgroupv1) {
   int missing = 0;
 
   if (!check_root()) {
@@ -213,11 +213,10 @@ int check_requirements_hw(int hw_access) {
     missing++;
   }
 
-  /* Cgroup check (v1 devices or v2) */
-  if (!check_cgroup_devices()) {
-    ds_error("Kernel missing required cgroup support");
-    ds_log("Droidspaces requires cgroup 'devices' controller (missing "
-           "'devices' in /proc/cgroups).");
+  /* cgroup 'devices' controller is v1-only; not needed on cgroupv2 */
+  if (force_cgroupv1 && !check_cgroup_devices()) {
+    ds_error("Legacy cgroup v1 mode requires the 'devices' controller "
+             "but it is missing from this kernel.");
     missing++;
   }
 
@@ -335,11 +334,10 @@ int check_requirements_detailed(void) {
                  has_devtmpfs, "OPT");
 
   int has_cg_dev = check_cgroup_devices();
-  if (!has_cg_dev)
-    missing_must++;
+  /* devices controller is v1-only; not relevant for cgroupv2 */
   print_ds_check("cgroup devices support",
-                 "Control Groups (devices controller) support", has_cg_dev,
-                 "MUST");
+                 "Required for --force-cgroupv1; not needed on cgroupv2",
+                 has_cg_dev, "OPT");
 
   int has_pivot = check_pivot_root();
   if (!has_pivot)

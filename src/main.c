@@ -975,7 +975,7 @@ int main(int argc, char **argv) {
       ret = 1;
       goto cleanup;
     }
-    if (check_requirements_hw(cfg.hw_access) < 0) {
+    if (check_requirements_hw(cfg.hw_access, cfg.force_cgroupv1) < 0) {
       ret = 1;
       goto cleanup;
     }
@@ -998,7 +998,7 @@ int main(int argc, char **argv) {
   }
 
   if (strcmp(cmd, "restart") == 0) {
-    if (check_requirements_hw(cfg.hw_access) < 0) {
+    if (check_requirements_hw(cfg.hw_access, cfg.force_cgroupv1) < 0) {
       ret = 1;
       goto cleanup;
     }
