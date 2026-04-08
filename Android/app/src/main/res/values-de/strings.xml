@@ -2,12 +2,10 @@
 <resources>
     <!-- App Info -->
     <string name="app_name">Droidspaces</string>
-
     <!-- Welcome Screen -->
     <string name="welcome_title">Willkommen bei Droidspaces</string>
     <string name="welcome_subtitle">LXC-ähnlicher Linux-Container-Manager für Android!</string>
     <string name="get_started">Loslegen</string>
-
     <!-- Root Check Screen -->
     <string name="root_check_title">Root-Zugangsprüfung</string>
     <string name="checking_root">Überprüfe Root-Zugriff…</string>
@@ -19,7 +17,6 @@
     <string name="root_available_message">Sie können jetzt Droidspaces verwenden</string>
     <string name="skip">Überspringen</string>
     <string name="continue_button">Weiter</string>
-
     <!-- Navigation -->
     <string name="home_title">Start</string>
     <string name="containers">Container</string>
@@ -30,13 +27,11 @@
     <string name="refresh">Aktualisieren</string>
     <string name="search">Suchen</string>
     <string name="clear">Löschen</string>
-
     <!-- Main Tab Screen -->
     <string name="container_singular">Container</string>
     <string name="running">Läuft</string>
     <string name="container_count">%1$d Container</string>
     <string name="containers_count">%1$d Container</string>
-
     <!-- Backend Status Card -->
     <string name="backend_checking">Backend: Überprüft...</string>
     <string name="backend_installed">Backend: Installiert</string>
@@ -56,7 +51,6 @@
     <string name="tap_to_reinstall">Hier tippen, um neu zu installieren</string>
     <string name="tap_to_install_module">Hier tippen, um Modul zu installieren</string>
     <string name="device_not_supported">Ihr Gerät wird nicht unterstützt</string>
-
     <!-- Settings Screen -->
     <string name="backend_section">Backend</string>
     <string name="reinstall_backend">Backend neu installieren</string>
@@ -88,7 +82,6 @@
     <string name="contributors">Mitwirkende</string>
     <string name="github">GitHub</string>
     <string name="ok">OK</string>
-
     <!-- Containers Screen -->
     <string name="no_containers_installed">Keine Container installiert</string>
     <string name="install_container_description">Installiere einen Container mit dem Button unten</string>
@@ -110,7 +103,6 @@
     <string name="view_logs">Logs anzeigen</string>
     <string name="edit_container_configuration">Container-Konfiguration bearbeiten</string>
     <string name="uninstall_container_menu">Container deinstallieren</string>
-
     <!-- Container Card -->
     <string name="status_running">LÄUFT</string>
     <string name="status_restarting">WIRD NEU GESTARTET</string>
@@ -125,7 +117,6 @@
     <string name="storage_option">Speicher</string>
     <string name="hw_option">HW</string>
     <string name="selinux_option">SELinux</string>
-
     <!-- Container Details Screen -->
     <string name="container_info">Container-Info</string>
     <string name="distribution">Distribution</string>
@@ -137,7 +128,6 @@
     <string name="checking">Überprüfe</string>
     <string name="not_available">Nicht verfügbar</string>
     <string name="manage">Verwalten</string>
-
     <!-- Edit Container Screen -->
     <string name="edit_container_title">Container bearbeiten: %1$s</string>
     <string name="container_is_running">Container läuft</string>
@@ -157,7 +147,6 @@
     <string name="saving">Wird gespeichert...</string>
     <string name="save_changes">Änderungen speichern</string>
     <string name="failed_to_update_config">Konfiguration konnte nicht aktualisiert werden</string>
-
     <!-- Container Name Screen -->
     <string name="container_setup">Container-Einrichtung</string>
     <string name="container_information">Container-Informationen</string>
@@ -167,12 +156,10 @@
     <string name="hostname_hint">Wenn leer, wird der Container-Name als Hostname verwendet</string>
     <string name="container_name_exists">Ein Container mit diesem Namen existiert bereits</string>
     <string name="next_configuration">Weiter: Konfiguration</string>
-
     <!-- Container Config Screen -->
     <string name="configuration_title">Konfiguration</string>
     <string name="container_options">Container-Optionen</string>
     <string name="next_storage">Weiter: Speicher</string>
-
     <!-- Installation Screen -->
     <string name="installation_complete">Installation abgeschlossen</string>
     <string name="installation_failed">Installation fehlgeschlagen</string>
@@ -194,7 +181,6 @@
     <string name="installing_binary">Binary wird installiert: %1$s</string>
     <string name="granting_permissions">Berechtigungen werden vergeben...</string>
     <string name="preparing_installation">Vorbereitung der Installation...</string>
-
     <!-- Control Panel Screen -->
     <string name="active_containers">Aktive Container</string>
     <string name="no_containers_running">Keine Container laufen</string>
@@ -203,7 +189,6 @@
     <string name="cpu">CPU</string>
     <string name="ram">RAM</string>
     <string name="temp">Temp</string>
-
     <!-- Systemd Screen -->
     <string name="systemd_services">Systemd-Dienste</string>
     <string name="fetching_services">Dienste werden abgerufen...</string>
@@ -234,7 +219,6 @@
     <string name="no_static_services">Keine abnormalen Dienste</string>
     <string name="no_abnormal_services">Keine abnormalen Dienste</string>
     <string name="no_masked_services">Keine maskierten Dienste</string>
-
     <!-- System Info Card -->
     <string name="kernel">Kernel</string>
     <string name="selinux_status">SELinux-Status</string>
@@ -242,18 +226,15 @@
     <string name="architecture">Architektur</string>
     <string name="supported_abis">Unterstützte ABIs</string>
     <string name="loading">Wird geladen...</string>
-
     <!-- Empty State -->
     <string name="backend_not_available">Backend nicht verfügbar</string>
     <string name="backend_not_available_description">Droidspaces-Backend ist nicht installiert oder beschädigt. Bitte installieren Sie es zuerst.</string>
     <string name="root_access_not_available">Root-Zugriff nicht verfügbar</string>
     <string name="root_access_not_available_description">Diese Seite ist deaktiviert, da Root-Zugriff nicht verfügbar ist</string>
-
     <!-- Dialog Utils -->
     <string name="operation_failed_title">Vorgang fehlgeschlagen</string>
     <string name="no_output_available">Kein Output verfügbar</string>
     <string name="dismiss">Schließen</string>
-
     <!-- Container Users Card -->
     <string name="available_users">Verfügbare Benutzer</string>
     <string name="login_command_copied">Login-Befehl für Benutzer %1$s kopiert</string>
@@ -261,14 +242,12 @@
     <string name="no_local_users_found">Keine lokalen Benutzer gefunden</string>
     <string name="select_user">Benutzer auswählen</string>
     <string name="copy_login">Login kopieren</string>
-
     <!-- Process List Screen -->
 
     <!-- Common -->
     <string name="error_generic">Fehler</string>
     <string name="comma">,</string>
     <string name="gb_size">%1$dGB</string>
-
     <!-- Sparse Image Config Screen -->
     <string name="sparse_image_configuration">Sparse-Image-Konfiguration</string>
     <string name="storage_configuration">Speicher-Konfiguration</string>
@@ -285,21 +264,17 @@
     <string name="size_gb">Größe (GB)</string>
     <string name="enter_size_between_4_512_gb">Geben Sie eine Größe zwischen 4 und 512 GB ein</string>
     <string name="next_summary">Weiter: Zusammenfassung</string>
-
     <!-- Container Log Viewer -->
     <string name="logs_title">Logs: %1$s</string>
     <string name="clear_logs">Logs löschen</string>
     <string name="copy_logs">Logs kopieren</string>
     <string name="container_logs">Container-Logs</string>
-
     <!-- Validation Error Messages -->
     <string name="error_container_name_empty">Container-Name darf nicht leer sein</string>
     <string name="error_container_name_invalid">Container-Name darf nur Buchstaben, Zahlen, Bindestriche (-), Unterstriche (_), Punkte (.) und Leerzeichen enthalten</string>
     <string name="error_hostname_invalid">Hostname darf nur Buchstaben, Zahlen und Bindestriche (-) enthalten</string>
-
     <!-- Process List -->
     <string name="user_in_parentheses">(%1$s)</string>
-
     <!-- Requirements -->
     <string name="check_requirements">Anforderungen prüfen</string>
     <string name="requirements_check_title">Anforderungsprüfung</string>
@@ -307,4 +282,106 @@
     <string name="requirements_check_completed_successfully">Anforderungsprüfung erfolgreich abgeschlossen</string>
     <string name="requirements_check_completed_with_errors">Anforderungsprüfung mit Fehlern abgeschlossen</string>
     <string name="kernel_requirements_copied">Kernel-Anforderungen in die Zwischenablage kopiert</string>
+    <string name="environment_variables_configured"></string>
+    <string name="optional_symmetric_hint"></string>
+    <string name="migrate_dialog_message"></string>
+    <string name="help_card_title"></string>
+    <string name="manual_deadlock_shield_description"></string>
+    <string name="error_dns_servers_invalid"></string>
+    <string name="error_ip_collision"></string>
+    <string name="enter_manually"></string>
+    <string name="force_cgroupv1"></string>
+    <string name="termux_x11_description"></string>
+    <string name="migrate_dialog_title"></string>
+    <string name="error_port_must_be_number"></string>
+    <string name="open_terminal"></string>
+    <string name="resize_sparse_image"></string>
+    <string name="add_bind_mount"></string>
+    <string name="daemon_mode"></string>
+    <string name="add_upstream_interface"></string>
+    <string name="container_path_placeholder"></string>
+    <string name="bug_report_title"></string>
+    <string name="select_user_to_enter"></string>
+    <string name="symmetric_label"></string>
+    <string name="static_ip_description"></string>
+    <string name="error_start_must_be_less_than_end"></string>
+    <string name="error_ports_must_be_numbers"></string>
+    <string name="migrating"></string>
+    <string name="starting_migration"></string>
+    <string name="volatile_option"></string>
+    <string name="port_forwarding"></string>
+    <string name="grant_permission"></string>
+    <string name="reboot_recommended"></string>
+    <string name="octet_label"></string>
+    <string name="network_mode"></string>
+    <string name="source_code"></string>
+    <string name="notification_permission_rationale"></string>
+    <string name="select_host_path_title"></string>
+    <string name="daemon_mode_description"></string>
+    <string name="invalid_path"></string>
+    <string name="error_port_out_of_range"></string>
+    <string name="uptime"></string>
+    <string name="i_understand"></string>
+    <string name="migrate_to_sparse_image"></string>
+    <string name="volatile_mode_description"></string>
+    <string name="deadlock_shield_option"></string>
+    <string name="resize_dialog_title"></string>
+    <string name="cat_networking"></string>
+    <string name="open_settings"></string>
+    <string name="dns_servers_label"></string>
+    <string name="volatile_mode"></string>
+    <string name="container_path"></string>
+    <string name="network_mode_nat"></string>
+    <string name="help_card_url"></string>
+    <string name="environment_variables"></string>
+    <string name="network_mode_host"></string>
+    <string name="protocol"></string>
+    <string name="bind_mounts_description"></string>
+    <string name="add_port_forward"></string>
+    <string name="network_mode_none"></string>
+    <string name="max_dns_servers_reached"></string>
+    <string name="upstream_interfaces_mandatory"></string>
+    <string name="enter_container_path"></string>
+    <string name="manual_deadlock_shield"></string>
+    <string name="dns_servers_placeholder"></string>
+    <string name="force_cgroupv1_description"></string>
+    <string name="available_system_interfaces"></string>
+    <string name="error_invalid_range_format"></string>
+    <string name="container_port_hint"></string>
+    <string name="terminal"></string>
+    <string name="open"></string>
+    <string name="environment_variables_hint"></string>
+    <string name="cat_security"></string>
+    <string name="error_port_overlap"></string>
+    <string name="x11_option"></string>
+    <string name="host_path"></string>
+    <string name="host_port_hint"></string>
+    <string name="termux_x11"></string>
+    <string name="dns_servers_description"></string>
+    <string name="generate_bug_report_description"></string>
+    <string name="optional"></string>
+    <string name="cgroupv1_option"></string>
+    <string name="resize_dialog_message"></string>
+    <string name="static_ip_address"></string>
+    <string name="generate_bug_report"></string>
+    <string name="cat_integration"></string>
+    <string name="error_port_width_mismatch"></string>
+    <string name="notification_permission_title"></string>
+    <string name="port_forward_examples"></string>
+    <string name="nat_settings"></string>
+    <string name="not_configured"></string>
+    <string name="error_octet_range"></string>
+    <string name="starting_resizing"></string>
+    <string name="interface_name_hint"></string>
+    <string name="dns_servers_hint"></string>
+    <string name="add"></string>
+    <string name="resizing"></string>
+    <string name="upstream_interfaces_required_error"></string>
+    <string name="leave_blank_for_symmetric"></string>
+    <string name="logs_copied"></string>
+    <string name="bind_mounts"></string>
+    <string name="terminal_card_desc"></string>
+    <string name="cat_advanced"></string>
+    <string name="help_card_message"></string>
+    <string name="operation_in_progress"></string>
 </resources>
