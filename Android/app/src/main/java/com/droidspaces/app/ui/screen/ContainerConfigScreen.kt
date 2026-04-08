@@ -752,14 +752,6 @@ fun ContainerConfigScreen(
                 onCheckedChange = { enableHwAccess = it }
             )
 
-            ToggleCard(
-                icon = Icons.Default.Person,
-                title = context.getString(R.string.allow_user_ns),
-                description = context.getString(R.string.allow_user_ns_description),
-                checked = allowUserNs,
-                enabled = !blockNestedNs,
-                onCheckedChange = { allowUserNs = it }
-            )
 
             ToggleCard(
                 painter = androidx.compose.ui.res.painterResource(R.drawable.ic_x11),
@@ -808,6 +800,15 @@ fun ContainerConfigScreen(
                 checked = blockNestedNs,
                 enabled = !allowUserNs,
                 onCheckedChange = { blockNestedNs = it }
+            )
+
+            ToggleCard(
+                icon = Icons.Default.Person,
+                title = context.getString(R.string.allow_user_ns),
+                description = context.getString(R.string.allow_user_ns_description),
+                checked = allowUserNs,
+                enabled = !blockNestedNs,
+                onCheckedChange = { allowUserNs = it }
             )
 
             ToggleCard(
