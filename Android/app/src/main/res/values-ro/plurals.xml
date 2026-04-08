@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <plurals name="container_count">
-        <item quantity="one">container</item>
-        <item quantity="few">containere</item>
+        <item quantity="one">%d container</item>
+        <item quantity="few">%d containere</item>
         <item quantity="other">containerele</item>
     </plurals>
 </resources>
