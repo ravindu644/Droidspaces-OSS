@@ -326,18 +326,6 @@ int check_requirements_detailed(void) {
   print_ds_check("IPC namespace", "Inter-process communication isolation",
                  has_ipc_ns, "MUST");
 
-  int has_devtmpfs = grep_file("/proc/filesystems", "devtmpfs");
-  /* devtmpfs is only required with --hw-access; downgrade to RECOMMENDED */
-  print_ds_check("devtmpfs support",
-                 "Required for --hw-access (GPU/hardware passthrough); "
-                 "tmpfs fallback used otherwise",
-                 has_devtmpfs, "OPT");
-
-  int has_cg_dev = check_cgroup_devices();
-  /* devices controller is v1-only; not relevant for cgroupv2 */
-  print_ds_check("cgroup devices support",
-                 "Required for --force-cgroupv1; not needed on cgroupv2",
-                 has_cg_dev, "OPT");
 
   int has_pivot = check_pivot_root();
   if (!has_pivot)
@@ -394,6 +382,16 @@ int check_requirements_detailed(void) {
 
   print_ds_check("Cgroup namespace", "Control Group namespace isolation",
                  check_ns(CLONE_NEWCGROUP, "cgroup"), "OPT");
+
+  int has_devtmpfs = grep_file("/proc/filesystems", "devtmpfs");
+  print_ds_check("devtmpfs support",
+                 "Required for hardware access mode; tmpfs fallback used otherwise",
+                 has_devtmpfs, "OPT");
+
+  int has_cg_dev = check_cgroup_devices();
+  print_ds_check("cgroup devices support",
+                 "Required for legacy cgroup v1 mode; not needed on cgroupv2",
+                 has_cg_dev, "OPT");
 
   /* OPTIONAL */
   check_append("\n" C_BOLD "[OPTIONAL]" C_RESET
