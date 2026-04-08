@@ -165,6 +165,10 @@ static int check_kernel_version_supported(void) {
  * ---------------------------------------------------------------------------*/
 
 int check_requirements(void) {
+  return check_requirements_hw(0);
+}
+
+int check_requirements_hw(int hw_access) {
   int missing = 0;
 
   if (!check_root()) {
@@ -174,10 +178,10 @@ int check_requirements(void) {
     missing++;
   }
 
-  if (grep_file("/proc/filesystems", "devtmpfs") == 0) {
-    ds_error("devtmpfs is not supported by the kernel");
-    ds_log("This is a REQUIRED feature for hardware node management.");
-    missing++;
+  /* devtmpfs is only needed for --hw-access; without it we use tmpfs */
+  if (hw_access && grep_file("/proc/filesystems", "devtmpfs") == 0) {
+    ds_warn("Hardware access mode is active but this kernel does not support "
+            "devtmpfs. GPU and hardware nodes may not be available.");
   }
 
   /* Functional namespace checks */
@@ -324,10 +328,11 @@ int check_requirements_detailed(void) {
                  has_ipc_ns, "MUST");
 
   int has_devtmpfs = grep_file("/proc/filesystems", "devtmpfs");
-  if (!has_devtmpfs)
-    missing_must++;
-  print_ds_check("devtmpfs support", "Kernel support for devtmpfs",
-                 has_devtmpfs, "MUST");
+  /* devtmpfs is only required with --hw-access; downgrade to RECOMMENDED */
+  print_ds_check("devtmpfs support",
+                 "Required for --hw-access (GPU/hardware passthrough); "
+                 "tmpfs fallback used otherwise",
+                 has_devtmpfs, "OPT");
 
   int has_cg_dev = check_cgroup_devices();
   if (!has_cg_dev)
