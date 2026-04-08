@@ -679,6 +679,7 @@ void print_documentation(const char *argv0);
 
 int is_dangerous_node(const char *name);
 int check_requirements(void);
+int check_requirements_hw(int hw_access, int force_cgroupv1);
 int check_requirements_detailed(void);
 
 /* ---------------------------------------------------------------------------
