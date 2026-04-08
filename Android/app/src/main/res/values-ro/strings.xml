@@ -5,8 +5,8 @@
     <string name="welcome_subtitle">Manager de containere în stil LXC pentru Android !</string>
     <string name="root_check_title">Verificatul permisiunilor de root</string>
     <string name="checking_root">Se verifică accesul permisiunilor de root...</string>
-    <string name="root_granted">Permisiunile de root au fost aprobate</string>
-    <string name="root_denied">Permisiunile de root nu au fost aprobate</string>
+    <string name="root_granted">Permisiunile de root au fost acordate</string>
+    <string name="root_denied">Permisiunile de root nu au fost acordate</string>
     <string name="root_required_message">Permmisiunile de root sunt necesare pentru a gestiona containere.</string>
     <string name="check_root_access">Verifică accesul la root</string>
     <string name="check_root_access_click">Apasă butonul de mai jos pentru a verifica accesul la root</string>
