@@ -324,4 +324,5 @@
     <string name="help_card_title">Ești nou în Droidspaces?</string>
     <string name="help_card_message">Apasă aici pentru a învăța cum să configurezi primul tău container Android !</string>
     <string name="reboot_recommended">Un restart este recomandat după instalare pentru a aplica regulile SELinux.</string>
+    <string name="get_started">Începe</string>
 </resources>
