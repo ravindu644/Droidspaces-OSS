@@ -278,7 +278,7 @@
     <string name="action_successful">%1$s %2$s 成功</string>
     <string name="failed_to_action">无法 %1$s %2$s</string>
     <string name="error_unknown">错误：%1$s</string>
-    <string name="actioning_service">正在 %1$s %2$s...</string>
+    <string name="actioning_service">%1$sing %2$s...</string>
     <string name="no_services_found">未找到服务</string>
     <string name="no_systemd_services">没有可用的 systemd 服务</string>
     <string name="no_running_services">没有运行中的服务</string>
