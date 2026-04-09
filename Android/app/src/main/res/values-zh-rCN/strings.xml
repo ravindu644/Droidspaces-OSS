@@ -199,7 +199,7 @@
     <string name="requirements_check_completed_successfully">成功完成运行要求检查</string>
     <string name="starting_migration">开始执行迁移操作...</string>
     <string name="grant_permission">授予权限</string>
-    <string name="container_name_placeholder">我的容器</string>
+    <string name="container_name_placeholder">my-container</string>
     <string name="reboot_recommended">建议在安装完成后重启以应用 SELinux 策略。</string>
     <string name="ram">RAM</string>
     <string name="user_in_parentheses">%1$s</string>
