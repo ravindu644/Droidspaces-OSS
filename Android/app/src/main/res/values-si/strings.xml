@@ -356,4 +356,13 @@
     <string name="help_card_url">https://github.com/ravindu644/Droidspaces-OSS/blob/main/Documentation/Installation-Android.md</string>
     <string name="reboot_recommended">SELinux නීති ක්රියාත්මක කිරීම සඳහා ස්ථාපනයෙන් පසු ඔබගේ උපාංගය restart කිරීම නිර්දේශ කෙරේ.</string>
     <string name="app_name">Droidspaces</string>
+    <string name="allow_user_ns">User Namespaces සෑදීමට අවසර ලබා දෙන්න</string>
+    <string name="allow_user_ns_description">වරප්‍රසාද නොලත් කන්ටේනර (උදා: Flatpak/Bubblewrap) සඳහා CLONE_NEWUSER අවසරය ලබා දෙන්න. සටහන: මෙයින් ඔබගේ කන්ටේනරයේ ආරක්ෂාව අඩුවිය හැක.</string>
+    <string name="user_ns_option">User NS</string>
+    <string name="installation_setup_summary">ස්ථාපන සාරාංශය</string>
+    <string name="review_configuration">සැකසුම් සමාලෝචනය</string>
+    <string name="tarball_label">Tarball</string>
+    <string name="directory_label">ෆෝල්ඩරය</string>
+    <string name="installation_path_label">ස්ථාපනය කරන ස්ථානය</string>
+    <string name="no_options_enabled">අමතර විකල්ප සක්‍රීය කර නොමැත</string>
 </resources>
