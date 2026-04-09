@@ -105,7 +105,7 @@
     <string name="status_stopped">නවත්වා ඇත</string>
     <string name="pid_label">PID: %1$d</string>
     <string name="hostname_label">සත්කාරක නාමය: %1$s</string>
-    <string name="options_label">සැකසුම්: %1$s</string>
+    <string name="options_label">විකල්ප: %1$s</string>
     <string name="start">ආරම්භ කරන්න</string>
     <string name="stop">නවත්වන්න</string>
     <string name="restart">ප්‍රතිපණගන්වන්න</string>
@@ -356,4 +356,11 @@
     <string name="help_card_url">https://github.com/ravindu644/Droidspaces-OSS/blob/main/Documentation/Installation-Android.md</string>
     <string name="reboot_recommended">SELinux නීති ක්රියාත්මක කිරීම සඳහා ස්ථාපනයෙන් පසු ඔබගේ උපාංගය restart කිරීම නිර්දේශ කෙරේ.</string>
     <string name="app_name">Droidspaces</string>
+    <string name="tarball_label">Tarball</string>
+    <string name="review_configuration">සැකසුම් සමාලෝචනය</string>
+    <string name="installation_path_label">ස්ථාපනය කරන ස්ථානය</string>
+    <string name="directory_label">ෆෝල්ඩරය</string>
+    <string name="no_options_enabled">අමතර විකල්ප සක්‍රීය කර නොමැත</string>
+    <string name="installation_setup_summary">ස්ථාපන සාරාංශය</string>
+    <string name="options">විකල්ප</string>
 </resources>

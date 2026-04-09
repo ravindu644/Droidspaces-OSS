@@ -18,4 +18,20 @@
     <string name="containers">Konteynerler</string>
     <string name="panel">Panel</string>
     <string name="settings">Ayarlar</string>
+    <string name="close">Kapalı</string>
+    <string name="containers_count">konteynerler</string>
+    <string name="backend_not_installed">Backend: Kurulmamış</string>
+    <string name="backend_installed">Backend: Kuruldu</string>
+    <string name="clear">Temiz</string>
+    <string name="backend_checking">Kontrol ediliyor</string>
+    <string name="backend_unsupported">Backend: Desteklenmiyor</string>
+    <string name="container_singular">Ana Menü</string>
+    <string name="back">Geri</string>
+    <string name="refresh">Yenile</string>
+    <string name="search">Ara</string>
+    <string name="backend_corrupted">Backend: Bozulmuş</string>
+    <string name="backend_update_available">Backend: Yeni bir güncelleme var</string>
+    <string name="running">Çalışıyor</string>
+    <string name="container_count">konteyner</string>
+    <string name="backend_module_missing">Backend: Kayıp</string>
 </resources>

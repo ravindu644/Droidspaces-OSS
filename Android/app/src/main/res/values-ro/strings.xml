@@ -325,4 +325,13 @@
     <string name="help_card_message">Apasă aici pentru a învăța cum să configurezi primul tău container Android !</string>
     <string name="reboot_recommended">Un restart este recomandat după instalare pentru a aplica regulile SELinux.</string>
     <string name="get_started">Începe</string>
+    <string name="about_description">Manager de containere în stil LXC pentru Android</string>
+    <string name="review_configuration">Verifică configurația</string>
+    <string name="containers_count">%1$d containere</string>
+    <string name="installation_path_label">Calea de instalare</string>
+    <string name="directory_label">Directoriu</string>
+    <string name="cat_networking">Categorii de configurație și modul de rețea</string>
+    <string name="no_options_enabled">­Nicio opțiune suplimentară este activată</string>
+    <string name="container_count">%1$d container</string>
+    <string name="installation_setup_summary">Rezumatul instalării</string>
 </resources>
