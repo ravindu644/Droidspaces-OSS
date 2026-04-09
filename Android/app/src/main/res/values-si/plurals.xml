@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <plurals name="container_count">
+        <item quantity="one">%d කන්ටේනරයක්</item>
+        <item quantity="other">කන්ටේනර් %d ක්</item>
+    </plurals>
+</resources>
