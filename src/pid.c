@@ -37,10 +37,10 @@ const char *get_logs_dir(void) {
 }
 
 int ensure_workspace(void) {
-  mkdir(get_workspace_dir(), 0755);
-  mkdir(get_pids_dir(), 0755);
-  mkdir(get_net_dir(), 0755);
-  mkdir(get_logs_dir(), 0755);
+  mkdir_p(get_workspace_dir(), 0755);
+  mkdir_p(get_pids_dir(), 0755);
+  mkdir_p(get_net_dir(), 0755);
+  mkdir_p(get_logs_dir(), 0755);
 
   return 0;
 }
