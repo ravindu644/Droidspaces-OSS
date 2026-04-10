@@ -75,13 +75,14 @@ int check_ns(int flag, const char *name) {
 }
 
 static int check_pivot_root(void) {
-  struct statfs st;
-  if (statfs("/", &st) < 0)
+  /* Probe the syscall directly instead of guessing from fstype.
+   * pivot_root(".", ".") returns EINVAL (bad args) when the syscall is
+   * present but args are wrong, or ENOSYS when not compiled in.
+   * This works correctly even on ramfs/rootfs roots (e.g. recovery env). */
+  int ret = syscall(__NR_pivot_root, ".", ".");
+  if (ret < 0 && errno == ENOSYS)
     return 0;
-  /* pivot_root is not supported if the root is on ramfs/tmpfs (unless it's a
-   * submount) */
-  /* RAMFS_MAGIC = 0x858458f6, TMPFS_MAGIC = 0x01021994 */
-  return (st.f_type != 0x858458f6);
+  return 1;
 }
 
 static int check_loop(void) { return access("/dev/loop-control", F_OK) == 0; }
