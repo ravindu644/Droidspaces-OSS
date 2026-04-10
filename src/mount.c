@@ -1123,3 +1123,31 @@ int detect_hw_access_in_container(pid_t pid) {
     return strcmp(fstype, "devtmpfs") == 0;
   return 0;
 }
+
+/* Ensure host devpts is mounted - specifically for Android Recovery
+ * environments where /dev/pts is often missing or unmounted, causing openpty()
+ * to fail. */
+int ds_fix_host_ptys(void) {
+  const char *pts_path = "/dev/pts";
+
+  /* If already a mountpoint, we are good */
+  if (is_mountpoint(pts_path))
+    return 0;
+
+  /* Ensure directory exists */
+  mkdir(pts_path, 0755);
+
+  /* Mount host devpts. We use standard gid=5 (tty) and mode=620.
+   * This is the 'host' global namespace version of setup_devpts. */
+  if (mount("devpts", pts_path, "devpts", MS_NOSUID | MS_NOEXEC,
+            "gid=5,mode=620") < 0) {
+    if (errno != EBUSY) {
+      /* EBUSY means already mounted (redundant with is_mountpoint but safe) */
+      ds_warn("Failed to mount host devpts: %s", strerror(errno));
+      return -1;
+    }
+  }
+
+  ds_log("Host devpts mounted successfully (Recovery fix).");
+  return 0;
+}

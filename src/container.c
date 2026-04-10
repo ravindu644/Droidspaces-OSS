@@ -486,6 +486,8 @@ int start_rootfs(struct ds_config *cfg) {
   }
 
   cfg->tty_count = DS_MAX_TTYS;
+  ds_fix_host_ptys();
+
   if (ds_terminal_create(&cfg->console) < 0) {
     ds_error("Failed to allocate console PTY");
     goto cleanup;

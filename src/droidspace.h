@@ -425,6 +425,7 @@ int ds_apply_jail_mask(int hw_access);
 int setup_dev(const char *rootfs, int hw_access, int gpu_mode);
 int create_devices(const char *rootfs, int hw_access);
 int setup_devpts(int hw_access);
+int ds_fix_host_ptys(void);
 int setup_volatile_overlay(struct ds_config *cfg);
 int cleanup_volatile_overlay(struct ds_config *cfg);
 int check_volatile_mode(struct ds_config *cfg);
