@@ -107,7 +107,8 @@ wait_for_network() {
     local count=0
     while [ $count -lt $timeout ]; do
         if /system/bin/ip route get 8.8.8.8 2>/dev/null | grep -qv "ds-br0"; then
-            log "Network is ready (${count}s)"
+            log "Network is ready (${count}s). Waiting 10s for stability..."
+            sleep 10
             return 0
         fi
         sleep 1
