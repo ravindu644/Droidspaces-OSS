@@ -19,7 +19,7 @@
     <string name="panel">Panel</string>
     <string name="settings">Ayarlar</string>
     <string name="close">Kapat</string>
-    <string name="containers_count">konteynerler</string>
+    <string name="containers_count">%1$d konteyner</string>
     <string name="backend_not_installed">Backend: Kurulmamış</string>
     <string name="backend_installed">Backend: Kuruldu</string>
     <string name="clear">Temiz</string>
@@ -32,13 +32,13 @@
     <string name="backend_corrupted">Backend: Bozulmuş</string>
     <string name="backend_update_available">Backend: Yeni bir güncelleme var</string>
     <string name="running">Çalışıyor</string>
-    <string name="container_count">konteyner</string>
+    <string name="container_count">%1$d konteyner</string>
     <string name="backend_module_missing">Backend: Kayıp</string>
     <string name="backend_unknown">Backend: Bilinmiyor</string>
     <string name="root_unavailable">Root erişimi mevcut değil.</string>
     <string name="grant_root_message">Droidspaces\'i kullanmaya devam etmek için root erişimi verin!</string>
-    <string name="version_label">Versiyon:</string>
-    <string name="root_provider_label">Root Uygulaması:</string>
+    <string name="version_label">Versiyon: %1$s</string>
+    <string name="root_provider_label">Root Uygulaması: %1$s</string>
     <string name="unknown">Bilinmeyen</string>
     <string name="update_available_message">Backend güncellemesi mevcut; güncellemek için buraya tıklayın</string>
     <string name="tap_to_install">Yüklemek için buraya dokunun</string>

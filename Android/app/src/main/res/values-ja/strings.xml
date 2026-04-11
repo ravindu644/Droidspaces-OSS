@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">ドロイドスペース</string>
+    <string name="app_name">Droidspaces</string>
     <string name="welcome_subtitle">LXC風なAndroid用のLinuxコンテナマネージャ！</string>
     <string name="get_started">始める</string>
     <string name="root_check_title">ルートアクセス権限の確認</string>
@@ -352,7 +352,7 @@
     <string name="masked_legend">隠匿中</string>
     <string name="unmask">見せる</string>
     <string name="mask_service">サービスを隠す</string>
-    <string name="actioning_service">%2$sをして%1$sせしむ…</string>
+    <string name="actioning_service">%1$sing %2$s...</string>
     <string name="no_services_found">サービスが見つかりませんでした</string>
     <string name="no_systemd_services">利用可能なsystemdサービスはありません</string>
     <string name="no_running_services">実行中のサービスはありません</string>
