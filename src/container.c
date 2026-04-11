@@ -1065,8 +1065,9 @@ int start_rootfs(struct ds_config *cfg) {
          monitor_pid);
 
   /* 9. Android: Remount /data with suid for directory-based containers.
-   * This is required for sudo/su to work if the rootfs is on /data. */
-  if (is_android() && !cfg->rootfs_img_path[0])
+   * This is required for sudo/su to work if the rootfs is on /data.
+   * Skip on ramfs (recovery) as it's unnecessary and likely to fail. */
+  if (is_android() && !cfg->rootfs_img_path[0] && !is_ramfs("/"))
     android_remount_data_suid();
 
   /* Log volatile mode */

@@ -231,6 +231,20 @@ void ds_resolve_argv_paths(int argc, char **argv) {
   }
 }
 
+#ifndef RAMFS_MAGIC
+#define RAMFS_MAGIC 0x858458f6
+#endif
+#ifndef TMPFS_MAGIC
+#define TMPFS_MAGIC 0x01021994
+#endif
+
+int is_ramfs(const char *path) {
+  struct statfs sfs;
+  if (statfs(path, &sfs) < 0)
+    return 0;
+  return (sfs.f_type == RAMFS_MAGIC || sfs.f_type == TMPFS_MAGIC);
+}
+
 int is_subpath(const char *parent, const char *child) {
   char *real_parent = ds_resolve_path_arg(parent);
   char *real_child = ds_resolve_path_arg(child);

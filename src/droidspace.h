@@ -344,6 +344,7 @@ struct ds_config {
 void safe_strncpy(char *dst, const char *src, size_t size);
 char *ds_resolve_path_arg(const char *path);
 void ds_resolve_argv_paths(int argc, char **argv);
+int is_ramfs(const char *path);
 int is_subpath(const char *parent, const char *child);
 int is_running_in_termux(void);
 int write_file(const char *path, const char *content);

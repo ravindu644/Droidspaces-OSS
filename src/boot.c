@@ -413,25 +413,21 @@ int internal_boot(struct ds_config *cfg) {
    * MS_MOVE atomically relocates the new root onto / and chroot(2) locks us
    * in - exactly what switch_root(8) does internally. */
   int used_ms_move = 0;
-  if (syscall(SYS_pivot_root, ".", ".old_root") < 0) {
-    if (errno == EINVAL) {
-      /* Running on ramfs/rootfs (e.g. Android recovery). Fall back to
-       * MS_MOVE + chroot which has no fstype restriction. In this path
-       * there is no old root mount to unmount, so skip .old_root cleanup. */
-      ds_warn("pivot_root failed (ramfs root?), falling back to MS_MOVE+chroot");
-      used_ms_move = 1;
-      if (mount(".", "/", NULL, MS_MOVE, NULL) < 0) {
-        ds_error("MS_MOVE fallback failed: %s", strerror(errno));
-        return -1;
-      }
-      if (chroot(".") < 0) {
-        ds_error("chroot(\".\") after MS_MOVE failed: %s", strerror(errno));
-        return -1;
-      }
-    } else {
-      ds_error("pivot_root failed: %s", strerror(errno));
+  if (is_ramfs("/")) {
+    ds_log("Detected rootfs/ramfs root - automatically falling back to "
+           "MS_MOVE+chroot");
+    used_ms_move = 1;
+    if (mount(".", "/", NULL, MS_MOVE, NULL) < 0) {
+      ds_error("MS_MOVE fallback failed: %s", strerror(errno));
       return -1;
     }
+    if (chroot(".") < 0) {
+      ds_error("chroot(\".\") after MS_MOVE failed: %s", strerror(errno));
+      return -1;
+    }
+  } else if (syscall(SYS_pivot_root, ".", ".old_root") < 0) {
+    ds_error("pivot_root failed: %s", strerror(errno));
+    return -1;
   }
 
   if (chdir("/") < 0) {
