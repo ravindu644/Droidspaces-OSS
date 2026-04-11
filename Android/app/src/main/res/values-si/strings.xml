@@ -363,4 +363,9 @@
     <string name="no_options_enabled">අමතර විකල්ප සක්‍රීය කර නොමැත</string>
     <string name="installation_setup_summary">ස්ථාපන සාරාංශය</string>
     <string name="options">විකල්ප</string>
+    <string name="gpu_option">GPU</string>
+    <string name="gpu_access">GPU ප්‍රවේශය</string>
+    <string name="gpu_access_description">සම්පූර්ණ Hardware Passthrough එකක් සිදු නොකර, GPU nodes පමණක් හුදකලා වූ /dev නාමාවලියක නිර්මාණය කිරීම</string>
+    <string name="symlink_integration">Droidspaces, system path එකට එකතු කරන්න</string>
+    <string name="symlink_integration_description">Android root shell එක හරහා droidspaces විධානය භාවිතා කිරීමට /system/bin තුළ symlink එකක් සාදන්න. අවවාදයයි: ඔබගේ mount පද්ධතිය OverlayFS meta modules මත පදනම් වූවක් නම්, මෙය සක්‍රීය කිරීමෙන් Bootloop ඇති විය හැක. මෙම විකල්පය Magic Mount මත පදනම් වූ mount පද්ධති සඳහා පමණක් භාවිතා කරන්න (Reboot කිරීමක් අවශ්‍ය වේ)</string>
 </resources>

@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <plurals name="container_count">
+        <item quantity="other">%d 個のコンテナ</item>
+    </plurals>
+</resources>

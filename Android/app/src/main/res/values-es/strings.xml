@@ -252,4 +252,5 @@
     <string name="requirements_check_completed_successfully">Requisitos comprobados con éxito</string>
     <string name="requirements_check_completed_with_errors">Comprobación de requisitos con errores</string>
     <string name="kernel_requirements_copied">Requisitos del kernel copiados al portapapeles</string>
+    <string name="language_description">Cambiar el idioma de la app</string>
 </resources>
