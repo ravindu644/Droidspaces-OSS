@@ -36,7 +36,7 @@
     <string name="backend_module_missing">Backend: Kayıp</string>
     <string name="backend_unknown">Backend: Bilinmiyor</string>
     <string name="root_unavailable">Root erişimi mevcut değil.</string>
-    <string name="grant_root_message">Droidspaces'i kullanmaya devam etmek için root erişimi verin!</string>
+    <string name="grant_root_message">Droidspaces\'i kullanmaya devam etmek için root erişimi verin!</string>
     <string name="version_label">Versiyon:</string>
     <string name="root_provider_label">Root Uygulaması:</string>
     <string name="unknown">Bilinmeyen</string>
@@ -46,7 +46,7 @@
     <string name="tap_to_install_module">Modülü kurmak için buraya dokunun</string>
     <string name="device_not_supported">Cihazınız desteklenmiyor</string>
     <string name="backend_section">Backend</string>
-    <string name="reinstall_backend">Backend'i yeniden yükle</string>
+    <string name="reinstall_backend">Backend\'i yeniden yükle</string>
     <string name="reinstall_backend_description">Dosyaları ve boot modülünü yeniden yükle</string>
     <string name="requirements">Gereksinimler</string>
     <string name="kernel_requirements">Kernel Gereksinimleri</string>
