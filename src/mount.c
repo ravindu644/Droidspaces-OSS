@@ -70,7 +70,8 @@ static int find_available_mountpoint(const char *name, char *mount_path,
         char stale_dev[256] = {0};
         get_backing_dev(mount_path, stale_dev, sizeof(stale_dev));
         umount2(mount_path, MNT_DETACH | MNT_FORCE);
-        if (stale_dev[0]) loop_detach(stale_dev);
+        if (stale_dev[0])
+          loop_detach(stale_dev);
       }
     }
     return 0;
@@ -961,6 +962,37 @@ int setup_custom_binds(struct ds_config *cfg, const char *rootfs) {
  * Rootfs Image Handling - Pure C loop device management (no host tools)
  * ---------------------------------------------------------------------------*/
 
+/* Probe superblock magic bytes to identify the filesystem type. */
+static const char *detect_fs_type(const char *img_path) {
+  int fd = open(img_path, O_RDONLY | O_CLOEXEC);
+  if (fd < 0)
+    return NULL;
+
+  uint8_t buf[8];
+  const char *result = NULL;
+
+  /* offset 0x438: ext2/3/4 (0xEF53 LE) */
+  if (pread(fd, buf, 2, 0x438) == 2) {
+    uint16_t m = (uint16_t)buf[0] | (uint16_t)buf[1] << 8;
+    if (m == 0xEF53) {
+      result = "ext4";
+      goto out;
+    }
+  }
+
+  /* offset 0x10040: btrfs ("_BHRfS_M") */
+  if (pread(fd, buf, 8, 0x10040) == 8) {
+    if (memcmp(buf, "_BHRfS_M", 8) == 0) {
+      result = "btrfs";
+      goto out;
+    }
+  }
+
+out:
+  close(fd);
+  return result;
+}
+
 /*
  * Resolve loop device node path after LOOP_CTL_GET_FREE.
  *
@@ -982,7 +1014,8 @@ static int open_loop_dev(long devnr, char *path_out, size_t path_size) {
   /* Wait up to 500ms for ueventd/udev to create the node */
   for (int i = 0; i < 5; i++) {
     int fd = open(path_out, O_RDWR | O_CLOEXEC);
-    if (fd >= 0) return fd;
+    if (fd >= 0)
+      return fd;
     usleep(100000);
   }
 
@@ -993,12 +1026,14 @@ static int open_loop_dev(long devnr, char *path_out, size_t path_size) {
     snprintf(path_out, path_size, "/dev/block/loop%ld", devnr);
 
   int fd = open(path_out, O_RDWR | O_CLOEXEC);
-  if (fd >= 0) return fd;
+  if (fd >= 0)
+    return fd;
 
   /* Last resort: create the node ourselves */
   if (mknod(path_out, S_IFBLK | 0660, makedev(7, (int)devnr)) == 0) {
     fd = open(path_out, O_RDWR | O_CLOEXEC);
-    if (fd >= 0) return fd;
+    if (fd >= 0)
+      return fd;
   }
 
   return -1;
@@ -1048,7 +1083,8 @@ static int loop_attach(const char *img_path, char *loop_path_out,
 
   struct loop_info64 li;
   memset(&li, 0, sizeof(li));
-  /* AUTOCLEAR: kernel auto-releases loop device after umount + all fds closed */
+  /* AUTOCLEAR: kernel auto-releases loop device after umount + all fds closed
+   */
   li.lo_flags = LO_FLAGS_AUTOCLEAR;
   snprintf((char *)li.lo_file_name, LO_NAME_SIZE, "%.63s", img_path);
 
@@ -1060,17 +1096,21 @@ static int loop_attach(const char *img_path, char *loop_path_out,
 
 /* Detach a loop device explicitly via LOOP_CLR_FD (belt-and-suspenders). */
 static void loop_detach(const char *loop_dev) {
-  if (!loop_dev || !loop_dev[0]) return;
+  if (!loop_dev || !loop_dev[0])
+    return;
   int fd = open(loop_dev, O_RDONLY | O_CLOEXEC);
-  if (fd < 0) return;
+  if (fd < 0)
+    return;
   ioctl(fd, LOOP_CLR_FD, 0);
   close(fd);
 }
 
-/* Find the block device (loop node) backing a given mount point via /proc/mounts. */
+/* Find the block device (loop node) backing a given mount point via
+ * /proc/mounts. */
 static int get_backing_dev(const char *mnt, char *dev_out, size_t dev_size) {
   FILE *f = fopen("/proc/mounts", "r");
-  if (!f) return -1;
+  if (!f)
+    return -1;
 
   char line[PATH_MAX + 256];
   int found = 0;
@@ -1094,10 +1134,21 @@ int mount_rootfs_img(const char *img_path, char *mount_point, size_t mp_size,
     return -1;
   }
 
-  /* e2fsck: keep as external call - implementing fsck in pure C is out of scope */
-  char *e2fsck_argv[] = {"e2fsck", "-f", "-y", (char *)(uintptr_t)img_path, NULL};
-  if (run_command_quiet(e2fsck_argv) == 0)
-    ds_log("Image checked and repaired successfully.");
+  /* Detect filesystem type from superblock magic */
+  const char *fstype = detect_fs_type(img_path);
+  if (!fstype) {
+    ds_warn("Unknown filesystem in %s. Only ext4 and btrfs are supported.",
+            img_path);
+    return -1;
+  }
+
+  /* e2fsck: only for ext images */
+  if (strcmp(fstype, "ext4") == 0) {
+    char *e2fsck_argv[] = {"e2fsck", "-f", "-y", (char *)(uintptr_t)img_path,
+                           NULL};
+    if (run_command_quiet(e2fsck_argv) == 0)
+      ds_log("Image checked and repaired successfully.");
+  }
 
   /* Settle time: prevent "device busy" on rapid restarts */
   sync();
@@ -1108,35 +1159,43 @@ int mount_rootfs_img(const char *img_path, char *mount_point, size_t mp_size,
     set_selinux_context(img_path, DS_ANDROID_VOLD_CONTEXT);
 
   /*
-   * ext4 mount options (without "loop" - we manage the loop device ourselves).
-   * MS_NOATIME | MS_NODIRATIME are VFS-level flags; the rest are ext4-specific
-   * data options.
+   * Build mount flags: base VFS flags + any fstype-specific extras.
    * pivot_root requires a writable mount to create .old_root, so no MS_RDONLY.
    */
-  const char *mnt_data = "nodelalloc,errors=remount-ro,init_itable=0";
   unsigned long mnt_flags = MS_NOATIME | MS_NODIRATIME;
+  const char *mnt_data = NULL;
+
+  if (strcmp(fstype, "ext4") == 0) {
+    mnt_data = "nodelalloc,errors=remount-ro,init_itable=0";
+  } else if (strcmp(fstype, "btrfs") == 0) {
+    /* btrfs defaults are usually sane */
+    mnt_data = NULL;
+  }
 
   for (int attempt = 0; attempt < 3; attempt++) {
     if (attempt == 0)
-      ds_log("Mounting rootfs image %s on %s...", img_path, mount_point);
+      ds_log("Mounting %s rootfs image %s on %s...", fstype, img_path,
+             mount_point);
     else
-      ds_log("Mounting rootfs image %s on %s (Attempt %d/3)...",
+      ds_log("Mounting %s rootfs image %s on %s (Attempt %d/3)...", fstype,
              img_path, mount_point, attempt + 1);
 
     char loop_path[64];
     int loop_fd = loop_attach(img_path, loop_path, sizeof(loop_path));
-    if (loop_fd < 0) goto retry;
+    if (loop_fd < 0)
+      goto retry;
 
-    int ret = mount(loop_path, mount_point, "ext4", mnt_flags, mnt_data);
+    int ret = mount(loop_path, mount_point, fstype, mnt_flags, mnt_data);
     close(loop_fd); /* AUTOCLEAR handles cleanup if mount failed */
 
-    if (ret == 0) return 0;
+    if (ret == 0)
+      return 0;
 
     /* mount() failed: explicitly detach since AUTOCLEAR needs last-fd-close
      * + no active mounts to trigger; we already closed loop_fd so it should
      * auto-clear, but be explicit for kernels < 3.18 edge cases. */
     loop_detach(loop_path);
-    ds_warn("mount(%s) failed: %s", loop_path, strerror(errno));
+    ds_warn("mount(%s, %s) failed: %s", loop_path, fstype, strerror(errno));
 
   retry:
     if (attempt < 2) {
@@ -1151,7 +1210,8 @@ int mount_rootfs_img(const char *img_path, char *mount_point, size_t mp_size,
 }
 
 int unmount_rootfs_img(const char *mount_point, int silent) {
-  if (!mount_point || !mount_point[0]) return 0;
+  if (!mount_point || !mount_point[0])
+    return 0;
 
   /* Grab the backing loop device before we unmount (it disappears after) */
   char loop_dev[256] = {0};
@@ -1161,7 +1221,8 @@ int unmount_rootfs_img(const char *mount_point, int silent) {
   sync();
   umount2(mount_point, MNT_DETACH);
 
-  /* 2. Explicitly detach loop device (AUTOCLEAR also handles this, but be safe) */
+  /* 2. Explicitly detach loop device (AUTOCLEAR also handles this, but be safe)
+   */
   if (loop_dev[0])
     loop_detach(loop_dev);
 
