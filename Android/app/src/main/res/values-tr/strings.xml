@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">Droidspaces</string>
+    <string name="app_name" translatable="false">Droidspaces</string>
     <string name="welcome_title">Droidspaces\'a hoşgeldin</string>
     <string name="welcome_subtitle">Android için LXC tarzı linux konteyner yöneticisi!</string>
     <string name="get_started">Başla</string>
@@ -19,7 +19,7 @@
     <string name="panel">Panel</string>
     <string name="settings">Ayarlar</string>
     <string name="close">Kapat</string>
-    <string name="containers_count">konteynerler</string>
+    <string name="containers_count">%1$d konteyner</string>
     <string name="backend_not_installed">Backend: Kurulmamış</string>
     <string name="backend_installed">Backend: Kuruldu</string>
     <string name="clear">Temiz</string>
@@ -32,13 +32,13 @@
     <string name="backend_corrupted">Backend: Bozulmuş</string>
     <string name="backend_update_available">Backend: Yeni bir güncelleme var</string>
     <string name="running">Çalışıyor</string>
-    <string name="container_count">konteyner</string>
+    <string name="container_count">%1$d konteyner</string>
     <string name="backend_module_missing">Backend: Kayıp</string>
     <string name="backend_unknown">Backend: Bilinmiyor</string>
     <string name="root_unavailable">Root erişimi mevcut değil.</string>
     <string name="grant_root_message">Droidspaces\'i kullanmaya devam etmek için root erişimi verin!</string>
-    <string name="version_label">Versiyon:</string>
-    <string name="root_provider_label">Root Uygulamasi:</string>
+    <string name="version_label">Versiyon: %1$s</string>
+    <string name="root_provider_label">Root Uygulaması: %1$s</string>
     <string name="unknown">Bilinmeyen</string>
     <string name="update_available_message">Backend güncellemesi mevcut; güncellemek için buraya tıklayın</string>
     <string name="tap_to_install">Yüklemek için buraya dokunun</string>
@@ -47,7 +47,7 @@
     <string name="device_not_supported">Cihazınız desteklenmiyor</string>
     <string name="backend_section">Backend</string>
     <string name="reinstall_backend">Backend\'i yeniden yükle</string>
-    <string name="reinstall_backend_description">Dosyaları ve boot modulunu yeniden yukle</string>
+    <string name="reinstall_backend_description">Dosyaları ve boot modülünü yeniden yükle</string>
     <string name="requirements">Gereksinimler</string>
     <string name="kernel_requirements">Kernel Gereksinimleri</string>
     <string name="copy">Kopyala</string>
@@ -71,9 +71,9 @@
     <string name="about_droidspaces">Droidspaces Hakkında</string>
     <string name="about_description">Android için LXC benzeri konteyner yöneticisi</string>
     <string name="developers">Geliştirici(ler)</string>
-    <string name="developer_ravindu644">ravindu644</string>
+    <string name="developer_ravindu644" translatable="false">ravindu644</string>
     <string name="developer_ravindu644_role">Backend, Arayüz</string>
-    <string name="developer_thesithumsandaruwan">thesithumsandaruwan</string>
+    <string name="developer_thesithumsandaruwan" translatable="false">thesithumsandaruwan</string>
     <string name="developer_thesithumsandaruwan_role">Arayüz</string>
     <string name="telegram_channel">Telegram Kanalı</string>
     <string name="contributors">Katkıda Bulunanlar</string>
@@ -156,7 +156,7 @@
     <string name="selinux_permissive_description">SELinux\'u permissive olarak ayarla</string>
     <string name="run_at_boot">Sistem açılışında çalıştır</string>
     <string name="run_at_boot_description">Sistem başlatıldığında konteyneri başlat</string>
-    <string name="force_cgroupv1">\"Cgroup V1\" Ozelligini Zorla</string>
+    <string name="force_cgroupv1">\"Cgroup V1\" Özelliğini Zorla</string>
     <string name="force_cgroupv1_description">Eski Cgroup V1 hiyerarşisinin kullanımını zorla</string>
     <string name="manual_deadlock_shield">Manuel Kilitlenme Koruması</string>
     <string name="manual_deadlock_shield_description">İç içe geçmiş ad alanı oluşturulmasını engelleyerek eski çekirdeklerde (ör. 4.14.x) çekirdek düzeyinde VFS kilitlenmelerini önler.\n\nUYARI: Bu seçeneği etkinleştirmek, konteyner içindeki Docker, Podman, LXC ve Systemd sanal ortam desteğini engelleyecektir.</string>
@@ -164,12 +164,12 @@
     <string name="cat_integration">Entegrasyon ve Donanım</string>
     <string name="cat_security">Güvenlik ve Önyükleme</string>
     <string name="cat_advanced">Gelişmiş Seçenekler</string>
-    <string name="network_mode">Ag Modu</string>
+    <string name="network_mode">Ağ Modu</string>
     <string name="network_mode_host">Host</string>
     <string name="network_mode_nat">NAT (Izole)</string>
     <string name="network_mode_none">Yok</string>
-    <string name="nat_settings">NAT Ayarlari</string>
-    <string name="upstream_interfaces_mandatory">Upstream Arayuzleri (Zorunlu)</string>
+    <string name="nat_settings">NAT Ayarları</string>
+    <string name="upstream_interfaces_mandatory">Upstream Arayüzleri (Zorunlu)</string>
     <string name="upstream_interfaces_required_error">NAT modu için en az bir adet upstream arabirim belirtmeniz gerekir.</string>
     <string name="add_upstream_interface">Upstream Arayuzu Ekle</string>
     <string name="available_system_interfaces">Kullanılabilir Sistem Arayüzleri:</string>
@@ -226,7 +226,7 @@
     <string name="container_setup">Konteyner Kurulumu</string>
     <string name="container_information">Konteyner Bilgileri</string>
     <string name="container_name_label">Konteyner Adı *</string>
-    <string name="container_name_placeholder">benim-konteynerim</string>
+    <string name="container_name_placeholder" translatable="false">benim-konteynerim</string>
     <string name="hostname_placeholder">Varsayılan için boş bırakın</string>
     <string name="hostname_hint">Boş bırakılırsa, host adı olarak konteyner adı kullanılır</string>
     <string name="container_name_exists">Bu isimde bir konteyner zaten mevcut</string>
@@ -281,7 +281,7 @@
     <string name="action_successful">%1$s %2$s başarılı</string>
     <string name="failed_to_action">%1$s %2$s işlemi başarısız oldu</string>
     <string name="error_unknown">Hata: %1$s</string>
-    <string name="actioning_service">%1$sing %2$s...</string>
+    <string name="actioning_service" translatable="false">%1$sing %2$s...</string>
     <string name="no_services_found">Servis Bulunamadı</string>
     <string name="no_systemd_services">Kullanılabilir systemd servisi yok</string>
     <string name="no_running_services">Çalışan servis yok</string>
@@ -318,7 +318,7 @@
     <string name="sparse_images_recommended">Şifrelenmiş depolama alanlarında, F2FS /data bölümlerinde veya doğrudan dizin bağlama ile uyumluluk sorunları yaşayabilecek diğer dosya sistemlerinde konteyner kullanırken, sparse image kullanılması önerilir.</string>
     <string name="sparse_images_description">Bir sparse image, döngü aygıtı olarak bağlanan özel bir ext4 dosya sistemi görüntü dosyası oluşturur; bu da daha iyi bir yalıtım ve uyumluluk sağlar.</string>
     <string name="use_sparse_image">Sparse Image Kullan</string>
-    <string name="use_sparse_image_description">Sparse image icinde bir konteyner oluştur</string>
+    <string name="use_sparse_image_description">Sparse image içinde bir konteyner oluştur</string>
     <string name="image_size">Görüntü Boyutu</string>
     <string name="size_required">Boyutun girilmesi zorunludur</string>
     <string name="invalid_number">Geçersiz sayı</string>
@@ -328,9 +328,9 @@
     <string name="enter_size_between_4_512_gb">4 ile 512 GB arasında bir boyut girin</string>
     <string name="next_summary">Sonraki: Özet</string>
     <string name="logs_title">Loglar: %1$s</string>
-    <string name="clear_logs">Loglari temizle</string>
-    <string name="copy_logs">Loglari kopyala</string>
-    <string name="container_logs">Konteyner Loglari</string>
+    <string name="clear_logs">Logları temizle</string>
+    <string name="copy_logs">Logları kopyala</string>
+    <string name="container_logs">Konteyner Logları</string>
     <string name="error_container_name_empty">Konteyner adı boş bırakılamaz</string>
     <string name="error_container_name_invalid">Konteyner adı yalnızca harfler, rakamlar, tireler (-), alt çizgiler (_), noktalar (.) ve boşluklar içerebilir</string>
     <string name="error_hostname_invalid">Host adı yalnızca harfler, rakamlar ve tire (-) içerebilir</string>
@@ -353,9 +353,9 @@
     <string name="open_settings">Ayarlar\'ı aç</string>
     <string name="i_understand">Anlıyorum</string>
     <string name="migrate_to_sparse_image">Sparse imageye geçin</string>
-    <string name="resize_sparse_image">Sparse imageyi yeniden boyutlandirin</string>
+    <string name="resize_sparse_image">Sparse imageyi yeniden boyutlandırın</string>
     <string name="migrate_dialog_title">Sparse imageye geçin</string>
-    <string name="resize_dialog_title">Sparse imageyi yeniden boyutlandirin</string>
+    <string name="resize_dialog_title">Sparse imageyi yeniden boyutlandırın</string>
     <string name="migrate_dialog_message">“%1$s” dosyasını sparse imageye taşıma işlemi, özel bir ext4 dosya sistemi oluşturacaktır. Bu işlem, kesintiye uğradığı takdirde verileri kalıcı olarak silebilir. Lütfen verilerinizi yedekleyin.</string>
     <string name="resize_dialog_message">“%1$s” için sparse image boyutu değiştiriliyor. Boyutu büyütmek, küçültmekten daha güvenlidir. Lütfen verilerinizi yedekleyin.</string>
     <string name="operation_in_progress">İşlem devam ediyor, lütfen bekleyin...</string>

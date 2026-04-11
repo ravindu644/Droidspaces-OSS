@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">Droidspaces</string>
+    <string name="app_name" translatable="false">Droidspaces</string>
     <string name="welcome_title">Bun venit la Droidspaces</string>
     <string name="welcome_subtitle">Manager de containere în stil LXC pentru Android !</string>
     <string name="root_check_title">Verificatul permisiunilor de root</string>

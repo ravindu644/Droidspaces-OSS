@@ -68,9 +68,9 @@
     <string name="about_droidspaces">Droidspaces පිළිබඳව</string>
     <string name="about_description">ඇන්ඩ්‍රොයිඩ් වලින් Linux containers කළමනාකරණය කරමු !</string>
     <string name="developers">සංවර්ධකයින්</string>
-    <string name="developer_ravindu644">ravindu644</string>
+    <string name="developer_ravindu644" translatable="false">ravindu644</string>
     <string name="developer_ravindu644_role">Backend, UI</string>
-    <string name="developer_thesithumsandaruwan">thesithumsandaruwan</string>
+    <string name="developer_thesithumsandaruwan" translatable="false">thesithumsandaruwan</string>
     <string name="developer_thesithumsandaruwan_role">UI</string>
     <string name="telegram_channel">Telegram චැනලය</string>
     <string name="contributors">දායකත්වය ලබා දුන් අය</string>
@@ -214,7 +214,7 @@
     <string name="container_setup">කන්ටේනරය සැකසීම</string>
     <string name="container_information">කන්ටේනරය පිළිබඳ තොරතුරු</string>
     <string name="container_name_label">කන්ටේනරයේ නම *</string>
-    <string name="container_name_placeholder">my-container</string>
+    <string name="container_name_placeholder" translatable="false">my-container</string>
     <string name="hostname_placeholder">පෙරනිමි අගය සඳහා හිස්ව තබන්න</string>
     <string name="hostname_hint">හිස්ව තැබුවහොත්, කන්ටේනරයේ නම සත්කාරක නාමය ලෙස භාවිතා කරනු ඇත</string>
     <string name="container_name_exists">මෙම නමින් යුත් කන්ටේනරයක් දැනටමත් පවතී</string>
@@ -269,7 +269,7 @@
     <string name="action_successful">%1$s %2$s සාර්ථකයි</string>
     <string name="failed_to_action">%1$s %2$s අසාර්ථක විය</string>
     <string name="error_unknown">දෝෂය: %1$s</string>
-    <string name="actioning_service">%1$sing %2$s...</string>
+    <string name="actioning_service" translatable="false">%1$sing %2$s...</string>
     <string name="no_services_found">සේවා කිසිවක් හමු නොවීය</string>
     <string name="no_systemd_services">කිසිඳු Systemd සේවාවක් නොමැත</string>
     <string name="no_running_services">කිසිඳු ධාවනය වන සේවාවක් නොමැත</string>
@@ -355,7 +355,7 @@
     <string name="help_card_message">ඔබේ පළමු Android කන්ටේනරය සකසන්නේ කෙසේදැයි ඉගෙන ගැනීමට මෙතන ක්ලික් කරන්න !</string>
     <string name="help_card_url">https://github.com/ravindu644/Droidspaces-OSS/blob/main/Documentation/Installation-Android.md</string>
     <string name="reboot_recommended">SELinux නීති ක්රියාත්මක කිරීම සඳහා ස්ථාපනයෙන් පසු ඔබගේ උපාංගය restart කිරීම නිර්දේශ කෙරේ.</string>
-    <string name="app_name">Droidspaces</string>
+    <string name="app_name" translatable="false">Droidspaces</string>
     <string name="tarball_label">Tarball</string>
     <string name="review_configuration">සැකසුම් සමාලෝචනය</string>
     <string name="installation_path_label">ස්ථාපනය කරන ස්ථානය</string>

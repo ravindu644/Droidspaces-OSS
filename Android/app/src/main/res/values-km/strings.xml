@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">Droidspaces</string>
+    <string name="app_name" translatable="false">Droidspaces</string>
     <string name="welcome_title">សូមស្វាគមន៍មកកាន់ DroidSpaces</string>
     <string name="welcome_subtitle">កម្មវិធីគ្រប់គ្រងកុងតឺន័រ Linux បែប LXC សម្រាប់ Android!</string>
     <string name="get_started">ចាប់ផ្តើម</string>
@@ -90,10 +90,10 @@
     <string name="generate_bug_report_description">ប្រមូលព័ត៌មានប្រព័ន្ធ និង Log សម្រាប់ដោះស្រាយបញ្ហា</string>
     <string name="telegram_channel">ឆានែលតេលេក្រាម</string>
     <string name="generate_bug_report">បង្កើតរបាយការណ៍កំហុស</string>
-    <string name="developer_thesithumsandaruwan">thesithumsandaruwan</string>
+    <string name="developer_thesithumsandaruwan" translatable="false">thesithumsandaruwan</string>
     <string name="stopping_container">កំពុងបញ្ឈប់ Container...</string>
     <string name="about_droidspaces">អំពីកម្មវិធី DroidSpaces</string>
     <string name="developers">អ្នកអភិវឌ្ឍន៍កម្មវិធី</string>
-    <string name="developer_ravindu644">ravindu644</string>
+    <string name="developer_ravindu644" translatable="false">ravindu644</string>
     <string name="developer_thesithumsandaruwan_role">UI</string>
 </resources>

@@ -72,9 +72,9 @@
     <string name="about_droidspaces">À propos de Droidspaces</string>
     <string name="about_description">Gestionnaire de conteneurs de style LXC pour Android</string>
     <string name="developers">Développeur(s)</string>
-    <string name="developer_ravindu644">ravindu644</string>
+    <string name="developer_ravindu644" translatable="false">ravindu644</string>
     <string name="developer_ravindu644_role">Backend, UI</string>
-    <string name="developer_thesithumsandaruwan">thesithumsandaruwan</string>
+    <string name="developer_thesithumsandaruwan" translatable="false">thesithumsandaruwan</string>
     <string name="developer_thesithumsandaruwan_role">UI</string>
     <string name="telegram_channel">Chaîne Telegram</string>
     <string name="contributors">Contributeurs</string>
@@ -149,7 +149,7 @@
     <string name="container_setup">Configuration du conteneur</string>
     <string name="container_information">Informations du conteneur</string>
     <string name="container_name_label">Nom du conteneur *</string>
-    <string name="container_name_placeholder">mon-conteneur</string>
+    <string name="container_name_placeholder" translatable="false">mon-conteneur</string>
     <string name="hostname_placeholder">Laisser vide pour la valeur par défaut</string>
     <string name="hostname_hint">Si vide, le nom du conteneur sera utilisé comme nom d\'hôte</string>
     <string name="container_name_exists">Un conteneur avec ce nom existe déjà</string>
@@ -208,7 +208,7 @@
     <string name="action_successful">%1$s %2$s réussi</string>
     <string name="failed_to_action">Échec de %1$s %2$s</string>
     <string name="error_unknown">Erreur : %1$s</string>
-    <string name="actioning_service">%1$sing %2$s...</string>
+    <string name="actioning_service" translatable="false">%1$sing %2$s...</string>
     <string name="no_services_found">Aucun service trouvé</string>
     <string name="no_systemd_services">Aucun service systemd disponible</string>
     <string name="no_running_services">Aucun service en cours</string>

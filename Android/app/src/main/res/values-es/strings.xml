@@ -65,9 +65,9 @@
     <string name="about_droidspaces">Acerca de Droidspaces</string>
     <string name="about_description">Gestor de contenedores Linux (estilo LXC) para Android</string>
     <string name="developers">Desarrolladores</string>
-    <string name="developer_ravindu644">ravindu644</string>
+    <string name="developer_ravindu644" translatable="false">ravindu644</string>
     <string name="developer_ravindu644_role">Backend, IU</string>
-    <string name="developer_thesithumsandaruwan">thesithumsandaruwan</string>
+    <string name="developer_thesithumsandaruwan" translatable="false">thesithumsandaruwan</string>
     <string name="developer_thesithumsandaruwan_role">IU</string>
     <string name="telegram_channel">Canal de Telegram</string>
     <string name="contributors">Colaboradores</string>
@@ -137,7 +137,7 @@
     <string name="container_setup">Configuración del contenedor</string>
     <string name="container_information">Información del contenedor</string>
     <string name="container_name_label">Nombre del contenedor *</string>
-    <string name="container_name_placeholder">mi-contenedor</string>
+    <string name="container_name_placeholder" translatable="false">mi-contenedor</string>
     <string name="hostname_placeholder">Vacío para predeterminado</string>
     <string name="hostname_hint">Si está vacío, se usará el nombre del contenedor como hostname</string>
     <string name="container_name_exists">Ya existe un contenedor con este nombre</string>
@@ -192,7 +192,7 @@
     <string name="action_successful">%1$s de %2$s exitoso</string>
     <string name="failed_to_action">Error al %1$sar %2$s</string>
     <string name="error_unknown">Error: %1$s</string>
-    <string name="actioning_service">Procesando %1$s en %2$s…</string>
+    <string name="actioning_service" translatable="false">Procesando %1$s en %2$s…</string>
     <string name="no_services_found">No se encontraron servicios</string>
     <string name="no_systemd_services">No hay servicios systemd disponibles</string>
     <string name="no_running_services">No hay servicios en ejecución</string>

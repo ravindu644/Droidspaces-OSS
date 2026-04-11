@@ -2,6 +2,6 @@
 <resources>
     <plurals name="container_count">
         <item quantity="one">%d konteyner</item>
-        <item quantity="other">%d konteynerler</item>
+        <item quantity="other">%d konteyner</item>
     </plurals>
 </resources>

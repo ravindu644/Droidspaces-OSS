@@ -72,9 +72,9 @@
     <string name="about_droidspaces">Sobre o Droidspaces</string>
     <string name="about_description">Gerenciador de containers estilo LXC para Android</string>
     <string name="developers">Desenvolvedor(es)</string>
-    <string name="developer_ravindu644">ravindu644</string>
+    <string name="developer_ravindu644" translatable="false">ravindu644</string>
     <string name="developer_ravindu644_role">Backend, UI</string>
-    <string name="developer_thesithumsandaruwan">thesithumsandaruwan</string>
+    <string name="developer_thesithumsandaruwan" translatable="false">thesithumsandaruwan</string>
     <string name="developer_thesithumsandaruwan_role">UI</string>
     <string name="telegram_channel">Canal no Telegram</string>
     <string name="contributors">Colaboradores</string>
@@ -149,7 +149,7 @@
     <string name="container_setup">Configuração do Container</string>
     <string name="container_information">Informações do Container</string>
     <string name="container_name_label">Nome do Container *</string>
-    <string name="container_name_placeholder">meu-container</string>
+    <string name="container_name_placeholder" translatable="false">meu-container</string>
     <string name="hostname_placeholder">Deixe vazio para padrão</string>
     <string name="hostname_hint">Se vazio, usará o nome do container como hostname</string>
     <string name="container_name_exists">Já existe um container com este nome</string>
@@ -208,7 +208,7 @@
     <string name="action_successful">%1$s %2$s com sucesso</string>
     <string name="failed_to_action">Falha ao %1$s %2$s</string>
     <string name="error_unknown">Erro: %1$s</string>
-    <string name="actioning_service">%1$s %2$s...</string>
+    <string name="actioning_service" translatable="false">%1$s %2$s...</string>
     <string name="no_services_found">Nenhum serviço encontrado</string>
     <string name="no_systemd_services">Nenhum serviço systemd disponível</string>
     <string name="no_running_services">Nenhum serviço em execução</string>
