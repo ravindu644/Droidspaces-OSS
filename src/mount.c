@@ -1188,8 +1188,13 @@ int mount_rootfs_img(const char *img_path, char *mount_point, size_t mp_size,
     int ret = mount(loop_path, mount_point, fstype, mnt_flags, mnt_data);
     close(loop_fd); /* AUTOCLEAR handles cleanup if mount failed */
 
-    if (ret == 0)
+    if (ret == 0) {
+      /* Android FIX: Some kernels enforce nosuid/nodev on all loop mounts
+       * if the backing file is on /data. Explicitly remount to clear them. */
+      if (is_android())
+        mount(NULL, mount_point, NULL, MS_REMOUNT | mnt_flags, mnt_data);
       return 0;
+    }
 
     /* mount() failed: explicitly detach since AUTOCLEAR needs last-fd-close
      * + no active mounts to trigger; we already closed loop_fd so it should
