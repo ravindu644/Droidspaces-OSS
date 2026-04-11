@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <!-- App Info -->
-    <string name="app_name">Droidspaces</string>
+    <string name="app_name" translatable="false">Droidspaces</string>
     <!-- Welcome Screen -->
     <string name="welcome_title">Willkommen bei Droidspaces</string>
     <string name="welcome_subtitle">LXC-ähnlicher Linux-Container-Manager für Android!</string>
@@ -74,9 +74,9 @@
     <string name="about_droidspaces">Über Droidspaces</string>
     <string name="about_description">LXC-ähnlicher Container-Manager für Android</string>
     <string name="developers">Entwickler</string>
-    <string name="developer_ravindu644">ravindu644</string>
+    <string name="developer_ravindu644" translatable="false">ravindu644</string>
     <string name="developer_ravindu644_role">Backend, UI</string>
-    <string name="developer_thesithumsandaruwan">thesithumsandaruwan</string>
+    <string name="developer_thesithumsandaruwan" translatable="false">thesithumsandaruwan</string>
     <string name="developer_thesithumsandaruwan_role">UI</string>
     <string name="telegram_channel">Telegram-Kanal</string>
     <string name="contributors">Mitwirkende</string>
@@ -151,7 +151,7 @@
     <string name="container_setup">Container-Einrichtung</string>
     <string name="container_information">Container-Informationen</string>
     <string name="container_name_label">Container-Name *</string>
-    <string name="container_name_placeholder">mein-container</string>
+    <string name="container_name_placeholder" translatable="false">mein-container</string>
     <string name="hostname_placeholder">Leer lassen für Standard</string>
     <string name="hostname_hint">Wenn leer, wird der Container-Name als Hostname verwendet</string>
     <string name="container_name_exists">Ein Container mit diesem Namen existiert bereits</string>
@@ -210,7 +210,7 @@
     <string name="action_successful">%1$s %2$s erfolgreich</string>
     <string name="failed_to_action">Fehler beim %1$s %2$s</string>
     <string name="error_unknown">Fehler: %1$s</string>
-    <string name="actioning_service">%1$sing %2$s...</string>
+    <string name="actioning_service" translatable="false">%1$sing %2$s...</string>
     <string name="no_services_found">Keine Dienste gefunden</string>
     <string name="no_systemd_services">Keine systemd-Dienste verfügbar</string>
     <string name="no_running_services">Keine laufenden Dienste</string>

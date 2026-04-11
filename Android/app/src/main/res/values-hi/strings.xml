@@ -72,9 +72,9 @@
     <string name="about_droidspaces">Droidspaces के बारे में</string>
     <string name="about_description">Android के लिए LXC-शैली का कंटेनर मैनेजर</string>
     <string name="developers">डेवलपर</string>
-    <string name="developer_ravindu644">ravindu644</string>
+    <string name="developer_ravindu644" translatable="false">ravindu644</string>
     <string name="developer_ravindu644_role">बैकएंड, UI</string>
-    <string name="developer_thesithumsandaruwan">thesithumsandaruwan</string>
+    <string name="developer_thesithumsandaruwan" translatable="false">thesithumsandaruwan</string>
     <string name="developer_thesithumsandaruwan_role">UI</string>
     <string name="telegram_channel">टेलीग्राम चैनल</string>
     <string name="contributors">योगदानकर्ता</string>
@@ -149,7 +149,7 @@
     <string name="container_setup">कंटेनर सेटअप</string>
     <string name="container_information">कंटेनर जानकारी</string>
     <string name="container_name_label">कंटेनर नाम *</string>
-    <string name="container_name_placeholder">my-container</string>
+    <string name="container_name_placeholder" translatable="false">my-container</string>
     <string name="hostname_placeholder">डिफ़ॉल्ट के लिए खाली छोड़ें</string>
     <string name="hostname_hint">यदि खाली है, तो कंटेनर नाम को होस्टनेम के रूप में उपयोग किया जाएगा</string>
     <string name="container_name_exists">इस नाम का कंटेनर पहले से मौजूद है</string>
@@ -208,7 +208,7 @@
     <string name="action_successful">%1$s %2$s सफल</string>
     <string name="failed_to_action">%1$s %2$s विफल</string>
     <string name="error_unknown">त्रुटि: %1$s</string>
-    <string name="actioning_service">%1$sing %2$s...</string>
+    <string name="actioning_service" translatable="false">%1$sing %2$s...</string>
     <string name="no_services_found">कोई सेवाएँ नहीं मिलीं</string>
     <string name="no_systemd_services">कोई systemd सेवाएँ उपलब्ध नहीं</string>
     <string name="no_running_services">कोई चल रही सेवाएँ नहीं</string>

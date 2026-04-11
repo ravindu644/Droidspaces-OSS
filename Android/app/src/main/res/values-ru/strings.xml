@@ -72,9 +72,9 @@
     <string name="about_droidspaces">О Droidspaces</string>
     <string name="about_description">Менеджер контейнеров в стиле LXC для Android</string>
     <string name="developers">Разработчики</string>
-    <string name="developer_ravindu644">ravindu644</string>
+    <string name="developer_ravindu644" translatable="false">ravindu644</string>
     <string name="developer_ravindu644_role">Backend, UI</string>
-    <string name="developer_thesithumsandaruwan">thesithumsandaruwan</string>
+    <string name="developer_thesithumsandaruwan" translatable="false">thesithumsandaruwan</string>
     <string name="developer_thesithumsandaruwan_role">UI</string>
     <string name="telegram_channel">Telegram-канал</string>
     <string name="contributors">Участники</string>
@@ -149,7 +149,7 @@
     <string name="container_setup">Настройка контейнера</string>
     <string name="container_information">Информация о контейнере</string>
     <string name="container_name_label">Имя контейнера *</string>
-    <string name="container_name_placeholder">мой-контейнер</string>
+    <string name="container_name_placeholder" translatable="false">мой-контейнер</string>
     <string name="hostname_placeholder">Оставить пустым для значения по умолчанию</string>
     <string name="hostname_hint">Если пусто, будет использовано имя контейнера как имя хоста</string>
     <string name="container_name_exists">Контейнер с таким именем уже существует</string>
@@ -208,7 +208,7 @@
     <string name="action_successful">%1$s %2$s выполнено успешно</string>
     <string name="failed_to_action">Не удалось %1$s %2$s</string>
     <string name="error_unknown">Ошибка: %1$s</string>
-    <string name="actioning_service">%1$s %2$s...</string>
+    <string name="actioning_service" translatable="false">%1$s %2$s...</string>
     <string name="no_services_found">Службы не найдены</string>
     <string name="no_systemd_services">Нет доступных служб systemd</string>
     <string name="no_running_services">Нет запущенных служб</string>

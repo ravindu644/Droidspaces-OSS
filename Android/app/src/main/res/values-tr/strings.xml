@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">Droidspaces</string>
+    <string name="app_name" translatable="false">Droidspaces</string>
     <string name="welcome_title">Droidspaces\'a hoşgeldin</string>
     <string name="welcome_subtitle">Android için LXC tarzı linux konteyner yöneticisi!</string>
     <string name="get_started">Başla</string>
@@ -71,9 +71,9 @@
     <string name="about_droidspaces">Droidspaces Hakkında</string>
     <string name="about_description">Android için LXC benzeri konteyner yöneticisi</string>
     <string name="developers">Geliştirici(ler)</string>
-    <string name="developer_ravindu644">ravindu644</string>
+    <string name="developer_ravindu644" translatable="false">ravindu644</string>
     <string name="developer_ravindu644_role">Backend, Arayüz</string>
-    <string name="developer_thesithumsandaruwan">thesithumsandaruwan</string>
+    <string name="developer_thesithumsandaruwan" translatable="false">thesithumsandaruwan</string>
     <string name="developer_thesithumsandaruwan_role">Arayüz</string>
     <string name="telegram_channel">Telegram Kanalı</string>
     <string name="contributors">Katkıda Bulunanlar</string>
@@ -226,7 +226,7 @@
     <string name="container_setup">Konteyner Kurulumu</string>
     <string name="container_information">Konteyner Bilgileri</string>
     <string name="container_name_label">Konteyner Adı *</string>
-    <string name="container_name_placeholder">benim-konteynerim</string>
+    <string name="container_name_placeholder" translatable="false">benim-konteynerim</string>
     <string name="hostname_placeholder">Varsayılan için boş bırakın</string>
     <string name="hostname_hint">Boş bırakılırsa, host adı olarak konteyner adı kullanılır</string>
     <string name="container_name_exists">Bu isimde bir konteyner zaten mevcut</string>
@@ -281,7 +281,7 @@
     <string name="action_successful">%1$s %2$s başarılı</string>
     <string name="failed_to_action">%1$s %2$s işlemi başarısız oldu</string>
     <string name="error_unknown">Hata: %1$s</string>
-    <string name="actioning_service">%1$sing %2$s...</string>
+    <string name="actioning_service" translatable="false">%1$sing %2$s...</string>
     <string name="no_services_found">Servis Bulunamadı</string>
     <string name="no_systemd_services">Kullanılabilir systemd servisi yok</string>
     <string name="no_running_services">Çalışan servis yok</string>

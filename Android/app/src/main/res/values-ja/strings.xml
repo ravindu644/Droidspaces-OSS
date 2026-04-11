@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">Droidspaces</string>
+    <string name="app_name" translatable="false">Droidspaces</string>
     <string name="welcome_subtitle">LXC風なAndroid用のLinuxコンテナマネージャ！</string>
     <string name="get_started">始める</string>
     <string name="root_check_title">ルートアクセス権限の確認</string>
@@ -84,7 +84,7 @@
     <string name="size_gb">容量 (GB)</string>
     <string name="enter_size_between_4_512_gb">4 〜 512 GB の容量を入力してください</string>
     <string name="developers">開発者</string>
-    <string name="developer_ravindu644">ravindu644</string>
+    <string name="developer_ravindu644" translatable="false">ravindu644</string>
     <string name="telegram_channel">テレグラムのチャンネル</string>
     <string name="contributors">協力者</string>
     <string name="github">GitHub</string>
@@ -262,7 +262,7 @@
     <string name="terminal_card_desc">このコンテナ内で対話可能なシェルを開く</string>
     <string name="select_user_to_enter">コンテナにどのユーザとして入るか選択する:</string>
     <string name="developer_ravindu644_role">バックエンドとユーザーインタフェース</string>
-    <string name="developer_thesithumsandaruwan">thesithumsandaruwan</string>
+    <string name="developer_thesithumsandaruwan" translatable="false">thesithumsandaruwan</string>
     <string name="developer_thesithumsandaruwan_role">ユーザーインタフェース</string>
     <string name="failure_in_operation">%2$sコンテナを%1$sできませんでした</string>
     <string name="uninstall_container_message">これより「%1$s」コンテナとそのデータの恒久的削除を実施します。この操作は取り消せませんぞ。\n\nもしコンテナが実行中だった場合には、先に停止されます。</string>
@@ -316,7 +316,7 @@
     <string name="network_mode_none">無し(遮断)</string>
     <string name="optional_symmetric_hint">空欄可 (例: 8080 または 1000-2000)</string>
     <string name="port_forward_examples">例: 8080 (単一), 8000-8010 (範囲). 対称割当の場合には宛先を空欄にしてください。</string>
-    <string name="container_name_placeholder">kontena-no-namae</string>
+    <string name="container_name_placeholder" translatable="false">kontena-no-namae</string>
     <string name="hostname_placeholder">既定値で良ければ空欄</string>
     <string name="hostname_hint">空欄の場合は、コンテナ名がホスト名として流用される</string>
     <string name="next_configuration">次へ: 構築</string>
@@ -352,7 +352,7 @@
     <string name="masked_legend">隠匿中</string>
     <string name="unmask">見せる</string>
     <string name="mask_service">サービスを隠す</string>
-    <string name="actioning_service">%1$sing %2$s...</string>
+    <string name="actioning_service" translatable="false">%1$sing %2$s...</string>
     <string name="no_services_found">サービスが見つかりませんでした</string>
     <string name="no_systemd_services">利用可能なsystemdサービスはありません</string>
     <string name="no_running_services">実行中のサービスはありません</string>
