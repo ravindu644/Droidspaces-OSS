@@ -19,7 +19,7 @@
     <string name="panel">Panel</string>
     <string name="settings">Ayarlar</string>
     <string name="close">Kapat</string>
-    <string name="containers_count">%1$d konteynerler</string>
+    <string name="containers_count">%1$d konteyner</string>
     <string name="backend_not_installed">Backend: Kurulmamış</string>
     <string name="backend_installed">Backend: Kuruldu</string>
     <string name="clear">Temiz</string>
