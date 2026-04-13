@@ -187,7 +187,8 @@ int ds_config_load(const char *config_path, struct ds_config *cfg) {
     } else if (strcmp(key, "hostname") == 0) {
       safe_strncpy(cfg->hostname, val, sizeof(cfg->hostname));
     } else if (strcmp(key, "rootfs_path") == 0) {
-      if (strstr(val, ".img")) {
+      struct stat st;
+      if (stat(val, &st) == 0 && (S_ISREG(st.st_mode) || S_ISBLK(st.st_mode))) {
         safe_strncpy(cfg->rootfs_img_path, val, sizeof(cfg->rootfs_img_path));
         if (!cfg->is_img_mount)
           cfg->rootfs_path[0] = '\0';
@@ -511,7 +512,8 @@ int ds_config_save(const char *config_path, struct ds_config *cfg) {
 
   if (cfg->is_img_mount && cfg->rootfs_img_path[0]) {
     char *abs_path = ds_resolve_path_arg(cfg->rootfs_img_path);
-    fprintf(f_out, "rootfs_path=%s\n", abs_path ? abs_path : cfg->rootfs_img_path);
+    fprintf(f_out, "rootfs_path=%s\n",
+            abs_path ? abs_path : cfg->rootfs_img_path);
     free(abs_path);
   } else if (cfg->rootfs_path[0]) {
     char *abs_path = ds_resolve_path_arg(cfg->rootfs_path);

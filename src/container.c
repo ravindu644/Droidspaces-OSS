@@ -451,7 +451,11 @@ int start_rootfs(struct ds_config *cfg) {
   /* CRITICAL: Before forking, verify /sbin/init exists in the rootfs */
   char init_path[PATH_MAX];
   char rootfs_norm[PATH_MAX];
-  safe_strncpy(rootfs_norm, cfg->rootfs_path, sizeof(rootfs_norm));
+  if (cfg->is_img_mount && cfg->img_mount_point[0]) {
+    safe_strncpy(rootfs_norm, cfg->img_mount_point, sizeof(rootfs_norm));
+  } else {
+    safe_strncpy(rootfs_norm, cfg->rootfs_path, sizeof(rootfs_norm));
+  }
   size_t rlen = strlen(rootfs_norm);
   if (rlen > 0 && rootfs_norm[rlen - 1] == '/')
     rootfs_norm[rlen - 1] = '\0';
@@ -994,6 +998,11 @@ int start_rootfs(struct ds_config *cfg) {
                                sizeof(reboot_cfg.dns_server_content));
           }
           *cfg = reboot_cfg;
+          /* Restore mount point to rootfs_path for the next boot cycle */
+          if (cfg->is_img_mount && cfg->img_mount_point[0]) {
+            safe_strncpy(cfg->rootfs_path, cfg->img_mount_point,
+                         sizeof(cfg->rootfs_path));
+          }
         }
       }
 

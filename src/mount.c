@@ -1180,13 +1180,22 @@ int mount_rootfs_img(const char *img_path, char *mount_point, size_t mp_size,
       ds_log("Mounting %s rootfs image %s on %s (Attempt %d/3)...", fstype,
              img_path, mount_point, attempt + 1);
 
-    char loop_path[64];
-    int loop_fd = loop_attach(img_path, loop_path, sizeof(loop_path));
-    if (loop_fd < 0)
-      goto retry;
+    struct stat st;
+    int is_blk = (stat(img_path, &st) == 0 && S_ISBLK(st.st_mode));
+    char final_src[PATH_MAX];
+    int loop_fd = -1;
 
-    int ret = mount(loop_path, mount_point, fstype, mnt_flags, mnt_data);
-    close(loop_fd); /* AUTOCLEAR handles cleanup if mount failed */
+    if (is_blk) {
+      safe_strncpy(final_src, img_path, sizeof(final_src));
+    } else {
+      loop_fd = loop_attach(img_path, final_src, sizeof(final_src));
+      if (loop_fd < 0)
+        goto retry;
+    }
+
+    int ret = mount(final_src, mount_point, fstype, mnt_flags, mnt_data);
+    if (loop_fd >= 0)
+      close(loop_fd); /* AUTOCLEAR handles cleanup if mount failed */
 
     if (ret == 0) {
       /* Android FIX: Some kernels enforce nosuid/nodev on all loop mounts
@@ -1199,8 +1208,9 @@ int mount_rootfs_img(const char *img_path, char *mount_point, size_t mp_size,
     /* mount() failed: explicitly detach since AUTOCLEAR needs last-fd-close
      * + no active mounts to trigger; we already closed loop_fd so it should
      * auto-clear, but be explicit for kernels < 3.18 edge cases. */
-    loop_detach(loop_path);
-    ds_warn("mount(%s, %s) failed: %s", loop_path, fstype, strerror(errno));
+    if (loop_fd >= 0)
+      loop_detach(final_src);
+    ds_warn("mount(%s, %s) failed: %s", final_src, fstype, strerror(errno));
 
   retry:
     if (attempt < 2) {
