@@ -24,6 +24,7 @@ import kotlinx.coroutines.launch
 import com.droidspaces.app.ui.component.FilePickerDialog
 import com.droidspaces.app.ui.component.SettingsRowCard
 import com.droidspaces.app.ui.component.EnvironmentVariablesDialog
+import com.droidspaces.app.ui.component.PrivilegedModeDialog
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.compose.foundation.lazy.LazyColumn
@@ -54,6 +55,7 @@ fun ContainerConfigScreen(
     initialRunAtBoot: Boolean = false,
     initialForceCgroupv1: Boolean = false,
     initialBlockNestedNs: Boolean = false,
+    initialPrivileged: String = "",
     initialEnvFileContent: String = "",
     initialUpstreamInterfaces: List<String> = emptyList(),
     initialPortForwards: List<PortForward> = emptyList(),
@@ -71,6 +73,7 @@ fun ContainerConfigScreen(
         runAtBoot: Boolean,
         forceCgroupv1: Boolean,
         blockNestedNs: Boolean,
+        privileged: String,
         envFileContent: String?,
         upstreamInterfaces: List<String>,
         portForwards: List<PortForward>
@@ -93,6 +96,7 @@ fun ContainerConfigScreen(
     var envFileContent by remember { mutableStateOf(initialEnvFileContent) }
     var upstreamInterfaces by remember { mutableStateOf(initialUpstreamInterfaces) }
     var portForwards by remember { mutableStateOf(initialPortForwards) }
+    var privileged by remember { mutableStateOf(initialPrivileged) }
     val context = LocalContext.current
 
     var availableUpstreams by remember { mutableStateOf<List<String>>(emptyList()) }
@@ -152,6 +156,18 @@ fun ContainerConfigScreen(
     }
 
     var showEnvDialog by remember { mutableStateOf(false) }
+    var showPrivilegedDialog by remember { mutableStateOf(false) }
+
+    if (showPrivilegedDialog) {
+        PrivilegedModeDialog(
+            initialPrivileged = privileged,
+            onConfirm = { tags ->
+                privileged = tags
+                showPrivilegedDialog = false
+            },
+            onDismiss = { showPrivilegedDialog = false }
+        )
+    }
 
     if (showEnvDialog) {
         EnvironmentVariablesDialog(
@@ -183,7 +199,7 @@ fun ContainerConfigScreen(
             ) {
                 Button(
                     onClick = {
-                        onNext(netMode, disableIPv6, enableAndroidStorage, enableHwAccess, enableGpuMode, enableTermuxX11, selinuxPermissive, volatileMode, bindMounts, dnsServers, runAtBoot, forceCgroupv1, blockNestedNs, if (envFileContent.isBlank()) null else envFileContent, upstreamInterfaces, portForwards)
+                        onNext(netMode, disableIPv6, enableAndroidStorage, enableHwAccess, enableGpuMode, enableTermuxX11, selinuxPermissive, volatileMode, bindMounts, dnsServers, runAtBoot, forceCgroupv1, blockNestedNs, privileged, if (envFileContent.isBlank()) null else envFileContent, upstreamInterfaces, portForwards)
                     },
                     modifier = Modifier
                         .fillMaxWidth()
@@ -801,20 +817,28 @@ fun ContainerConfigScreen(
                 onCheckedChange = { forceCgroupv1 = it }
             )
 
+            val isSeccompDisabled = privileged.contains("noseccomp") || privileged.contains("full")
+            LaunchedEffect(isSeccompDisabled) {
+                if (isSeccompDisabled) blockNestedNs = false
+            }
+
             ToggleCard(
                 icon = Icons.Default.GppBad,
                 title = context.getString(R.string.manual_deadlock_shield),
                 description = context.getString(R.string.manual_deadlock_shield_description),
-                checked = blockNestedNs,
-                onCheckedChange = { blockNestedNs = it }
+                checked = if (isSeccompDisabled) false else blockNestedNs,
+                onCheckedChange = { blockNestedNs = it },
+                enabled = !isSeccompDisabled
             )
 
-            ToggleCard(
-                icon = Icons.Default.PowerSettingsNew,
-                title = context.getString(R.string.run_at_boot),
-                description = context.getString(R.string.run_at_boot_description),
-                checked = runAtBoot,
-                onCheckedChange = { runAtBoot = it }
+            SettingsRowCard(
+                title = context.getString(R.string.privileged_mode),
+                subtitle = if (privileged.isEmpty()) context.getString(R.string.not_configured) else privileged,
+                description = context.getString(R.string.privileged_mode_description),
+                icon = Icons.Default.GppMaybe,
+                onClick = {
+                    showPrivilegedDialog = true
+                }
             )
 
             Text(
@@ -847,6 +871,7 @@ fun ContainerConfigScreen(
                 }
             )
 
+
             // Bind Mounts Section
             Row(
                 modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
@@ -858,7 +883,6 @@ fun ContainerConfigScreen(
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold
                 )
-
             }
 
             bindMounts.forEach { mount ->
@@ -898,14 +922,23 @@ fun ContainerConfigScreen(
 
             OutlinedButton(
                 onClick = { showFilePicker = true },
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
+                border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
             ) {
                 Icon(Icons.Default.Add, contentDescription = null)
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(context.getString(R.string.add_bind_mount))
             }
+            ToggleCard(
+                icon = Icons.Default.PowerSettingsNew,
+                title = context.getString(R.string.run_at_boot),
+                description = context.getString(R.string.run_at_boot_description),
+                checked = runAtBoot,
+                onCheckedChange = { runAtBoot = it }
+            )
 
             Spacer(modifier = Modifier.height(16.dp))
+
         }
     }
 }

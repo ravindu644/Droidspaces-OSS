@@ -22,7 +22,8 @@ fun SettingsRowCard(
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
     icon: ImageVector? = null,
-    painter: Painter? = null
+    painter: Painter? = null,
+    description: String? = null
 ) {
     val alpha = if (enabled) 1f else 0.5f
     Card(
@@ -64,10 +65,18 @@ fun SettingsRowCard(
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.SemiBold
                     )
+                    if (description != null) {
+                        Text(
+                            text = description,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f * alpha)
+                        )
+                    }
                     Text(
                         text = subtitle,
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f * alpha)
+                        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.9f * alpha),
+                        fontWeight = FontWeight.Bold
                     )
                 }
             }

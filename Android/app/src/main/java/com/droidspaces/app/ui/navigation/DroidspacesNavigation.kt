@@ -306,11 +306,12 @@ fun DroidspacesNavigation(
                 initialRunAtBoot = viewModel.runAtBoot,
                 initialForceCgroupv1 = viewModel.forceCgroupv1,
                 initialBlockNestedNs = viewModel.blockNestedNs,
+                initialPrivileged = viewModel.privileged,
                 initialEnvFileContent = viewModel.envFileContent ?: "",
                 initialUpstreamInterfaces = viewModel.upstreamInterfaces,
                 initialPortForwards = viewModel.portForwards,
-                onNext = { netMode, disableIPv6, enableAndroidStorage, enableHwAccess, enableGpuMode, enableTermuxX11, selinuxPermissive, volatileMode, bindMounts, dnsServers, runAtBoot, forceCgroupv1, blockNestedNs, envFileContent, upstreamInterfaces, portForwards ->
-                    viewModel.setConfig(netMode, disableIPv6, enableAndroidStorage, enableHwAccess, enableGpuMode, enableTermuxX11, selinuxPermissive, volatileMode, bindMounts, dnsServers, runAtBoot, envFileContent, upstreamInterfaces, portForwards, forceCgroupv1, blockNestedNs)
+                onNext = { netMode, disableIPv6, enableAndroidStorage, enableHwAccess, enableGpuMode, enableTermuxX11, selinuxPermissive, volatileMode, bindMounts, dnsServers, runAtBoot, forceCgroupv1, blockNestedNs, privileged, envFileContent, upstreamInterfaces, portForwards ->
+                    viewModel.setConfig(netMode, disableIPv6, enableAndroidStorage, enableHwAccess, enableGpuMode, enableTermuxX11, selinuxPermissive, volatileMode, bindMounts, dnsServers, runAtBoot, envFileContent, upstreamInterfaces, portForwards, forceCgroupv1, blockNestedNs, privileged)
                     navController.navigate(Screen.SparseImageConfig.route)
                 },
                 onBack = {

@@ -44,6 +44,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import com.droidspaces.app.ui.component.SettingsRowCard
 import com.droidspaces.app.ui.component.EnvironmentVariablesDialog
 import com.droidspaces.app.util.PortForward
+import com.droidspaces.app.ui.component.PrivilegedModeDialog
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.compose.foundation.lazy.LazyColumn
@@ -87,6 +88,7 @@ fun EditContainerScreen(
     var forceCgroupv1 by remember { mutableStateOf(container.forceCgroupv1) }
     var blockNestedNs by remember { mutableStateOf(container.blockNestedNs) }
     var staticNatIp by remember { mutableStateOf(container.staticNatIp) }
+    var privileged by remember { mutableStateOf(container.privileged) }
 
     // Track the "saved" baseline values - updated after each successful save
     var savedHostname by remember { mutableStateOf(container.hostname) }
@@ -107,6 +109,7 @@ fun EditContainerScreen(
     var savedForceCgroupv1 by remember { mutableStateOf(container.forceCgroupv1) }
     var savedBlockNestedNs by remember { mutableStateOf(container.blockNestedNs) }
     var savedStaticNatIp by remember { mutableStateOf(container.staticNatIp) }
+    var savedPrivileged by remember { mutableStateOf(container.privileged) }
 
     // Navigation and internal UI states
     var showFilePicker by remember { mutableStateOf(false) }
@@ -143,7 +146,8 @@ fun EditContainerScreen(
             portForwards != savedPortForwards ||
             forceCgroupv1 != savedForceCgroupv1 ||
             blockNestedNs != savedBlockNestedNs ||
-            staticNatIp != savedStaticNatIp
+            staticNatIp != savedStaticNatIp ||
+            privileged != savedPrivileged
         }
     }
 
@@ -180,7 +184,8 @@ fun EditContainerScreen(
                     portForwards = portForwards,
                     forceCgroupv1 = forceCgroupv1,
                     blockNestedNs = blockNestedNs,
-                    staticNatIp = staticNatIp
+                    staticNatIp = staticNatIp,
+                    privileged = privileged
                 )
 
                 // Update config file
@@ -209,6 +214,7 @@ fun EditContainerScreen(
                         savedForceCgroupv1 = forceCgroupv1
                         savedBlockNestedNs = blockNestedNs
                         savedStaticNatIp = staticNatIp
+                        savedPrivileged = privileged
 
                         // Refresh container list and SELinux status using ViewModel
                         containerViewModel.refresh()
@@ -278,6 +284,18 @@ fun EditContainerScreen(
     }
 
     var showEnvDialog by remember { mutableStateOf(false) }
+    var showPrivilegedDialog by remember { mutableStateOf(false) }
+
+    if (showPrivilegedDialog) {
+        PrivilegedModeDialog(
+            initialPrivileged = privileged,
+            onConfirm = { tags ->
+                privileged = tags
+                showPrivilegedDialog = false
+            },
+            onDismiss = { showPrivilegedDialog = false }
+        )
+    }
 
     if (showEnvDialog) {
         EnvironmentVariablesDialog(
@@ -1156,14 +1174,31 @@ fun EditContainerScreen(
                 }
             )
 
+            val isSeccompDisabled = privileged.contains("noseccomp") || privileged.contains("full")
+            LaunchedEffect(isSeccompDisabled) {
+                if (isSeccompDisabled) blockNestedNs = false
+            }
+
             ToggleCard(
                 icon = Icons.Default.GppBad,
                 title = context.getString(R.string.manual_deadlock_shield),
                 description = context.getString(R.string.manual_deadlock_shield_description),
-                checked = blockNestedNs,
+                checked = if (isSeccompDisabled) false else blockNestedNs,
                 onCheckedChange = {
                     clearFocus()
                     blockNestedNs = it
+                },
+                enabled = !isSeccompDisabled
+            )
+
+            SettingsRowCard(
+                title = context.getString(R.string.privileged_mode),
+                subtitle = if (privileged.isEmpty()) context.getString(R.string.not_configured) else privileged,
+                description = context.getString(R.string.privileged_mode_description),
+                icon = Icons.Default.GppMaybe,
+                onClick = {
+                    clearFocus()
+                    showPrivilegedDialog = true
                 }
             )
 
@@ -1208,6 +1243,7 @@ fun EditContainerScreen(
                     showEnvDialog = true
                 }
             )
+
 
             // Bind Mounts Section
             Row(

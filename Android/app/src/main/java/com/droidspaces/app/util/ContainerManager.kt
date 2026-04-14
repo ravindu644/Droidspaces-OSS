@@ -48,7 +48,8 @@ data class ContainerInfo(
     val portForwards: List<PortForward> = emptyList(),
     val forceCgroupv1: Boolean = false,
     val blockNestedNs: Boolean = false,
-    val staticNatIp: String = ""
+    val staticNatIp: String = "",
+    val privileged: String = ""
 ) {
     val isRunning: Boolean
         get() = status == ContainerStatus.RUNNING
@@ -95,6 +96,9 @@ data class ContainerInfo(
         }
         if (envFileContent != null) {
             appendLine("env_file=${Constants.CONTAINERS_BASE_PATH}/${ContainerManager.sanitizeContainerName(name)}/.env")
+        }
+        if (privileged.isNotEmpty()) {
+            appendLine("privileged=$privileged")
         }
     }
 }
@@ -277,7 +281,8 @@ object ContainerManager {
                 portForwards = portForwards,
                 forceCgroupv1 = configMap["force_cgroupv1"] == "1",
                 blockNestedNs = configMap["block_nested_ns"] == "1",
-                staticNatIp = configMap["static_nat_ip"] ?: ""
+                staticNatIp = configMap["static_nat_ip"] ?: "",
+                privileged = configMap["privileged"] ?: ""
             )
         } catch (e: Exception) {
             return null
