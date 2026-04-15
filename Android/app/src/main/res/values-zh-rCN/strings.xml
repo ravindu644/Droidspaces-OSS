@@ -192,7 +192,7 @@
     <string name="open_terminal">打开终端</string>
     <string name="requirements_for_droidspaces">Droidspaces 运行要求</string>
     <string name="resize_sparse_image">调整稀疏镜像容量</string>
-    <string name="temp">温度</string>
+    <string name="temp">Temp</string>
     <string name="select_user_to_enter">选择以该用户身份进入容器：</string>
     <string name="sparse_images_recommended">建议在加密存储、F2FS /data 分区或其他可能与直接目录挂载存在兼容性问题的文件系统上运行容器时，使用稀疏镜像。</string>
     <string name="migrating">迁移中...</string>
@@ -367,5 +367,17 @@
     <string name="symlink_integration_description">在 /system/bin 创建一个符号链接以在 Android root 终端访问 Droidspaces 命令行。注意：开启这个选项会导致循环重启如果你的挂载系统使用的是OverlayFS类元模块。只有在使用基于Magic Mount的挂载系统才可使用该选项。（需要重启）</string>
     <string name="gpu_option">GPU</string>
     <string name="gpu_access">GPU 访问</string>
-    <string name="gpu_access_description">将GPU节点镜像到隔离的 /dev（没有完整的硬件透传）</string>
+    <string name="gpu_access_description">将GPU节点镜像到隔离的 /dev（非完整硬件直通）</string>
+    <string name="privileged_mode">特权模式</string>
+    <string name="privileged_mode_description">配置细粒度的安全限制放宽，以支持嵌套虚拟化或高级硬件访问。</string>
+    <string name="privileged_nomask_desc">禁用隔离掩码以允许对 /proc 和 /sys 的写访问。注意：除非同时启用了“硬件访问”，否则 /sys 将保持只读状态。</string>
+    <string name="privileged_nocaps_desc">保留所有 Linux Capabilities（完整 root 权限）。</string>
+    <string name="privileged_noseccomp_desc">禁用 Seccomp 系统调用过滤。这将启用非特权用户命名空间等高级内核功能，是嵌套沙箱的必要条件（Bubblewrap、Flatpak），同时允许加载树外内核模块。</string>
+    <string name="privileged_shared_desc">启用至宿主机的 MS_SHARED 挂载传播。</string>
+    <string name="privileged_unfiltered_desc">绕过设备过滤。宿主机的所有 /dev 节点都将可见。</string>
+    <string name="privileged_full_desc">同时启用所有特权标志。</string>
+    <string name="privileged_warning_title">高危区域</string>
+    <string name="privileged_disclaimer">启用这些选项会降低设备的安全性。我们对任何数据丢失、设备损坏或异常错误概不负责。请勿报告在使用这些模式时遇到的问题。</string>
+    <string name="privileged_confirm_instruction">请输入“我不会报告任何错误”以进行确认：</string>
+    <string name="i_understand_caps">我不会报告任何错误</string>
 </resources>
