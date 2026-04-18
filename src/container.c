@@ -1820,30 +1820,46 @@ int show_info(struct ds_config *cfg, int trust_cfg_pid) {
     else
       printf("  HW access: " C_DIM "none" C_RESET "\n");
 
-    /* Resource usage */
+    /* Resource usage & Limits */
     long long mu, cu, pu;
-    if (ds_cgroup_get_usage(cfg, &mu, &cu, &pu) == 0) {
-      printf("\n" C_GREEN "Resource Usage:" C_RESET "\n");
-      if (mu >= 0) {
-        char mu_str[64], ml_str[64];
-        ds_format_size(mu, mu_str, sizeof(mu_str));
-        if (cfg->memory_limit > 0) {
-          ds_format_size(cfg->memory_limit, ml_str, sizeof(ml_str));
-          printf("  Memory: %s / %s\n", mu_str, ml_str);
-        } else {
-          printf("  Memory: %s\n", mu_str);
-        }
+    long long lm, lq, lp, lpi;
+
+    ds_cgroup_get_usage(cfg, &mu, &cu, &pu);
+    ds_cgroup_get_limits(cfg, &lm, &lq, &lp, &lpi);
+
+    printf("\n" C_GREEN "Resource Management:" C_RESET "\n");
+
+    /* Memory Info */
+    if (mu >= 0 || cfg->memory_limit > 0) {
+      char mu_str[64] = "unknown", ml_str[64] = "unlimited";
+      if (mu >= 0) ds_format_size(mu, mu_str, sizeof(mu_str));
+
+      if (cfg->memory_limit > 0) {
+        ds_format_size(cfg->memory_limit, ml_str, sizeof(ml_str));
+        if (lm > 0) printf("  Memory: %s / %s (enforced)\n", mu_str, ml_str);
+        else printf("  Memory: %s / %s " C_YELLOW "(not enforced)" C_RESET "\n", mu_str, ml_str);
+      } else {
+        printf("  Memory: %s\n", mu_str);
       }
-      if (pu >= 0) {
-        if (cfg->pids_limit > 0) {
-          printf("  PIDs: %lld / %lld\n", pu, cfg->pids_limit);
-        } else {
-          printf("  PIDs: %lld\n", pu);
-        }
+    }
+
+    /* PIDs Info */
+    if (pu >= 0 || cfg->pids_limit > 0) {
+      if (cfg->pids_limit > 0) {
+        if (lpi > 0) printf("  PIDs: %lld / %lld (enforced)\n", pu >= 0 ? pu : 0, cfg->pids_limit);
+        else printf("  PIDs: %lld / %lld " C_YELLOW "(not enforced)" C_RESET "\n", pu >= 0 ? pu : 0, cfg->pids_limit);
+      } else if (pu >= 0) {
+        printf("  PIDs: %lld\n", pu);
       }
-      if (cu >= 0) {
-        printf("  CPU Usage: %.3f s\n", (double)cu / 1000000.0);
+    }
+
+    /* CPU Info */
+    if (cu >= 0 || cfg->cpu_quota > 0) {
+      if (cfg->cpu_quota > 0) {
+        if (lq > 0) printf("  CPU Limit: %lldus/%lldus (enforced)\n", cfg->cpu_quota, lp > 0 ? lp : cfg->cpu_period);
+        else printf("  CPU Limit: %lldus/%lldus " C_YELLOW "(not enforced)" C_RESET "\n", cfg->cpu_quota, cfg->cpu_period);
       }
+      if (cu >= 0) printf("  CPU Usage: %.3f s\n", (double)cu / 1000000.0);
     }
   } else {
     /* Best effort: read os-release from rootfs path */

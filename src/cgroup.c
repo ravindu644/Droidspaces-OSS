@@ -21,10 +21,31 @@ static int ds_cgroup_match_controller(const char *controllers, const char *name)
   safe_strncpy(copy, controllers, sizeof(copy));
 
   char *saveptr;
-  char *token = strtok_r(copy, ",", &saveptr);
+  char *token = strtok_r(copy, ", ", &saveptr);
   while (token) {
     if (strcmp(token, name) == 0) return 1;
-    token = strtok_r(NULL, ",", &saveptr);
+    token = strtok_r(NULL, ", ", &saveptr);
+  }
+  return 0;
+}
+
+static int ds_cgroup_is_supported(struct host_cgroup *hc, const char *name) {
+  if (hc->version == 1) {
+    /* V1: check against the controllers listed for this mountpoint */
+    if (ds_cgroup_match_controller(hc->controllers, name))
+      return 1;
+    /* Alias: cpu maps to cpuacct on some kernels */
+    if (strcmp(name, "cpu") == 0 && ds_cgroup_match_controller(hc->controllers, "cpuacct"))
+      return 1;
+    return 0;
+  } else {
+    /* V2: "hc->controllers" is just "unified", we must read cgroup.controllers */
+    char path[PATH_MAX];
+    char buf[256];
+    snprintf(path, sizeof(path), "%s/cgroup.controllers", hc->mountpoint);
+    if (read_file(path, buf, sizeof(buf)) > 0) {
+      return ds_cgroup_match_controller(buf, name);
+    }
   }
   return 0;
 }
@@ -736,13 +757,30 @@ int ds_cgroup_host_create(struct ds_config *cfg) {
     }
 
     /* For Cgroup V2, enable controllers in the parent group so they are
-     * available in the container group. */
+     * available in the container group. We only enable what the host supports. */
     if (hosts[i].version == 2) {
-      char subtree_ctrl[PATH_MAX];
-      safe_strncpy(subtree_ctrl, base_ds_path, sizeof(subtree_ctrl));
-      strncat(subtree_ctrl, "/cgroup.subtree_control",
-              sizeof(subtree_ctrl) - strlen(subtree_ctrl) - 1);
-      (void)write_file(subtree_ctrl, "+cpuset +cpu +io +memory +pids");
+      char ctrl_path[PATH_MAX];
+      char available[256];
+      snprintf(ctrl_path, sizeof(ctrl_path), "%s/cgroup.controllers", base_ds_path);
+      if (read_file(ctrl_path, available, sizeof(available)) > 0) {
+        char enable_str[512] = {0};
+        char *saveptr;
+        char *token = strtok_r(available, " ", &saveptr);
+        while (token) {
+          if (enable_str[0] != '\0')
+            strncat(enable_str, " ", sizeof(enable_str) - strlen(enable_str) - 1);
+          strncat(enable_str, "+", sizeof(enable_str) - strlen(enable_str) - 1);
+          strncat(enable_str, token, sizeof(enable_str) - strlen(enable_str) - 1);
+          token = strtok_r(NULL, " ", &saveptr);
+        }
+        if (enable_str[0] != '\0') {
+          char subtree_ctrl[PATH_MAX];
+          safe_strncpy(subtree_ctrl, base_ds_path, sizeof(subtree_ctrl));
+          strncat(subtree_ctrl, "/cgroup.subtree_control",
+                  sizeof(subtree_ctrl) - strlen(subtree_ctrl) - 1);
+          (void)write_file(subtree_ctrl, enable_str);
+        }
+      }
     }
 
     char cg_path[PATH_MAX];
@@ -785,6 +823,22 @@ int ds_cgroup_apply_limits(struct ds_config *cfg) {
   sanitize_container_name(cfg->container_name, safe_name, sizeof(safe_name));
 
   int errors = 0;
+  int mem_supported = 0, cpu_supported = 0, pids_supported = 0;
+
+  /* First pass: detect global host support for requested limits */
+  for (int i = 0; i < n; i++) {
+    if (ds_cgroup_is_supported(&hosts[i], "memory")) mem_supported = 1;
+    if (ds_cgroup_is_supported(&hosts[i], "cpu")) cpu_supported = 1;
+    if (ds_cgroup_is_supported(&hosts[i], "pids")) pids_supported = 1;
+  }
+
+  /* Emit warnings for requested but unsupported limits */
+  if (cfg->memory_limit > 0 && !mem_supported)
+    ds_warn("[CGROUP] Memory limit requested but 'memory' controller is not supported by host kernel.");
+  if (cfg->cpu_quota > 0 && !cpu_supported)
+    ds_warn("[CGROUP] CPU limit requested but 'cpu' controller is not supported by host kernel.");
+  if (cfg->pids_limit > 0 && !pids_supported)
+    ds_warn("[CGROUP] PIDs limit requested but 'pids' controller is not supported by host kernel.");
 
   for (int i = 0; i < n; i++) {
     char cg_path[PATH_MAX];
@@ -799,7 +853,7 @@ int ds_cgroup_apply_limits(struct ds_config *cfg) {
     char val[64];
 
     if (hosts[i].version == 2) {
-      if (cfg->memory_limit > 0) {
+      if (cfg->memory_limit > 0 && ds_cgroup_is_supported(&hosts[i], "memory")) {
         snprintf(file_path, sizeof(file_path), "%s/memory.max", cg_path);
         snprintf(val, sizeof(val), "%lld", cfg->memory_limit);
         if (write_file(file_path, val) < 0) {
@@ -807,7 +861,7 @@ int ds_cgroup_apply_limits(struct ds_config *cfg) {
           errors++;
         }
       }
-      if (cfg->cpu_quota > 0) {
+      if (cfg->cpu_quota > 0 && ds_cgroup_is_supported(&hosts[i], "cpu")) {
         long long period = (cfg->cpu_period > 0) ? cfg->cpu_period : 100000;
         snprintf(file_path, sizeof(file_path), "%s/cpu.max", cg_path);
         snprintf(val, sizeof(val), "%lld %lld", cfg->cpu_quota, period);
@@ -816,7 +870,7 @@ int ds_cgroup_apply_limits(struct ds_config *cfg) {
           errors++;
         }
       }
-      if (cfg->pids_limit > 0) {
+      if (cfg->pids_limit > 0 && ds_cgroup_is_supported(&hosts[i], "pids")) {
         snprintf(file_path, sizeof(file_path), "%s/pids.max", cg_path);
         snprintf(val, sizeof(val), "%lld", cfg->pids_limit);
         if (write_file(file_path, val) < 0) {
@@ -827,7 +881,7 @@ int ds_cgroup_apply_limits(struct ds_config *cfg) {
     } else {
       /* Cgroup V1 */
       if (cfg->memory_limit > 0 &&
-          ds_cgroup_match_controller(hosts[i].controllers, "memory")) {
+          ds_cgroup_is_supported(&hosts[i], "memory")) {
         snprintf(file_path, sizeof(file_path), "%s/memory.limit_in_bytes",
                  cg_path);
         snprintf(val, sizeof(val), "%lld", cfg->memory_limit);
@@ -838,8 +892,7 @@ int ds_cgroup_apply_limits(struct ds_config *cfg) {
         }
       }
       if (cfg->cpu_quota > 0 &&
-          (ds_cgroup_match_controller(hosts[i].controllers, "cpu") ||
-           ds_cgroup_match_controller(hosts[i].controllers, "cpuacct"))) {
+          ds_cgroup_is_supported(&hosts[i], "cpu")) {
         long long period = (cfg->cpu_period > 0) ? cfg->cpu_period : 100000;
         snprintf(file_path, sizeof(file_path), "%s/cpu.cfs_period_us", cg_path);
         snprintf(val, sizeof(val), "%lld", period);
@@ -854,7 +907,7 @@ int ds_cgroup_apply_limits(struct ds_config *cfg) {
         }
       }
       if (cfg->pids_limit > 0 &&
-          ds_cgroup_match_controller(hosts[i].controllers, "pids")) {
+          ds_cgroup_is_supported(&hosts[i], "pids")) {
         snprintf(file_path, sizeof(file_path), "%s/pids.max", cg_path);
         snprintf(val, sizeof(val), "%lld", cfg->pids_limit);
         if (write_file(file_path, val) < 0) {
@@ -865,6 +918,79 @@ int ds_cgroup_apply_limits(struct ds_config *cfg) {
     }
   }
   return (errors > 0) ? -1 : 0;
+}
+
+int ds_cgroup_get_limits(struct ds_config *cfg, long long *mem_limit, long long *cpu_quota, long long *cpu_period, long long *pids_limit) {
+  struct host_cgroup hosts[32];
+  int n = get_host_cgroups(hosts, 32);
+  char safe_name[256];
+  sanitize_container_name(cfg->container_name, safe_name, sizeof(safe_name));
+
+  if (mem_limit) *mem_limit = -1;
+  if (cpu_quota) *cpu_quota = -1;
+  if (cpu_period) *cpu_period = -1;
+  if (pids_limit) *pids_limit = -1;
+
+  for (int i = 0; i < n; i++) {
+    char cg_path[PATH_MAX];
+    safe_strncpy(cg_path, hosts[i].mountpoint, sizeof(cg_path));
+    strncat(cg_path, "/droidspaces/", sizeof(cg_path) - strlen(cg_path) - 1);
+    strncat(cg_path, safe_name, sizeof(cg_path) - strlen(cg_path) - 1);
+
+    if (access(cg_path, F_OK) != 0) continue;
+
+    char file_path[PATH_MAX];
+    char buf[256];
+
+    if (hosts[i].version == 2) {
+      if (mem_limit && *mem_limit == -1 && ds_cgroup_is_supported(&hosts[i], "memory")) {
+        snprintf(file_path, sizeof(file_path), "%s/memory.max", cg_path);
+        if (read_file(file_path, buf, sizeof(buf)) > 0) {
+          if (strncmp(buf, "max", 3) == 0) *mem_limit = 0;
+          else *mem_limit = atoll(buf);
+        }
+      }
+      if (cpu_quota && *cpu_quota == -1 && ds_cgroup_is_supported(&hosts[i], "cpu")) {
+        snprintf(file_path, sizeof(file_path), "%s/cpu.max", cg_path);
+        if (read_file(file_path, buf, sizeof(buf)) > 0) {
+          if (strncmp(buf, "max", 3) == 0) *cpu_quota = 0;
+          else {
+            char *space = strchr(buf, ' ');
+            *cpu_quota = atoll(buf);
+            if (space && cpu_period) *cpu_period = atoll(space + 1);
+          }
+        }
+      }
+      if (pids_limit && *pids_limit == -1 && ds_cgroup_is_supported(&hosts[i], "pids")) {
+        snprintf(file_path, sizeof(file_path), "%s/pids.max", cg_path);
+        if (read_file(file_path, buf, sizeof(buf)) > 0) {
+          if (strncmp(buf, "max", 3) == 0) *pids_limit = 0;
+          else *pids_limit = atoll(buf);
+        }
+      }
+    } else {
+      if (mem_limit && *mem_limit == -1 && ds_cgroup_is_supported(&hosts[i], "memory")) {
+        snprintf(file_path, sizeof(file_path), "%s/memory.limit_in_bytes", cg_path);
+        if (read_file(file_path, buf, sizeof(buf)) > 0) *mem_limit = atoll(buf);
+      }
+      if (cpu_quota && *cpu_quota == -1 && ds_cgroup_is_supported(&hosts[i], "cpu")) {
+        snprintf(file_path, sizeof(file_path), "%s/cpu.cfs_quota_us", cg_path);
+        if (read_file(file_path, buf, sizeof(buf)) > 0) *cpu_quota = atoll(buf);
+        if (cpu_period) {
+          snprintf(file_path, sizeof(file_path), "%s/cpu.cfs_period_us", cg_path);
+          if (read_file(file_path, buf, sizeof(buf)) > 0) *cpu_period = atoll(buf);
+        }
+      }
+      if (pids_limit && *pids_limit == -1 && ds_cgroup_is_supported(&hosts[i], "pids")) {
+        snprintf(file_path, sizeof(file_path), "%s/pids.max", cg_path);
+        if (read_file(file_path, buf, sizeof(buf)) > 0) {
+          if (strncmp(buf, "max", 3) == 0) *pids_limit = 0;
+          else *pids_limit = atoll(buf);
+        }
+      }
+    }
+  }
+  return 0;
 }
 
 int ds_cgroup_get_usage(struct ds_config *cfg, long long *mem_usage, long long *cpu_usage, long long *pids_usage) {

@@ -476,6 +476,9 @@ int setup_cgroups(int is_systemd, int force_cgroupv1);
 void ds_cgroup_host_bootstrap(int force_cgroupv1);
 int ds_cgroup_host_create(struct ds_config *cfg);
 int ds_cgroup_apply_limits(struct ds_config *cfg);
+int ds_cgroup_get_limits(struct ds_config *cfg, long long *mem_limit,
+                         long long *cpu_quota, long long *cpu_period,
+                         long long *pids_limit);
 int ds_cgroup_get_usage(struct ds_config *cfg, long long *mem_usage,
                         long long *cpu_usage, long long *pids_usage);
 int ds_cgroup_attach(pid_t target_pid);
