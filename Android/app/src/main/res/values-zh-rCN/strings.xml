@@ -84,7 +84,7 @@
     <string name="dynamic_color">使用系统默认配色方案</string>
     <string name="dynamic_color_description">使用 Android 12+ Monet 动态色彩 (Material You)</string>
     <string name="daemon_mode">守护进程模式</string>
-    <string name="daemon_mode_description">将 Droidspaces 作为持久的系统级守护进程运行，以绕过来自 Magisk/APatch、GrapheneOS 等的 seccomp 限制。这允许通过从用户空间获取并运行命令来实现高权限操作（需要重启）。</string>
+    <string name="daemon_mode_description">将 Droidspaces 作为持久的系统级守护进程运行，以绕过来自 Magisk/APatch、GrapheneOS 等的 seccomp 限制。这允许通过从用户空间获取并运行命令来实现高权限操作。（重启后生效）</string>
     <string name="about_description">适用于 Android 的 LXC 风格容器管理器</string>
     <string name="developers">开发者</string>
     <string name="contributors">贡献者</string>
@@ -364,7 +364,7 @@
     <string name="error_unknown">错误：%1$s</string>
     <string name="options">选项</string>
     <string name="symlink_integration">将 Droidspaces 集成到系统路径中</string>
-    <string name="symlink_integration_description">在 /system/bin 创建一个符号链接以在 Android root 终端访问 Droidspaces 命令行。注意：开启这个选项会导致循环重启如果你的挂载系统使用的是OverlayFS类元模块。只有在使用基于Magic Mount的挂载系统才可使用该选项。（需要重启）</string>
+    <string name="symlink_integration_description">在 /system/bin 创建软链接，以便在 Android root shell 中访问 droidspaces 命令。警告：如果您的挂载机制为 OverlayFS 元模块，启用此项将导致无限重启！仅当您使用基于 Magic Mount 的挂载系统时才可启用此选项。（重启后生效）</string>
     <string name="gpu_option">GPU</string>
     <string name="gpu_access">GPU 访问</string>
     <string name="gpu_access_description">将GPU节点镜像到隔离的 /dev（非完整硬件直通）</string>
