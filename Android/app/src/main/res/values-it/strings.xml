@@ -1,13 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <!-- App Info -->
-    <string name="app_name">Droidspaces</string>
-
+    <string name="app_name" translatable="false">Droidspaces</string>
     <!-- Welcome Screen -->
     <string name="welcome_title">Benvenuto in Droidspaces</string>
     <string name="welcome_subtitle">Gestore di contenitori Linux LXC-Style per Android !</string>
     <string name="get_started">Inizia</string>
-
     <!-- Root Check Screen -->
     <string name="root_check_title">Verifica Accesso Root</string>
     <string name="checking_root">Verifica accesso root in corso...</string>
@@ -19,7 +17,6 @@
     <string name="root_available_message">Ora puoi usare Droidspaces</string>
     <string name="skip">Salta</string>
     <string name="continue_button">Continua</string>
-
     <!-- Navigation -->
     <string name="home_title">Home</string>
     <string name="containers">Contenitori</string>
@@ -30,13 +27,11 @@
     <string name="refresh">Aggiorna</string>
     <string name="search">Cerca</string>
     <string name="clear">Cancella</string>
-
     <!-- Main Tab Screen -->
     <string name="container_singular">Contenitore</string>
     <string name="running">In esecuzione</string>
     <string name="container_count">%1$d contenitore</string>
     <string name="containers_count">%1$d contenitori</string>
-
     <!-- Backend Status Card -->
     <string name="backend_checking">Backend: Verifica in corso...</string>
     <string name="backend_installed">Backend: Installato</string>
@@ -56,7 +51,6 @@
     <string name="tap_to_reinstall">Tocca qui per reinstallare</string>
     <string name="tap_to_install_module">Tocca qui per installare il modulo</string>
     <string name="device_not_supported">Il tuo dispositivo non è supportato</string>
-
     <!-- Settings Screen -->
     <string name="backend_section">Backend</string>
     <string name="reinstall_backend">Reinstalla Backend</string>
@@ -84,9 +78,9 @@
     <string name="about_droidspaces">Informazioni su Droidspaces</string>
     <string name="about_description">Gestore di contenitori LXC-Style per Android</string>
     <string name="developers">Sviluppatore/i</string>
-    <string name="developer_ravindu644">ravindu644</string>
+    <string name="developer_ravindu644" translatable="false">ravindu644</string>
     <string name="developer_ravindu644_role">Backend, UI</string>
-    <string name="developer_thesithumsandaruwan">thesithumsandaruwan</string>
+    <string name="developer_thesithumsandaruwan" translatable="false">thesithumsandaruwan</string>
     <string name="developer_thesithumsandaruwan_role">UI</string>
     <string name="telegram_channel">Canale Telegram</string>
     <string name="contributors">Contributori</string>
@@ -96,7 +90,6 @@
     <string name="generate_bug_report_description">Raccogli informazioni di sistema e log per il debug</string>
     <string name="bug_report_title">Segnalazione Bug</string>
     <string name="ok">OK</string>
-
     <!-- Containers Screen -->
     <string name="no_containers_installed">Nessun contenitore installato</string>
     <string name="install_container_description">Installa un contenitore usando il pulsante qui sotto</string>
@@ -118,7 +111,6 @@
     <string name="view_logs">Visualizza log</string>
     <string name="edit_container_configuration">Modifica configurazione contenitore</string>
     <string name="uninstall_container_menu">Disinstalla Contenitore</string>
-
     <!-- Container Card -->
     <string name="status_running">IN ESECUZIONE</string>
     <string name="status_restarting">IN RIAVVIO</string>
@@ -145,7 +137,6 @@
     <string name="installation_path_label">Percorso di installazione</string>
     <string name="no_options_enabled">Nessuna opzione aggiuntiva abilitata</string>
     <string name="options">Opzioni</string>
-
     <!-- Container Details Screen -->
     <string name="container_info">Info contenitore</string>
     <string name="distribution">Distribuzione</string>
@@ -158,7 +149,6 @@
     <string name="checking">Verifica in corso</string>
     <string name="not_available">Non disponibile</string>
     <string name="manage">Gestisci</string>
-
     <!-- Edit Container Screen -->
     <string name="edit_container_title">Modifica Contenitore: %1$s</string>
     <string name="container_is_running">Il contenitore è in esecuzione</string>
@@ -181,9 +171,7 @@
     <string name="force_cgroupv1">Forza Cgroup V1</string>
     <string name="force_cgroupv1_description">Forza l\'uso della gerarchia legacy Cgroup V1</string>
     <string name="manual_deadlock_shield">Deadlock Shield Manuale</string>
-    <string name="manual_deadlock_shield_description">Previene i deadlock VFS a livello kernel sui kernel legacy (es. 4.14.x) bloccando la creazione di namespace annidati.
-\n\nATTENZIONE: Abilitare questo bloccherà il supporto a Docker, Podman, LXC e Systemd sandboxing all\'interno del contenitore.</string>
-
+    <string name="manual_deadlock_shield_description">Previene i deadlock VFS a livello kernel sui kernel legacy (es. 4.14.x) bloccando la creazione di namespace annidati. \n\nATTENZIONE: Abilitare questo bloccherà il supporto a Docker, Podman, LXC e Systemd sandboxing all\'interno del contenitore.</string>
     <!-- Config Categories and Network Mode -->
     <string name="cat_networking">Rete</string>
     <string name="cat_integration">Integrazione &amp; Hardware</string>
@@ -248,22 +236,19 @@
     <string name="environment_variables_configured">%1$d variabile/i configurata/e</string>
     <string name="not_configured">Non configurato</string>
     <string name="environment_variables_hint"># Incolla le variabili d\'ambiente qui\n# Una per riga, formato CHIAVE=VALORE\n# Le righe che iniziano con # vengono ignorate\n\nDISPLAY=:0\nPULSE_SERVER=tcp:127.0.0.1:4713\nXDG_RUNTIME_DIR=/run/user/0\nLIBGL_ALWAYS_SOFTWARE=1</string>
-
     <!-- Container Name Screen -->
     <string name="container_setup">Configurazione Contenitore</string>
     <string name="container_information">Informazioni Contenitore</string>
     <string name="container_name_label">Nome Contenitore *</string>
-    <string name="container_name_placeholder">my-container</string>
+    <string name="container_name_placeholder" translatable="false">my-container</string>
     <string name="hostname_placeholder">Lascia vuoto per il valore predefinito</string>
     <string name="hostname_hint">Se vuoto, userà il nome del contenitore come hostname</string>
     <string name="container_name_exists">Esiste già un contenitore con questo nome</string>
     <string name="next_configuration">Avanti: Configurazione</string>
-
     <!-- Container Config Screen -->
     <string name="configuration_title">Configurazione</string>
     <string name="container_options">Opzioni Contenitore</string>
     <string name="next_storage">Avanti: Storage</string>
-
     <!-- Installation Screen -->
     <string name="installation_complete">Installazione completata</string>
     <string name="installation_failed">Installazione fallita</string>
@@ -285,7 +270,6 @@
     <string name="installing_binary">Installazione del binario: %1$s</string>
     <string name="granting_permissions">Concessione dei permessi...</string>
     <string name="preparing_installation">Preparazione dell\'installazione...</string>
-
     <!-- Control Panel Screen -->
     <string name="active_containers">Contenitori attivi</string>
     <string name="no_containers_running">Nessun contenitore in esecuzione</string>
@@ -294,7 +278,6 @@
     <string name="cpu">CPU</string>
     <string name="ram">RAM</string>
     <string name="temp">Temp</string>
-
     <!-- Systemd Screen -->
     <string name="systemd_services">Servizi Systemd</string>
     <string name="fetching_services">Recupero servizi...</string>
@@ -316,7 +299,7 @@
     <string name="action_successful">%1$s %2$s completato con successo</string>
     <string name="failed_to_action">Impossibile %1$s %2$s</string>
     <string name="error_unknown">Errore: %1$s</string>
-    <string name="actioning_service">%1$s %2$s in corso...</string>
+    <string name="actioning_service" translatable="false">%1$s %2$s in corso...</string>
     <string name="no_services_found">Nessun servizio trovato</string>
     <string name="no_systemd_services">Nessun servizio systemd disponibile</string>
     <string name="no_running_services">Nessun servizio in esecuzione</string>
@@ -325,7 +308,6 @@
     <string name="no_static_services">Nessun servizio statico</string>
     <string name="no_abnormal_services">Nessun servizio anomalo</string>
     <string name="no_masked_services">Nessun servizio mascherato</string>
-
     <!-- System Info Card -->
     <string name="kernel">Kernel</string>
     <string name="selinux_status">Stato SELinux</string>
@@ -333,18 +315,15 @@
     <string name="architecture">Architettura</string>
     <string name="supported_abis">ABI supportate</string>
     <string name="loading">Caricamento...</string>
-
     <!-- Empty State -->
     <string name="backend_not_available">Backend non disponibile</string>
     <string name="backend_not_available_description">Il backend Droidspaces non è installato o è corrotto. Installalo prima.</string>
     <string name="root_access_not_available">Accesso root non disponibile</string>
     <string name="root_access_not_available_description">Questa pagina è disabilitata poiché l\'accesso root non è disponibile</string>
-
     <!-- Dialog Utils -->
     <string name="operation_failed_title">Operazione fallita</string>
     <string name="no_output_available">Nessun output disponibile</string>
     <string name="dismiss">Ignora</string>
-
     <!-- Container Users Card -->
     <string name="available_users">Utenti disponibili</string>
     <string name="login_command_copied">Comando di login copiato per l\'utente %1$s</string>
@@ -352,14 +331,12 @@
     <string name="no_local_users_found">Nessun utente locale trovato</string>
     <string name="select_user">Seleziona utente</string>
     <string name="copy_login">Copia login</string>
-
     <!-- Process List Screen -->
 
     <!-- Common -->
     <string name="error_generic">Errore</string>
     <string name="comma">,</string>
     <string name="gb_size">%1$dGB</string>
-
     <!-- Sparse Image Config Screen -->
     <string name="sparse_image_configuration">Configurazione Sparse Image</string>
     <string name="storage_configuration">Configurazione Storage</string>
@@ -376,21 +353,17 @@
     <string name="size_gb">Dimensione (GB)</string>
     <string name="enter_size_between_4_512_gb">Inserisci una dimensione tra 4 e 512 GB</string>
     <string name="next_summary">Avanti: Riepilogo</string>
-
     <!-- Container Log Viewer -->
     <string name="logs_title">Log: %1$s</string>
     <string name="clear_logs">Cancella log</string>
     <string name="copy_logs">Copia log</string>
     <string name="container_logs">Log Contenitore</string>
-
     <!-- Validation Error Messages -->
     <string name="error_container_name_empty">Il nome del contenitore non può essere vuoto</string>
     <string name="error_container_name_invalid">Il nome del contenitore può contenere solo lettere, numeri, trattini (-), underscore (_), punti (.) e spazi</string>
     <string name="error_hostname_invalid">L\'hostname può contenere solo lettere, numeri e trattini (-)</string>
-
     <!-- Process List -->
     <string name="user_in_parentheses">(%1$s)</string>
-
     <!-- Requirements -->
     <string name="check_requirements">Verifica requisiti</string>
     <string name="requirements_check_title">Verifica Requisiti</string>
@@ -398,23 +371,19 @@
     <string name="requirements_check_completed_successfully">Verifica dei requisiti completata con successo</string>
     <string name="requirements_check_completed_with_errors">Verifica dei requisiti completata con errori</string>
     <string name="kernel_requirements_copied">Requisiti del kernel copiati negli appunti</string>
-
     <string name="logs_copied">Log copiati negli appunti</string>
-
     <!-- Terminal -->
     <string name="terminal">Terminale</string>
     <string name="terminal_card_desc">Apri una shell interattiva all\'interno di questo contenitore</string>
     <string name="open">Apri</string>
     <string name="open_terminal">Apri Terminale</string>
     <string name="select_user_to_enter">Seleziona l\'utente con cui accedere al contenitore:</string>
-
     <!-- Notification Permission -->
     <string name="notification_permission_title">Permesso Notifiche</string>
     <string name="notification_permission_rationale">Droidspaces deve mostrare una notifica persistente per mantenere le sessioni del terminale in esecuzione in background. Senza questo, Android (specialmente sui dispositivi Samsung) potrebbe terminare inaspettatamente il servizio del terminale.</string>
     <string name="grant_permission">Concedi permesso</string>
     <string name="open_settings">Apri impostazioni</string>
     <string name="i_understand">Ho capito</string>
-
     <!-- Sparse Image Management -->
     <string name="migrate_to_sparse_image">Migra verso una sparse image</string>
     <string name="resize_sparse_image">Ridimensiona la sparse image</string>
@@ -442,6 +411,5 @@
     <string name="privileged_disclaimer">Abilitando queste opzioni, stai compromettendo la sicurezza del tuo dispositivo. NON siamo responsabili per perdita di dati, dispositivi danneggiati o bug strani. NON segnalare problemi verificatisi durante l\'uso di queste modalità.</string>
     <string name="privileged_confirm_instruction">Digita \"I WON\'T REPORT ANY BUGS\" esattamente in maiuscolo per confermare:</string>
     <string name="i_understand_caps">I WON\'T REPORT ANY BUGS</string>
-
     <string name="reboot_recommended">Riavvio consigliato dopo l\'installazione per applicare le regole SELinux.</string>
 </resources>
