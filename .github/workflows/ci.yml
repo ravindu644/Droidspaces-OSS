@@ -22,6 +22,8 @@ jobs:
   build:
     name: Build Backend & Android App
     runs-on: ubuntu-latest
+    env:
+      HAS_TELEGRAM: ${{ secrets.API_ID != '' && secrets.API_HASH != '' }}
     steps:
     - uses: actions/checkout@v4
 
@@ -104,7 +106,7 @@ jobs:
       if: github.event_name != 'pull_request'
       run: |
         EVENT_TYPE="${{ github.event_name == 'workflow_dispatch' && github.event.inputs.create_release == 'true' && 'Official Release' || 'Git Push' }}"
-        COMMIT_MSG=$(git log -1 --pretty=format:%B)
+        COMMIT_MSG=$(git log -1 --pretty=format:%s)
         {
           echo "TELEGRAM_MESSAGE<<EOF"
           echo "**Droidspaces Build Successful**"
@@ -121,8 +123,16 @@ jobs:
           echo "EOF"
         } >> "$GITHUB_ENV"
 
+    - name: Upload Final Artifacts (APK & Tarball)
+      uses: actions/upload-artifact@v4
+      with:
+        name: droidspaces-artifacts
+        path: dist/
+
     - name: Send Telegram Notification
-      if: github.event_name != 'pull_request'
+      if: |
+        github.event_name != 'pull_request' &&
+        env.HAS_TELEGRAM == 'true'
       uses: xz-dev/TelegramFileUploader@v1
       with:
         to-who: ${{ secrets.TELEGRAM_TO }}
@@ -134,12 +144,6 @@ jobs:
         API_ID: ${{ secrets.API_ID }}
         API_HASH: ${{ secrets.API_HASH }}
         BOT_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
-
-    - name: Upload Final Artifacts (APK & Tarball)
-      uses: actions/upload-artifact@v4
-      with:
-        name: droidspaces-artifacts
-        path: dist/
 
   release:
     name: Create GitHub Release
