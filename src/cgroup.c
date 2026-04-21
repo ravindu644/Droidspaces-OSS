@@ -224,6 +224,130 @@ void ds_cgroup_host_bootstrap(int force_cgroupv1) {
   }
 }
 
+/* Android non-standard v1 controller path aliases.
+ * Android mounts many controllers outside /sys/fs/cgroup, and some use
+ * non-standard mount-option names.  This table maps the kernel's canonical
+ * controller name (from /proc/cgroups col-1) to the typical Android mountpoint
+ * suffix and the mount option string the kernel expects.
+ *
+ * History:
+ *  Android 4–8:  cpu→/dev/cpuctl, cpuset→/dev/cpuset, memory→/dev/memcg
+ *  Android 9–11: blkio→/dev/blkio added; schedtune on some OEM kernels
+ *  Android 12+:  cgroups.json abstraction; memory path still /dev/memcg on
+ *                many devices; blkio may be at /dev/blkio or
+ * /sys/fs/cgroup/blkio Pure-v2 host: none of the above exist; --force-cgroupv1
+ * user synthesizes fresh v1 mounts directly from the kernel's controller table.
+ */
+struct cgroup_v1_alias {
+  const char *kernel_name; /* subsys_name from /proc/cgroups          */
+  const char *dir_suffix;  /* directory under sys/fs/cgroup/           */
+  const char *mount_opt;   /* -o option for mount(2), NULL=kernel_name */
+};
+
+static const struct cgroup_v1_alias v1_aliases[] = {
+    {"cpuset", "cpuset", NULL},
+    {"cpu", "cpu", "cpu"},
+    {"cpuacct", "cpuacct", "cpuacct"},
+    {"blkio", "blkio", "blkio"},
+    {"memory", "memory", "memory"},
+    {"devices", "devices", "devices"},
+    {"freezer", "freezer", "freezer"},
+    {"net_cls", "net_cls", "net_cls"},
+    {"net_prio", "net_prio", "net_prio"},
+    {"pids", "pids", "pids"},
+    {"perf_event", "perf_event", "perf_event"},
+    {"misc", "misc", "misc"},
+    /* Android OEM aliases */
+    {"schedtune", "schedtune", "schedtune"},
+    {NULL, NULL, NULL}};
+
+/* Synthesize v1 cgroup mounts from /proc/cgroups when --force-cgroupv1 is
+ * active but the host (pure cgroupv2 Android) has no v1 mountinfo entries.
+ *
+ * For each enabled controller in /proc/cgroups that isn't already mounted
+ * under sys/fs/cgroup/, we attempt a fresh mount("cgroup", path, "cgroup",
+ * flags, controller_name).  This is safe because:
+ *   1. The kernel already has the subsystem compiled in (/proc/cgroups
+ * enabled=1).
+ *   2. cgroupv1 allows independent mounts of each subsystem even on a host
+ *      that normally uses v2, as long as the subsystem isn't already attached
+ *      to a live v2 hierarchy with active processes (rare in Android
+ * userspace).
+ *   3. We mount into the container's private tmpfs base, so the host is
+ *      not affected.
+ *
+ * Returns the number of controllers successfully mounted.
+ */
+static int ds_cgroup_v1_synthesize(void) {
+  FILE *f = fopen("/proc/cgroups", "re");
+  if (!f)
+    return 0;
+
+  unsigned long flags = MS_NOSUID | MS_NODEV | MS_NOEXEC;
+  int mounted = 0;
+  char line[256];
+
+  /* Skip header line */
+  if (!fgets(line, sizeof(line), f)) {
+    fclose(f);
+    return 0;
+  }
+
+  while (fgets(line, sizeof(line), f)) {
+    char name[64];
+    int hierarchy, num_cgroups, enabled;
+
+    /* Format: subsys_name  hierarchy  num_cgroups  enabled */
+    if (sscanf(line, "%63s %d %d %d", name, &hierarchy, &num_cgroups,
+               &enabled) != 4)
+      continue;
+
+    if (!enabled)
+      continue;
+
+    /* Skip name=systemd - handled separately */
+    if (strcmp(name, "name") == 0)
+      continue;
+
+    /* Find alias entry */
+    const struct cgroup_v1_alias *alias = NULL;
+    for (int i = 0; v1_aliases[i].kernel_name != NULL; i++) {
+      if (strcmp(v1_aliases[i].kernel_name, name) == 0) {
+        alias = &v1_aliases[i];
+        break;
+      }
+    }
+
+    /* Use kernel name directly if no explicit alias */
+    const char *dir = alias ? alias->dir_suffix : name;
+    const char *opt =
+        alias ? (alias->mount_opt ? alias->mount_opt : name) : name;
+
+    char mp[PATH_MAX];
+    snprintf(mp, sizeof(mp), "sys/fs/cgroup/%s", dir);
+
+    /* Already mounted by the main loop (e.g. from a real mountinfo entry) */
+    if (access(mp, F_OK) == 0)
+      continue;
+
+    if (mkdir(mp, 0755) < 0 && errno != EEXIST)
+      continue;
+
+    if (mount("cgroup", mp, "cgroup", flags, opt) == 0) {
+      ds_log("[CGROUP] mounted %s at %s", opt, mp);
+      mounted++;
+    } else {
+      /* Some controllers (e.g. schedtune) are OEM-only and will fail on
+       * mainline kernels.  Log at debug level and remove the empty dir. */
+      ds_log("[CGROUP] skipped %s: %s", opt, strerror(errno));
+      rmdir(mp);
+    }
+  }
+
+  fclose(f);
+  return mounted;
+}
+
 int setup_cgroups(int is_systemd, int force_cgroupv1) {
   /* Ensure host has cgroups mounted before we try to setup container subset.
    * Inside the container namespace, this is mostly a no-op if host is already
@@ -388,7 +512,30 @@ int setup_cgroups(int is_systemd, int force_cgroupv1) {
     }
   }
 
-  /* 2. FORCED SYSTEMD SUPPORT: If we are booting a systemd rootfs but no
+  /* 2. PURE-V2 HOST + --force-cgroupv1 FALLBACK:
+   * When the host is a pure cgroupv2 Android device and the user requested
+   * --force-cgroupv1, the mountinfo scan above yields zero v1 entries.
+   * Android never mounts v1 controllers in this configuration, so we must
+   * synthesize them directly from /proc/cgroups.
+   *
+   * We detect this condition by checking: forced v1 requested AND the host
+   * is pure v2 AND no v1 hierarchy was successfully set up yet. */
+  if (force_cgroupv1 && ds_cgroup_host_is_v2()) {
+    /* Count how many v1 mounts we actually produced from the main loop */
+    int v1_found = 0;
+    for (int i = 0; i < n; i++) {
+      if (hosts[i].version == 1)
+        v1_found++;
+    }
+    if (v1_found == 0) {
+      ds_log("[CGROUP] pure-v2 host with --force-cgroupv1: synthesizing v1 "
+             "controllers from /proc/cgroups");
+      int synth = ds_cgroup_v1_synthesize();
+      ds_log("[CGROUP] synthesized %d v1 controller(s)", synth);
+    }
+  }
+
+  /* 3. FORCED SYSTEMD SUPPORT: If we are booting a systemd rootfs but no
    * systemd hierarchy was found on the host, we MUST create one manually.
    * On modern kernels (or if V2 is active), we skip this because systemd
    * will use the unified hierarchy. */
