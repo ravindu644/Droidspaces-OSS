@@ -478,6 +478,13 @@ int main(int argc, char **argv) {
     }
   }
 
+  /* Sanitize container name immediately after discovery/resolution */
+  if (cfg.container_name[0] != '\0') {
+    char sanitized[256];
+    sanitize_container_name(cfg.container_name, sanitized, sizeof(sanitized));
+    safe_strncpy(cfg.container_name, sanitized, sizeof(cfg.container_name));
+  }
+
   /*
    * Unified Configuration Discovery and Loading
    * 1. Try to load from explicitly provided config file.
@@ -976,7 +983,9 @@ int main(int argc, char **argv) {
 
   /* Set up global logging context for centralized logging engine */
   if (cfg.container_name[0] != '\0') {
-    safe_strncpy(ds_log_container_name, cfg.container_name,
+    char sanitized[256];
+    sanitize_container_name(cfg.container_name, sanitized, sizeof(sanitized));
+    safe_strncpy(ds_log_container_name, sanitized,
                  sizeof(ds_log_container_name));
   }
 
@@ -1086,6 +1095,9 @@ int main(int argc, char **argv) {
     if (cfg.container_name[0] == '\0' && cfg.rootfs_path[0]) {
       generate_container_name(cfg.rootfs_path, cfg.container_name,
                               sizeof(cfg.container_name));
+      char sanitized[256];
+      sanitize_container_name(cfg.container_name, sanitized, sizeof(sanitized));
+      safe_strncpy(cfg.container_name, sanitized, sizeof(cfg.container_name));
     }
     ret = start_rootfs(&cfg);
     goto cleanup;

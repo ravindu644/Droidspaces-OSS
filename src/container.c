@@ -953,7 +953,9 @@ int start_rootfs(struct ds_config *cfg) {
         if (poll(&pfd, 1, 500) > 0) {
           /* Signal received, drain signalfd to prevent busy-wait */
           struct signalfd_siginfo fdsi;
-          (void)read(sfd, &fdsi, sizeof(fdsi));
+          if (read(sfd, &fdsi, sizeof(fdsi)) < 0) {
+            /* Handle or ignore error */
+          }
         }
       } else {
         usleep(500000);

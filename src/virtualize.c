@@ -135,6 +135,8 @@ int ds_virtualize_meminfo(struct ds_config *cfg, char **buf_out, size_t *size_ou
                     val = (long long)(val * ratio);
                 }
 
+                if (has_kb && val > mem_limit / 1024) val = mem_limit / 1024;
+
                 /* Restore fixed-width alignment for compatibility */
                 strncat(key, ":", sizeof(key) - strlen(key) - 1);
                 if (has_kb) {
@@ -316,6 +318,30 @@ int ds_virtualize_uptime(struct ds_config *cfg, char **buf_out, size_t *size_out
 }
 
 /*
+ * Generate virtualized CPU range for sysfs (e.g. 0-3)
+ */
+int ds_virtualize_cpu_sysfs(struct ds_config *cfg, char **buf_out, size_t *size_out) {
+    int host_cpus = (int)sysconf(_SC_NPROCESSORS_ONLN);
+    int container_cpus = host_cpus;
+    if (cfg->cpu_quota > 0 && cfg->cpu_period > 0) {
+        container_cpus = (int)((cfg->cpu_quota + cfg->cpu_period - 1) / cfg->cpu_period);
+        if (container_cpus < 1) container_cpus = 1;
+        if (container_cpus > host_cpus) container_cpus = host_cpus;
+    }
+
+    char *buf = malloc(64);
+    if (!buf) return -1;
+
+    if (container_cpus == 1) {
+        *size_out = snprintf(buf, 64, "0\n");
+    } else {
+        *size_out = snprintf(buf, 64, "0-%d\n", container_cpus - 1);
+    }
+    *buf_out = buf;
+    return 0;
+}
+
+/*
  * Generate virtualized /proc/loadavg
  */
 int ds_virtualize_loadavg(struct ds_config *cfg, char **buf_out, size_t *size_out) {
@@ -385,6 +411,29 @@ int ds_virtualize_init(struct ds_config *cfg) {
             }
         } else {
             ds_warn("Failed to generate virtual content for %s (continuing)", files[i]);
+        }
+    }
+
+    /* CPU sysfs virtualization for nproc */
+    char cpu_sys_base[PATH_MAX * 2];
+    snprintf(cpu_sys_base, sizeof(cpu_sys_base), "%s/sys/devices/system/cpu", vproc_path);
+    if (mkdir_p(cpu_sys_base, 0755) == 0) {
+        const char *cpu_files[] = {"online", "possible", "present"};
+        for (size_t i = 0; i < ARRAY_SIZE(cpu_files); i++) {
+            char *vbuf = NULL;
+            size_t vsz = 0;
+            if (ds_virtualize_cpu_sysfs(cfg, &vbuf, &vsz) == 0) {
+                char path[PATH_MAX * 2];
+                snprintf(path, sizeof(path), "%s/%s", cpu_sys_base, cpu_files[i]);
+                if (write_file(path, vbuf) == 0) {
+                    char target[PATH_MAX];
+                    snprintf(target, sizeof(target), "/sys/devices/system/cpu/%s", cpu_files[i]);
+                    if (bind_mount(path, target) < 0) {
+                        ds_warn("Failed to bind mount virtual %s over %s (continuing)", path, target);
+                    }
+                }
+                free(vbuf);
+            }
         }
     }
 

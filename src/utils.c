@@ -28,12 +28,12 @@ void sanitize_container_name(const char *name, char *out, size_t size) {
   size_t i, j = 0;
   for (i = 0; name[i] != '\0' && j < size - 1; i++) {
     char c = name[i];
-    if (isalnum((unsigned char)c) || c == '_' || c == '-') {
+    if (isalnum((unsigned char)c) || c == '_' || c == '-' || c == '.') {
       out[j++] = c;
     } else if (c == ' ') {
       out[j++] = '-';
     }
-    /* Skip all other characters (like /, ., .., etc.) */
+    /* Skip all other characters (like /, .., etc.) */
   }
   out[j] = '\0';
 
