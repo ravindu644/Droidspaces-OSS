@@ -210,16 +210,29 @@ void ds_cgroup_host_bootstrap(int force_cgroupv1) {
    * on the host, we mount it ourselves on /sys/fs/cgroup. This prevents
    * falling back to V1 on modern kernels just because the recovery init
    * script didn't mount it. */
-  if (!force_cgroupv1 && !ds_cgroup_host_is_v2() &&
-      grep_file("/proc/filesystems", "cgroup2") > 0) {
-    if (mkdir_p("/sys/fs/cgroup", 0755) == 0) {
-      /* Try to mount a tmpfs base first (LXC-style) */
+  if (force_cgroupv1 || ds_cgroup_host_is_v2())
+    return;
+
+  if (grep_file("/proc/filesystems", "cgroup2") > 0) {
+    /* Ensure the base directory exists */
+    if (access("/sys/fs/cgroup", F_OK) != 0) {
+      if (mkdir_p("/sys/fs/cgroup", 0755) != 0)
+        return;
+    }
+
+    /* If /sys/fs/cgroup is not already a tmpfs base, mount one (LXC-style).
+     * This provides a clean root for both v2 (unified) and any v1 named
+     * hierarchies that might be needed. */
+    struct statfs sfs;
+    if (statfs("/sys/fs/cgroup", &sfs) == 0 && sfs.f_type != TMPFS_MAGIC) {
       mount("none", "/sys/fs/cgroup", "tmpfs", MS_NOSUID | MS_NODEV | MS_NOEXEC,
             "mode=755,size=16M");
-      if (mount("none", "/sys/fs/cgroup", "cgroup2",
-                MS_NOSUID | MS_NODEV | MS_NOEXEC, NULL) == 0) {
-        ds_log("Auto-mounted Cgroup V2 on host.");
-      }
+    }
+
+    /* Mount the unified hierarchy */
+    if (mount("none", "/sys/fs/cgroup", "cgroup2",
+              MS_NOSUID | MS_NODEV | MS_NOEXEC, NULL) == 0) {
+      ds_log("Auto-mounted Cgroup V2 on host.");
     }
   }
 }

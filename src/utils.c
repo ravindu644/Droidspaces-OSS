@@ -231,13 +231,6 @@ void ds_resolve_argv_paths(int argc, char **argv) {
   }
 }
 
-#ifndef RAMFS_MAGIC
-#define RAMFS_MAGIC 0x858458f6
-#endif
-#ifndef TMPFS_MAGIC
-#define TMPFS_MAGIC 0x01021994
-#endif
-
 int is_ramfs(const char *path) {
   struct statfs sfs;
   if (statfs(path, &sfs) < 0)

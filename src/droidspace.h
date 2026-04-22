@@ -50,6 +50,13 @@
 #include <time.h>
 #include <unistd.h>
 
+#ifndef RAMFS_MAGIC
+#define RAMFS_MAGIC 0x858458f6
+#endif
+#ifndef TMPFS_MAGIC
+#define TMPFS_MAGIC 0x01021994
+#endif
+
 /* Cgroup Namespace support (Linux 4.6+) */
 #ifndef CLONE_NEWCGROUP
 #define CLONE_NEWCGROUP 0x02000000
