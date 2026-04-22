@@ -12,8 +12,6 @@ This guide explains how to compile a Linux kernel with Droidspaces support for A
 ### Quick Navigation
 
 - [Overview](#overview)
-- [Required Kernel Configuration](#kernel-config)
-- [Additional Kernel Configuration for UFW/Fail2ban](#additional-kernel-config)
 - [Configuring Non-GKI Kernels](#non-gki)
 - [Configuring GKI Kernels](#gki)
 - [Testing Your Kernel](#testing)
@@ -28,153 +26,6 @@ This guide explains how to compile a Linux kernel with Droidspaces support for A
 
 Droidspaces needs specific kernel options to run isolated containers. These options enable Linux namespaces, cgroups, seccomp filtering, networking, and device filesystem support.
 
-The required configuration is the same for all kernel versions. The only difference between non-GKI and GKI devices is how the kernel is compiled and deployed.
-
----
-
-<a id="kernel-config"></a>
-## Required Kernel Configuration
-
-```makefile
-# Kernel configurations for full DroidSpaces support
-# Copyright (C) 2026 ravindu644 <droidcasts@protonmail.com>
-
-# IPC mechanisms (required for tools that rely on shared memory and IPC namespaces)
-CONFIG_SYSCTL=y
-CONFIG_SYSVIPC=y
-CONFIG_POSIX_MQUEUE=y
-
-# Core namespace support (essential for isolation and running init systems)
-CONFIG_NAMESPACES=y
-CONFIG_PID_NS=y
-CONFIG_UTS_NS=y
-CONFIG_IPC_NS=y
-
-# Seccomp support (enables syscall filtering and security hardening)
-CONFIG_SECCOMP=y
-CONFIG_SECCOMP_FILTER=y
-
-# Control groups support (required for systemd and resource accounting)
-CONFIG_CGROUPS=y
-CONFIG_CGROUP_DEVICE=y
-CONFIG_CGROUP_PIDS=y
-CONFIG_MEMCG=y
-CONFIG_CGROUP_SCHED=y
-CONFIG_FAIR_GROUP_SCHED=y
-CONFIG_CGROUP_FREEZER=y
-CONFIG_CGROUP_NET_PRIO=y
-
-# Device filesystem support (enables hardware access when --hw-access is enabled)
-CONFIG_DEVTMPFS=y
-
-# Overlay filesystem support (required for volatile mode)
-CONFIG_OVERLAY_FS=y
-
-# Firmware loading support (optional, used when --hw-access is enabled)
-CONFIG_FW_LOADER=y
-CONFIG_FW_LOADER_USER_HELPER=y
-CONFIG_FW_LOADER_COMPRESS=y
-
-# Droidspaces Network Isolation Support - NAT/none modes
-# Network namespace isolation
-CONFIG_NET_NS=y
-
-# Virtual ethernet pairs
-CONFIG_VETH=y
-
-# Bridge device
-CONFIG_BRIDGE=y
-
-# Netfilter core
-CONFIG_NETFILTER=y
-CONFIG_BRIDGE_NETFILTER=y
-CONFIG_NETFILTER_ADVANCED=y
-
-# Connection tracking
-CONFIG_NF_CONNTRACK=y
-# kernels ≤ 4.18 (Android 4.4 / 4.9)
-CONFIG_NF_CONNTRACK_IPV4=y
-
-# iptables infrastructure
-CONFIG_IP_NF_IPTABLES=y
-
-# filter table
-CONFIG_IP_NF_FILTER=y
-
-# NAT table
-CONFIG_NF_NAT=y
-
-# NF Tables
-CONFIG_NF_TABLES=y
-
-# kernels ≤ 5.0 (Kernel 4.4 / 4.9)
-CONFIG_NF_NAT_IPV4=y
-CONFIG_IP_NF_NAT=y
-
-# MASQUERADE target (renamed in 5.2)
-CONFIG_IP_NF_TARGET_MASQUERADE=y
-CONFIG_NETFILTER_XT_TARGET_MASQUERADE=y
-
-# MSS clamping
-CONFIG_NETFILTER_XT_TARGET_TCPMSS=y
-
-# addrtype match (required for --dst-type LOCAL DNAT port forwarding)
-CONFIG_NETFILTER_XT_MATCH_ADDRTYPE=y
-
-# Conntrack netlink + NAT redirect (required for stateful NAT)
-CONFIG_NF_CONNTRACK_NETLINK=y
-CONFIG_NF_NAT_REDIRECT=y
-
-# Policy routing
-CONFIG_IP_ADVANCED_ROUTER=y
-CONFIG_IP_MULTIPLE_TABLES=y
-
-# Disable this on older kernels to make internet work
-CONFIG_ANDROID_PARANOID_NETWORK=n
-```
----
-
-<a id="additional-kernel-config"></a>
-## Additional Kernel Configuration for UFW/Fail2ban
-
-> [!TIP]
-> These options are not required for basic Droidspaces usage. Only add them if you want to run a firewall (UFW or Fail2ban) inside a Droidspaces container.
-
-**Use NAT mode when running UFW or Fail2ban.** Running them in host mode will conflict with the host's networking stack.
-
-```makefile
-# UFW CORE
-CONFIG_NETFILTER_XT_MATCH_COMMENT=y
-CONFIG_NETFILTER_XT_MATCH_STATE=y
-CONFIG_NETFILTER_XT_MATCH_CONNTRACK=y
-CONFIG_NETFILTER_XT_MATCH_MULTIPORT=y
-CONFIG_NETFILTER_XT_MATCH_HL=y
-CONFIG_NETFILTER_XT_TARGET_REJECT=y
-CONFIG_IP_NF_TARGET_REJECT=y
-CONFIG_NETFILTER_XT_TARGET_LOG=y
-CONFIG_IP_NF_TARGET_ULOG=y
-
-# FAIL2BAN CORE
-CONFIG_NETFILTER_XT_MATCH_RECENT=y
-CONFIG_NETFILTER_XT_MATCH_LIMIT=y
-CONFIG_NETFILTER_XT_MATCH_HASHLIMIT=y
-CONFIG_NETFILTER_XT_MATCH_OWNER=y
-CONFIG_NETFILTER_XT_MATCH_PKTTYPE=y
-CONFIG_NETFILTER_XT_MATCH_MARK=y
-CONFIG_NETFILTER_XT_TARGET_MARK=y
-
-# IPSET (efficient fail2ban banlists)
-CONFIG_IP_SET=y
-CONFIG_IP_SET_HASH_IP=y
-CONFIG_IP_SET_HASH_NET=y
-CONFIG_NETFILTER_XT_SET=y
-
-# NFNETLINK / logging
-CONFIG_NETFILTER_NETLINK_QUEUE=y
-CONFIG_NETFILTER_NETLINK_LOG=y
-CONFIG_NETFILTER_XT_TARGET_NFLOG=y
-```
-
 ---
 
 <a id="non-gki"></a>
@@ -184,40 +35,128 @@ CONFIG_NETFILTER_XT_TARGET_NFLOG=y
 
 Non-GKI kernels are the easiest to configure. Follow these steps:
 
-### Step 1: Apply the Non-GKI Patches
+### Step 1: Mandatory Configuration
 
-Apply all patches from the [Documentation/resources/kernel-patches/non-GKI](./resources/kernel-patches/non-GKI/) directory to your kernel source before doing anything else:
+Place these options in your device defconfig or use them as a configuration fragment.
 
-```bash
-patch -p1 < /path/to/filename.patch
+```makefile
+# Kernel configurations for full DroidSpaces support
+# Copyright (C) 2026 ravindu644 <droidcasts@protonmail.com>
+
+# IPC mechanisms
+CONFIG_SYSCTL=y
+CONFIG_SYSVIPC=y
+CONFIG_POSIX_MQUEUE=y
+
+# Core namespace support
+CONFIG_NAMESPACES=y
+CONFIG_PID_NS=y
+CONFIG_UTS_NS=y
+CONFIG_IPC_NS=y
+
+# Seccomp support
+CONFIG_SECCOMP=y
+CONFIG_SECCOMP_FILTER=y
+
+# Control groups support
+CONFIG_CGROUPS=y
+CONFIG_CGROUP_DEVICE=y
+CONFIG_CGROUP_PIDS=y
+CONFIG_MEMCG=y
+CONFIG_CGROUP_SCHED=y
+CONFIG_FAIR_GROUP_SCHED=y
+CONFIG_CGROUP_FREEZER=y
+CONFIG_CGROUP_NET_PRIO=y
+
+# Device filesystem support
+CONFIG_DEVTMPFS=y
+
+# Overlay filesystem support (required for volatile mode)
+CONFIG_OVERLAY_FS=y
+
+# Firmware loading support
+CONFIG_FW_LOADER=y
+CONFIG_FW_LOADER_USER_HELPER=y
+CONFIG_FW_LOADER_COMPRESS=y
+
+# Droidspaces Network Isolation Support - NAT/none modes
+CONFIG_NET_NS=y
+CONFIG_VETH=y
+CONFIG_BRIDGE=y
+CONFIG_NETFILTER=y
+CONFIG_BRIDGE_NETFILTER=y
+CONFIG_NETFILTER_ADVANCED=y
+CONFIG_NF_CONNTRACK=y
+CONFIG_IP_NF_IPTABLES=y
+CONFIG_IP_NF_FILTER=y
+CONFIG_NF_NAT=y
+CONFIG_NF_TABLES=y
+CONFIG_IP_NF_TARGET_MASQUERADE=y
+CONFIG_NETFILTER_XT_TARGET_MASQUERADE=y
+CONFIG_NETFILTER_XT_TARGET_TCPMSS=y
+CONFIG_NETFILTER_XT_MATCH_ADDRTYPE=y
+CONFIG_NF_CONNTRACK_NETLINK=y
+CONFIG_NF_NAT_REDIRECT=y
+CONFIG_IP_ADVANCED_ROUTER=y
+CONFIG_IP_MULTIPLE_TABLES=y
+
+# legacy compat
+CONFIG_NF_CONNTRACK_IPV4=y
+CONFIG_NF_NAT_IPV4=y
+CONFIG_IP_NF_NAT=y
+
+# Disable this on older kernels to make internet work
+CONFIG_ANDROID_PARANOID_NETWORK=n
 ```
 
-### Step 2: Place the Config Fragments
+### Step 2: Firewall Support (UFW/Fail2ban) - Optional
 
-Save the [required kernel configuration](#kernel-config) block as `droidspaces.config` and place it in your kernel's architecture config folder (e.g., `arch/arm64/configs/`). If you want to use UFW or Fail2ban, also save the [additional kernel configuration](#additional-kernel-config) block as `droidspaces-additional.config` and place it in the same folder.
+> [!TIP]
+>
+> These options are only required if you want to run UFW or Fail2ban inside the container.
+> 
+> **Use NAT mode** when running these to avoid host networking conflicts.
 
-```bash
-# For ARM64 devices, place them alongside your device defconfig:
-# $KERNEL_ROOT/arch/arm64/configs/droidspaces.config
-# $KERNEL_ROOT/arch/arm64/configs/droidspaces-additional.config  (optional)
+```makefile
+# UFW & FAIL2BAN CORE
+CONFIG_NETFILTER_XT_MATCH_COMMENT=y
+CONFIG_NETFILTER_XT_MATCH_STATE=y
+CONFIG_NETFILTER_XT_MATCH_CONNTRACK=y
+CONFIG_NETFILTER_XT_MATCH_MULTIPORT=y
+CONFIG_NETFILTER_XT_MATCH_HL=y
+CONFIG_NETFILTER_XT_TARGET_REJECT=y
+CONFIG_IP_NF_TARGET_REJECT=y
+CONFIG_NETFILTER_XT_TARGET_LOG=y
+CONFIG_IP_NF_TARGET_ULOG=y
+CONFIG_NETFILTER_XT_MATCH_RECENT=y
+CONFIG_NETFILTER_XT_MATCH_LIMIT=y
+CONFIG_NETFILTER_XT_MATCH_HASHLIMIT=y
+CONFIG_NETFILTER_XT_MATCH_OWNER=y
+CONFIG_NETFILTER_XT_MATCH_PKTTYPE=y
+CONFIG_NETFILTER_XT_MATCH_MARK=y
+CONFIG_NETFILTER_XT_TARGET_MARK=y
+CONFIG_IP_SET=y
+CONFIG_IP_SET_HASH_IP=y
+CONFIG_IP_SET_HASH_NET=y
+CONFIG_NETFILTER_XT_SET=y
+CONFIG_NETFILTER_NETLINK_QUEUE=y
+CONFIG_NETFILTER_NETLINK_LOG=y
+CONFIG_NETFILTER_XT_TARGET_NFLOG=y
 ```
 
-### Step 3: Merge the Configuration
+### Step 3: Apply Patches
 
-Pass your device defconfig and the Droidspaces fragment(s) to `make`. The kernel build system will merge them automatically:
+Apply all patches from the [Documentation/resources/kernel-patches/non-GKI](./resources/kernel-patches/non-GKI/) directory using this command:
 
 ```bash
-make [BUILD_OPTIONS] <your_device>_defconfig droidspaces.config droidspaces-additional.config
+patch -p1 < /path/to/extracted/patchfile.patch
 ```
 
-> [!NOTE]
-> You need to set environment variables like `ARCH`, `CC`, `CROSS_COMPILE`, and `CLANG_TRIPLE` before running `make`, depending on your toolchain. Make sure these are configured correctly for your device.
+### Step 4: Build, Flash and Test
 
-### Step 4: Flash and Test
-
-Flash the compiled kernel to your device using Odin, fastboot, Heimdall, or whatever method your device supports.
-
-After booting, open the Droidspaces app and go to **Settings** (gear icon) -> **Requirements** -> **Check Requirements**. All checks should pass with green checkmarks.
+1. Save the configuration blocks above as `.config` fragments or merge them into your defconfig.
+2. Compile and flash the kernel to your device.
+3. Verify using the Droidspaces app **Settings -> Requirements -> Check Requirements**.
 
 ---
 
@@ -234,17 +173,17 @@ To solve this, Droidspaces provides specialized **kABI-friendly patches** that a
 
 You **MUST** apply the correct kABI fix patch for your kernel version. Without this patch, your device will bootloop immediately upon enabling `CONFIG_SYSVIPC` or `CONFIG_IPC_NS`.
 
-- **For Kernels BELOW 6.12 (5.4, 5.10, 5.15, 6.1, 6.6):**
-  Apply the recommended patch from [Documentation/resources/kernel-patches/GKI/below-kernel-6.12](./resources/kernel-patches/GKI/below-kernel-6.12/).
+**For Kernels BELOW 6.12 (5.4, 5.10, 5.15, 6.1, 6.6):**
+- Apply the recommended patch from [Documentation/resources/kernel-patches/GKI/below-kernel-6.12](./resources/kernel-patches/GKI/below-kernel-6.12/).
 
-  > [!TIP]
-  >
-  > The `001.GKI-below-6.12-fix_sysvipc_kABI_6_7_8.patch` is recommended for most devices.
-  >
-  > If this patch causes a bootloop, try the alternative patches from the same directory (e.g., `1_2_3` or `3_4_5`).
+> [!TIP]
+>
+> The `001.GKI-below-6.12-fix_sysvipc_kABI_6_7_8.patch` is recommended for most devices.
+>
+> If this patch causes a bootloop, try the alternative patches from the same directory (e.g., `1_2_3` or `3_4_5`).
 
-- **For Kernels 6.12 and ABOVE:**
-  Apply the patch from [Documentation/resources/kernel-patches/GKI/kernel-6.12](./resources/kernel-patches/GKI/kernel-6.12/001.GKI-6.12-or-above-fix_sysvipc_kABI.patch).
+**For Kernels 6.12 and ABOVE:**
+- Apply the patch from [Documentation/resources/kernel-patches/GKI/kernel-6.12](./resources/kernel-patches/GKI/kernel-6.12/001.GKI-6.12-or-above-fix_sysvipc_kABI.patch).
 
 **How to apply the patch:**
 
