@@ -46,6 +46,7 @@
 #include <sys/utsname.h>
 #include <sys/vfs.h>
 #include <sys/wait.h>
+#include <poll.h>
 #include <termios.h>
 #include <time.h>
 #include <unistd.h>
@@ -355,7 +356,19 @@ struct ds_config {
   /* Upstream interfaces for NAT routing (--upstream wlan0,rmnet0,...) */
   char upstream_ifaces[DS_MAX_UPSTREAM_IFACES][IFNAMSIZ];
   int upstream_iface_count;
+
+  /* Resource limits */
+  long long memory_limit; /* memory.max in bytes */
+  long long cpu_quota;    /* cpu.max quota in us */
+  long long cpu_period;   /* cpu.max period in us */
+  long long pids_limit;   /* pids.max */
+
+  int virtualization; /* --virtualization: enable resource virtualization */
+  struct timespec start_time; /* when the container was started */
+  unsigned long ns_inode;     /* PID namespace inode for identity verification */
 };
+
+#define OPT_VIRTUALIZATION 268
 
 /* ---------------------------------------------------------------------------
  * utils.c
@@ -404,6 +417,8 @@ void write_monitor_debug_log(const char *name, const char *fmt, ...);
 int copy_file(const char *src, const char *dst);
 void sort_bind_mounts(struct ds_config *cfg);
 void sanitize_container_name(const char *name, char *out, size_t size);
+long long ds_parse_size(const char *str);
+void ds_format_size(long long bytes, char *buf, size_t sz);
 
 /* ---------------------------------------------------------------------------
  * config.c
@@ -473,6 +488,13 @@ int ds_cgroup_v2_usable(void);
 int ds_cgroup_host_is_v2(void);
 int setup_cgroups(int is_systemd, int force_cgroupv1);
 void ds_cgroup_host_bootstrap(int force_cgroupv1);
+int ds_cgroup_host_create(struct ds_config *cfg);
+int ds_cgroup_apply_limits(struct ds_config *cfg);
+int ds_cgroup_get_limits(struct ds_config *cfg, long long *mem_limit,
+                         long long *cpu_quota, long long *cpu_period,
+                         long long *pids_limit);
+int ds_cgroup_get_usage(struct ds_config *cfg, long long *mem_usage,
+                        long long *cpu_usage, long long *pids_usage);
 int ds_cgroup_attach(pid_t target_pid);
 /* Remove the ds-enter-<child_pid> leaf cgroup after an enter/run session. */
 void ds_cgroup_detach(pid_t child_pid);

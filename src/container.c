@@ -6,6 +6,7 @@
  */
 
 #include "droidspace.h"
+#include "virtualize.h"
 
 /* ---------------------------------------------------------------------------
  * External Command Lock - CLI-only ownership
@@ -546,6 +547,9 @@ int start_rootfs(struct ds_config *cfg) {
   fix_networking_host(cfg);
   android_optimizations(1);
 
+  /* Record start time before fork so all processes have consistent base */
+  clock_gettime(CLOCK_MONOTONIC, &cfg->start_time);
+
   /* 8. Fork Monitor Process */
   pid_t monitor_pid = fork();
   if (monitor_pid < 0) {
@@ -586,6 +590,29 @@ int start_rootfs(struct ds_config *cfg) {
      * PID namespace. */
     int ns_flags = CLONE_NEWUTS | CLONE_NEWIPC;
 
+    /* Create host-side cgroup directory and move self into it */
+    if (ds_cgroup_host_create(cfg) < 0) {
+      ds_error("Failed to initialize cgroup hierarchy.");
+      _exit(EXIT_FAILURE);
+    }
+
+    /* Apply resource limits if defined */
+    if (ds_cgroup_apply_limits(cfg) < 0) {
+      if (cfg->memory_limit > 0 || cfg->cpu_quota > 0 || cfg->pids_limit > 0) {
+        ds_error("Failed to enforce resource limits.");
+        _exit(EXIT_FAILURE);
+      }
+    }
+
+    /* Signal handling for monitor process */
+    sigset_t mask;
+    sigemptyset(&mask);
+    sigaddset(&mask, SIGCHLD);
+    sigaddset(&mask, SIGTERM);
+    sigaddset(&mask, SIGINT);
+    sigprocmask(SIG_BLOCK, &mask, NULL);
+    int sfd = signalfd(-1, &mask, SFD_CLOEXEC);
+
     /* Adaptive Cgroup Namespace (introduced in Linux 4.6).
      *
      * CGROUP SELECTION: Only enable cgroupns when V2 is active.
@@ -594,29 +621,6 @@ int start_rootfs(struct ds_config *cfg) {
     int cg_ns_ok = (access("/proc/self/ns/cgroup", F_OK) == 0) &&
                    (ds_cgroup_host_is_v2() && !cfg->force_cgroupv1);
     if (cg_ns_ok) {
-      /* To get isolation from a cgroup namespace, we must be in a sub-cgroup
-       * BEFORE we unshare. If we are in the root '/', the namespace root
-       * will be the host's root, providing zero isolation.
-       * We use a container-specific path to avoid conflicts. */
-      if (access("/sys/fs/cgroup/cgroup.procs", F_OK) == 0) {
-        char safe_name[256];
-        sanitize_container_name(cfg->container_name, safe_name,
-                                sizeof(safe_name));
-        char cg_path[PATH_MAX];
-        snprintf(cg_path, sizeof(cg_path), "/sys/fs/cgroup/droidspaces/%s",
-                 safe_name);
-        mkdir_p(cg_path, 0755);
-
-        char cg_procs[PATH_MAX];
-        safe_strncpy(cg_procs, cg_path, sizeof(cg_procs));
-        strncat(cg_procs, "/cgroup.procs",
-                sizeof(cg_procs) - strlen(cg_procs) - 1);
-        FILE *f = fopen(cg_procs, "we");
-        if (f) {
-          fprintf(f, "%d\n", getpid());
-          fclose(f);
-        }
-      }
       ns_flags |= CLONE_NEWCGROUP;
     } else {
       /* Legacy kernel without force flag - skip cgroupns, run in host
@@ -654,11 +658,17 @@ int start_rootfs(struct ds_config *cfg) {
       cfg->net_done_pipe[0] = cfg->net_done_pipe[1] = -1;
     }
 
-    /* ── Networking pipes (created fresh for every boot cycle) ── */
+    /* ── Intermediate sync pipes (created fresh for every boot cycle) ── */
     int mid_sync_pipe[2] = {-1, -1};
+    if (pipe(mid_sync_pipe) < 0) {
+      ds_error("Failed to create mid sync pipe: %s", strerror(errno));
+      _exit(EXIT_FAILURE);
+    }
+    fcntl(mid_sync_pipe[0], F_SETFD, FD_CLOEXEC);
+    fcntl(mid_sync_pipe[1], F_SETFD, FD_CLOEXEC);
+
     if (cfg->net_mode != DS_NET_HOST) {
-      if (pipe(cfg->net_ready_pipe) < 0 || pipe(cfg->net_done_pipe) < 0 ||
-          pipe(mid_sync_pipe) < 0) {
+      if (pipe(cfg->net_ready_pipe) < 0 || pipe(cfg->net_done_pipe) < 0) {
         ds_error("Failed to create NAT sync pipes: %s", strerror(errno));
         _exit(EXIT_FAILURE);
       }
@@ -668,8 +678,6 @@ int start_rootfs(struct ds_config *cfg) {
       fcntl(cfg->net_ready_pipe[1], F_SETFD, FD_CLOEXEC);
       fcntl(cfg->net_done_pipe[0], F_SETFD, FD_CLOEXEC);
       fcntl(cfg->net_done_pipe[1], F_SETFD, FD_CLOEXEC);
-      fcntl(mid_sync_pipe[0], F_SETFD, FD_CLOEXEC);
-      fcntl(mid_sync_pipe[1], F_SETFD, FD_CLOEXEC);
 
       ds_log("[NET] Sync pipes created for net_mode=%d", cfg->net_mode);
     }
@@ -768,16 +776,17 @@ int start_rootfs(struct ds_config *cfg) {
         }
       }
 
-      /* Send init PID to monitor so it can target /proc/<pid>/ns/net */
-      if (cfg->net_mode != DS_NET_HOST && mid_sync_pipe[1] >= 0) {
+      /* Send init PID to monitor so it can target /proc/<pid>/ns/net or vproc */
+      if (mid_sync_pipe[1] >= 0) {
         if (write(mid_sync_pipe[1], &init_pid, sizeof(pid_t)) !=
             sizeof(pid_t)) {
           ds_warn(
-              "[NET] Intermediate: failed to write init_pid to mid_sync_pipe");
+              "Intermediate: failed to write init_pid to mid_sync_pipe");
         }
         close(mid_sync_pipe[1]);
+        mid_sync_pipe[1] = -1;
         close(mid_sync_pipe[0]);
-        mid_sync_pipe[0] = mid_sync_pipe[1] = -1;
+        mid_sync_pipe[0] = -1;
       }
 
       /* Send init PID to parent via sync pipe (first boot only) */
@@ -824,49 +833,47 @@ int start_rootfs(struct ds_config *cfg) {
       sync_pipe[1] = -1;
     }
 
-    /* ── Monitor: NAT networking handshake ─────────────────────────────
-     *
-     * Sequence (all non-blocking after pipes are ready):
-     *   1. Read init_pid from mid_sync_pipe[0]
-     *   2. Read "ready" byte from net_ready_pipe[0]  (init sent it)
-     *   3. Call setup_veth_host_side → creates bridge/veth/rules
-     *   4. Write ds_net_handshake to net_done_pipe[1] (init reads it)
-     *
-     * This handshake ensures the veth peer is moved into the container's
-     * netns while the init process is alive and waiting, avoiding the race
-     * where we try to open /proc/<pid>/ns/net before the process exists. */
-    if (cfg->net_mode != DS_NET_HOST && mid_sync_pipe[0] >= 0) {
+    /* ── Monitor Handshake ───────────────────────────────────────────── */
+    if (mid_sync_pipe[0] >= 0) {
       close(mid_sync_pipe[1]); /* monitor is reader */
 
-      pid_t netns_pid = -1;
-      ssize_t nr = read(mid_sync_pipe[0], &netns_pid, sizeof(pid_t));
+      pid_t init_pid = -1;
+      ssize_t nr = read(mid_sync_pipe[0], &init_pid, sizeof(pid_t));
       close(mid_sync_pipe[0]);
 
-      if (nr != sizeof(pid_t) || netns_pid <= 0) {
-        ds_warn("[NET] Monitor: failed to read init_pid from mid_sync_pipe "
+      if (nr != sizeof(pid_t) || init_pid <= 0) {
+        ds_warn("Monitor: failed to read init_pid from mid_sync_pipe "
                 "(nr=%zd pid=%d)",
-                nr, (int)netns_pid);
+                nr, (int)init_pid);
       } else {
-        ds_log("[NET] Monitor: received init_pid=%d, waiting for READY...",
-               (int)netns_pid);
-        cfg->container_pid = netns_pid;
+        cfg->container_pid = init_pid;
 
-        /* Close the ends we don't need */
-        close(cfg->net_ready_pipe[1]); /* monitor reads, init writes */
-        close(cfg->net_done_pipe[0]);  /* monitor writes, init reads  */
-
-        char rdy;
-        if (read(cfg->net_ready_pipe[0], &rdy, 1) < 0) {
-          ds_warn("[NET] Monitor: failed to read READY signal: %s",
-                  strerror(errno));
-        } else {
-          ds_log("[NET] Monitor: READY received from init (pid=%d)",
-                 (int)netns_pid);
+        /* Record PID namespace inode for future identity verification in virtualization updates */
+        if (cfg->virtualization) {
+          cfg->ns_inode = ds_get_pid_ns_inode(init_pid);
         }
-        close(cfg->net_ready_pipe[0]);
+
+        if (cfg->net_mode != DS_NET_HOST) {
+          ds_log("[NET] Monitor: received init_pid=%d, waiting for READY...",
+                 (int)init_pid);
+
+          /* Close the ends we don't need */
+          close(cfg->net_ready_pipe[1]); /* monitor reads, init writes */
+          close(cfg->net_done_pipe[0]);  /* monitor writes, init reads  */
+
+          char rdy;
+          if (read(cfg->net_ready_pipe[0], &rdy, 1) < 0) {
+            ds_warn("[NET] Monitor: failed to read READY signal: %s",
+                    strerror(errno));
+          } else {
+            ds_log("[NET] Monitor: READY received from init (pid=%d)",
+                   (int)init_pid);
+          }
+          close(cfg->net_ready_pipe[0]);
+        }
 
         if (cfg->net_mode == DS_NET_NAT) {
-          if (setup_veth_host_side(cfg, netns_pid) < 0) {
+          if (setup_veth_host_side(cfg, init_pid) < 0) {
             ds_warn("[NET] Monitor: setup_veth_host_side failed - "
                     "container will have no internet");
           } else {
@@ -878,19 +885,22 @@ int start_rootfs(struct ds_config *cfg) {
              * setup_veth_host_side() so the bridge IP is already assigned.
              * Skipped when --dns was given (custom servers bypass the proxy).
              */
-            ds_dns_proxy_start(cfg, netns_pid);
+            ds_dns_proxy_start(cfg, init_pid);
           }
         }
 
         /* Send handshake to init */
-        struct ds_net_handshake hs;
-        ds_net_derive_handshake(netns_pid, cfg, &hs);
-        ds_log("[NET] Monitor: sending DONE: peer=%s ip=%s", hs.peer_name,
-               hs.ip_str);
-        if (write(cfg->net_done_pipe[1], &hs, sizeof(hs)) !=
-            (ssize_t)sizeof(hs))
-          ds_warn("[NET] Monitor: failed to write handshake to init");
-        close(cfg->net_done_pipe[1]);
+        if (cfg->net_mode != DS_NET_HOST) {
+          struct ds_net_handshake hs;
+          ds_net_derive_handshake(init_pid, cfg, &hs);
+          ds_log("[NET] Monitor: sending DONE: peer=%s ip=%s", hs.peer_name,
+                 hs.ip_str);
+          if (write(cfg->net_done_pipe[1], &hs, sizeof(hs)) !=
+              (ssize_t)sizeof(hs))
+            ds_warn("[NET] Monitor: failed to write handshake to init");
+          close(cfg->net_done_pipe[1]);
+          cfg->net_done_pipe[1] = -1;
+        }
       }
     }
     /* ─────────────────────────────────────────────────────────────────── */
@@ -925,8 +935,32 @@ int start_rootfs(struct ds_config *cfg) {
     }
 
     int status;
-    while (waitpid(mid_pid, &status, 0) < 0 && errno == EINTR)
-      ;
+    while (1) {
+      pid_t r = waitpid(mid_pid, &status, WNOHANG);
+      if (r == mid_pid)
+        break;
+      if (r < 0 && errno != EINTR)
+        break;
+
+      /* Periodic tasks for monitor process */
+      if (cfg->virtualization && cfg->container_pid > 0) {
+        ds_virtualize_update(cfg);
+      }
+
+      /* Wait for next update or a signal (500ms for responsiveness) */
+      if (sfd >= 0) {
+        struct pollfd pfd = {.fd = sfd, .events = POLLIN};
+        if (poll(&pfd, 1, 500) > 0) {
+          /* Signal received, drain signalfd to prevent busy-wait */
+          struct signalfd_siginfo fdsi;
+          if (read(sfd, &fdsi, sizeof(fdsi)) < 0) {
+            /* Handle or ignore error */
+          }
+        }
+      } else {
+        usleep(500000);
+      }
+    }
 
     /* Log what monitor saw */
     if (WIFEXITED(status)) {
@@ -1013,6 +1047,7 @@ int start_rootfs(struct ds_config *cfg) {
       }
 
       cfg->reboot_cycle = 1;
+      clock_gettime(CLOCK_MONOTONIC, &cfg->start_time);
       if (cfg->foreground)
         ds_log_silent = 1;
 
@@ -1082,6 +1117,7 @@ int start_rootfs(struct ds_config *cfg) {
 
   ds_log("Container started with PID %d (Monitor: %d)", cfg->container_pid,
          monitor_pid);
+
 
   /* 9. Android: Remount /data with suid for directory-based containers.
    * This is required for sudo/su to work if the rootfs is on /data.
@@ -1828,6 +1864,48 @@ int show_info(struct ds_config *cfg, int trust_cfg_pid) {
       printf("  HW access: GPU\n");
     else
       printf("  HW access: " C_DIM "none" C_RESET "\n");
+
+    /* Resource usage & Limits */
+    long long mu, cu, pu;
+    long long lm, lq, lp, lpi;
+
+    ds_cgroup_get_usage(cfg, &mu, &cu, &pu);
+    ds_cgroup_get_limits(cfg, &lm, &lq, &lp, &lpi);
+
+    printf("\n" C_GREEN "Resource Management:" C_RESET "\n");
+
+    /* Memory Info */
+    if (mu >= 0 || cfg->memory_limit > 0) {
+      char mu_str[64] = "unknown", ml_str[64] = "unlimited";
+      if (mu >= 0) ds_format_size(mu, mu_str, sizeof(mu_str));
+
+      if (cfg->memory_limit > 0) {
+        ds_format_size(cfg->memory_limit, ml_str, sizeof(ml_str));
+        if (lm > 0) printf("  Memory: %s / %s (enforced)\n", mu_str, ml_str);
+        else printf("  Memory: %s / %s " C_YELLOW "(not enforced)" C_RESET "\n", mu_str, ml_str);
+      } else {
+        printf("  Memory: %s\n", mu_str);
+      }
+    }
+
+    /* PIDs Info */
+    if (pu >= 0 || cfg->pids_limit > 0) {
+      if (cfg->pids_limit > 0) {
+        if (lpi > 0) printf("  PIDs: %lld / %lld (enforced)\n", pu >= 0 ? pu : 0, cfg->pids_limit);
+        else printf("  PIDs: %lld / %lld " C_YELLOW "(not enforced)" C_RESET "\n", pu >= 0 ? pu : 0, cfg->pids_limit);
+      } else if (pu >= 0) {
+        printf("  PIDs: %lld\n", pu);
+      }
+    }
+
+    /* CPU Info */
+    if (cu >= 0 || cfg->cpu_quota > 0) {
+      if (cfg->cpu_quota > 0) {
+        if (lq > 0) printf("  CPU Limit: %lldus/%lldus (enforced)\n", cfg->cpu_quota, lp > 0 ? lp : cfg->cpu_period);
+        else printf("  CPU Limit: %lldus/%lldus " C_YELLOW "(not enforced)" C_RESET "\n", cfg->cpu_quota, cfg->cpu_period);
+      }
+      if (cu >= 0) printf("  CPU Usage: %.3f s\n", (double)cu / 1000000.0);
+    }
   } else {
     /* Best effort: read os-release from rootfs path */
     if (cfg->rootfs_path[0]) {

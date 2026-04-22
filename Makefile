@@ -48,7 +48,8 @@ SRCS = $(SRC_DIR)/main.c \
        $(SRC_DIR)/ds_dhcp.c \
        $(SRC_DIR)/ds_dns_proxy.c \
        $(SRC_DIR)/daemon.c \
-       $(SRC_DIR)/check.c
+       $(SRC_DIR)/check.c \
+       $(SRC_DIR)/virtualize.c
 
 # Compiler flags - hardened warning set, all warnings are errors
 CFLAGS  = -Wall -Wextra -Wpedantic -Werror -O2 -flto=auto -std=gnu99 -I$(SRC_DIR) -no-pie -pthread

@@ -6,6 +6,7 @@
  */
 
 #include "droidspace.h"
+#include <ctype.h>
 #include <ftw.h>
 #include <sys/xattr.h>
 #include <time.h>
@@ -24,10 +25,23 @@ void safe_strncpy(char *dst, const char *src, size_t size) {
 /* Mirrors ContainerManager.sanitizeContainerName() in the Android app.
  * Replaces spaces with dashes so directory names are consistent. */
 void sanitize_container_name(const char *name, char *out, size_t size) {
-  size_t i;
-  for (i = 0; i < size - 1 && name[i] != '\0'; i++)
-    out[i] = (name[i] == ' ') ? '-' : name[i];
-  out[i] = '\0';
+  size_t i, j = 0;
+  for (i = 0; name[i] != '\0' && j < size - 1; i++) {
+    char c = name[i];
+    if (isalnum((unsigned char)c) || c == '_' || c == '-' || c == '.') {
+      out[j++] = c;
+    } else if (c == ' ') {
+      out[j++] = '-';
+    }
+    /* Skip all other characters (like /, .., etc.) */
+  }
+  out[j] = '\0';
+
+  /* If the resulting name is empty (e.g. input was only dots/slashes),
+   * provide a safe default. */
+  if (j == 0) {
+    safe_strncpy(out, "unnamed-container", size);
+  }
 }
 
 /* ---------------------------------------------------------------------------
@@ -1364,4 +1378,62 @@ void sort_bind_mounts(struct ds_config *cfg) {
 
   qsort(cfg->binds, cfg->bind_count, sizeof(struct ds_bind_mount),
         compare_bind_mounts);
+}
+
+long long ds_parse_size(const char *str) {
+  if (!str || !*str)
+    return -1;
+  char *endptr;
+  errno = 0;
+  double val = strtod(str, &endptr);
+  if (errno != 0 || endptr == str || val < 0)
+    return -1;
+
+  while (isspace((unsigned char)*endptr))
+    endptr++;
+
+  if (*endptr == '\0')
+    return (long long)val;
+
+  long long factor = 1;
+  switch (toupper((unsigned char)*endptr)) {
+  case 'K':
+    factor = 1024LL;
+    break;
+  case 'M':
+    factor = 1024LL * 1024;
+    break;
+  case 'G':
+    factor = 1024LL * 1024 * 1024;
+    break;
+  case 'T':
+    factor = 1024LL * 1024 * 1024 * 1024;
+    break;
+  default:
+    return -1;
+  }
+
+  /* Advance past the unit character and check for trailing junk */
+  endptr++;
+  while (isspace((unsigned char)*endptr))
+    endptr++;
+  if (*endptr != '\0')
+    return -1;
+
+  return (long long)(val * factor);
+}
+
+void ds_format_size(long long bytes, char *buf, size_t sz) {
+    if (bytes < 0) {
+        snprintf(buf, sz, "N/A");
+        return;
+    }
+    const char *units[] = {"B", "KB", "MB", "GB", "TB"};
+    int unit = 0;
+    double d_bytes = (double)bytes;
+    while (d_bytes >= 1024 && unit < 4) {
+        d_bytes /= 1024;
+        unit++;
+    }
+    snprintf(buf, sz, "%.2f %s", d_bytes, units[unit]);
 }

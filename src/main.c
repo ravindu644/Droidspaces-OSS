@@ -75,10 +75,14 @@ void print_usage(void) {
       C_BOLD "Options (Security & Boot):" C_RESET "\n"
       "  -P, --selinux-permissive  Set host SELinux to permissive mode\n"
       "  -V, --volatile            Discard changes on exit (OverlayFS)\n"
+      "      --virtualization      Enable resource virtualization (meminfo, cpuinfo, etc)\n"
       "      --force-cgroupv1      Force legacy cgroup v1 hierarchy\n"
       "      --block-nested-namespaces\n"
       "                            Manual Deadlock Shield (no nested "
       "namespaces)\n"
+      "      --memory=LIMIT        Set memory limit (e.g. 512M, 1G)\n"
+      "      --cpus=COUNT          Set CPU limit (e.g. 1.5, 2)\n"
+      "      --pids-limit=LIMIT    Set max number of PIDs\n"
       "      --privileged=TAGS     Relax security: nomask, nocaps, noseccomp, "
       "shared, unfiltered-dev, full\n\n"
 
@@ -185,30 +189,63 @@ static int auto_resolve_container_name(struct ds_config *cfg) {
   char first_name[256];
   int count = count_running_containers(first_name, sizeof(first_name));
 
-  /* If 0 containers found, try a scan once if we aren't already silent
-   * (prevents infinite scan loops) */
-  if (count == 0 && !ds_log_silent) {
-    ds_log_silent = 1;
-    scan_containers();
-    ds_log_silent = 0;
-    count = count_running_containers(first_name, sizeof(first_name));
-  }
-
-  /* If still not found after scan, fail */
-  if (count == 0) {
-    ds_error("No containers are currently running.");
-    return -1;
+  if (count == 1) {
+    safe_strncpy(cfg->container_name, first_name, sizeof(cfg->container_name));
+    return 0;
   }
 
   if (count > 1) {
-    ds_error("Multiple containers running. Please specify " C_BOLD
-             "--name" C_RESET ".");
+    ds_error("Multiple containers running. Please specify " C_BOLD "--name" C_RESET ".");
     show_containers();
     return -1;
   }
 
-  safe_strncpy(cfg->container_name, first_name, sizeof(cfg->container_name));
-  return 0;
+  /* If no containers are running, check the Containers/ directory for installed systems */
+  char containers_dir[PATH_MAX];
+  snprintf(containers_dir, sizeof(containers_dir), "%s/Containers", get_workspace_dir());
+  DIR *d = opendir(containers_dir);
+  int installed_count = 0;
+  char last_found[256] = {0};
+
+  if (d) {
+    struct dirent *ent;
+    while ((ent = readdir(d)) != NULL) {
+      if (ent->d_name[0] == '.') continue;
+      char conf_path[PATH_MAX];
+      snprintf(conf_path, sizeof(conf_path), "%s/%s/container.config", containers_dir, ent->d_name);
+      if (access(conf_path, F_OK) == 0) {
+        installed_count++;
+        safe_strncpy(last_found, ent->d_name, sizeof(last_found));
+      }
+    }
+    closedir(d);
+  }
+
+  if (installed_count == 1) {
+    safe_strncpy(cfg->container_name, last_found, sizeof(cfg->container_name));
+    return 0;
+  }
+
+  if (installed_count > 1) {
+    ds_error("Multiple containers installed. Please specify " C_BOLD "--name" C_RESET ".");
+    show_containers();
+    return -1;
+  }
+
+  /* If still not found, try a recovery scan once if we aren't already silent */
+  if (!ds_log_silent) {
+    ds_log_silent = 1;
+    scan_containers();
+    ds_log_silent = 0;
+    count = count_running_containers(first_name, sizeof(first_name));
+    if (count == 1) {
+      safe_strncpy(cfg->container_name, first_name, sizeof(cfg->container_name));
+      return 0;
+    }
+  }
+
+  ds_error("No containers found. Specify " C_BOLD "-r" C_RESET " or " C_BOLD "-i" C_RESET " to start a new one.");
+  return -1;
 }
 
 /* ---------------------------------------------------------------------------
@@ -308,9 +345,7 @@ static void print_cgroup_status(struct ds_config *cfg) {
 
 int main(int argc, char **argv) {
   int ret = 0;
-  struct ds_config cfg;
-  /* CRITICAL: Zero all fields to avoid garbage pointer in dynamic arrays */
-  memset(&cfg, 0, sizeof(cfg));
+  struct ds_config cfg = {0};
 
   /* Initialise pipe fds to -1 so accidental close(-1) is harmless */
   cfg.net_ready_pipe[0] = cfg.net_ready_pipe[1] = -1;
@@ -341,6 +376,10 @@ int main(int argc, char **argv) {
       {"upstream", required_argument, 0, 259},
       {"force-cgroupv1", no_argument, 0, 260},
       {"block-nested-namespaces", no_argument, 0, 261},
+      {"memory", required_argument, 0, 265},
+      {"cpus", required_argument, 0, 266},
+      {"pids-limit", required_argument, 0, 267},
+      {"virtualization", no_argument, 0, OPT_VIRTUALIZATION},
       {"privileged", required_argument, 0, 264},
       {"nat-ip", required_argument, 0, 262},
       {"gpu", no_argument, 0, 263},
@@ -437,6 +476,13 @@ int main(int argc, char **argv) {
       ret = proxy_ret;
       goto cleanup;
     }
+  }
+
+  /* Sanitize container name immediately after discovery/resolution */
+  if (cfg.container_name[0] != '\0') {
+    char sanitized[256];
+    sanitize_container_name(cfg.container_name, sanitized, sizeof(sanitized));
+    safe_strncpy(cfg.container_name, sanitized, sizeof(cfg.container_name));
   }
 
   /*
@@ -854,6 +900,48 @@ int main(int argc, char **argv) {
       cfg.block_nested_ns = 1;
       break;
 
+    case 265: {
+      long long bytes = ds_parse_size(optarg);
+      if (bytes < 4 * 1024 * 1024) {
+        ds_error("Memory limit too low: %s (minimum 4MB)", optarg);
+        ret = 1;
+        goto cleanup;
+      }
+      cfg.memory_limit = bytes;
+      break;
+    }
+
+    case 266: {
+      char *endptr;
+      errno = 0;
+      double cpus = strtod(optarg, &endptr);
+      if (errno != 0 || endptr == optarg || *endptr != '\0' || cpus < 0.01) {
+        ds_error("Invalid or too low CPU limit: %s (minimum 0.01)", optarg);
+        ret = 1;
+        goto cleanup;
+      }
+      cfg.cpu_period = 100000; /* 100ms default period */
+      cfg.cpu_quota = (long long)(cpus * cfg.cpu_period);
+      break;
+    }
+
+    case 267: {
+      char *endptr;
+      errno = 0;
+      long long pids = strtoll(optarg, &endptr, 10);
+      if (errno != 0 || endptr == optarg || *endptr != '\0' || pids <= 0) {
+        ds_error("Invalid PIDs limit: %s", optarg);
+        ret = 1;
+        goto cleanup;
+      }
+      cfg.pids_limit = pids;
+      break;
+    }
+
+    case OPT_VIRTUALIZATION:
+      cfg.virtualization = 1;
+      break;
+
     case 262: {
       /* --nat-ip: static container IP inside the NAT subnet.
        * Only a basic format check here - subnet + uniqueness validation
@@ -895,7 +983,9 @@ int main(int argc, char **argv) {
 
   /* Set up global logging context for centralized logging engine */
   if (cfg.container_name[0] != '\0') {
-    safe_strncpy(ds_log_container_name, cfg.container_name,
+    char sanitized[256];
+    sanitize_container_name(cfg.container_name, sanitized, sizeof(sanitized));
+    safe_strncpy(ds_log_container_name, sanitized,
                  sizeof(ds_log_container_name));
   }
 
@@ -1005,6 +1095,9 @@ int main(int argc, char **argv) {
     if (cfg.container_name[0] == '\0' && cfg.rootfs_path[0]) {
       generate_container_name(cfg.rootfs_path, cfg.container_name,
                               sizeof(cfg.container_name));
+      char sanitized[256];
+      sanitize_container_name(cfg.container_name, sanitized, sizeof(sanitized));
+      safe_strncpy(cfg.container_name, sanitized, sizeof(cfg.container_name));
     }
     ret = start_rootfs(&cfg);
     goto cleanup;

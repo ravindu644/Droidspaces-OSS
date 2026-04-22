@@ -249,6 +249,8 @@ int ds_config_load(const char *config_path, struct ds_config *cfg) {
       cfg->force_cgroupv1 = parse_bool(val);
     } else if (strcmp(key, "block_nested_ns") == 0) {
       cfg->block_nested_ns = parse_bool(val);
+    } else if (strcmp(key, "virtualization") == 0) {
+      cfg->virtualization = parse_bool(val);
     } else if (strcmp(key, "privileged") == 0) {
       parse_privileged(val, cfg);
     } else if (strcmp(key, "bind_mounts") == 0) {
@@ -276,6 +278,14 @@ int ds_config_load(const char *config_path, struct ds_config *cfg) {
       else if (val[0])
         ds_warn("config: ignoring invalid static_nat_ip '%s': %s", val,
                 _errbuf);
+    } else if (strcmp(key, "memory_limit") == 0) {
+      cfg->memory_limit = atoll(val);
+    } else if (strcmp(key, "cpu_quota") == 0) {
+      cfg->cpu_quota = atoll(val);
+    } else if (strcmp(key, "cpu_period") == 0) {
+      cfg->cpu_period = atoll(val);
+    } else if (strcmp(key, "pids_limit") == 0) {
+      cfg->pids_limit = atoll(val);
     } else if (strcmp(key, "net_mode") == 0) {
       if (strcmp(val, "nat") == 0) {
         cfg->net_mode = DS_NET_NAT;
@@ -566,6 +576,7 @@ int ds_config_save(const char *config_path, struct ds_config *cfg) {
   fprintf(f_out, "volatile_mode=%d\n", cfg->volatile_mode);
   fprintf(f_out, "force_cgroupv1=%d\n", cfg->force_cgroupv1);
   fprintf(f_out, "block_nested_ns=%d\n", cfg->block_nested_ns);
+  fprintf(f_out, "virtualization=%d\n", cfg->virtualization);
 
   if (cfg->privileged_mask > 0) {
     fprintf(f_out, "privileged=");
@@ -641,6 +652,15 @@ int ds_config_save(const char *config_path, struct ds_config *cfg) {
    * auto-assigned); skipped for host/none modes where it's irrelevant. */
   if (cfg->net_mode == DS_NET_NAT && cfg->static_nat_ip[0])
     fprintf(f_out, "static_nat_ip=%s\n", cfg->static_nat_ip);
+
+  if (cfg->memory_limit > 0)
+    fprintf(f_out, "memory_limit=%lld\n", cfg->memory_limit);
+  if (cfg->cpu_quota > 0)
+    fprintf(f_out, "cpu_quota=%lld\n", cfg->cpu_quota);
+  if (cfg->cpu_period > 0)
+    fprintf(f_out, "cpu_period=%lld\n", cfg->cpu_period);
+  if (cfg->pids_limit > 0)
+    fprintf(f_out, "pids_limit=%lld\n", cfg->pids_limit);
 
   if (cfg->env_file[0])
     fprintf(f_out, "env_file=%s\n", cfg->env_file);
@@ -736,7 +756,11 @@ int ds_config_load_by_name(const char *name, struct ds_config *cfg) {
   snprintf(config_path, sizeof(config_path),
            "%s/Containers/%s/container.config", get_workspace_dir(), safe_name);
 
-  return ds_config_load(config_path, cfg);
+  int ret = ds_config_load(config_path, cfg);
+  if (ret == 0 && !cfg->config_file_existed) {
+    return -1; /* File not found is an error for load_by_name */
+  }
+  return ret;
 }
 
 int ds_config_save_by_name(const char *name, struct ds_config *cfg) {
@@ -795,6 +819,7 @@ void apply_reset_config(struct ds_config *cfg, int cli_net_mode_set,
   cfg->unknown_head = save_head;
   cfg->unknown_tail = save_tail;
   cfg->block_nested_ns = save_block_nested_ns;
+  cfg->virtualization = 0;
 
   if (cli_net_mode_set)
     cfg->net_mode = cli_net_mode;

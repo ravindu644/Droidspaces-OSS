@@ -765,14 +765,14 @@ static void ds_selinux_transition(char **argv) {
   {
     int sfd = open("/proc/self/attr/current", O_WRONLY);
     if (sfd >= 0) {
-      write(sfd, DS_SELINUX_CTX, strlen(DS_SELINUX_CTX));
+      (void)write_all(sfd, DS_SELINUX_CTX, strlen(DS_SELINUX_CTX));
       close(sfd);
     }
   }
   /* Clear the stale exec context regardless of whether setcon worked */
   fd = open("/proc/self/attr/exec", O_WRONLY);
   if (fd >= 0) {
-    write(fd, "\0", 1);
+    (void)write_all(fd, "\0", 1);
     close(fd);
   }
 }

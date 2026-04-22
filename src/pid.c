@@ -365,90 +365,108 @@ int sync_pidfile(const char *src_pidfile, const char *name) {
  * ---------------------------------------------------------------------------*/
 
 int show_containers(void) {
-  DIR *d = opendir(get_pids_dir());
-  if (!d) {
-    if (errno == ENOENT) {
-      printf("\n(No containers running)\n\n");
-      return 0;
-    }
-    ds_error("Failed to open PIDs directory: %s", strerror(errno));
-    return -1;
-  }
-
   struct container_info {
-    char name[128];
+    char name[256];
     pid_t pid;
+    int running;
   } *containers = NULL;
 
   int count = 0;
-  int cap = 32;
-  containers = malloc(cap * sizeof(struct container_info));
-  if (!containers) {
+  int cap = 64;
+  containers = calloc((size_t)cap, sizeof(struct container_info));
+  if (!containers) return -1;
+
+  /* Step 1: Scan Containers directory to find all installed systems */
+  char containers_dir[PATH_MAX];
+  snprintf(containers_dir, sizeof(containers_dir), "%s/Containers", get_workspace_dir());
+  DIR *d = opendir(containers_dir);
+  if (d) {
+    struct dirent *ent;
+    while ((ent = readdir(d)) != NULL) {
+      if (ent->d_name[0] == '.') continue;
+
+      /* Verify it's a valid container directory (contains container.config) */
+      char conf_path[PATH_MAX];
+      snprintf(conf_path, sizeof(conf_path), "%s/%s/container.config", containers_dir, ent->d_name);
+      if (access(conf_path, F_OK) != 0) continue;
+
+      if (count >= cap) {
+        cap *= 2;
+        struct container_info *tmp = realloc(containers, (size_t)cap * sizeof(struct container_info));
+        if (!tmp) { free(containers); closedir(d); return -1; }
+        containers = tmp;
+      }
+
+      safe_strncpy(containers[count].name, ent->d_name, sizeof(containers[count].name));
+
+      /* Check status */
+      struct ds_config tmp_cfg = {0};
+      safe_strncpy(tmp_cfg.container_name, ent->d_name, sizeof(tmp_cfg.container_name));
+      pid_t pid = 0;
+      if (is_container_running(&tmp_cfg, &pid)) {
+        containers[count].running = 1;
+        containers[count].pid = pid;
+      } else {
+        containers[count].running = 0;
+        containers[count].pid = 0;
+      }
+      count++;
+    }
     closedir(d);
-    return -1;
   }
 
-  size_t max_name_len = 4; /* "NAME" */
+  /* Step 2: Scan Pids directory for any running containers NOT in Containers/ (e.g. ad-hoc) */
+  d = opendir(get_pids_dir());
+  if (d) {
+    struct dirent *ent;
+    while ((ent = readdir(d)) != NULL) {
+      if (!is_pid_file(ent->d_name)) continue;
 
-  struct dirent *ent;
-  while ((ent = readdir(d)) != NULL) {
-    if (is_pid_file(ent->d_name)) {
+      char name[256];
+      get_container_name_from_pidfile(ent->d_name, name, sizeof(name));
+
+      /* Skip if already added from Containers/ */
+      int exists = 0;
+      for (int i = 0; i < count; i++) {
+        if (strcmp(containers[i].name, name) == 0) {
+          exists = 1; break;
+        }
+      }
+      if (exists) continue;
+
       struct ds_config tmp_cfg = {0};
-      char clean_name[128];
-      get_container_name_from_pidfile(ent->d_name, clean_name,
-                                      sizeof(clean_name));
-
-      safe_strncpy(tmp_cfg.container_name, clean_name,
-                   sizeof(tmp_cfg.container_name));
-      resolve_pidfile_from_name(clean_name, tmp_cfg.pidfile,
-                                sizeof(tmp_cfg.pidfile));
-
-      pid_t pid;
+      safe_strncpy(tmp_cfg.container_name, name, sizeof(tmp_cfg.container_name));
+      pid_t pid = 0;
       if (is_container_running(&tmp_cfg, &pid)) {
         if (count >= cap) {
-          if (cap > 8192) {
-            free(containers);
-            closedir(d);
-            return -1;
-          }
           cap *= 2;
-          struct container_info *tmp =
-              realloc(containers, (size_t)cap * sizeof(struct container_info));
-          if (!tmp) {
-            free(containers);
-            closedir(d);
-            return -1;
-          }
+          struct container_info *tmp = realloc(containers, (size_t)cap * sizeof(struct container_info));
+          if (!tmp) { free(containers); closedir(d); return -1; }
           containers = tmp;
         }
-
-        safe_strncpy(containers[count].name, clean_name,
-                     sizeof(containers[count].name));
+        safe_strncpy(containers[count].name, name, sizeof(containers[count].name));
+        containers[count].running = 1;
         containers[count].pid = pid;
-        size_t nlen = strlen(containers[count].name);
-        if (nlen > max_name_len)
-          max_name_len = nlen;
         count++;
-      } else if (pid == 0 && access(tmp_cfg.pidfile, F_OK) == 0) {
-        /* Explicit pruning during scan */
-        unlink(tmp_cfg.pidfile);
-        remove_mount_path(tmp_cfg.pidfile);
       }
     }
+    closedir(d);
   }
-  closedir(d);
 
   if (count == 0) {
-    printf("\n(No containers running)\n\n");
+    printf("\n(No containers found)\n\n");
     free(containers);
     return 0;
   }
 
-  if (max_name_len > 60)
-    max_name_len = 60;
+  size_t max_name_len = 4; /* "NAME" */
+  for (int i = 0; i < count; i++) {
+    size_t l = strlen(containers[i].name);
+    if (l > max_name_len) max_name_len = l;
+  }
+  if (max_name_len > 60) max_name_len = 60;
 
-/* Helper to print horizontal line */
-#define PRINT_LINE(start, mid, end)                                            \
+#define PRINT_LINE(start, mid, mid2, end)                                      \
   do {                                                                         \
     printf("%s", start);                                                       \
     for (size_t i = 0; i < max_name_len + 2; i++)                              \
@@ -456,22 +474,29 @@ int show_containers(void) {
     printf("%s", mid);                                                         \
     for (size_t i = 0; i < 10; i++)                                            \
       printf("─");                                                             \
+    printf("%s", mid2);                                                        \
+    for (size_t i = 0; i < 12; i++)                                            \
+      printf("─");                                                             \
     printf("%s\n", end);                                                       \
   } while (0)
 
   printf("\n");
-  PRINT_LINE("┌", "┬", "┐");
-  printf("│ %-*s │ %-8s │\n", (int)max_name_len, "NAME", "PID");
-  PRINT_LINE("├", "┼", "┤");
+  PRINT_LINE("┌", "┬", "┬", "┐");
+  printf("│ %-*s │ %-8s │ %-10s │\n", (int)max_name_len, "NAME", "PID", "STATUS");
+  PRINT_LINE("├", "┼", "┼", "┤");
 
   for (int i = 0; i < count; i++) {
-    printf("│ %-*s │ %-8d │\n", (int)max_name_len, containers[i].name,
-           containers[i].pid);
+    char pid_str[16];
+    if (containers[i].pid > 0) snprintf(pid_str, sizeof(pid_str), "%d", containers[i].pid);
+    else safe_strncpy(pid_str, "-", sizeof(pid_str));
+
+    printf("│ %-*s │ %-8s │ %s%-10s" C_RESET " │\n", (int)max_name_len, containers[i].name,
+           pid_str, containers[i].running ? C_GREEN : C_RED,
+           containers[i].running ? "RUNNING" : "STOPPED");
   }
 
-  PRINT_LINE("└", "┴", "┘");
+  PRINT_LINE("└", "┴", "┴", "┘");
   printf("\n");
-#undef PRINT_LINE
 
   free(containers);
   return 0;
