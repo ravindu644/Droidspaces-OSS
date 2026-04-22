@@ -70,6 +70,13 @@ char *ds_resolve_path_arg(const char *path) {
 
   if (p[0] == '/') {
     char *res = strdup(p);
+    if (res) {
+      size_t len = strlen(res);
+      while (len > 1 && res[len - 1] == '/') {
+        res[len - 1] = '\0';
+        len--;
+      }
+    }
     free(to_free);
     return res;
   }
