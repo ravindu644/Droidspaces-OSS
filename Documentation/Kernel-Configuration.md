@@ -16,8 +16,6 @@ This guide explains how to compile a Linux kernel with Droidspaces support for A
 - [Additional Kernel Configuration for UFW/Fail2ban](#additional-kernel-config)
 - [Configuring Non-GKI Kernels](#non-gki)
 - [Configuring GKI Kernels](#gki)
-    - [Method 1](#method-1-legacy-patching-boot-image-only) - Unprofessional way
-    - [Method 2](#method-2-the-hybrid-lkm-workflow-recommended) - Recommended way
 - [Testing Your Kernel](#testing)
 - [Recommended Kernel Versions](#versions)
 - [Nested Containers](#nested)
@@ -221,162 +219,97 @@ Flash the compiled kernel to your device using Odin, fastboot, Heimdall, or what
 
 After booting, open the Droidspaces app and go to **Settings** (gear icon) -> **Requirements** -> **Check Requirements**. All checks should pass with green checkmarks.
 
+---
+
 <a id="gki"></a>
 ## Configuring GKI Kernels
 
-**Applies to:** Kernel 5.4, 5.10, 5.15, 6.1+
+**Applies to:** Kernel 5.4, 5.10, 5.15, 6.1, 6.6, 6.12+
 
----
+Google's Generic Kernel Image (GKI) enforces strict **kABI (Kernel Application Binary Interface)** compliance. Enabling standard Droidspaces features like `CONFIG_SYSVIPC` or `CONFIG_IPC_NS` would normally shift memory offsets in the core `task_struct`, causing pre-compiled vendor modules (GPU, Camera, etc.) to crash or bootloop the device.
 
-### The GKI "Built-in" Trap
+To solve this, Droidspaces provides specialized **kABI-friendly patches** that allow these features to be enabled without shifting offsets.
 
-Core Droidspaces features - specifically **IPC Namespaces (`CONFIG_IPC_NS`)** and **Devices Control Groups (`CONFIG_CGROUP_DEVICE`)** - **CANNOT BE COMPILED AS MODULES (`=m`)**. They must be built directly into the kernel image (`=y`).
+### Step 1: Apply the Mandatory kABI Patch
 
-Because these features are built-in, enabling them fundamentally changes the core kernel's internal data structures. This **IMMEDIATELY BREAKS THE GKI ABI**.
+You **MUST** apply the correct kABI fix patch for your kernel version. Without this patch, your device will bootloop immediately upon enabling `CONFIG_SYSVIPC` or `CONFIG_IPC_NS`.
 
-In GKI, an ABI break is an "all-or-nothing" event. Once the internal structures change, **EVERY SINGLE KERNEL MODULE (`.ko`)** in the system - including critical vendor drivers for your GPU, Camera, Audio, and Sensors - must be recompiled and re-linked against the new kernel image.
+- **For Kernels BELOW 6.12 (5.4, 5.10, 5.15, 6.1, 6.6):**
+  Apply the recommended patch from [Documentation/resources/kernel-patches/GKI/below-kernel-6.12](./resources/kernel-patches/GKI/below-kernel-6.12/).
 
----
+  > [!TIP]
+  >
+  > The `001.GKI-below-6.12-fix_sysvipc_kABI_6_7_8.patch` is recommended for most devices.
+  >
+  > If this patch causes a bootloop, try the alternative patches from the same directory (e.g., `1_2_3` or `3_4_5`).
 
-### Why "Hacking" CRC is Dangerous: A Technical Deep Dive
+- **For Kernels 6.12 and ABOVE:**
+  Apply the patch from [Documentation/resources/kernel-patches/GKI/kernel-6.12](./resources/kernel-patches/GKI/kernel-6.12/001.GKI-6.12-or-above-fix_sysvipc_kABI.patch).
 
-Many developers try to bypass the kernel's **CRC** to force the kernel to load vendor modules even after the ABI has broken. This is a recipe for disaster.
-
-#### The Memory Offset Problem
-
-Imagine a kernel structure used by a vendor GPU driver:
-
-```c
-struct b {
-    int varX;  // Offset: 0x0 (32-bit)
-    long varY; // Offset: 0x20 (64-bit)
-    long varZ; // Offset: 0x60 (64-bit)
-};
-```
-
-The pre-compiled vendor module expects `varY` to be exactly at `&b + 0x20`.
-
-Now, if you enable a Droidspaces config that adds a new variable (`varC`) to this struct to support namespaces:
-
-```c
-struct b {
-    int varX;  // Offset: 0x0
-    int varC;  // Offset: 0x20 (NEW VARIABLE)
-    long varY; // Offset: 0x40 (SHIFTED!)
-    long varZ; // Offset: 0x80 (SHIFTED!)
-};
-```
-
-If you force the kernel to load the old vendor module by bypassing CRC checks, the module will try to read `varY` from the old offset (`0x20`). It will actually be reading `varC`.
-
-**The Result**: The module writes data to the wrong memory addresses. This causes:
-- **Silent Memory Corruption**: Your OS will behave "weirdly," apps will crash randomly, and you may lose data.
-- **Hardware Panics**: The phone will shut off instantly without a single line of logs because the kernel has corrupted its own state.
-
-For real-world examples of these failures, see [Issue #23](https://github.com/ravindu644/Droidspaces-OSS/issues/23) and [Issue #26](https://github.com/ravindu644/Droidspaces-OSS/issues/26).
-
----
-
-### Method 1: Legacy Patching (Boot Image Only)
-
-> [!CAUTION]
-> 
-> **KERNEL 5.4 / 5.10 / 5.15 ONLY. THIS METHOD IS COMPLETELY BROKEN ON KERNEL 6.1 AND HIGHER.**
->
-> This method uses ABI/CRC bypass patches and only replaces `boot.img`. It may work on older GKI kernels in some device configurations, but it is inherently unstable and relies on the memory corruption behaviour described above.
->
-> **If you choose to proceed, you accept full responsibility for the outcome.** Issues caused by this method - bootloops, random power-offs, data corruption, camera or sensor failures, or anything else - **will be closed immediately without investigation.** You have been warned.
-
-#### Step 1: Apply the GKI Patches
-
-Apply **all** patches from the [Documentation/resources/kernel-patches/GKI](./resources/kernel-patches/GKI/) directory to your kernel source:
+**How to apply the patch:**
 
 ```bash
-patch -p1 < /path/to/filename.patch
+patch -p1 < /path/to/extracted/patchfile.patch
 ```
 
-Every patch in this directory is required. Skipping even one will cause a bootloop, as ABI compatibility with pre-compiled vendor modules cannot be maintained without them.
+### Step 2: Edit `gki_defconfig`
 
-#### Step 2: Edit `gki_defconfig`
+Rather than using separate fragment files, directly edit `arch/arm64/configs/gki_defconfig`, use this **GKI-Exclusive Configuration**.
 
-Rather than using separate fragment files in the GKI build system, directly edit `arch/arm64/configs/gki_defconfig`.
+These options have been tested and proven to work across all GKI kernels without breaking ABI.
 
-Follow these rules:
+> [!WARNING]
+>
+> **DO NOT** enable anything other than the recommended GKI configuration below. These specific items are kABI-safe when combined with the Step 1 patch.
 
-- **Do not** append the contents of [required kernel configuration](#kernel-config) or [additional kernel configuration](#additional-kernel-config) to the end of `gki_defconfig` as a block.
+```makefile
+# Kernel configurations for full DroidSpaces support for GKI
+# Copyright (C) 2026 ravindu644 <droidcasts@protonmail.com>
+
+# IPC
+CONFIG_SYSVIPC=y
+CONFIG_POSIX_MQUEUE=y
+
+# Namespaces
+CONFIG_IPC_NS=y
+CONFIG_PID_NS=y
+
+# HW Access Support
+CONFIG_DEVTMPFS=y
+
+# --- Below configs are optional but recommended ---
+
+# Networking (Docker/NAT support)
+CONFIG_NETFILTER_XT_MATCH_ADDRTYPE=y
+
+# UFW support
+CONFIG_NETFILTER_XT_TARGET_REJECT=y
+CONFIG_NETFILTER_XT_TARGET_LOG=y
+CONFIG_NETFILTER_XT_MATCH_RECENT=y
+
+# Fail2ban support
+CONFIG_IP_SET=y
+CONFIG_IP_SET_HASH_IP=y
+CONFIG_IP_SET_HASH_NET=y
+CONFIG_NETFILTER_XT_SET=y
+```
+
+**Workflow Rules:**
+- **Do not** append this as a block at the end of the file.
 - Search for each option individually.
 - If an option appears as `# CONFIG_NAME is not set`, change it to `CONFIG_NAME=y`.
 - If an option is already set to `CONFIG_NAME=y`, leave it alone.
-- If an option does not exist anywhere in the file, add it at the end.
+- If an option does not exist, add it at the end.
 
-#### Step 3: Compile
+### Step 3: Compile
 
 Use your preferred build method: Bazel, the official AOSP `build.sh`/`prepare_vendor.sh` scripts, or traditional `Kbuild` with `make`.
 
-#### Step 4: Flash and Test
+### Step 4: Flash and Test
 
-Flash **only** the compiled `boot.img` using Odin, fastboot, Heimdall, or your device's preferred method.
+Flash the compiled `boot.img` or `Image` using Odin, fastboot, Heimdall, Anykernel3 or your device's preferred method. Since we used kABI-safe patches, your stock vendor modules will continue to work perfectly.
 
-After booting, open the Droidspaces app and go to **Settings** (gear icon) -> **Requirements** -> **Check Requirements**. If something does not pass, refer to the [Testing](#testing) section and debug it yourself.
-
----
-
-### Method 2: The Hybrid LKM Workflow (Recommended)
-
-Replacing only `boot.img` is not enough for a stable system. You must update the entire module ecosystem of your device. This is the correct way to handle a GKI ABI break.
-
-#### For Intermediate Users
-
-Recommended for those who can build kernels but are new to complex LKM management.
-
-- **Build**: Compile your kernel with all Droidspaces features AND all required LKMs.
-
-- **Identify**: Run [LKM_Tools](https://github.com/ravindu644/LKM_Tools) to build `vendor_boot.img`, `vendor_dlkm.img`, `system_dlkm.img`. If it reports **missing modules** (vendor-specific modules that were not built from source):
-    - **Grab**: Extract those missing modules from your stock ROM.
-    - **Stage**: Place the stock `.ko` files in the staging directory.
-    - **Patch**: **ONLY NOW** apply the [CRC patch](./resources/kernel-patches/GKI/01.disable_crc_checks_for_lkms.patch) to the kernel's module loader to allow these few mismatched modules to be accepted.
-    - **Re-trigger**: Run LKM_Tools again to "perfectly wire up" the stock modules into your partitions.
-
-- **Flash**: Flash **all** generated images (`boot`, `vendor_boot`, `system_dlkm`, `vendor_dlkm`) in a single "one-shot" operation.
-
-> [!TIP]
->
-> This method is significantly more stable than a global CRC bypass. Since 90% of your modules are compiled natively against your new kernel, you are only bypassing CRC for ~30 stock modules instead of hundreds. It's "better than nothing" if you lack full source code for every vendor driver.
-
-#### For Advanced Users
-
-The only production-grade way to build a GKI kernel. This method ensures 100% ABI compatibility and system stability with zero compromises.
-
-- **Strict ABI Compliance**: **DO NOT APPLY ANY CRC OR ABI RELATED PATCHES.** Your entire tree must be compiled with strict symbol versioning enabled.
-
-- **Source-level Wiring**: Identify which LKMs are missing using [LKM_Tools](https://github.com/ravindu644/LKM_Tools). If an LKM is not building, manually wire it into your kernel's `Drivers/{Makefile, Kconfig}`.
-
-- **Kanging Missing Sources**: If the entire source code for a specific vendor LKM is missing from your tree, you must "kang" (backport/pull) the source from another GKI kernel tree from GitHub, wire it up, and compile it locally.
-
-- **One-Shot Packaging**: Use LKM Tools to "perfectly wire up" the resulting `.ko` files across the DLKM partitions.
-
-- **Flash**: Deploy the full set of images (boot + all DLKMs) in a single session.
-
----
-
-### Why LKM Tools?
-
-A common question among developers is why they should use [LKM_Tools](https://github.com/ravindu644/LKM_Tools) instead of relying on the standard Bazel/AOSP build scripts (`build.sh`, `prepare_vendor.sh`).
-
-The reason is simple: **Module loading order is critical for system stability.**
-
-1. **OEM Specialization**: Your device manufacturer uses a specific `modules.load` configuration that defines exactly which modules are loaded and in what precise sequence.
-2. **Incomplete/Useless Images**: Standard AOSP/Bazel build scripts generate a "generic" `vendor_boot.img` that is often incomplete and unusable for production. For example, if a stock OEM `vendor_boot` contains 200 LKMs, the generic AOSP script may build a `vendor_boot` with as few as ~100 modules. These missing modules are critical for hardware initialization.
-3. **The Solution**: [LKM_Tools](https://github.com/ravindu644/LKM_Tools) is designed to handle this complexity. It replicates the stock OEM module layout, ensuring your newly compiled modules are wired and loaded in the exact same sequence as the stock ROM.
-
----
-
-### Reference & Tooling
-
-Do not attempt Method 2 without following a proven reference implementation.
-
-- **Gold Standard Reference**: [ravindu644/android_kernel_a166p](https://github.com/ravindu644/android_kernel_a166p) (Used to wire ~600 modules with zero hacks).
-- **Essential Tool**: [ravindu644/LKM_Tools](https://github.com/ravindu644/LKM_Tools) (Automates the complex re-packaging of DLKM partitions).
+After booting, open the Droidspaces app and go to **Settings** (gear icon) -> **Requirements** -> **Check Requirements** to verify your setup.
 
 ---
 
