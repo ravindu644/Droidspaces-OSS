@@ -716,7 +716,10 @@ char *ds_config_auto_path(const char *rootfs_path) {
   char *dir = dirname(temp);
   char *final_path = malloc(PATH_MAX);
   if (final_path) {
-    snprintf(final_path, PATH_MAX, "%s/container.config", dir);
+    if (strcmp(dir, "/") == 0)
+      snprintf(final_path, PATH_MAX, "/container.config");
+    else
+      snprintf(final_path, PATH_MAX, "%s/container.config", dir);
   }
 
   return final_path;
