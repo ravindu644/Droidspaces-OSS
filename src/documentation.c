@@ -440,9 +440,14 @@ static void print_page(int page, const char *bin) {
 
     printf("%sGPU-only mode (no full hardware passthrough):%s\n", bold, reset);
     printf("  %s --name=gpu --rootfs=/path/to/rootfs --gpu start\n", bin);
-    printf("  (Scans host /dev for GPU nodes and mknods them into an\n");
+    printf("  (Scans host /dev for GPU nodes and maps them into an\n");
     printf("   isolated tmpfs /dev. Safe alternative to --hw-access when\n");
     printf("   only GPU acceleration is needed.)\n\n");
+
+    printf("%sPrivileged Mode (Security Relaxation):%s\n", bold, reset);
+    printf("  %s -r rootfs/ --privileged=full start\n", bin);
+    printf("  %s -r rootfs/ --privileged=nomask,noseccomp start\n", bin);
+    printf("  (Permits dangerous/expert features like user namespaces.)\n\n");
     break;
 
   case 4: /* Notes */

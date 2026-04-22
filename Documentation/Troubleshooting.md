@@ -14,7 +14,6 @@ Common issues, their causes, and how to fix them.
 - [Networking is completely dead - ping fails with "socket: permission denied"](#paranoid-networking)
 - [DNS / Name Resolution Issues](#dns--name-resolution-issues)
 - [WiFi/Mobile Data Disconnects](#wifimobile-data-disconnects)
-- [NAT Mode: No Internet / IPv6-Only Upstream](#ipv4-quirks)
 - [SELinux-Induced Rootfs Corruption](#selinux-induced-rootfs-corruption-directory-mode)
 - [Systemd Service Sandboxing Conflicts](#systemd-service-sandboxing-conflicts-legacy-kernels)
 - [WIFI `Power save: on` make the networking experience sluggish in Android](#nuke-wifi-powersave)
@@ -276,18 +275,6 @@ In this mode, the rootfs is stored as a standalone ext4 image and loop-mounted a
     sudo systemctl daemon-reload
     sudo systemctl restart <service-name>
     ```
-
----
-
-<a id="ipv4-quirks"></a>
-## NAT Mode: No Internet / IPv6-Only Upstream
-
-**Symptoms**: Container starts in NAT mode but has no internet access, even with correct `--upstream` interfaces. `ping 8.8.8.8` fails inside the container.
-
-**Cause**: Droidspaces NAT mode currently supports **IPv4 only**. If your upstream interface (e.g., `rmnet_data0`) does not have an assigned IPv4 address (common with certain ISPs that use IPv6-only APNs/networks), NAT will fail. Additionally, some mobile data interfaces may change names (e.g., `rmnet_data0` vs `rmnet_data1`) upon reconnection.
-
-> [!TIP]
-> **Using Wildcards:** To handle unpredictable interface names on mobile data, you can use wildcards in your `--upstream` configuration (e.g., `--upstream "rmnet_data*,wlan0"`). Droidspaces will automatically monitor and match any active interface that fits the pattern - in real time.
 
 ---
 

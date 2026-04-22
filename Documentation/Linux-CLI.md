@@ -6,7 +6,7 @@ Complete guide to using Droidspaces from the command line on Linux.
 >
 > **Using the CLI on Android:** All command-line arguments work exactly the same on Android.
 >
-> Once the backend is installed via the app, the `droidspaces` binary is located at `/data/local/Droidspaces/bin/droidspaces`. If the boot module is installed and you've restarted your phone, it will also be available globally in your `$PATH`.
+> Once the backend is installed via the app, the `droidspaces` binary is located at `/data/local/Droidspaces/bin/droidspaces`.
 >
 > Also, you can view the full interactive, **more advanced** command-line documentation offline at any time by running:
 > `droidspaces docs`
@@ -15,12 +15,12 @@ Complete guide to using Droidspaces from the command line on Linux.
 
 ## Quick Navigation
 
-[1. Getting Started](#getting-started)
-[2. Command Reference](#command-reference)
-[3. Options & Flags](#options-flags)
-[4. Configuration Files](#configs)
-[5. Common Workflows](#common-workflows)
-[6. Advanced Usage & Lifecycle](#advanced-usage)
+[1. Getting Started](#getting-started)  
+[2. Command Reference](#command-reference)  
+[3. Options & Flags](#options-flags)  
+[4. Configuration Files](#configs)  
+[5. Common Workflows](#common-workflows)  
+[6. Advanced Usage & Lifecycle](#advanced-usage)  
 [7. System Requirements](#system-requirements)
 
 ---
@@ -86,7 +86,7 @@ sudo droidspaces --name=web,db,app stop
 | Option | Short | Description |
 |--------|-------|-------------|
 | `--rootfs=PATH` | `-r` | Path to a rootfs directory. Must contain `/sbin/init`. |
-| `--rootfs-img=PATH` | `-i` | Path to an ext4 rootfs image file. Automatically loop-mounted. |
+| `--rootfs-img=PATH` | `-i` | Path to an ext4 rootfs image file or block device. Automatically mounted. |
 
 *Note: These are mutually exclusive. `--name` is mandatory when using `--rootfs-img`.*
 
@@ -94,11 +94,9 @@ sudo droidspaces --name=web,db,app stop
 
 | Option | Short | Description |
 |--------|-------|-------------|
-| `--name=NAME` | `-n` | Unique name for the container. Auto-generated if omitted. |
-| `--pidfile=PATH` | `-p` | Custom path for the PID file. Mutually exclusive with `--name`. |
+| `--name=NAME` | `-n` | Unique name for the container. Auto-generated if omitted in directory-based rootfs mode. |
 | `--hostname=NAME` | `-h` | Set the container's hostname. Defaults to the container name. |
 | `--conf=PATH` | `-C` | Load container configuration directly from a config file. |
-| `--force-cgroupv1` | | Force legacy Cgroup V1 hierarchy. Required if the host kernel has a broken or partial Cgroups V2 implementation (common on older Android 4.x kernels). |
 | `--reset` | | Reset container config to defaults (preserves name, rootfs path). |
 
 ### Networking
@@ -118,9 +116,12 @@ sudo droidspaces --name=web,db,app stop
 | `--foreground` | `-f` | Attach to the container console on start to see init logs. |
 | `--volatile` | `-V` | Ephemeral mode. Changes are stored in RAM and lost on exit. |
 | `--hw-access` | `-H` | Expose host hardware (GPU, USB, etc.). Auto-detects GPU group IDs and creates matching groups inside the container. Mounts X11 socket for GUI apps (Termux X11 on Android, `/tmp/.X11-unix` on Linux). See [Safety Warning](Features.md#hardware-access-mode). |
+| `--gpu` | | Exclusively enable GPU acceleration. Scans the host `/dev` for known GPU nodes and securely maps only them into the container without exposing other host hardware. (Ignored if `-H` is passed). |
 | `--termux-x11`| `-X` | Mount X11 socket for Termux-X11 display (Android only). |
 | `--enable-android-storage`| | Mount `/storage/emulated/0` (Android only). |
 | `--selinux-permissive` | | Set host SELinux to permissive for the container session. |
+| `--force-cgroupv1` | | Force legacy Cgroup V1 hierarchy. Required if the host kernel has a broken or partial Cgroups V2 implementation (common on older Android 4.x kernels). |
+| `--privileged=TAGS` | | Relax security protections. Accepts a comma-separated list of tags: `nomask`, `nocaps`, `noseccomp`, `shared`, `unfiltered-dev`, `full`. Use with extreme caution. |
 
 ### Bind Mounts
 
@@ -138,7 +139,7 @@ sudo droidspaces --name=web,db,app stop
 <a id="configs"></a>
 ## 4. Configuration Files
 
-Instead of relying solely on long command-line arguments, Droidspaces allows you to define container environments in a `.config` file and load it using `--conf=./myconfig.config`.
+Instead of relying solely on long command-line arguments, Droidspaces allows you to define container environments in a `.config` file and load it using the `--conf` flag.
 
 Below is a reference of every supported key in the configuration file:
 
@@ -178,6 +179,9 @@ disable_ipv6=0
 # Expose host hardware nodes to the container (/dev)
 enable_hw_access=0
 
+# Auto-detect and securely map GPU nodes without full hardware access
+enable_gpu_mode=0
+
 # Android: Setup Termux X11 socket
 enable_termux_x11=0
 
@@ -203,6 +207,12 @@ foreground=0
 
 <a id="common-workflows"></a>
 ## 5. Common Workflows
+
+### Running with a Config File
+Instead of passing many flags, you can load everything from a `.config` file:
+```bash
+sudo droidspaces --conf=./my-container.config start
+```
 
 ### Persistent Development
 ```bash
@@ -237,6 +247,20 @@ sudo droidspaces --name=mycontainer run uname -a
 sudo droidspaces --name=mycontainer run sh -c "ps aux | grep init"
 ```
 
+### GPU Acceleration
+Ensure only the GPU nodes (and not all host hardware) are securely exposed:
+```bash
+sudo droidspaces --name=gpu-app --rootfs=/path/to/rootfs --gpu start
+```
+
+### Deep Customization (Privileged Mode)
+For cases where you need unmasked access:
+```bash
+sudo droidspaces --name=privileged-box --rootfs=/path/to/rootfs --privileged=full start
+# Or mix and match tags:
+sudo droidspaces --name=dev-box --rootfs=/path/to/rootfs --privileged=nocaps,noseccomp start
+```
+
 ---
 
 <a id="advanced-usage"></a>
@@ -247,14 +271,6 @@ If a container was started outside the current session, or its host-side PID fil
 ```bash
 sudo droidspaces scan
 ```
-
-### Fast Restarts
-Droidspaces implements a "fast restart" mechanism that completes in under 200ms by preserving the loop mount and coordinating state between the CLI and the background monitor via an external command lock (`.lock`).
-
-### PID File Storage
-PID files are stored in:
-- **Linux**: `/var/lib/Droidspaces/Pids/`
-- **Android**: `/data/local/Droidspaces/Pids/`
 
 ---
 

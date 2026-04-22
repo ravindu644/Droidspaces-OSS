@@ -6,7 +6,7 @@ The Droidspaces Android app provides a premium GUI for managing Linux containers
 
 - **Home**: A dashboard displaying the number of installed and running containers, root availability status, and the backend version.
 - **Containers**: A dedicated manager for all installed containers (Install, Start, Stop, Edit, and Uninstall).
-- **Panel**: A central hub for managing **Running Containers** and monitoring real-time **System Statistics** (CPU, RAM, Uptime, Temperature, etc.).
+- **Panel**: A central dashboard for managing **Running Containers** and monitoring real-time **System Statistics** (CPU, RAM, Temperature, etc.).
 
 ---
 
@@ -18,11 +18,11 @@ This tab allows you to install containers using the "+" icon, and lists all your
 - **Play Button**: Start the container and boot the init system.
 - **Stop Button**: Sends a graceful shutdown signal to the container's init.
 - **Cycle Button**: Fast-restart the container.
-- **Terminal Icon (Logs)**: This button **does not open a shell**. It provides access to persistent session logs for the container's previous start, stop, and restart sequences.
+- **Terminal Icon (Logs)**: Provides access to persistent session logs for the container's previous start, stop, and restart sequences.
 
 > [!TIP]
 >
-> You can **edit container configuration** or **uninstall** existing installed containers by **pressing and holding** the container's card.
+> You can **edit container configuration** or **uninstall** existing installed containers by **pressing and holding** the container's card. Also gives you the ability to migrate to a `rootfs.img`-based container or resize your existing `rootfs.img`..!
 
 ---
 
@@ -50,7 +50,6 @@ If you select **NAT (Isolated)** mode, you **must** specify one or more upstream
 ### Port Forwarding
 In NAT mode, use the **Port Forwarding** section to map host ports to container ports (e.g., `22:22`). You can also specify **port ranges** (e.g., `1000-2000:1000-2000`) for services that require multiple contiguous ports.
 
-
 ---
 
 ## Panel Tab (Active Environments)
@@ -59,7 +58,7 @@ The **Panel** tab focuses strictly on your running containers. Tapping a running
 
 ### Container Details Screen
 This screen provides deep introspection into the running environment:
-- **Distribution Info**: Shows the Pretty Name, Version, Hostname, and **IP Address (IPv4)**.
+- **Distribution Info**: Shows the Pretty Name, Version, Per-container-uptime, Hostname, and **IP Address (IPv4)**.
 - **Available Users**: Lists detected users in the rootfs.
 - **Copy Login**: Choose a user from the dropdown and tap this to copy a command like `su -c 'droidspaces enter [user]'`.
 - **Terminal**: Open an interactive Terminal Emulator inside from the container, natively on the Droidspaces app !
@@ -99,4 +98,4 @@ For power users who prefer **Termux**, **ADB**, or other terminal emulators, Dro
 Accessed via the gear icon in the top right:
 - **Requirements**: Runs a 27-point diagnostic check on your kernel.
 - **Kernel Config**: Provides a copyable `droidspaces.config` snippet specifically for your device.
-- **Theme Engine**: Support for AMOLED Black, Material You, and Light/Dark modes.
+- **Theme Engine**: Support for AMOLED Black, Material You, Changing accent colors, and Light/Dark modes.

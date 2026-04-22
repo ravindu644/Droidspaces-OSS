@@ -116,7 +116,7 @@ For Qualcomm Adreno GPUs, Droidspaces supports **native hardware acceleration** 
 
 1. **Install Tarball**: Download and install a compatible rootfs via the Droidspaces app.
 
-2. **Enable Hardware**: In the container settings, enable **Hardware Access** and **Termux X11**.
+2. **Enable GPU Access**: In the container settings, enable **GPU Access** and **Termux X11**.
 
 3. **Set Display**: Add `DISPLAY=:0` to your environment variables.
 
@@ -136,30 +136,6 @@ For Qualcomm Adreno GPUs, Droidspaces supports **native hardware acceleration** 
    ```bash
    dbus-launch --exit-with-session startxfce4
    ```
-
-#### Manual Device Mapping
-
-If you prefer not to use the global **Hardware Access** toggle (which exposes all host devices via `devtmpfs`), you can manually bind-mount only the required GPU nodes.
-
-1. **Configure Bind Mounts**:
-
-   In your container's **Custom Bind Mounts** section, add the following mappings:
-
-   ```text
-   /dev/dri/renderD128:/dev/dri/renderD128
-   /dev/kgsl-3d0:/dev/kgsl-3d0
-   /dev/dma_heap/system:/dev/dma_heap/system
-   /dev/ion:/dev/ion (Optional: skip if /dev/ion does not exist on your host)
-   ```
-
-2. **Fix Permissions**:
-
-   By default, manually mounted nodes may belong to the `root` or `system` group of the host, which prevents the container's `droidspaces-gpu` group from accessing them. Run this command inside the container to grant access:
-
-   ```bash
-   sudo chgrp droidspaces-gpu /dev/dri/renderD128 /dev/kgsl-3d0 /dev/dma_heap/system /dev/ion
-   ```
-
 ---
 
 <a id="linux"></a>
