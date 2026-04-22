@@ -224,134 +224,242 @@ void ds_cgroup_host_bootstrap(int force_cgroupv1) {
   }
 }
 
-/* Android non-standard v1 controller path aliases.
- * Android mounts many controllers outside /sys/fs/cgroup, and some use
- * non-standard mount-option names.  This table maps the kernel's canonical
- * controller name (from /proc/cgroups col-1) to the typical Android mountpoint
- * suffix and the mount option string the kernel expects.
- *
- * History:
- *  Android 4–8:  cpu→/dev/cpuctl, cpuset→/dev/cpuset, memory→/dev/memcg
- *  Android 9–11: blkio→/dev/blkio added; schedtune on some OEM kernels
- *  Android 12+:  cgroups.json abstraction; memory path still /dev/memcg on
- *                many devices; blkio may be at /dev/blkio or
- * /sys/fs/cgroup/blkio Pure-v2 host: none of the above exist; --force-cgroupv1
- * user synthesizes fresh v1 mounts directly from the kernel's controller table.
+/*
+ * Lightweight map: kernel controller name -> host mountpoint.
+ * Built once from /proc/self/mountinfo (v1 entries only) so that
+ * mount_v1_controllers() can resolve where Android actually put a controller
+ * (e.g. memory -> /dev/memcg, cpu -> /dev/cpuctl) before falling back to a
+ * fresh synthesized mount for anything not present on the host.
  */
-struct cgroup_v1_alias {
-  const char *kernel_name; /* subsys_name from /proc/cgroups          */
-  const char *dir_suffix;  /* directory under sys/fs/cgroup/           */
-  const char *mount_opt;   /* -o option for mount(2), NULL=kernel_name */
+#define V1_MAP_MAX 32
+struct v1_host_map {
+  char name[64];
+  char mountpoint[PATH_MAX];
 };
 
-static const struct cgroup_v1_alias v1_aliases[] = {
-    {"cpuset", "cpuset", NULL},
-    {"cpu", "cpu", "cpu"},
-    {"cpuacct", "cpuacct", "cpuacct"},
-    {"blkio", "blkio", "blkio"},
-    {"memory", "memory", "memory"},
-    {"devices", "devices", "devices"},
-    {"freezer", "freezer", "freezer"},
-    {"net_cls", "net_cls", "net_cls"},
-    {"net_prio", "net_prio", "net_prio"},
-    {"pids", "pids", "pids"},
-    {"perf_event", "perf_event", "perf_event"},
-    {"misc", "misc", "misc"},
-    /* Android OEM aliases */
-    {"schedtune", "schedtune", "schedtune"},
-    {NULL, NULL, NULL}};
-
-/* Synthesize v1 cgroup mounts from /proc/cgroups when --force-cgroupv1 is
- * active but the host (pure cgroupv2 Android) has no v1 mountinfo entries.
+/*
+ * build_v1_host_map - one-pass parse of /proc/self/mountinfo for v1 entries.
  *
- * For each enabled controller in /proc/cgroups that isn't already mounted
- * under sys/fs/cgroup/, we attempt a fresh mount("cgroup", path, "cgroup",
- * flags, controller_name).  This is safe because:
- *   1. The kernel already has the subsystem compiled in (/proc/cgroups
- * enabled=1).
- *   2. cgroupv1 allows independent mounts of each subsystem even on a host
- *      that normally uses v2, as long as the subsystem isn't already attached
- *      to a live v2 hierarchy with active processes (rare in Android
- * userspace).
- *   3. We mount into the container's private tmpfs base, so the host is
- *      not affected.
- *
- * Returns the number of controllers successfully mounted.
+ * Records the first controller token -> host mountpoint for each cgroup v1
+ * mount.  Co-mounted hierarchies (net_cls,net_prio) are stored under the
+ * first token; symlinks for the rest are created by mount_v1_controllers().
+ * Returns the number of entries filled.
  */
-static int ds_cgroup_v1_synthesize(void) {
-  FILE *f = fopen("/proc/cgroups", "re");
+static int build_v1_host_map(struct v1_host_map *map, int max) {
+  FILE *f = fopen("/proc/self/mountinfo", "re");
   if (!f)
     return 0;
 
-  unsigned long flags = MS_NOSUID | MS_NODEV | MS_NOEXEC;
-  int mounted = 0;
-  char line[256];
+  char line[2048];
+  int count = 0;
+  while (fgets(line, sizeof(line), f) && count < max) {
+    char *dash = strstr(line, " - ");
+    if (!dash)
+      continue;
+    char fstype[16];
+    if (sscanf(dash + 3, "%15s", fstype) != 1 || strcmp(fstype, "cgroup") != 0)
+      continue;
 
-  /* Skip header line */
-  if (!fgets(line, sizeof(line), f)) {
+    /* Field 5: mountpoint */
+    char *p = line;
+    for (int i = 0; i < 4; i++) {
+      p = strchr(p, ' ');
+      if (!p)
+        break;
+      p++;
+    }
+    if (!p)
+      continue;
+    char *mp_end = strchr(p, ' ');
+    if (!mp_end)
+      continue;
+    *mp_end = '\0';
+    if (strstr(p, "/Droidspaces/"))
+      continue;
+    safe_strncpy(map[count].mountpoint, p, sizeof(map[count].mountpoint));
+
+    /* superOptions: 3rd field after the dash (fstype src opts) */
+    char *so = strchr(dash + 3 + strlen(fstype) + 1, ' ');
+    if (!so)
+      continue;
+    so = strchr(so + 1, ' ');
+    if (!so)
+      continue;
+    so++;
+    char *nl = strchr(so, '\n');
+    if (nl)
+      *nl = '\0';
+    if (strncmp(so, "rw,", 3) == 0)
+      so += 3;
+    else if (strncmp(so, "ro,", 3) == 0)
+      so += 3;
+
+    /* First token = primary controller name */
+    char first[64];
+    if (sscanf(so, "%63[^,\n]", first) != 1)
+      continue;
+    if (strncmp(first, "name=", 5) == 0)
+      continue; /* skip name=systemd */
+
+    safe_strncpy(map[count].name, first, sizeof(map[count].name));
+    count++;
+  }
+  fclose(f);
+  return count;
+}
+
+/*
+ * mount_v1_controllers - unified v1 controller setup, works on every host.
+ *
+ * Iterates /proc/cgroups (kernel truth) for every enabled controller.
+ * For each one:
+ *   1. If already present in sys/fs/cgroup/ -> skip (idempotent).
+ *   2. If found in the host map AND in_ns  -> fresh namespace mount.
+ *   3. If found in the host map, no ns     -> bind-mount from host path.
+ *   4. Not in map (pure-v2, hybrid gap)    -> synthesize a fresh v1 mount.
+ *      This is safe: the kernel accepts a fresh v1 mount for any subsystem
+ *      that isn't already bound to an active v2 hierarchy with live tasks.
+ *
+ * Co-mounted hierarchies (e.g. net_cls,net_prio on the same host mount)
+ * get symlinks for their secondary names, matching historical behaviour.
+ */
+static void mount_v1_controllers(int in_ns, const struct v1_host_map *map,
+                                 int map_n) {
+  FILE *f = fopen("/proc/cgroups", "re");
+  if (!f)
+    return;
+
+  unsigned long flags = MS_NOSUID | MS_NODEV | MS_NOEXEC;
+  char line[256];
+  if (!fgets(line, sizeof(line), f)) { /* skip header */
     fclose(f);
-    return 0;
+    return;
   }
 
   while (fgets(line, sizeof(line), f)) {
     char name[64];
-    int hierarchy, num_cgroups, enabled;
-
-    /* Format: subsys_name  hierarchy  num_cgroups  enabled */
-    if (sscanf(line, "%63s %d %d %d", name, &hierarchy, &num_cgroups,
-               &enabled) != 4)
+    int hier, ncg, enabled;
+    if (sscanf(line, "%63s %d %d %d", name, &hier, &ncg, &enabled) != 4)
       continue;
-
     if (!enabled)
       continue;
 
-    /* Skip name=systemd - handled separately */
-    if (strcmp(name, "name") == 0)
+    char mp[PATH_MAX];
+    snprintf(mp, sizeof(mp), "sys/fs/cgroup/%s", name);
+    if (access(mp, F_OK) == 0)
+      continue; /* already set up */
+    if (mkdir(mp, 0755) < 0 && errno != EEXIST)
       continue;
 
-    /* Find alias entry */
-    const struct cgroup_v1_alias *alias = NULL;
-    for (int i = 0; v1_aliases[i].kernel_name != NULL; i++) {
-      if (strcmp(v1_aliases[i].kernel_name, name) == 0) {
-        alias = &v1_aliases[i];
+    /* Find host mountpoint for this controller (may be NULL) */
+    const char *host_mp = NULL;
+    for (int i = 0; i < map_n; i++) {
+      if (strcmp(map[i].name, name) == 0) {
+        host_mp = map[i].mountpoint;
         break;
       }
     }
 
-    /* Use kernel name directly if no explicit alias */
-    const char *dir = alias ? alias->dir_suffix : name;
-    const char *opt =
-        alias ? (alias->mount_opt ? alias->mount_opt : name) : name;
-
-    char mp[PATH_MAX];
-    snprintf(mp, sizeof(mp), "sys/fs/cgroup/%s", dir);
-
-    /* Already mounted by the main loop (e.g. from a real mountinfo entry) */
-    if (access(mp, F_OK) == 0)
-      continue;
-
-    if (mkdir(mp, 0755) < 0 && errno != EEXIST)
-      continue;
-
-    if (mount("cgroup", mp, "cgroup", flags, opt) == 0) {
-      ds_log("[CGROUP] mounted %s at %s", opt, mp);
-      mounted++;
-    } else {
-      /* Some controllers (e.g. schedtune) are OEM-only and will fail on
-       * mainline kernels.  Log at debug level and remove the empty dir. */
-      ds_log("[CGROUP] skipped %s: %s", opt, strerror(errno));
-      rmdir(mp);
+    int ok = 0;
+    if (in_ns) {
+      /* Namespace path: always use a fresh mount, source location irrelevant */
+      ok = (mount("cgroup", mp, "cgroup", flags, name) == 0);
+    } else if (host_mp) {
+      /* Legacy path: bind-mount our cgroup slice from the host */
+      char self_path[PATH_MAX], src[PATH_MAX];
+      safe_strncpy(src, host_mp, sizeof(src));
+      if (find_self_cgroup_path(name, self_path, sizeof(self_path)) == 0) {
+        strncat(src, self_path, sizeof(src) - strlen(src) - 1);
+        if (access(src, F_OK) != 0)
+          safe_strncpy(src, host_mp, sizeof(src));
+      }
+      ok = (domount_silent(src, mp, NULL, MS_BIND | MS_REC | flags, NULL) == 0);
     }
-  }
 
+    if (!ok) {
+      /* Synthesize: host never mounted this controller, or bind failed.
+       * Covers pure-v2 hosts, hybrid hosts with gaps, and future controllers
+       * that Android hasn't wired up yet. */
+      ok = (mount("cgroup", mp, "cgroup", flags, name) == 0);
+    }
+
+    if (!ok) {
+      ds_log("[CGROUP] v1 controller '%s' unavailable: %s", name,
+             strerror(errno));
+      rmdir(mp);
+      continue;
+    }
+    ds_log("[CGROUP] v1 mounted: %s", name);
+
+    /* Symlinks for co-mounted names on the same host mount.
+     * Re-read mountinfo to find the full superOptions for host_mp. */
+    if (!host_mp)
+      continue;
+    FILE *mi = fopen("/proc/self/mountinfo", "re");
+    if (!mi)
+      continue;
+    char ml[2048];
+    while (fgets(ml, sizeof(ml), mi)) {
+      char *dash = strstr(ml, " - ");
+      if (!dash)
+        continue;
+      char ft[16];
+      if (sscanf(dash + 3, "%15s", ft) != 1 || strcmp(ft, "cgroup") != 0)
+        continue;
+      char *p = ml;
+      for (int i = 0; i < 4; i++) {
+        p = strchr(p, ' ');
+        if (!p)
+          break;
+        p++;
+      }
+      if (!p)
+        continue;
+      char *me = strchr(p, ' ');
+      if (!me)
+        continue;
+      *me = '\0';
+      if (strcmp(p, host_mp) != 0)
+        continue;
+      char *so = strchr(dash + 3 + strlen(ft) + 1, ' ');
+      if (!so)
+        continue;
+      so = strchr(so + 1, ' ');
+      if (!so)
+        continue;
+      so++;
+      char *nl2 = strchr(so, '\n');
+      if (nl2)
+        *nl2 = '\0';
+      if (strncmp(so, "rw,", 3) == 0)
+        so += 3;
+      else if (strncmp(so, "ro,", 3) == 0)
+        so += 3;
+      if (!strchr(so, ','))
+        break; /* single controller, no symlinks needed */
+      char *it = strdup(so);
+      if (!it)
+        break;
+      char *tok, *sp;
+      tok = strtok_r(it, ",", &sp);
+      while (tok) {
+        if (strcmp(tok, name) != 0) {
+          char lp[PATH_MAX];
+          snprintf(lp, sizeof(lp), "sys/fs/cgroup/%s", tok);
+          if (access(lp, F_OK) != 0)
+            symlink(name, lp);
+        }
+        tok = strtok_r(NULL, ",", &sp);
+      }
+      free(it);
+      break;
+    }
+    fclose(mi);
+  }
   fclose(f);
-  return mounted;
 }
 
 int setup_cgroups(int is_systemd, int force_cgroupv1) {
-  /* Ensure host has cgroups mounted before we try to setup container subset.
-   * Inside the container namespace, this is mostly a no-op if host is already
-   * setup, but ensures private view is consistent. */
   ds_cgroup_host_bootstrap(force_cgroupv1);
 
   if (access("sys/fs/cgroup", F_OK) != 0) {
@@ -359,207 +467,92 @@ int setup_cgroups(int is_systemd, int force_cgroupv1) {
       return -1;
   }
 
-  /* 1. Mount tmpfs as the cgroup base */
+  /* Mount tmpfs as the cgroup base */
   if (domount("none", "sys/fs/cgroup", "tmpfs",
               MS_NOSUID | MS_NODEV | MS_NOEXEC, "mode=755,size=16M") < 0)
     return -1;
 
-  struct host_cgroup hosts[32];
-  int n = get_host_cgroups(hosts, 32);
-
   int in_ns = is_cgroup_ns_active();
-
-  /* CGROUP SELECTION LOGIC:
-   * 1. If --force-cgroupv1 is set -> strictly use V1.
-   * 2. Otherwise, if the host has V2 mounted -> use V2.
-   * 3. Fallback to V1.
-   * This allows forcing V2 even on older kernels (like 4.14) if supported
-   * by the host, while giving an escape hatch to V1. */
   int v2_active = ds_cgroup_host_is_v2() && !force_cgroupv1;
   int systemd_setup_done = 0;
 
-  for (int i = 0; i < n; i++) {
-    /* STRICT SEPARATION:
-     * We don't mix V1 and V2 hierarchies in the container. */
-    if (v2_active && hosts[i].version == 1)
-      continue;
-    if (!v2_active && hosts[i].version == 2)
-      continue;
-
-    char container_mp[PATH_MAX];
-    const char *suffix = NULL;
-
-    if (strcmp(hosts[i].mountpoint, "/sys/fs/cgroup") == 0) {
-      suffix = "";
-    } else {
-      suffix = strstr(hosts[i].mountpoint, "/sys/fs/cgroup/");
-      if (suffix) {
-        suffix += 15; /* skip "/sys/fs/cgroup/" */
-      } else {
-        suffix = strrchr(hosts[i].mountpoint, '/');
-        if (suffix)
-          suffix++;
-        else
-          suffix = hosts[i].controllers;
-      }
-    }
-
-    /* Track if this is the systemd hierarchy */
-    int is_systemd_hierarchy = (strcmp(suffix, "systemd") == 0 ||
-                                strstr(hosts[i].controllers, "name=systemd"));
-
-    snprintf(container_mp, sizeof(container_mp), "sys/fs/cgroup/%s", suffix);
-    if (suffix[0] != '\0') {
-      mkdir(container_mp, 0755);
-    }
-
-    if (in_ns) {
-      /* MODERN PATH: Use Cgroup Namespace support.
-       * Mounting the cgroup filesystem directly inside the namespace
-       * automatically gives us the container-isolated root. */
-      unsigned long flags = MS_NOSUID | MS_NODEV | MS_NOEXEC;
-      const char *fstype = (hosts[i].version == 2) ? "cgroup2" : "cgroup";
-      const char *opts = (hosts[i].version == 2) ? NULL : hosts[i].controllers;
-
-      /* For v1, we MUST specify at least one controller. If the parser failed
-       * to find them in mountinfo (common on Android), fallback to the
-       * directory name (suffix). */
-      if (hosts[i].version == 1 && (opts == NULL || opts[0] == '\0')) {
-        opts = suffix;
-      }
-
-      /* ANDROID FIX: Map known directory names to actual controller names
-       * expected by the kernel. */
-      const char *actual_opts = opts;
-      if (hosts[i].version == 1) {
-        if (strcmp(opts, "memcg") == 0)
-          actual_opts = "memory";
-        else if (strcmp(opts, "acct") == 0)
-          actual_opts = "cpuacct";
-      }
-
-      if (mount("cgroup", container_mp, fstype, flags, actual_opts) == 0) {
-        if (is_systemd_hierarchy || hosts[i].version == 2)
-          systemd_setup_done = 1;
-        goto symlink_v1;
-      }
-    }
-
-    /* LEGACY PATH: Manual bind-mount isolation */
-    char self_path[PATH_MAX];
-    const char *ctrl_for_lookup =
-        (hosts[i].version == 2) ? NULL : hosts[i].controllers;
-    char first_ctrl[64];
-
-    if (ctrl_for_lookup) {
-      if (sscanf(ctrl_for_lookup, "%63[^,]", first_ctrl) == 1) {
-        ctrl_for_lookup = first_ctrl;
-      }
-    }
-
-    if (find_self_cgroup_path(ctrl_for_lookup, self_path, sizeof(self_path)) ==
-        0) {
-      char host_full_subpath[PATH_MAX * 2];
-      safe_strncpy(host_full_subpath, hosts[i].mountpoint,
-                   sizeof(host_full_subpath));
-      strncat(host_full_subpath, self_path,
-              sizeof(host_full_subpath) - strlen(host_full_subpath) - 1);
-
-      /* Some ROMs mount cgroup controllers at non-standard locations
-       * (e.g. blkio at /dev/blkio instead of /sys/fs/cgroup/blkio).
-       * If the resolved subpath doesn't exist, fall back to the hierarchy
-       * root so the bind-mount still succeeds. */
-      if (access(host_full_subpath, F_OK) != 0) {
-        ds_log("[DEBUG] cgroup subpath %s not found, falling back to %s",
-               host_full_subpath, hosts[i].mountpoint);
-        safe_strncpy(host_full_subpath, hosts[i].mountpoint,
-                     sizeof(host_full_subpath));
-      }
-
-      unsigned long flags = MS_BIND | MS_REC | MS_NOSUID | MS_NODEV | MS_NOEXEC;
-      if (domount_silent(host_full_subpath, container_mp, NULL, flags, NULL) ==
-          0) {
-        if (is_systemd_hierarchy || hosts[i].version == 2)
-          systemd_setup_done = 1;
-      } else {
-        ds_log("[DEBUG] cgroup bind-mount %s -> %s failed: %s",
-               host_full_subpath, container_mp, strerror(errno));
-      }
-    }
-
-  symlink_v1:
-    /* Create symlinks for secondary names in comounted v1 hierarchies */
-    if (hosts[i].version == 1 && strchr(hosts[i].controllers, ',')) {
-      char *tok, *saveptr;
-      char *it = strdup(hosts[i].controllers);
-      if (it) {
-        tok = strtok_r(it, ",", &saveptr);
-        while (tok) {
-          char link_path[PATH_MAX];
-          snprintf(link_path, sizeof(link_path), "sys/fs/cgroup/%s", tok);
-          if (strcmp(tok, suffix) != 0) {
-            if (access(link_path, F_OK) != 0) {
-              if (symlink(suffix, link_path) < 0) {
-                ds_warn("Failed to create cgroup symlink %s -> %s: %s",
-                        link_path, suffix, strerror(errno));
-              }
-            }
-          }
-          tok = strtok_r(NULL, ",", &saveptr);
-        }
-        free(it);
-      }
-    }
-  }
-
-  /* 2. PURE-V2 HOST + --force-cgroupv1 FALLBACK:
-   * When the host is a pure cgroupv2 Android device and the user requested
-   * --force-cgroupv1, the mountinfo scan above yields zero v1 entries.
-   * Android never mounts v1 controllers in this configuration, so we must
-   * synthesize them directly from /proc/cgroups.
-   *
-   * We detect this condition by checking: forced v1 requested AND the host
-   * is pure v2 AND no v1 hierarchy was successfully set up yet. */
-  if (force_cgroupv1 && ds_cgroup_host_is_v2()) {
-    /* Count how many v1 mounts we actually produced from the main loop */
-    int v1_found = 0;
+  if (v2_active) {
+    /* V2 PATH: discover host v2 mount and mirror it into the container */
+    struct host_cgroup hosts[32];
+    int n = get_host_cgroups(hosts, 32);
     for (int i = 0; i < n; i++) {
-      if (hosts[i].version == 1)
-        v1_found++;
+      if (hosts[i].version != 2)
+        continue;
+
+      const char *suffix = NULL;
+      if (strcmp(hosts[i].mountpoint, "/sys/fs/cgroup") == 0) {
+        suffix = "";
+      } else {
+        suffix = strstr(hosts[i].mountpoint, "/sys/fs/cgroup/");
+        if (suffix)
+          suffix += 15;
+        else {
+          suffix = strrchr(hosts[i].mountpoint, '/');
+          suffix = suffix ? suffix + 1 : hosts[i].controllers;
+        }
+      }
+
+      char container_mp[PATH_MAX];
+      snprintf(container_mp, sizeof(container_mp), "sys/fs/cgroup/%s", suffix);
+      if (suffix[0] != '\0')
+        mkdir(container_mp, 0755);
+
+      if (in_ns) {
+        if (mount("cgroup2", container_mp, "cgroup2",
+                  MS_NOSUID | MS_NODEV | MS_NOEXEC, NULL) == 0) {
+          systemd_setup_done = 1;
+          continue;
+        }
+      }
+
+      /* Legacy bind-mount fallback for v2 */
+      char self_path[PATH_MAX];
+      if (find_self_cgroup_path(NULL, self_path, sizeof(self_path)) == 0) {
+        char src[PATH_MAX * 2];
+        safe_strncpy(src, hosts[i].mountpoint, sizeof(src));
+        strncat(src, self_path, sizeof(src) - strlen(src) - 1);
+        if (access(src, F_OK) != 0)
+          safe_strncpy(src, hosts[i].mountpoint, sizeof(src));
+        unsigned long bflags =
+            MS_BIND | MS_REC | MS_NOSUID | MS_NODEV | MS_NOEXEC;
+        if (domount_silent(src, container_mp, NULL, bflags, NULL) == 0)
+          systemd_setup_done = 1;
+      }
     }
-    if (v1_found == 0) {
-      ds_log("[CGROUP] pure-v2 host with --force-cgroupv1: synthesizing v1 "
-             "controllers from /proc/cgroups");
-      int synth = ds_cgroup_v1_synthesize();
-      ds_log("[CGROUP] synthesized %d v1 controller(s)", synth);
-    }
+  } else {
+    /* V1 PATH (force_cgroupv1 or legacy host):
+     * Build a map of what the host actually mounted, then let
+     * mount_v1_controllers() fill every kernel-enabled controller,
+     * synthesizing fresh mounts for anything missing from the host. */
+    struct v1_host_map map[V1_MAP_MAX];
+    int map_n = build_v1_host_map(map, V1_MAP_MAX);
+    mount_v1_controllers(in_ns, map, map_n);
+    systemd_setup_done = 1; /* systemd check handled below */
   }
 
-  /* 3. FORCED SYSTEMD SUPPORT: If we are booting a systemd rootfs but no
-   * systemd hierarchy was found on the host, we MUST create one manually.
-   * On modern kernels (or if V2 is active), we skip this because systemd
-   * will use the unified hierarchy. */
-  if (is_systemd && !systemd_setup_done && !v2_active) {
-    mkdir("sys/fs/cgroup/systemd", 0755);
-    if (mount("cgroup", "sys/fs/cgroup/systemd", "cgroup",
-              MS_NOSUID | MS_NODEV | MS_NOEXEC, "none,name=systemd") < 0) {
-      ds_error("Failed to mount systemd cgroup: %s", strerror(errno));
-      return -1;
+  /* Ensure a systemd cgroup hierarchy exists for systemd containers.
+   * On v1 this is a named cgroup; on v2 systemd uses the unified root. */
+  if (is_systemd && !v2_active) {
+    if (access("sys/fs/cgroup/systemd", F_OK) != 0) {
+      mkdir("sys/fs/cgroup/systemd", 0755);
+      if (mount("cgroup", "sys/fs/cgroup/systemd", "cgroup",
+                MS_NOSUID | MS_NODEV | MS_NOEXEC, "none,name=systemd") < 0) {
+        ds_error("Failed to mount systemd cgroup: %s", strerror(errno));
+        return -1;
+      }
     }
     systemd_setup_done = 1;
   }
 
-  /* If it's a systemd container and we still don't have a systemd cgroup, fail
-   * early. */
   if (is_systemd && !systemd_setup_done) {
     ds_error("Systemd cgroup setup failed. Systemd containers cannot boot.");
     return -1;
   }
-
-  /* Final isolation: Both Pure V2 and Legacy V1 environments stay Read-Write.
-   * - Systemd-v2 needs write access to the root to manage scopes.
-   * - Systemd-v1/OpenRC needs write access to create controller symlinks.
-   * The "Hybrid-RO" middle-ground is now removed. */
 
   return 0;
 }
