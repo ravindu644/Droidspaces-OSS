@@ -165,7 +165,7 @@ patch -p1 < /path/to/extracted/patchfile.patch
 
 **Applies to:** Kernel 5.4, 5.10, 5.15, 6.1, 6.6, 6.12+
 
-Google's Generic Kernel Image (GKI) enforces strict **kABI (Kernel Application Binary Interface)** compliance. Enabling standard Droidspaces features like `CONFIG_SYSVIPC` or `CONFIG_IPC_NS` would normally shift memory offsets in the core `task_struct`, causing pre-compiled vendor modules (GPU, Camera, etc.) to crash or bootloop the device.
+Google's Generic Kernel Image (GKI) enforces strict **kABI (Kernel Application Binary Interface)** compliance. Enabling standard Droidspaces features like `CONFIG_SYSVIPC`, `CONFIG_IPC_NS` or `CONFIG_POSIX_MQUEUE` would normally shift memory offsets in the core `task_struct`, causing pre-compiled vendor modules (GPU, Camera, etc.) to crash or bootloop the device.
 
 To solve this, Droidspaces provides specialized **kABI-friendly patches** that allow these features to be enabled without shifting offsets.
 
