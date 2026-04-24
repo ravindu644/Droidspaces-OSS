@@ -235,11 +235,11 @@ The entire runtime is a **single static binary** under 300KB, compiled against m
 
 ### A. Android Devices
 
-Droidspaces supports Android devices running Linux kernel **3.18 and above**:
+Droidspaces supports Android devices running Linux kernel **3.10 and above**:
 
 | Kernel Version | Support Level | Notes |
 |----------------|---------------|-------|
-| 3.18 | Supported | **Legacy.** Minimum floor. Basic namespace support. systemd-based distros may be unstable; **Alpine** is recommended. |
+| 3.10 | Supported | **Legacy.** Minimum floor. Basic namespace support. systemd-based distros may be unstable; **Alpine** is recommended. |
 | 4.4 - 4.19 | Stable | **Hardened.** [Full support upto modern distros with systemd older than v258](./Documentation/Troubleshooting.md#modern-distros). Nested containers (Docker/Podman) are natively supported. If you encounter systemd hangs on specific kernels (like 4.14.113) due to the VFS deadlock bug, manually enable the **Deadlock Shield** [[more info](./Documentation/Features.md#vfs-deadlock)]. |
 | 5.4 - 5.10 | Recommended | **Mainline.** Full feature support including nested containers and Cgroup v2. |
 | 5.15+ | Premium | **Full.** Best performance and maximum compatibility with all modern distributions. |
@@ -277,7 +277,7 @@ Android kernels are often heavily modified and may have critical container featu
 <a id="non-GKI"></a>
 
 ##### Non-GKI (Legacy Kernels)
-Covers kernels: **3.18, 4.4, 4.9, 4.14, 4.19**. These kernels work plug-and-play after adding the required config fragments.
+Covers kernels: **3.10, 3.18, 4.4, 4.9, 4.14, 4.19**. These kernels work plug-and-play after adding the required config fragments.
 See: [Legacy Kernel Configuration](Documentation/Kernel-Configuration.md#configuring-non-gki-kernels-legacy-kernels)
 
 <a id="GKI"></a>

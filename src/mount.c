@@ -1223,7 +1223,7 @@ int mount_rootfs_img(const char *img_path, char *mount_point, size_t mp_size,
 
     /* mount() failed: explicitly detach since AUTOCLEAR needs last-fd-close
      * + no active mounts to trigger; we already closed loop_fd so it should
-     * auto-clear, but be explicit for kernels < 3.18 edge cases. */
+     * auto-clear, but be explicit for kernels < 3.10 edge cases. */
     if (loop_fd >= 0)
       loop_detach(final_src);
     ds_warn("mount(%s, %s) failed: %s", final_src, fstype, strerror(errno));

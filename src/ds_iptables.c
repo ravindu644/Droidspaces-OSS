@@ -12,7 +12,7 @@
  *   • Always check existence before inserting (fully idempotent)
  *
  * ── Kernel / API compatibility ──────────────────────────────────────────────
- *   • Kernel 3.18+ (Android/Linux)
+ *   • Kernel 3.10+ (Android/Linux)
  *   • Uses getsockopt/setsockopt on AF_INET SOCK_RAW with IPPROTO_RAW
  *   • Falls back to iptables(8) binary on ENOPROTOOPT / EOPNOTSUPP / any
  *     kernel rejection

@@ -4,7 +4,7 @@
  * Pure-C RTNETLINK client: link, address, route, and policy-rule management.
  * Replaces all `ip link/addr/route/rule` shell invocations.
  *
- * Kernel compatibility: 3.18+ (Android & Linux)
+ * Kernel compatibility: 3.10+ (Android & Linux)
  * No external dependencies beyond musl/glibc.
  *
  * Copyright (C) 2026 ravindu644 <droidcasts@protonmail.com>
