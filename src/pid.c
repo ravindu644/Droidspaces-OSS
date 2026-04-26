@@ -486,11 +486,15 @@ int is_container_init(pid_t pid) {
 
   char line[1024];
   int is_init = 0;
+  int nspid_found = 0;
   while (fgets(line, sizeof(line), f)) {
     if (strncmp(line, "NSpid:", 6) == 0) {
       /* NSpid line format: "NSpid: <pid1> <pid2> ... <pidN>"
        * The last value is the PID in the innermost namespace.
-       * We use a robust tokenizer to avoid issues with tabs/spaces. */
+       * We use a robust tokenizer to avoid issues with tabs/spaces.
+       * NOTE: NSpid was added in Linux 4.1. On older kernels (e.g. 3.10),
+       * this line is absent and we fall back to the ns/pid inode check. */
+      nspid_found = 1;
       char *p = line + 6;
       char *last_val = NULL;
       char *saveptr;
@@ -506,7 +510,31 @@ int is_container_init(pid_t pid) {
     }
   }
   fclose(f);
-  return is_init;
+
+  if (nspid_found)
+    return is_init;
+
+  /*
+   * Fallback for kernels < 4.1 (e.g. 3.10) where NSpid is absent:
+   * Compare the inode of /proc/<pid>/ns/pid vs /proc/1/ns/pid.
+   * Available since Linux 3.8 (namespaces(7)).
+   * If inodes differ, the process lives in a different PID namespace.
+   * Combined with the /run/droidspaces marker check in
+   * is_valid_container_pid(), this is sufficient to identify a
+   * container init process.
+   */
+  struct stat st_pid, st_host;
+  char ns_path[PATH_MAX];
+
+  snprintf(ns_path, sizeof(ns_path), "/proc/%d/ns/pid", pid);
+  if (stat(ns_path, &st_pid) < 0)
+    return 0;
+
+  if (stat("/proc/1/ns/pid", &st_host) < 0)
+    return 0;
+
+  /* Different inode == different PID namespace == process is a container init */
+  return (st_pid.st_ino != st_host.st_ino) ? 1 : 0;
 }
 
 /* Restore host-side metadata (config, pid, env, mount) from internal markers.
