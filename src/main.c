@@ -612,6 +612,11 @@ int main(int argc, char **argv) {
           ret = 1;
           goto cleanup;
         }
+        if (!validate_bind_destination(dest)) {
+          ds_error("Unsafe bind destination: %s", dest);
+          ret = 1;
+          goto cleanup;
+        }
         if (ds_config_add_bind(&cfg, src, dest) < 0) {
           ret = 1;
           goto cleanup;

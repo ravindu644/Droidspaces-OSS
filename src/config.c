@@ -107,6 +107,8 @@ int ds_config_add_bind(struct ds_config *cfg, const char *src,
                        const char *dest) {
   if (!src || !dest || src[0] == '\0' || dest[0] == '\0')
     return 0;
+  if (!validate_bind_destination(dest))
+    return -1;
 
   /* Check for duplication */
   for (int i = 0; i < cfg->bind_count; i++) {

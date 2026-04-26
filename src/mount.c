@@ -917,6 +917,12 @@ int setup_custom_binds(struct ds_config *cfg, const char *rootfs) {
   sort_bind_mounts(cfg);
 
   for (int i = 0; i < cfg->bind_count; i++) {
+    if (!validate_bind_destination(cfg->binds[i].dest)) {
+      ds_error("Security Violation: Unsafe bind destination %s",
+               cfg->binds[i].dest);
+      continue;
+    }
+
     char tgt[PATH_MAX * 2];
     int n = snprintf(tgt, sizeof(tgt), "%s%s", rootfs, cfg->binds[i].dest);
     if (n < 0 || (size_t)n >= sizeof(tgt)) {
