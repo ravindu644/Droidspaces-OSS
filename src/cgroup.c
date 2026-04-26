@@ -526,3 +526,19 @@ void ds_cgroup_cleanup_container(const char *container_name) {
   }
   closedir(d);
 }
+
+static int ds_host_supports_v2_cached = -1;
+
+void print_cgroup_status(struct ds_config *cfg) {
+  if (cfg->force_cgroupv1) {
+    ds_warn("Using legacy Cgroup V1 hierarchy (forced by --force-cgroupv1)");
+    return;
+  }
+
+  if (ds_host_supports_v2_cached == -1)
+    ds_host_supports_v2_cached = ds_cgroup_kernel_supports_v2();
+
+  if (!ds_host_supports_v2_cached) {
+    ds_warn("Host does not support Cgroup V2 (falling back to legacy V1)");
+  }
+}

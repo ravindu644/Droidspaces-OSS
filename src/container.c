@@ -354,6 +354,8 @@ int start_rootfs(struct ds_config *cfg) {
             "background.");
   }
 
+  print_cgroup_status(cfg);
+
   /* If the user requested permissive mode, ensure it's applied.
    * ds_set_selinux_permissive() is a no-op if host is already permissive. */
   if (cfg->selinux_permissive) {

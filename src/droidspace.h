@@ -478,6 +478,7 @@ int ds_cgroup_attach(pid_t target_pid);
 void ds_cgroup_detach(pid_t child_pid);
 /* Remove the entire /sys/fs/cgroup/droidspaces/<name>/ subtree on stop. */
 void ds_cgroup_cleanup_container(const char *container_name);
+void print_cgroup_status(struct ds_config *cfg);
 
 /* ---------------------------------------------------------------------------
  * hardware.c

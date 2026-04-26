@@ -298,23 +298,6 @@ static void enforce_nat_safety(struct ds_config *cfg, int argc, char **argv) {
   }
 }
 
-static int ds_host_supports_v2 = -1;
-
-static void print_cgroup_status(struct ds_config *cfg) {
-  if (cfg->force_cgroupv1) {
-    ds_warn("Using legacy Cgroup V1 hierarchy (forced by --force-cgroupv1)");
-    return;
-  }
-
-  /* Host-side V2 support check is cached to avoid repeated /proc scans */
-  if (ds_host_supports_v2 == -1)
-    ds_host_supports_v2 = ds_cgroup_kernel_supports_v2();
-
-  if (!ds_host_supports_v2) {
-    ds_warn("Host does not support Cgroup V2 (falling back to legacy V1)");
-  }
-}
-
 int main(int argc, char **argv) {
   int ret = 0;
   struct ds_config cfg;
@@ -997,7 +980,6 @@ int main(int argc, char **argv) {
 
     check_kernel_recommendation();
     ds_cgroup_host_bootstrap(cfg.force_cgroupv1);
-    print_cgroup_status(&cfg);
     if (cfg.container_name[0] == '\0' && cfg.rootfs_path[0]) {
       generate_container_name(cfg.rootfs_path, cfg.container_name,
                               sizeof(cfg.container_name));
@@ -1027,7 +1009,6 @@ int main(int argc, char **argv) {
 
     check_kernel_recommendation();
     ds_cgroup_host_bootstrap(cfg.force_cgroupv1);
-    print_cgroup_status(&cfg);
     ret = restart_rootfs(&cfg);
     goto cleanup;
   }
