@@ -15,10 +15,18 @@
  * ---------------------------------------------------------------------------*/
 
 void safe_strncpy(char *dst, const char *src, size_t size) {
-  if (!dst || !src || size == 0)
+  if (!dst || size == 0)
     return;
-  strncpy(dst, src, size - 1);
-  dst[size - 1] = '\0';
+  if (!src) {
+    dst[0] = '\0';
+    return;
+  }
+  size_t len = strlen(src);
+  if (len >= size) {
+    ds_warn("String truncation: src='%s' (len=%zu) to size=%zu", src, len,
+            size);
+  }
+  snprintf(dst, size, "%s", src);
 }
 
 /* Mirrors ContainerManager.sanitizeContainerName() in the Android app.
