@@ -70,14 +70,6 @@ void ds_env_boot_setup(struct ds_config *cfg) {
   clearenv();
   set_container_defaults(term_buf);
 
-  /* Set container_ttys for systemd/openrc if ttys were allocated */
-  if (cfg->tty_count > 0) {
-    char ttys_str[256];
-    build_container_ttys_string(cfg->ttys, cfg->tty_count, ttys_str,
-                                sizeof(ttys_str));
-    setenv("container_ttys", ttys_str, 1);
-  }
-
   /* Standard Linux LANG default */
   setenv("LANG", "en_US.UTF-8", 0);
 

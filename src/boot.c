@@ -371,18 +371,10 @@ int internal_boot(struct ds_config *cfg) {
     mkdir_p("tmp", 01777);
   }
 
-  /* 13. Bind-mount TTYs BEFORE pivot_root so we can still see /dev/pts/N
-   * from host. We use relative paths to the current directory (rootfs). */
+  /* 13. Bind-mount console BEFORE pivot_root (host pts still visible). */
   if (mount(cfg->console.name, "dev/console", NULL, MS_BIND, NULL) < 0)
     ds_warn("Failed to bind mount console '%s': %s", cfg->console.name,
             strerror(errno));
-
-  char tty_target[32];
-  for (int i = 0; i < cfg->tty_count; i++) {
-    snprintf(tty_target, sizeof(tty_target), "dev/tty%d", i + 1);
-    if (mount(cfg->ttys[i].name, tty_target, NULL, MS_BIND, NULL) < 0)
-      ds_warn("Failed to bind mount '%s': %s", tty_target, strerror(errno));
-  }
 
   /* 14. Write identity markers for PID discovery */
   mkdir("run/droidspaces", 0755);
