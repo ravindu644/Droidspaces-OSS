@@ -35,7 +35,8 @@ fun ControlPanelScreen(
     isBackendAvailable: Boolean,
     isRootAvailable: Boolean = true,
     containerViewModel: ContainerViewModel,
-    onNavigateToContainerDetails: (String) -> Unit = {}
+    onNavigateToContainerDetails: (String) -> Unit = {},
+    onNavigateToToTerminal: (String) -> Unit = {},
 ) {
     val context = LocalContext.current
     val snackbarHostState = remember { SnackbarHostState() }
@@ -131,6 +132,9 @@ fun ControlPanelScreen(
                                 container = container,
                                 onEnter = {
                                     onNavigateToContainerDetails(container.name)
+                                },
+                                onTerminalClick = {
+                                    onNavigateToToTerminal(container.name)
                                 }
                             )
                         }
