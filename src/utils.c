@@ -1365,3 +1365,52 @@ void sort_bind_mounts(struct ds_config *cfg) {
   qsort(cfg->binds, cfg->bind_count, sizeof(struct ds_bind_mount),
         compare_bind_mounts);
 }
+
+int validate_container_name(const char *name) {
+  if (!name || !name[0])
+    return 0;
+
+  if (strcmp(name, ".") == 0 || strcmp(name, "..") == 0)
+    return 0;
+
+  size_t len = strlen(name);
+  if (len >= 256)
+    return 0;
+
+  for (size_t i = 0; i < len; i++) {
+    unsigned char c = (unsigned char)name[i];
+    if (!(isalnum(c) || c == '.' || c == '_' || c == '-' || c == ' '))
+      return 0;
+  }
+
+  return 1;
+}
+
+int validate_bind_destination(const char *dest) {
+  if (!dest || dest[0] != '/' || dest[1] == '\0')
+    return 0;
+
+  if (strlen(dest) >= PATH_MAX)
+    return 0;
+
+  const char *p = dest;
+  while (*p) {
+    while (*p == '/')
+      p++;
+    const char *start = p;
+    while (*p && *p != '/')
+      p++;
+    size_t len = (size_t)(p - start);
+    if (len == 0)
+      continue;
+    if ((len == 1 && start[0] == '.') ||
+        (len == 2 && start[0] == '.' && start[1] == '.'))
+      return 0;
+    for (size_t i = 0; i < len; i++) {
+      if (iscntrl((unsigned char)start[i]))
+        return 0;
+    }
+  }
+
+  return 1;
+}

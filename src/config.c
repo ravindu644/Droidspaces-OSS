@@ -93,11 +93,22 @@ static void parse_bind_mounts(const char *value, struct ds_config *cfg) {
     char *sep = strchr(token, ':');
     if (sep) {
       *sep = '\0';
-      const char *src = trim_whitespace(token);
-      const char *dest = trim_whitespace(sep + 1);
+      const char *src_raw = trim_whitespace(token);
+      const char *dest_raw = trim_whitespace(sep + 1);
 
-      /* Use proper allocation function instead of direct array access */
-      ds_config_add_bind(cfg, src, dest);
+      char *src_exp = ds_resolve_path_arg(src_raw);
+      char *dest_exp = ds_resolve_path_arg(dest_raw);
+      const char *src = src_exp ? src_exp : src_raw;
+      const char *dest = dest_exp ? dest_exp : dest_raw;
+
+      /* Validate before storing - caller's responsibility, same as CLI path */
+      if (!validate_bind_destination(dest)) {
+        ds_warn("Skipping unsafe bind destination '%s' from config.", dest);
+      } else {
+        ds_config_add_bind(cfg, src, dest);
+      }
+      free(src_exp);
+      free(dest_exp);
     }
     token = strtok_r(NULL, ",", &saveptr);
   }
@@ -107,6 +118,9 @@ int ds_config_add_bind(struct ds_config *cfg, const char *src,
                        const char *dest) {
   if (!src || !dest || src[0] == '\0' || dest[0] == '\0')
     return 0;
+  /* Defensive: callers must pre-validate; this is a last-resort assert */
+  if (!validate_bind_destination(dest))
+    return -1;
 
   /* Check for duplication */
   for (int i = 0; i < cfg->bind_count; i++) {
