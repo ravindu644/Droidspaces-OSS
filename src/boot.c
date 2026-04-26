@@ -376,29 +376,6 @@ int internal_boot(struct ds_config *cfg) {
     ds_warn("Failed to bind mount console '%s': %s", cfg->console.name,
             strerror(errno));
 
-  /* 14. Write identity markers for PID discovery */
-  mkdir("run/droidspaces", 0755);
-  char marker[PATH_MAX];
-  snprintf(marker, sizeof(marker), "run/droidspaces/%s", cfg->uuid);
-  write_file(marker, ""); /* empty UUID marker */
-
-  /* Save a normalized copy of the config inside /run for metadata recovery.
-   * Path arguments are resolved to absolute via ds_resolve_path_arg()
-   * ensuring every persistent boot knows exactly where its assets live. */
-  if (ds_config_save("run/droidspaces/container.config", cfg) < 0) {
-    ds_warn("Boot: Failed to save internal configuration backup");
-  }
-
-  write_file("run/droidspaces/name", cfg->container_name);
-
-  /* Save mount path for recovery - survives host-side .mount sidecar deletion
-   */
-  if (cfg->img_mount_point[0])
-    write_file("run/droidspaces/mount", cfg->img_mount_point);
-
-  /* Legacy compatibility: write version to the marker directory root */
-  write_file("run/droidspaces/version", DS_VERSION);
-
   /* 15. Android-specific storage */
   if (cfg->android_storage) {
     android_setup_storage(".");
@@ -465,6 +442,26 @@ int internal_boot(struct ds_config *cfg) {
       ds_log("Setting up %d custom bind mount(s)...", cfg->bind_count);
     ds_log("Booting '%s' (init: /sbin/init)...", cfg->container_name);
   }
+
+  /* 20b. Write identity markers for PID discovery (AFTER logs to ensure CLI
+   * parent sees them before exiting background mode). */
+  mkdir("run/droidspaces", 0755);
+  char marker_path[PATH_MAX];
+  snprintf(marker_path, sizeof(marker_path), "run/droidspaces/%s", cfg->uuid);
+  write_file(marker_path, ""); /* empty UUID marker */
+
+  /* Save a normalized copy of the config inside /run for metadata recovery. */
+  if (ds_config_save("run/droidspaces/container.config", cfg) < 0) {
+    ds_warn("Boot: Failed to save internal configuration backup");
+  }
+
+  write_file("run/droidspaces/name", cfg->container_name);
+
+  if (cfg->img_mount_point[0])
+    write_file("run/droidspaces/mount", cfg->img_mount_point);
+
+  /* Legacy compatibility: write version to the marker directory root */
+  write_file("run/droidspaces/version", DS_VERSION);
   if (cfg->foreground) {
     printf(C_BOLD C_WHITE "\r\n(to exit from the foreground mode, press "
                           "CTRL+ALT+Q)\r\n" C_RESET);
