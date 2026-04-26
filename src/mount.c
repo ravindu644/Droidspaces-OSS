@@ -202,26 +202,48 @@ static void ds_mask_path(const char *path) {
 }
 
 int bind_mount(const char *src, const char *tgt) {
-  /* Ensure target exists */
-  struct stat st_src, st_tgt;
-  if (stat(src, &st_src) < 0)
+  int src_fd = open(src, O_PATH | O_NOFOLLOW | O_CLOEXEC);
+  if (src_fd < 0) {
+    /* If it failed because of ELOOP, it's a symlink we should reject anyway */
     return -1;
-
-  if (stat(tgt, &st_tgt) < 0) {
-    if (S_ISDIR(st_src.st_mode)) {
-      /* CRITICAL: Match source permissions - never hardcode 0755.
-       * the kernel overlays the source transparently. */
-      mkdir(tgt, st_src.st_mode & 07777);
-      if (chown(tgt, st_src.st_uid, st_src.st_gid) < 0) {
-        ds_warn("Failed to chown bind mount point %s: %s", tgt,
-                strerror(errno));
-      }
-    } else {
-      write_file(tgt, ""); /* Create empty file as mount point */
-    }
   }
 
-  return domount(src, tgt, NULL, MS_BIND | MS_REC, NULL);
+  struct stat st_src;
+  if (fstat(src_fd, &st_src) < 0) {
+    close(src_fd);
+    return -1;
+  }
+
+  /* Reject symlinks explicitly */
+  if (S_ISLNK(st_src.st_mode)) {
+    close(src_fd);
+    errno = ELOOP;
+    return -1;
+  }
+
+  struct stat st_tgt;
+  if (lstat(tgt, &st_tgt) < 0) {
+    if (S_ISDIR(st_src.st_mode)) {
+      mkdir(tgt, st_src.st_mode & 07777);
+      if (chown(tgt, st_src.st_uid, st_src.st_gid) < 0) {
+        /* ignore chown failure, not critical for bind mount setup */
+      }
+    } else {
+      write_file(tgt, "");
+    }
+  } else if (S_ISLNK(st_tgt.st_mode)) {
+    ds_error("Security Violation: Bind target %s is a symlink!", tgt);
+    close(src_fd);
+    errno = ELOOP;
+    return -1;
+  }
+
+  char proc_path[64];
+  snprintf(proc_path, sizeof(proc_path), "/proc/self/fd/%d", src_fd);
+
+  int res = domount(proc_path, tgt, NULL, MS_BIND | MS_REC, NULL);
+  close(src_fd);
+  return res;
 }
 
 /*
@@ -935,19 +957,6 @@ int setup_custom_binds(struct ds_config *cfg, const char *rootfs) {
       continue;
     }
 
-    /* Check if source exists on host and is not a symlink */
-    struct stat st_src;
-    if (lstat(cfg->binds[i].src, &st_src) != 0) {
-      ds_warn("Skip bind mount: source path not found on host: %s",
-              cfg->binds[i].src);
-      continue;
-    }
-    if (S_ISLNK(st_src.st_mode)) {
-      ds_error("Security Violation: Bind source %s is a symlink!",
-               cfg->binds[i].src);
-      continue;
-    }
-
     /* Ensure parent directory exists */
     char parent[PATH_MAX];
     safe_strncpy(parent, tgt, sizeof(parent));
@@ -957,14 +966,7 @@ int setup_custom_binds(struct ds_config *cfg, const char *rootfs) {
       mkdir_p(parent, 0755);
     }
 
-    /* Security: Check if target exists and is a symlink */
-    struct stat st_tgt;
-    if (lstat(tgt, &st_tgt) == 0 && S_ISLNK(st_tgt.st_mode)) {
-      ds_error("Security Violation: Bind target %s is a symlink!", tgt);
-      continue;
-    }
-
-    /* Perform bind mount */
+    /* Perform bind mount (handles source/target symlink checks securely) */
     if (bind_mount(cfg->binds[i].src, tgt) < 0) {
       ds_warn("Failed to bind mount %s on %s (skipping)", cfg->binds[i].src,
               tgt);
