@@ -50,9 +50,10 @@
 #include <netinet/in.h>
 #include <poll.h>
 
-/* DNS wire protocol - max UDP payload per RFC 1035 §2.3.4 */
-#define DNS_UDP_MAX 512
-/* Max buffer for upstream reply (EDNS0 can exceed 512 bytes) */
+/* DNS wire protocol - max UDP payload per RFC 1035 §2.3.4 (512)
+ * but EDNS0 (RFC 6891) allows up to 4096. */
+#define DNS_UDP_MAX 4096
+/* Max buffer for upstream reply */
 #define DNS_REPLY_MAX 4096
 /* Upstream reply timeout */
 #define DNS_TIMEOUT_SEC 3
