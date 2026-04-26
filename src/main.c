@@ -988,8 +988,6 @@ int main(int argc, char **argv) {
     }
     enforce_nat_safety(&cfg, argc, argv);
 
-    print_ds_banner();
-
     print_privileged_warning(cfg.privileged_mask);
 
     if ((cfg.privileged_mask & DS_PRIV_NOSEC) && cfg.block_nested_ns) {
@@ -1019,7 +1017,6 @@ int main(int argc, char **argv) {
       goto cleanup;
     }
     enforce_nat_safety(&cfg, argc, argv);
-    print_ds_banner();
 
     print_privileged_warning(cfg.privileged_mask);
 

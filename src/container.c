@@ -263,20 +263,12 @@ int is_valid_container_pid(pid_t pid) {
  * ---------------------------------------------------------------------------*/
 
 int start_rootfs(struct ds_config *cfg) {
-  /* if foreground was requested but we have no interactive terminal (piped,
-   * scripted, config foreground=1, etc.), flip the switch once here and warn
-   * once. Covers both CLI and daemon paths. */
-  if (cfg->foreground && (!isatty(STDIN_FILENO) || !isatty(STDOUT_FILENO))) {
-    cfg->foreground = 0;
-    ds_warn("No interactive terminal - foreground mode disabled, running in "
-            "background.");
-  }
 
   int has_side_effects = 0;
   /* 0. Early restart detection: check for external lock from previous stop
    *    command to detect a preserved mount for reuse. */
   int lock_acquired = 0;
-  if (cfg->container_name[0] && cfg->rootfs_img_path[0]) {
+  if (cfg->container_name[0]) {
     char lock_path[PATH_MAX];
     get_lock_path(cfg->container_name, lock_path, sizeof(lock_path));
 
@@ -339,18 +331,6 @@ int start_rootfs(struct ds_config *cfg) {
   /* 1. Preparation */
   ensure_workspace();
 
-  /* If the user requested permissive mode, ensure it's applied.
-   * ds_set_selinux_permissive() is a no-op if host is already permissive. */
-  if (cfg->selinux_permissive) {
-    ds_set_selinux_permissive();
-  }
-
-  if (cfg->android_storage && !is_android())
-    ds_warn("--enable-android-storage is only supported on Android hosts. "
-            "Skipping.");
-  if (cfg->termux_x11 && !is_android())
-    ds_warn("--termux-x11 is only applicable on Android. Skipping.");
-
   /* 1b. Name Uniqueness Check
    * We no longer auto-generate or increment names. The name must be provided
    * by the user and it must be unique. */
@@ -362,6 +342,29 @@ int start_rootfs(struct ds_config *cfg) {
       goto cleanup;
     }
   }
+
+  print_ds_banner();
+
+  /* if foreground was requested but we have no interactive terminal (piped,
+   * scripted, config foreground=1, etc.), flip the switch once here and warn
+   * once. Covers both CLI and daemon paths. */
+  if (cfg->foreground && (!isatty(STDIN_FILENO) || !isatty(STDOUT_FILENO))) {
+    cfg->foreground = 0;
+    ds_warn("No interactive terminal - foreground mode disabled, running in "
+            "background.");
+  }
+
+  /* If the user requested permissive mode, ensure it's applied.
+   * ds_set_selinux_permissive() is a no-op if host is already permissive. */
+  if (cfg->selinux_permissive) {
+    ds_set_selinux_permissive();
+  }
+
+  if (cfg->android_storage && !is_android())
+    ds_warn("--enable-android-storage is only supported on Android hosts. "
+            "Skipping.");
+  if (cfg->termux_x11 && !is_android())
+    ds_warn("--termux-x11 is only applicable on Android. Skipping.");
 
   /* If no hostname specified, default to container name */
   if (cfg->hostname[0] == '\0') {
@@ -1163,8 +1166,6 @@ int start_rootfs(struct ds_config *cfg) {
     }
 
     show_info(cfg, 1);
-    if (lock_acquired)
-      release_external_lock(cfg->container_name);
     ds_log("Container '%s' is running in background.", cfg->container_name);
     if (is_android()) {
       ds_log("Use 'su -c \"%s --name='%s' enter\"' to connect.", cfg->prog_name,
@@ -1873,7 +1874,15 @@ int show_info(struct ds_config *cfg, int trust_cfg_pid) {
 }
 
 int restart_rootfs(struct ds_config *cfg) {
+  pid_t pid = 0;
+  if (!is_container_running(cfg, &pid) || pid <= 0) {
+    ds_error("Container '%s' is not running or invalid.", cfg->container_name);
+    return -1;
+  }
   ds_log("Restarting container %s...", cfg->container_name);
-  stop_rootfs(cfg, 1); /* skip unmount to keep rootfs.img attached */
+  if (stop_rootfs(cfg, 1) < 0) {
+    return -1;
+  }
+  putchar('\n');
   return start_rootfs(cfg);
 }
