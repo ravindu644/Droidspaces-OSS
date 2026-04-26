@@ -16,6 +16,7 @@ Common issues, their causes, and how to fix them.
 - [WiFi/Mobile Data Disconnects](#wifimobile-data-disconnects)
 - [SELinux-Induced Rootfs Corruption](#selinux-induced-rootfs-corruption-directory-mode)
 - [Systemd Service Sandboxing Conflicts](#systemd-service-sandboxing-conflicts-legacy-kernels)
+- [Reclaiming Storage (Sparse Image)](#reclaim-storage)
 - [WIFI `Power save: on` make the networking experience sluggish in Android](#nuke-wifi-powersave)
 - [Getting Help](#getting-help)
 
@@ -275,6 +276,24 @@ In this mode, the rootfs is stored as a standalone ext4 image and loop-mounted a
     sudo systemctl daemon-reload
     sudo systemctl restart <service-name>
     ```
+
+---
+
+<a id="reclaim-storage"></a>
+## Reclaiming Storage (Sparse Image)
+
+**Symptoms:** You have deleted large files or uninstalled heavy packages inside a container using **Sparse Image mode** (`rootfs.img`), but the `rootfs.img` file on your Android internal storage still takes up the same amount of space (it doesn't "shrink" back).
+
+**Cause:** Ext4 sparse images expand as you write data, but the host filesystem cannot automatically detect when blocks are freed inside the image. This is especially common on legacy kernels (e.g., 4.14).
+
+**Solution:** Use `fstrim` inside the container to tell the kernel to "discard" unused blocks, which punches holes in the sparse image and reclaims space on the physical disk.
+
+1. **Start the container** normally.
+2. **Run fstrim** as root inside the container:
+   ```bash
+   sudo fstrim -av
+   ```
+3. The command will report how many bytes were trimmed. You will notice the `rootfs.img` size on your Android storage has now decreased to match the actual data usage.
 
 ---
 
