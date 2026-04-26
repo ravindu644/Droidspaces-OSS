@@ -138,6 +138,12 @@ static int validate_kernel_version(void) {
 static int validate_configuration_cli(struct ds_config *cfg) {
   int errors = 0;
 
+  if (cfg->container_name[0] && !validate_container_name(cfg->container_name)) {
+    ds_error("Invalid container name '%s'. Use only letters, numbers, '.', "
+             "'_' and '-'.",
+             cfg->container_name);
+    errors++;
+  }
   if (cfg->rootfs_path[0] && cfg->rootfs_img_path[0]) {
     ds_error("Both rootfs directory and image specified simultaneously.");
     ds_log("Directory: %s", cfg->rootfs_path);
@@ -497,6 +503,14 @@ int main(int argc, char **argv) {
       ret = 1;
       goto cleanup;
     }
+  }
+
+  if (cfg.container_name[0] && !validate_container_name(cfg.container_name)) {
+    ds_error("Invalid container name '%s'. Use only letters, numbers, '.', "
+             "'_' and '-'.",
+             cfg.container_name);
+    ret = 1;
+    goto cleanup;
   }
 
   /* If we have a name but haven't successfully loaded a config file yet, load
@@ -901,6 +915,13 @@ int main(int argc, char **argv) {
   }
 
   const char *cmd = argv[optind];
+  if (cfg.container_name[0] && !validate_container_name(cfg.container_name)) {
+    ds_error("Invalid container name '%s'. Use only letters, numbers, '.', "
+             "'_' and '-'.",
+             cfg.container_name);
+    ret = 1;
+    goto cleanup;
+  }
 
   /* Set up global logging context for centralized logging engine */
   if (cfg.container_name[0] != '\0') {

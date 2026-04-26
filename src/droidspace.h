@@ -404,6 +404,7 @@ void write_monitor_debug_log(const char *name, const char *fmt, ...);
 int copy_file(const char *src, const char *dst);
 void sort_bind_mounts(struct ds_config *cfg);
 void sanitize_container_name(const char *name, char *out, size_t size);
+int validate_container_name(const char *name);
 
 /* ---------------------------------------------------------------------------
  * config.c

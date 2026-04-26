@@ -686,6 +686,8 @@ int ds_config_save(const char *config_path, struct ds_config *cfg) {
 int ds_config_validate(struct ds_config *cfg) {
   int errors = 0;
 
+  if (cfg->container_name[0] && !validate_container_name(cfg->container_name))
+    errors++;
   if (cfg->rootfs_path[0] && cfg->rootfs_img_path[0])
     errors++;
   if (!cfg->container_name[0])
@@ -728,6 +730,8 @@ char *ds_config_auto_path(const char *rootfs_path) {
 int ds_config_load_by_name(const char *name, struct ds_config *cfg) {
   if (!name || name[0] == '\0')
     return -1;
+  if (!validate_container_name(name))
+    return -1;
 
   char safe_name[256];
   sanitize_container_name(name, safe_name, sizeof(safe_name));
@@ -741,6 +745,9 @@ int ds_config_load_by_name(const char *name, struct ds_config *cfg) {
 
 int ds_config_save_by_name(const char *name, struct ds_config *cfg) {
   if (!name || name[0] == '\0')
+    return -1;
+
+  if (!validate_container_name(name))
     return -1;
 
   char safe_name[256];

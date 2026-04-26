@@ -30,6 +30,26 @@ void sanitize_container_name(const char *name, char *out, size_t size) {
   out[i] = '\0';
 }
 
+int validate_container_name(const char *name) {
+  if (!name || !name[0])
+    return 0;
+
+  if (strcmp(name, ".") == 0 || strcmp(name, "..") == 0)
+    return 0;
+
+  size_t len = strlen(name);
+  if (len >= 256)
+    return 0;
+
+  for (size_t i = 0; i < len; i++) {
+    unsigned char c = (unsigned char)name[i];
+    if (!(isalnum(c) || c == '.' || c == '_' || c == '-'))
+      return 0;
+  }
+
+  return 1;
+}
+
 /* ---------------------------------------------------------------------------
  * Relative-path resolution
  *
