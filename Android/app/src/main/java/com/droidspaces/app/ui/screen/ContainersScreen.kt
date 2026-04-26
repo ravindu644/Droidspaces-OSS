@@ -69,6 +69,7 @@ fun ContainersScreen(
     isRootAvailable: Boolean = true,
     onNavigateToInstallation: (Uri) -> Unit = {},
     onNavigateToEditContainer: (String) -> Unit = {},
+    onNavigateToContainerDetails: (String) -> Unit = {},
     containerViewModel: ContainerViewModel
 ) {
     val scope = rememberCoroutineScope()
@@ -614,6 +615,9 @@ fun ContainersScreen(
                             },
                             onEdit = {
                                 onNavigateToEditContainer(container.name)
+                            },
+                            onEnter = {
+                                onNavigateToContainerDetails(container.name)
                             },
                             onUninstall = {
                                 showUninstallConfirmation = container

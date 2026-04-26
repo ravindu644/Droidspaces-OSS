@@ -298,6 +298,7 @@ fun MainTabScreen(
                         isRootAvailable = appStateViewModel.isRootAvailable,
                         onNavigateToInstallation = onNavigateToContainerInstallation,
                         onNavigateToEditContainer = onNavigateToEditContainer,
+                        onNavigateToContainerDetails = onNavigateToContainerDetails,
                         containerViewModel = containerViewModel,
                         onRefresh = { performRefresh(TabItem.Containers) }
                     )
@@ -454,6 +455,7 @@ private fun ContainersTabContent(
     isRootAvailable: Boolean,
     onNavigateToInstallation: (android.net.Uri) -> Unit,
     onNavigateToEditContainer: (String) -> Unit,
+    onNavigateToContainerDetails: (String) -> Unit,
     containerViewModel: ContainerViewModel,
     onRefresh: suspend () -> Unit
 ) {
@@ -463,6 +465,7 @@ private fun ContainersTabContent(
             isRootAvailable = isRootAvailable,
             onNavigateToInstallation = onNavigateToInstallation,
             onNavigateToEditContainer = onNavigateToEditContainer,
+            onNavigateToContainerDetails = onNavigateToContainerDetails,
             containerViewModel = containerViewModel
         )
     }
