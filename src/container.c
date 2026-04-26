@@ -263,6 +263,15 @@ int is_valid_container_pid(pid_t pid) {
  * ---------------------------------------------------------------------------*/
 
 int start_rootfs(struct ds_config *cfg) {
+  /* if foreground was requested but we have no interactive terminal (piped,
+   * scripted, config foreground=1, etc.), flip the switch once here and warn
+   * once. Covers both CLI and daemon paths. */
+  if (cfg->foreground && (!isatty(STDIN_FILENO) || !isatty(STDOUT_FILENO))) {
+    cfg->foreground = 0;
+    ds_warn("No interactive terminal - foreground mode disabled, running in "
+            "background.");
+  }
+
   int has_side_effects = 0;
   /* 0. Early restart detection: check for external lock from previous stop
    *    command to detect a preserved mount for reuse. */
@@ -1411,15 +1420,18 @@ int enter_rootfs(struct ds_config *cfg, const char *user) {
 
   int sv[2];
   if (socketpair(AF_UNIX, SOCK_STREAM, 0, sv) < 0) {
-    close(tty.master); close(tty.slave);
+    close(tty.master);
+    close(tty.slave);
     free_config_env_vars(cfg);
     return -1;
   }
 
   /* Send slave fd to child before fork so it can use it after setns */
   if (ds_send_fd(sv[0], tty.slave) < 0) {
-    close(sv[0]); close(sv[1]);
-    close(tty.master); close(tty.slave);
+    close(sv[0]);
+    close(sv[1]);
+    close(tty.master);
+    close(tty.slave);
     free_config_env_vars(cfg);
     return -1;
   }
@@ -1428,7 +1440,8 @@ int enter_rootfs(struct ds_config *cfg, const char *user) {
 
   pid_t child = fork();
   if (child < 0) {
-    close(sv[0]); close(sv[1]);
+    close(sv[0]);
+    close(sv[1]);
     close(tty.master);
     free_config_env_vars(cfg);
     return -1;

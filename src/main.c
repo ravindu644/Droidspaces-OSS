@@ -926,17 +926,6 @@ int main(int argc, char **argv) {
     goto cleanup;
   }
 
-  /* Prevent foreground mode in non-interactive environments for interactive
-   * commands */
-  if (cfg.foreground && (!isatty(STDIN_FILENO) || !isatty(STDOUT_FILENO))) {
-    if (strcmp(cmd, "start") == 0 || strcmp(cmd, "restart") == 0 ||
-        strcmp(cmd, "enter") == 0) {
-      ds_error("Foreground mode requires a fully interactive terminal.");
-      ret = 1;
-      goto cleanup;
-    }
-  }
-
   /* Basic info commands */
   if (strcmp(cmd, "check") == 0) {
     ret = check_requirements_detailed();

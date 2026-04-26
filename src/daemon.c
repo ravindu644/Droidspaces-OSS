@@ -969,13 +969,21 @@ int ds_client_run(int argc, char **argv) {
     }
     if (forces_tty) {
       if (is_enter) {
-        fprintf(stderr,
-                "[-] Interactive terminal is required for the enter command\n");
+        ds_error("Interactive terminal is required for the enter command\n");
+        return 1;
       } else {
-        fprintf(stderr,
-                "[-] Foreground mode requires a fully interactive terminal.\n");
+        /* Strip -f/--foreground; start_rootfs() will warn and flip the switch.
+         */
+        for (int i = 0; i < argc; i++) {
+          if (strcmp(argv[i], "-f") == 0 ||
+              strcmp(argv[i], "--foreground") == 0) {
+            for (int j = i; j < argc - 1; j++)
+              argv[j] = argv[j + 1];
+            argv[--argc] = NULL;
+            break;
+          }
+        }
       }
-      return 1;
     }
     interactive = 0;
   }
