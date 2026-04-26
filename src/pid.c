@@ -119,8 +119,15 @@ static int is_pid_file(const char *name) {
 int resolve_pidfile_from_name(const char *name, char *pidfile, size_t size) {
   if (!name || !pidfile || size == 0)
     return -1;
+<<<<<<< HEAD
   if (!validate_container_name(name))
     return -1;
+=======
+  if (!validate_container_name(name)) {
+    ds_error("Invalid container name '%s'.", name);
+    return -1;
+  }
+>>>>>>> 12e8e1f (container: reject unsafe names)
 
   char safe_name[256];
   sanitize_container_name(name, safe_name, sizeof(safe_name));

@@ -403,6 +403,11 @@ int main(int argc, char **argv) {
       safe_strncpy(cfg.config_file, optarg, sizeof(cfg.config_file));
       cfg.config_file_specified = 1;
     } else if (opt == 'n') {
+      if (!validate_container_name(optarg)) {
+        ds_error("Invalid container name '%s'. Use only letters, numbers, '.', '_' and '-'.", optarg);
+        ret = 1;
+        goto cleanup;
+      }
       safe_strncpy(cfg.container_name, optarg, sizeof(cfg.container_name));
     } else if (opt == 'r') {
       safe_strncpy(temp_r, optarg, sizeof(temp_r));

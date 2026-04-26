@@ -405,7 +405,10 @@ int copy_file(const char *src, const char *dst);
 void sort_bind_mounts(struct ds_config *cfg);
 void sanitize_container_name(const char *name, char *out, size_t size);
 int validate_container_name(const char *name);
+<<<<<<< HEAD
 int validate_bind_destination(const char *dest);
+=======
+>>>>>>> 12e8e1f (container: reject unsafe names)
 
 /* ---------------------------------------------------------------------------
  * config.c
