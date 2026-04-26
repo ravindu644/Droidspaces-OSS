@@ -349,7 +349,7 @@ private fun TerminalCard(
             pressedElevation = 4.dp
         ),
         colors = CardDefaults.elevatedCardColors(
-            containerColor = MaterialTheme.colorScheme.tertiaryContainer
+            containerColor = MaterialTheme.colorScheme.primaryContainer
         )
     ) {
         Row(
@@ -368,14 +368,14 @@ private fun TerminalCard(
                     imageVector = Icons.Default.Terminal,
                     contentDescription = null,
                     modifier = Modifier.size(22.dp),
-                    tint = MaterialTheme.colorScheme.tertiary
+                    tint = MaterialTheme.colorScheme.primary
                 )
                 Column {
                     Text(
                         text = context.getString(R.string.terminal),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onTertiaryContainer
+                        color = MaterialTheme.colorScheme.onPrimaryContainer
                     )
                     val description = if (sessionCount > 0) {
                         "$sessionCount ${if (sessionCount == 1) "session" else "sessions"} running · tap to restore"
@@ -385,7 +385,7 @@ private fun TerminalCard(
                     Text(
                         text = description,
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onTertiaryContainer.copy(alpha = 0.7f)
+                        color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
                     )
                 }
             }
@@ -394,8 +394,8 @@ private fun TerminalCard(
                 onClick = onOpenTerminal,
                 modifier = Modifier.widthIn(min = 140.dp),
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.tertiary,
-                    contentColor = MaterialTheme.colorScheme.onTertiary
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    contentColor = MaterialTheme.colorScheme.onPrimary
                 )
             ) {
                 Icon(
@@ -487,9 +487,9 @@ private fun PremiumSystemdCard(
                         else -> MaterialTheme.colorScheme.onSurfaceVariant
                     }
                 )
-                            Text(
-                                text = context.getString(R.string.systemd),
-                                style = MaterialTheme.typography.titleMedium,
+                Text(
+                    text = context.getString(R.string.systemd),
+                    style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     color = when (state) {
                         is SystemdCardState.Available -> MaterialTheme.colorScheme.onPrimaryContainer
