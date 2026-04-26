@@ -22,7 +22,6 @@
 #include <limits.h>
 #include <net/if.h>
 #include <pthread.h>
-#include <pty.h>
 #include <sched.h>
 #include <signal.h>
 #include <stdarg.h>
@@ -628,6 +627,7 @@ void ds_dns_proxy_update_upstream(const char *new_iface);
  * terminal.c
  * ---------------------------------------------------------------------------*/
 
+int ds_openpty(int *master, int *slave, char *name);
 int ds_terminal_create(struct ds_tty_info *tty);
 int ds_terminal_set_stdfds(int fd);
 int ds_terminal_make_controlling(int fd);

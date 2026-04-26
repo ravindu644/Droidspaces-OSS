@@ -1401,16 +1401,35 @@ int enter_rootfs(struct ds_config *cfg, const char *user) {
 
   ds_log("Entering container '%s' as %s...", cfg->container_name, user);
 
-  int sv[2];
-  if (socketpair(AF_UNIX, SOCK_STREAM, 0, sv) < 0) {
+  /* Allocate PTY in host mnt namespace - /dev/ptmx is a real char device here.
+   * On kernel 3.x the container's /dev/ptmx may be a dangling symlink. */
+  struct ds_tty_info tty;
+  if (ds_terminal_create(&tty) < 0) {
     free_config_env_vars(cfg);
     return -1;
   }
 
+  int sv[2];
+  if (socketpair(AF_UNIX, SOCK_STREAM, 0, sv) < 0) {
+    close(tty.master); close(tty.slave);
+    free_config_env_vars(cfg);
+    return -1;
+  }
+
+  /* Send slave fd to child before fork so it can use it after setns */
+  if (ds_send_fd(sv[0], tty.slave) < 0) {
+    close(sv[0]); close(sv[1]);
+    close(tty.master); close(tty.slave);
+    free_config_env_vars(cfg);
+    return -1;
+  }
+  close(tty.slave);
+  tty.slave = -1;
+
   pid_t child = fork();
   if (child < 0) {
-    close(sv[0]);
-    close(sv[1]);
+    close(sv[0]); close(sv[1]);
+    close(tty.master);
     free_config_env_vars(cfg);
     return -1;
   }
@@ -1418,11 +1437,12 @@ int enter_rootfs(struct ds_config *cfg, const char *user) {
   if (child == 0) {
     close(sv[0]);
 
-    /* CRITICAL: Physically attach process to the container's cgroup on the
-     * host. This ensures the process is inside the container's hierarchy
-     * subtree, which is required for D-Bus/logind inside to move it into
-     * session scopes.
-     */
+    /* Receive slave fd that was pre-allocated in host mnt namespace */
+    tty.slave = ds_recv_fd(sv[1]);
+    if (tty.slave < 0)
+      _exit(EXIT_FAILURE);
+
+    /* cgroup attach before entering namespaces */
     ds_log_silent = 1;
     ds_cgroup_attach(pid);
     ds_log_silent = 0;
@@ -1440,11 +1460,6 @@ int enter_rootfs(struct ds_config *cfg, const char *user) {
                                  !(cfg->privileged_mask & DS_PRIV_NOSEC));
     ds_apply_capability_hardening(cfg->hw_access, cfg->privileged_mask);
     ds_log_silent = 0;
-
-    /* Allocate TTY INSIDE the container namespaces */
-    struct ds_tty_info tty;
-    if (ds_terminal_create(&tty) < 0)
-      _exit(EXIT_FAILURE);
 
     /* ---------------------------------------------------------------
      * LXC-STYLE SESSION SETUP - intermediate becomes session leader

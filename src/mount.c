@@ -726,9 +726,17 @@ int setup_devpts(int hw_access) {
           }
         }
 
-        /* Method 2: Symlink (fallback) */
+        /* Method 2: Symlink - but verify target exists first.
+         * Kernel 3.x devpts newinstance may not create /dev/pts/ptmx. */
         unlink(ptmx_path);
-        if (symlink("pts/ptmx", ptmx_path) == 0) {
+        if (symlink("pts/ptmx", ptmx_path) == 0 && access(pts_ptmx, F_OK) == 0)
+          return 0;
+
+        /* Method 3: real c 5,2 node for kernel 3.x (not namespace-isolated
+         * but /dev/ptmx actually exists and openpty works). */
+        unlink(ptmx_path);
+        if (mknod(ptmx_path, S_IFCHR | 0666, makedev(5, 2)) == 0) {
+          chmod(ptmx_path, 0666);
           return 0;
         }
       }

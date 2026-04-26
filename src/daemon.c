@@ -257,7 +257,7 @@ static void handle_session(int conn, ds_req_t *r) {
   char buf[DS_IOBUF];
 
   if (is_pty) {
-    if (openpty(&master, &slave, NULL, NULL, NULL) < 0) {
+    if (ds_openpty(&master, &slave, NULL) < 0) {
       send_frame(conn, MSG_ERR, "daemon: openpty failed\n", 23);
       send_exit(conn, 1);
       return;

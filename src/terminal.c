@@ -12,27 +12,54 @@
  * PTY Allocation
  * ---------------------------------------------------------------------------*/
 
+/* Open master + slave without relying on /dev/ptmx symlink resolution.
+ * TIOCGPTPEER (4.13+) opens slave directly from master fd.
+ * Falls back to TIOCGPTN + path open for kernel 3.x. */
+int ds_openpty(int *master, int *slave, char *name) {
+  int m = open("/dev/ptmx", O_RDWR | O_NOCTTY | O_CLOEXEC);
+  if (m < 0)
+    return -1;
+
+  /* unlock slave */
+  int unlock = 0;
+  if (ioctl(m, TIOCSPTLCK, &unlock) < 0)
+    goto err;
+
+  /* try kernel 4.13+ path-free method first */
+  int s = ioctl(m, TIOCGPTPEER, O_RDWR | O_NOCTTY | O_CLOEXEC);
+  if (s < 0) {
+    /* fallback: build /dev/pts/N path */
+    unsigned int ptyno;
+    if (ioctl(m, TIOCGPTN, &ptyno) < 0)
+      goto err;
+    snprintf(name, PATH_MAX, "/dev/pts/%u", ptyno);
+    s = open(name, O_RDWR | O_NOCTTY | O_CLOEXEC);
+    if (s < 0)
+      goto err;
+  } else if (name) {
+    /* populate name even on the fast path */
+    unsigned int ptyno;
+    if (ioctl(m, TIOCGPTN, &ptyno) == 0)
+      snprintf(name, PATH_MAX, "/dev/pts/%u", ptyno);
+  }
+
+  *master = m;
+  *slave  = s;
+  return 0;
+err:
+  close(m);
+  return -1;
+}
+
 int ds_terminal_create(struct ds_tty_info *tty) {
-  /* openpty() allocates a master/slave pair.
-   * slave name is returned in tty->name. */
-  if (openpty(&tty->master, &tty->slave, tty->name, NULL, NULL) < 0) {
+  if (ds_openpty(&tty->master, &tty->slave, tty->name) < 0) {
     ds_error("openpty failed: %s", strerror(errno));
     return -1;
   }
 
-  /* Set ownership and permissions for the slave TTY */
-  if (fchown(tty->slave, 0, 5) < 0) {
-    /* 5 is usually 'tty' group, failure ignored on some platforms */
-  }
-  if (fchmod(tty->slave, 0620) < 0) {
-    /* Failure ignored */
-  }
-
-  /* Set FD_CLOEXEC so they don't leak to the container's init */
-  if (fcntl(tty->master, F_SETFD, FD_CLOEXEC) < 0)
-    ds_warn("fcntl(master, FD_CLOEXEC) failed: %s", strerror(errno));
-  if (fcntl(tty->slave, F_SETFD, FD_CLOEXEC) < 0)
-    ds_warn("fcntl(slave, FD_CLOEXEC) failed: %s", strerror(errno));
+  /* tty group ownership + permissions */
+  fchown(tty->slave, 0, 5);
+  fchmod(tty->slave, 0620);
 
   return 0;
 }
