@@ -113,45 +113,36 @@ fun TerminalConsole(
             }
     }
 
-    // Use a single non-restarting collector for all scroll triggers to prevent
-    // "double-bouncing" (where snapsFlow and isProcessing-flip compete).
-    LaunchedEffect(Unit) {
-        // Track the last processing state to detect the start of a new operation
-        var wasProcessing = false
-
-        snapshotFlow { Triple(logs.size, verticalScrollState.maxValue, isProcessing) }
-            .collect { (_, maxValue, processing) ->
-                // Reset scroller state when a new operation starts
-                if (processing && !wasProcessing) {
-                    userScrolledUp = false
+    // Auto-scroll logic: ensures the terminal stays at the bottom during processing.
+    // We watch both logs.size (data) and maxValue (layout) to catch every update.
+    LaunchedEffect(logs.size, verticalScrollState.maxValue) {
+        if (!userScrolledUp) {
+            val target = verticalScrollState.maxValue
+            if (verticalScrollState.value < target) {
+                isAutoScrolling = true
+                try {
+                    // Use a slightly faster spring for tight stickiness during bursts,
+                    // but keeping it smooth enough for that "glide" feel.
+                    verticalScrollState.animateScrollTo(
+                        value = target,
+                        animationSpec = spring(
+                            dampingRatio = Spring.DampingRatioNoBouncy,
+                            stiffness = Spring.StiffnessLow
+                        )
+                    )
+                } finally {
                     isAutoScrolling = false
                 }
-                wasProcessing = processing
-
-                // Only auto-scroll if the user hasn't manually scrolled up
-                if (!userScrolledUp) {
-                    // Small delay to let the layout settle for the new line
-                    kotlinx.coroutines.delay(50)
-
-                    // Only animate if there's actually a distance to cover.
-                    // This prevents the "double bounce" where we trigger an animation
-                    // even if we are already at the target maxValue.
-                    if (verticalScrollState.value < maxValue) {
-                        isAutoScrolling = true
-                        try {
-                            verticalScrollState.animateScrollTo(
-                                value = maxValue,
-                                animationSpec = spring(
-                                    dampingRatio = Spring.DampingRatioNoBouncy,
-                                    stiffness = Spring.StiffnessLow
-                                )
-                            )
-                        } finally {
-                            isAutoScrolling = false
-                        }
-                    }
-                }
             }
+        }
+    }
+
+    // Reset auto-scroll state when a new operation starts
+    LaunchedEffect(isProcessing) {
+        if (isProcessing) {
+            userScrolledUp = false
+            isAutoScrolling = false
+        }
     }
 
     val defaultTextColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.9f)
