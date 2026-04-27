@@ -418,6 +418,9 @@
     <!-- Sparse Image Management -->
     <string name="migrate_to_sparse_image">Migrate to a sparse image</string>
     <string name="resize_sparse_image">Resize the sparse image</string>
+    <string name="export_container">Export container as tarball</string>
+    <string name="export_container_failed">Failed to export container %1$s</string>
+    <string name="starting_export">Starting export...</string>
     <string name="migrate_dialog_title">Migrate to Sparse Image</string>
     <string name="resize_dialog_title">Resize Sparse Image</string>
     <string name="migrate_dialog_message">Migrating \"%1$s\" to a sparse image will create a dedicated ext4 filesystem. This operation is destructive if interrupted. Please backup your data.</string>

@@ -39,6 +39,7 @@ fun ContainerCard(
     onUninstall: () -> Unit = {},
     onMigrate: () -> Unit = {},
     onResize: () -> Unit = {},
+    onExport: () -> Unit = {},
     isOperationRunning: Boolean = false,
     onShowLogs: () -> Unit = {},
     modifier: Modifier = Modifier
@@ -325,6 +326,17 @@ fun ContainerCard(
                 }
 
                 DropdownMenuItem(
+                    text = { Text(context.getString(R.string.export_container)) },
+                    onClick = {
+                        showContextMenu = false
+                        onExport()
+                    },
+                    leadingIcon = {
+                        Icon(Icons.Default.FileDownload, contentDescription = null)
+                    }
+                )
+
+                DropdownMenuItem(
                     text = { Text(context.getString(R.string.uninstall_container_menu)) },
                     onClick = {
                         showContextMenu = false
@@ -337,4 +349,3 @@ fun ContainerCard(
         }
     }
 }
-

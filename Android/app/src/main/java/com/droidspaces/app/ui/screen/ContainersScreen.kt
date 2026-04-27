@@ -84,13 +84,124 @@ fun ContainersScreen(
     var showLogViewerFor by remember { mutableStateOf<String?>(null) }
     var lastErrorContainer by remember { mutableStateOf<String?>(null) }
 
-    // Uninstall state management (similar to SystemdScreen pattern)
+    // Uninstall/Operation state management
     var showUninstallConfirmation by remember { mutableStateOf<ContainerInfo?>(null) }
     var uninstallState by remember { mutableStateOf<UninstallState>(UninstallState.Idle) }
     var uninstallLogsDialog by remember { mutableStateOf<List<String>?>(null) }
 
     // Sparse operation state management
     var pendingSparseOperation by remember { mutableStateOf<SparseOperation?>(null) }
+
+    // Export state - tracks which container is pending export (waiting for file picker)
+    var pendingExportContainer by remember { mutableStateOf<ContainerInfo?>(null) }
+
+    // Execute container export - writes archive to user-picked URI via temp file
+    suspend fun executeExport(container: ContainerInfo, outputUri: Uri) {
+        runningOperationContainer = container.name
+        val logs = if (!containerLogs.containsKey(container.name)) {
+            val newLogs = androidx.compose.runtime.mutableStateListOf<Pair<Int, String>>()
+            containerLogs = containerLogs.toMutableMap().apply { put(container.name, newLogs) }
+            newLogs
+        } else {
+            containerLogs[container.name]!!
+        }
+        logs.clear()
+        prefsManager.clearContainerLogs(container.name)
+        // Defer showLogViewerFor until after stopping logic
+
+        val logger = ViewModelLogger { level, message ->
+            logs.add(level to message)
+        }.apply { verbose = true }
+
+        var scriptFile: File? = null
+        var tempArchive: File? = null
+        try {
+            // Check if container is running first
+            val isRunning = ContainerManager.checkContainerStatus(container.name).first
+            if (isRunning) {
+                // Show progress dialog - stopping (using UninstallState for consistent UI)
+                uninstallState = UninstallState.InProgress(container.name, context.getString(R.string.stopping_container))
+
+                val stopCommand = ContainerCommandBuilder.buildStopCommand(container)
+                val stopResult = ContainerOperationExecutor.executeCommand(stopCommand, "stop", logger)
+
+                // Dismiss progress dialog
+                uninstallState = UninstallState.Idle
+
+                if (!stopResult) {
+                    logger.e(context.getString(R.string.failed_to_stop_container, container.name))
+                    scope.showError(snackbarHostState, context.getString(R.string.failed_to_stop_container, container.name))
+                    return
+                }
+            }
+
+            // Clear stop-logs so terminal starts fresh for the actual export
+            logs.clear()
+
+            // Now show the log viewer for the actual operation
+            showLogViewerFor = container.name
+            logger.i(context.getString(R.string.starting_export))
+
+            // Deploy export_container.sh from assets
+            val deployed = File("${context.cacheDir}/export_container.sh")
+            scriptFile = deployed
+            context.assets.open("export_container.sh").use { input ->
+                deployed.outputStream().use { out: java.io.OutputStream -> input.copyTo(out) }
+            }
+            Shell.cmd("chmod 755 \"${deployed.absolutePath}\"").exec()
+
+            // Write archive to a temp file first, then copy to the URI
+            tempArchive = File("${context.cacheDir}/${container.name}_export_tmp.tar.gz")
+            tempArchive.delete()
+
+            val cmd = "\"${deployed.absolutePath}\" \"${container.name}\" \"${tempArchive.absolutePath}\""
+            val success = ContainerOperationExecutor.executeCommand(
+                command = cmd,
+                operation = "export",
+                logger = logger,
+                skipHeader = true,
+                operationCompletedMessage = context.getString(R.string.operation_completed_success)
+            )
+
+            if (success && tempArchive.exists() && tempArchive.length() > 0) {
+                // Copy temp file → user-picked URI
+                logger.i("Writing archive to destination...")
+                withContext(Dispatchers.IO) {
+                    context.contentResolver.openOutputStream(outputUri)?.use { out ->
+                        tempArchive.inputStream().use { it.copyTo(out) }
+                    }
+                }
+                logger.i("Done! Archive written successfully.")
+            } else if (!success) {
+                logger.e(context.getString(R.string.export_container_failed, container.name))
+                scope.showError(snackbarHostState, context.getString(R.string.export_container_failed, container.name))
+            }
+        } catch (e: Exception) {
+            logger.e("Export error: ${e.message}")
+            logger.e(e.stackTraceToString())
+            scope.showError(snackbarHostState, context.getString(R.string.export_container_failed, container.name))
+        } finally {
+            scriptFile?.delete()
+            tempArchive?.delete()
+            prefsManager.saveContainerLogs(container.name, logs.toList())
+            kotlinx.coroutines.delay(500)
+            runningOperationContainer = null
+        }
+    }
+
+
+    // File picker launcher - CreateDocument for saving the export archive
+    val exportFileLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.CreateDocument("application/gzip")
+    ) { uri: Uri? ->
+        val container = pendingExportContainer
+        pendingExportContainer = null
+        if (uri != null && container != null) {
+            scope.launch {
+                executeExport(container, uri)
+            }
+        }
+    }
 
     // File picker launcher - accept all files, validate internally
     // We don't filter in the picker (MIME types are unreliable for tar.xz/tar.gz)
@@ -118,6 +229,7 @@ fun ContainersScreen(
             }
         }
     }
+
 
     // Get containers from ViewModel - single source of truth (KernelSU pattern)
     val containers = containerViewModel.containerList
@@ -340,7 +452,7 @@ fun ContainersScreen(
         }
         logs.clear()
         prefsManager.clearContainerLogs(container.name)
-        showLogViewerFor = container.name
+        // Defer showLogViewerFor until after stopping logic
 
         val logger = ViewModelLogger { level, message ->
             logs.add(level to message)
@@ -348,12 +460,18 @@ fun ContainersScreen(
 
         var scriptFile: File? = null
         try {
-            // 2. Stop container if running
+            // Check if container is running first
             val isRunning = ContainerManager.checkContainerStatus(container.name).first
             if (isRunning) {
-                logger.i(context.getString(R.string.stopping_container))
+                // Show progress dialog - stopping (using UninstallState for consistent UI)
+                uninstallState = UninstallState.InProgress(container.name, context.getString(R.string.stopping_container))
+
                 val stopCommand = ContainerCommandBuilder.buildStopCommand(container)
                 val stopResult = ContainerOperationExecutor.executeCommand(stopCommand, "stop", logger)
+
+                // Dismiss progress dialog
+                uninstallState = UninstallState.Idle
+
                 if (!stopResult) {
                     logger.e(context.getString(R.string.failed_to_stop_container, container.name))
                     return
@@ -361,6 +479,12 @@ fun ContainersScreen(
                 // Small delay to ensure cleanup
                 kotlinx.coroutines.delay(1000)
             }
+
+            // Clear stop-logs so terminal starts fresh for the actual operation
+            logs.clear()
+
+            // Now show the log viewer for the actual operation
+            showLogViewerFor = container.name
 
             // 3. Deploy sparsemgr.sh from assets
             val deployedFile = File("${context.cacheDir}/sparsemgr.sh")
@@ -435,6 +559,7 @@ fun ContainersScreen(
         }
     }
 
+
     Box(
         modifier = Modifier.fillMaxSize()
     ) {
@@ -498,6 +623,16 @@ fun ContainersScreen(
                             },
                             onResize = {
                                 pendingSparseOperation = SparseOperation.Resize(container)
+                            },
+                            onExport = {
+                                // Generate filename: <name>_yyyyMMdd_HHmmss.tar.gz
+                                val timestamp = java.text.SimpleDateFormat(
+                                    "yyyyMMdd_HHmmss",
+                                    java.util.Locale.US
+                                ).format(java.util.Date())
+                                val fileName = "${container.name}_${timestamp}.tar.gz"
+                                pendingExportContainer = container
+                                exportFileLauncher.launch(fileName)
                             }
                         )
                     }
