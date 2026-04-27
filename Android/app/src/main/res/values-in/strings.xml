@@ -358,7 +358,7 @@
     <string name="privileged_disclaimer">Dengan mengaktifkan opsi-opsi ini, Anda membahayakan keamanan perangkat Anda. Kami TIDAK bertanggung jawab atas kehilangan data, perangkat yang rusak total, atau bug yang aneh. JANGAN laporkan masalah yang terjadi saat menggunakan mode-mode ini.</string>
     <string name="privileged_confirm_instruction">Ketik “SAYA TIDAK AKAN MELAPORKAN BUG APA PUN” persis seperti ini dengan huruf besar untuk mengonfirmasi:</string>
     <string name="i_understand_caps">SAYA TIDAK AKAN MELAPORKAN BUG APAPUN</string>
-    <string name="reboot_recommended">Disarankan untuk me-reboot sistem setelah instalasi agar aturan SELinux diterapkan.</string>
+    <string name="reboot_recommended">Disarankan untuk me-reboot sistem agar aturan SELinux diterapkan dan daemon berjalan saat booting.</string>
     <string name="mask_service">Layanan mask</string>
     <string name="no_masked_services">Tidak ada layanan masked</string>
     <string name="bind_mounts">Mount Bind</string>

@@ -354,7 +354,7 @@
     <string name="help_card_title">Droidspaces වලට අලුත් ද?</string>
     <string name="help_card_message">ඔබේ පළමු Android කන්ටේනරය සකසන්නේ කෙසේදැයි ඉගෙන ගැනීමට මෙතන ක්ලික් කරන්න !</string>
     <string name="help_card_url">https://github.com/ravindu644/Droidspaces-OSS/blob/main/Documentation/Installation-Android.md</string>
-    <string name="reboot_recommended">SELinux නීති ක්රියාත්මක කිරීම සඳහා ස්ථාපනයෙන් පසු ඔබගේ උපාංගය restart කිරීම නිර්දේශ කෙරේ.</string>
+    <string name="reboot_recommended">SELinux නීති ක්රියාත්මක කිරීම සහ boot වීමේදී daemon ආරම්භ කිරීම සඳහා ඔබගේ උපාංගය restart කිරීම නිර්දේශ කෙරේ.</string>
     <string name="app_name" translatable="false">Droidspaces</string>
     <string name="tarball_label">Tarball</string>
     <string name="review_configuration">සැකසුම් සමාලෝචනය</string>

@@ -246,7 +246,7 @@
     <string name="network_mode_nat">ネットワークアドレス変換 (分離)</string>
     <string name="nat_settings">ネットワークアドレス変換設定</string>
     <string name="symmetric_label">(対称)</string>
-    <string name="reboot_recommended">SELinuxのルールを適用する為に、インストール後には再起動が推奨されます。</string>
+    <string name="reboot_recommended">SELinuxのルールを適用し、起動時にデーモンを開始する為に再起動が推奨されます。</string>
     <string name="size_required">容量は必須です</string>
     <string name="invalid_number">不正な数値</string>
     <string name="error_container_name_invalid">コンテナ名に含められるのは、英数字、ハイフン (-)、アンダースコア (_)、ドット (.)、そして空白だけです</string>

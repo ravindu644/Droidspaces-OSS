@@ -411,5 +411,5 @@
     <string name="privileged_disclaimer">Abilitando queste opzioni, stai compromettendo la sicurezza del tuo dispositivo. NON siamo responsabili per perdita di dati, dispositivi danneggiati o bug strani. NON segnalare problemi verificatisi durante l\'uso di queste modalità.</string>
     <string name="privileged_confirm_instruction">Digita \"I WON\'T REPORT ANY BUGS\" esattamente in maiuscolo per confermare:</string>
     <string name="i_understand_caps">I WON\'T REPORT ANY BUGS</string>
-    <string name="reboot_recommended">Riavvio consigliato dopo l\'installazione per applicare le regole SELinux.</string>
+    <string name="reboot_recommended">Riavvio consigliato per applicare le regole SELinux e avviare il daemon all\'avvio.</string>
 </resources>

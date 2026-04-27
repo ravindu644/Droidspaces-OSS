@@ -200,7 +200,7 @@
     <string name="starting_migration">开始执行迁移操作...</string>
     <string name="grant_permission">授予权限</string>
     <string name="container_name_placeholder" translatable="false">my-container</string>
-    <string name="reboot_recommended">建议在安装完成后重启以应用 SELinux 策略。</string>
+    <string name="reboot_recommended">建议重启以应用 SELinux 策略并在开机时启动守护进程。</string>
     <string name="ram">RAM</string>
     <string name="user_in_parentheses">%1$s</string>
     <string name="next_summary">下一步：概览</string>

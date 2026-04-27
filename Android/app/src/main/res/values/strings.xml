@@ -443,5 +443,5 @@
     <string name="privileged_confirm_instruction">Type \"I WON\'T REPORT ANY BUGS\" exactly in capitals to confirm:</string>
     <string name="i_understand_caps">I WON\'T REPORT ANY BUGS</string>
 
-    <string name="reboot_recommended">Reboot recommended after installation to apply SELinux rules.</string>
+    <string name="reboot_recommended">Reboot recommended to apply SELinux rules and start the daemon on boot.</string>
 </resources>

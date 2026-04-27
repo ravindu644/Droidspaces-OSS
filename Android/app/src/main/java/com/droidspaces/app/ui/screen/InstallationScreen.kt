@@ -22,6 +22,7 @@ import com.droidspaces.app.util.ModuleInstaller
 import com.droidspaces.app.util.ModuleInstallationStep
 import com.droidspaces.app.util.DroidspacesChecker
 import com.droidspaces.app.util.DroidspacesBackendStatus
+import com.droidspaces.app.util.PreferencesManager
 import com.topjohnwu.superuser.Shell
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -104,6 +105,16 @@ fun InstallationScreen(
                     }
                     moduleResult.fold(
                         onSuccess = {
+                            // On a truly fresh install, .daemon_mode won't exist yet.
+                            // Force-enable daemon mode so new users get sane defaults.
+                            // On reinstalls/updates the file already exists (value 0 or 1),
+                            // meaning the user has an established preference — leave it alone.
+                            val daemonFileExists = withContext(Dispatchers.IO) {
+                                Shell.cmd("test -f '${Constants.DAEMON_MODE_FILE}'").exec().isSuccess
+                            }
+                            if (!daemonFileExists) {
+                                PreferencesManager.getInstance(context).isDaemonModeEnabled = true
+                            }
                             // Restore symlink if it was enabled before the update
                             if (wasSymlinkEnabled) {
                                 withContext(Dispatchers.IO) {
