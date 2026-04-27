@@ -214,7 +214,9 @@ static void print_page(int page, const char *bin) {
 
     printf("%sRunning a command:%s\n", bold, reset);
     printf("  %s --name=mycontainer run echo hello\n", bin);
-    printf("  %s --name=mycontainer run ls -la /tmp\n\n", bin);
+    printf("  %s --name=mycontainer run ls -la /tmp\n", bin);
+    printf("  %s --name=mycontainer -u myuser run whoami\n", bin);
+    printf("  (Use -u/--user to run as a specific container user)\n\n");
 
     printf("%sFetch info about a container:%s\n", bold, reset);
     printf("  %s --name=mycontainer info\n\n", bin);
@@ -305,6 +307,13 @@ static void print_page(int page, const char *bin) {
     printf("%sEntering as different user:%s\n", bold, reset);
     printf("  %s --name=mycontainer enter myuser\n\n", bin);
 
+    printf("%sRunning a command as a specific user:%s\n", bold, reset);
+    printf("  %s --name=mycontainer -u myuser run whoami\n", bin);
+    printf("  %s --name=mycontainer -u myuser run env\n", bin);
+    printf("  %s --name=mycontainer --user=myuser run id\n", bin);
+    printf(
+        "  (Equivalent to: su - myuser -c \"<cmd>\", but without a shell)\n\n");
+
     printf("%sStopping containers with spaces in names:%s\n", bold, reset);
     printf("  %s stop --name=\"container 1,container 2,container 3\"\n\n", bin);
 
@@ -376,7 +385,9 @@ static void print_page(int page, const char *bin) {
            "/tmp/init.log\"\n",
            bin);
     printf("  %s --name=mycontainer run sh -c \"cat /etc/os-release | grep "
-           "ID\"\n\n",
+           "ID\"\n",
+           bin);
+    printf("  %s --name=mycontainer -u myuser run sh -c \"id && env\"\n\n",
            bin);
 
     printf("%sContainer lifecycle with all operations:%s\n", bold, reset);
@@ -472,10 +483,14 @@ static void print_page(int page, const char *bin) {
     printf("    container's /etc/group and root is added to each group.\n");
     printf("    X11 socket is auto-mounted (Termux X11 on Android,\n");
     printf("    /tmp/.X11-unix on desktop Linux).\n");
-    printf("12. --gpu enables GPU acceleration without full hardware passthrough.\n");
-    printf("    Known GPU nodes are scanned from the host /dev and mknoded into\n");
-    printf("    the container's isolated tmpfs. The droidspaces-gpu group is\n");
-    printf("    auto-created. Safe to combine with --hw-access (no-op overlap).\n\n");
+    printf("12. --gpu enables GPU acceleration without full hardware "
+           "passthrough.\n");
+    printf("    Known GPU nodes are scanned from the host /dev and mknoded "
+           "into\n");
+    printf(
+        "    the container's isolated tmpfs. The droidspaces-gpu group is\n");
+    printf("    auto-created. Safe to combine with --hw-access (no-op "
+           "overlap).\n\n");
     break;
   }
 #undef printf

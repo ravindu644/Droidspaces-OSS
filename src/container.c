@@ -1627,7 +1627,8 @@ int enter_rootfs(struct ds_config *cfg, const char *user) {
   return 0;
 }
 
-int run_in_rootfs(struct ds_config *cfg, int argc, char **argv) {
+int run_in_rootfs(struct ds_config *cfg, int argc, char **argv,
+                  const char *as_user) {
   (void)argc;
   pid_t pid = 0;
   if (!is_container_running(cfg, &pid) || pid <= 0) {
@@ -1684,6 +1685,35 @@ int run_in_rootfs(struct ds_config *cfg, int argc, char **argv) {
       load_etc_environment();
 
       /* Run the command directly as an alien process (instant results) */
+      if (as_user != NULL) {
+        /* Build the command string for su -c.
+         * If argv[0] has no spaces and argv[1] is NULL, pass it directly.
+         * Otherwise join all args into a single shell string. */
+        char cmd_buf[4096];
+        if (argv[1] == NULL) {
+          safe_strncpy(cmd_buf, argv[0], sizeof(cmd_buf));
+        } else {
+          size_t off = 0;
+          for (int k = 0; argv[k] && off < sizeof(cmd_buf) - 1; k++) {
+            if (k > 0 && off < sizeof(cmd_buf) - 2)
+              cmd_buf[off++] = ' ';
+            size_t al = strlen(argv[k]);
+            if (off + al >= sizeof(cmd_buf) - 1)
+              al = sizeof(cmd_buf) - 1 - off;
+            memcpy(cmd_buf + off, argv[k], al);
+            off += al;
+          }
+          cmd_buf[off] = '\0';
+        }
+        char *su_argv[] = {"su", "-",     (char *)(uintptr_t)as_user,
+                           "-c", cmd_buf, NULL};
+        execvp("/bin/su", su_argv);
+        execvp("/usr/bin/su", su_argv);
+        ds_error("Failed to exec su for user '%s': %s", as_user,
+                 strerror(errno));
+        _exit(EXIT_FAILURE);
+      }
+
       if (argv[1] == NULL && strchr(argv[0], ' ') != NULL) {
         char *shell_argv[] = {"/bin/sh", "-c", argv[0], NULL};
         execvp("/bin/sh", shell_argv);

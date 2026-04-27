@@ -84,6 +84,8 @@ void print_usage(void) {
 
       C_BOLD "Options (Advanced):" C_RESET "\n"
       "  -f, --foreground          Run in foreground (attach console)\n"
+      "  -u, --user=USER           Run command as USER (for 'run' command "
+      "only)\n"
       "  -E, --env=PATH            Load environment variables from file\n"
       "  -B, --bind=SRC:DEST       Bind mount host directory into container\n"
       "                            Supports multiple flags or "
@@ -339,6 +341,7 @@ int main(int argc, char **argv) {
       {"conf", required_argument, 0, 'C'},
       {"config", required_argument, 0, 'C'},
       {"env", required_argument, 0, 'E'},
+      {"user", required_argument, 0, 'u'},
       {"net", required_argument, 0, 257},
       {"port", required_argument, 0, 258},
       {"upstream", required_argument, 0, 259},
@@ -370,6 +373,7 @@ int main(int argc, char **argv) {
    */
   const char *discovered_cmd = NULL;
   char temp_r[PATH_MAX] = {0}, temp_i[PATH_MAX] = {0};
+  char run_user[256] = {0};
   int reset_config = 0;
   int cli_net_mode_set = 0;
   enum ds_net_mode cli_net_mode = DS_NET_HOST;
@@ -377,8 +381,8 @@ int main(int argc, char **argv) {
 
   /* 1. Discovery Pass: Capture identity and command without permuting argv.
    * Using '-' at the start of optstring returns non-options as '1'. */
-  while ((opt = getopt_long(argc, argv, "-r:i:n:h:d:fHXPvVB:C:E:", long_options,
-                            NULL)) != -1) {
+  while ((opt = getopt_long(argc, argv, "-r:i:n:h:d:fHXPvVB:C:E:u:",
+                            long_options, NULL)) != -1) {
     if (opt == 1) { /* Non-option argument */
       if (!discovered_cmd) {
         discovered_cmd = optarg;
@@ -398,6 +402,8 @@ int main(int argc, char **argv) {
       safe_strncpy(temp_r, optarg, sizeof(temp_r));
     } else if (opt == 'i') {
       safe_strncpy(temp_i, optarg, sizeof(temp_i));
+    } else if (opt == 'u') {
+      safe_strncpy(run_user, optarg, sizeof(run_user));
     } else if (opt == 256) {
       reset_config = 1;
     }
@@ -528,7 +534,7 @@ int main(int argc, char **argv) {
    * Strict mode for 'run' prevents stealing arguments from the sub-command. */
   int strict = (discovered_cmd && (strcmp(discovered_cmd, "run") == 0));
   const char *optstring =
-      strict ? "+r:i:n:h:d:fHXPvVB:C:E:" : "r:i:n:h:d:fHXPvVB:C:E:";
+      strict ? "+r:i:n:h:d:fHXPvVB:C:E:u:" : "r:i:n:h:d:fHXPvVB:C:E:u:";
 
   while ((opt = getopt_long(argc, argv, optstring, long_options, NULL)) != -1) {
     switch (opt) {
@@ -552,6 +558,9 @@ int main(int argc, char **argv) {
       break;
     case 'E':
       safe_strncpy(cfg.env_file, optarg, sizeof(cfg.env_file));
+      break;
+    case 'u':
+      safe_strncpy(run_user, optarg, sizeof(run_user));
       break;
     case 'd':
       safe_strncpy(cfg.dns_servers, optarg, sizeof(cfg.dns_servers));
@@ -1090,7 +1099,9 @@ int main(int argc, char **argv) {
       ret = 1;
       goto cleanup;
     }
-    ret = run_in_rootfs(&cfg, argc - (optind + 1), argv + (optind + 1));
+    const char *as_user = (run_user[0] != '\0') ? run_user : NULL;
+    ret =
+        run_in_rootfs(&cfg, argc - (optind + 1), argv + (optind + 1), as_user);
     goto cleanup;
   }
 

@@ -695,7 +695,8 @@ int start_rootfs(struct ds_config *cfg);
 int stop_rootfs(struct ds_config *cfg, int skip_unmount);
 int enter_namespace(pid_t pid, struct ds_config *cfg);
 int enter_rootfs(struct ds_config *cfg, const char *user);
-int run_in_rootfs(struct ds_config *cfg, int argc, char **argv);
+int run_in_rootfs(struct ds_config *cfg, int argc, char **argv,
+                  const char *as_user);
 int show_info(struct ds_config *cfg, int trust_cfg_pid);
 int show_container_uptime(struct ds_config *cfg);
 int restart_rootfs(struct ds_config *cfg);

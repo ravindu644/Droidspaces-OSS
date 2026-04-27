@@ -66,7 +66,7 @@ sudo droidspaces --name=web,db,app stop
 | `stop` | Gracefully shut down one or more containers. |
 | `restart` | Fast restart (under 200ms) by preserving loop mounts. |
 | `enter [user]` | Open an interactive shell inside a running container. |
-| `run <cmd>` | Execute a single command without opening a full shell. |
+| `run <cmd>` | Execute a single command without opening a full shell. Use `-u`/`--user` to run as a specific container user. |
 | `status` | Show if a specific container is running. |
 | `info` | Show deep technical details about a container. |
 | `show` | List all currently running containers in a table. |
@@ -245,6 +245,10 @@ sudo droidspaces --name=test --rootfs=/path/to/rootfs --volatile start
 sudo droidspaces --name=mycontainer run uname -a
 # Use sh -c for pipes:
 sudo droidspaces --name=mycontainer run sh -c "ps aux | grep init"
+# Run as a specific user with -u/--user:
+sudo droidspaces --name=mycontainer -u myuser run whoami
+sudo droidspaces --name=mycontainer -u myuser run env
+sudo droidspaces --name=mycontainer -u myuser run sh -c "id && env"
 ```
 
 ### GPU Acceleration
