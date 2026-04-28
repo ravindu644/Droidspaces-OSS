@@ -246,7 +246,7 @@ fun DroidspacesNavigation(
                 onNavigateToContainerDetails = { containerName ->
                     navController.navigate(Screen.ContainerDetails.createRoute(containerName))
                 },
-                onNavigateToToTerminal = { containerName ->
+                onNavigateToTerminal = { containerName ->
                     navController.navigate(Screen.Terminal.createRoute(containerName))
                 }
             )

@@ -2,11 +2,9 @@ package com.droidspaces.app.ui.component
 
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.spring
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -16,7 +14,6 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -27,6 +24,10 @@ import com.droidspaces.app.util.ContainerOSInfoManager
 /**
  * Container card for Panel tab - shows container name, icon, quick actions, and stats.
  * Tapping opens ContainerDetailsScreen.
+ *
+ * @param refreshTrigger Increment this to force a live re-fetch of OS info (e.g. on pull-to-refresh
+ *                       or tab re-entry). The card always shows cached data instantly and then
+ *                       updates in the background when the trigger changes.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -34,16 +35,25 @@ fun RunningContainerCard(
     container: ContainerInfo,
     onEnter: () -> Unit = {},
     onTerminalClick: () -> Unit = {},
+    refreshTrigger: Int = 0,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
     val cardShape = RoundedCornerShape(20.dp)
     val interactionSource = remember { MutableInteractionSource() }
 
-    // Pre-load cached OS info for instant display - zero delay
-    // Uses persistent cache that survives app restarts
+    // Show cached data instantly (zero delay), then refresh in background whenever
+    // refreshTrigger changes (pull-to-refresh, tab re-entry, etc.)
     var osInfo by remember {
         mutableStateOf(ContainerOSInfoManager.getCachedOSInfo(container.name, context))
+    }
+
+    LaunchedEffect(container.name, refreshTrigger) {
+        osInfo = ContainerOSInfoManager.getOSInfo(
+            containerName = container.name,
+            useCache = false,
+            appContext = context
+        )
     }
 
     Card(
@@ -68,30 +78,27 @@ fun RunningContainerCard(
                 .padding(horizontal = 16.dp, vertical = 14.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            // --- TOP ROW: Icon, Name, and Quick Actions ---
+            // --- TOP ROW: Icon, Name, Terminal quick-action ---
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.fillMaxWidth()
             ) {
-                // Temporary placeholder until we have a distro icon
                 Icon(
-                    imageVector = Icons.Default.Computer,
-                    contentDescription = "Distro Icon",
+                    imageVector = Icons.Default.Storage,
+                    contentDescription = "Container",
                     modifier = Modifier.size(24.dp),
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    tint = MaterialTheme.colorScheme.primary
                 )
 
                 Spacer(modifier = Modifier.width(12.dp))
 
-                // Container Name
                 Text(
                     text = container.name,
                     style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
+                    fontWeight = FontWeight.SemiBold,
                     modifier = Modifier.weight(1f)
                 )
 
-                // Quick Actions
                 IconButton(
                     onClick = onTerminalClick,
                     modifier = Modifier.size(32.dp)
@@ -99,58 +106,39 @@ fun RunningContainerCard(
                     Icon(
                         imageVector = Icons.Default.Terminal,
                         contentDescription = "Open Terminal",
+                        tint = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.size(20.dp)
                     )
                 }
             }
 
-            // --- BOTTOM ROWs: Status, Uptime, IP ---
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                // Green Status Dot
-                Box(
-                    modifier = Modifier
-                        .size(10.dp)
-                        .clip(CircleShape)
-                        .background(Color(0xFF00FF00))
-                )
-                
-                Spacer(modifier = Modifier.width(8.dp))
+            HorizontalDivider()
 
-                // Status Text
+            // --- INFO ROWS: Distribution, Uptime, IP ---
+
+            // Distribution (e.g. "Debian GNU/Linux 13 (trixie)")
+            osInfo?.prettyName?.let { distro ->
                 Text(
-                    text = context.getString(R.string.running),
+                    text = distro,
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
                 )
             }
 
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                // Uptime Text
-                // TODO: Add CPU and memory usage
-                Text(
-                    text = context.getString(R.string.uptime_label, osInfo?.uptime ?: ""),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
+            // Uptime
+            // TODO: Add CPU and memory usage
+            Text(
+                text = context.getString(R.string.uptime_label, osInfo?.uptime ?: ""),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+            )
 
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                // IP Address Text
-                Text(
-                    text = context.getString(R.string.ip_address_label, osInfo?.ipAddress ?: ""),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
+            // IP Address
+            Text(
+                text = context.getString(R.string.ip_address_label, osInfo?.ipAddress ?: ""),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+            )
         }
     }
 }
