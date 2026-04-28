@@ -146,6 +146,10 @@
     <string name="no_options_enabled">No additional options enabled</string>
     <string name="options">Options</string>
 
+    <!-- Running Container Card -->
+    <string name="uptime_label">Uptime: %1$s</string>
+    <string name="ip_address_label">IP Address: %1$s</string> 
+
     <!-- Container Details Screen -->
     <string name="container_info">Container Info</string>
     <string name="distribution">Distribution</string>

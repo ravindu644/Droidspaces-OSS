@@ -62,7 +62,8 @@ fun MainTabScreen(
     onNavigateToInstallation: () -> Unit = {},
     onNavigateToContainerInstallation: (android.net.Uri) -> Unit = {},
     onNavigateToEditContainer: (String) -> Unit = {},
-    onNavigateToContainerDetails: (String) -> Unit = {}
+    onNavigateToContainerDetails: (String) -> Unit = {},
+    onNavigateToToTerminal: (String) -> Unit = {},
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -298,6 +299,7 @@ fun MainTabScreen(
                         isRootAvailable = appStateViewModel.isRootAvailable,
                         onNavigateToInstallation = onNavigateToContainerInstallation,
                         onNavigateToEditContainer = onNavigateToEditContainer,
+                        onNavigateToContainerDetails = onNavigateToContainerDetails,
                         containerViewModel = containerViewModel,
                         onRefresh = { performRefresh(TabItem.Containers) }
                     )
@@ -309,7 +311,8 @@ fun MainTabScreen(
                         isRootAvailable = appStateViewModel.isRootAvailable,
                         containerViewModel = containerViewModel,
                         onRefresh = { performRefresh(TabItem.ControlPanel) },
-                        onNavigateToContainerDetails = onNavigateToContainerDetails
+                        onNavigateToContainerDetails = onNavigateToContainerDetails,
+                        onNavigateToToTerminal = onNavigateToToTerminal
                     )
                 }
             }
@@ -454,6 +457,7 @@ private fun ContainersTabContent(
     isRootAvailable: Boolean,
     onNavigateToInstallation: (android.net.Uri) -> Unit,
     onNavigateToEditContainer: (String) -> Unit,
+    onNavigateToContainerDetails: (String) -> Unit,
     containerViewModel: ContainerViewModel,
     onRefresh: suspend () -> Unit
 ) {
@@ -463,6 +467,7 @@ private fun ContainersTabContent(
             isRootAvailable = isRootAvailable,
             onNavigateToInstallation = onNavigateToInstallation,
             onNavigateToEditContainer = onNavigateToEditContainer,
+            onNavigateToContainerDetails = onNavigateToContainerDetails,
             containerViewModel = containerViewModel
         )
     }
@@ -474,14 +479,16 @@ private fun ControlPanelTabContent(
     isRootAvailable: Boolean,
     containerViewModel: ContainerViewModel,
     onRefresh: suspend () -> Unit,
-    onNavigateToContainerDetails: (String) -> Unit
+    onNavigateToContainerDetails: (String) -> Unit,
+    onNavigateToToTerminal: (String) -> Unit,
 ) {
     PullToRefreshWrapper(onRefresh = { onRefresh() }) {
         ControlPanelScreen(
             isBackendAvailable = isBackendAvailable,
             isRootAvailable = isRootAvailable,
             containerViewModel = containerViewModel,
-            onNavigateToContainerDetails = onNavigateToContainerDetails
+            onNavigateToContainerDetails = onNavigateToContainerDetails,
+            onNavigateToToTerminal = onNavigateToToTerminal
         )
     }
 }

@@ -36,6 +36,7 @@ fun ContainerCard(
     onStop: () -> Unit = {},
     onRestart: () -> Unit = {},
     onEdit: () -> Unit = {},
+    onEnter: () -> Unit = {},
     onUninstall: () -> Unit = {},
     onMigrate: () -> Unit = {},
     onResize: () -> Unit = {},
@@ -54,7 +55,7 @@ fun ContainerCard(
             .fillMaxWidth()
             .clip(cardShape)
             .combinedClickable(
-                onClick = { /* TODO: Navigate to container details */ },
+                onClick = if (container.isRunning) { onEnter } else { {} },
                 onLongClick = {
                     showContextMenu = true
                 },
