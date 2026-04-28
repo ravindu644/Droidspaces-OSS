@@ -29,7 +29,7 @@ import com.droidspaces.app.ui.component.HelpCard
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.sp
 import com.droidspaces.app.R
 
 enum class TabItem(val titleResId: Int, val icon: androidx.compose.ui.graphics.vector.ImageVector) {
@@ -63,6 +63,7 @@ fun MainTabScreen(
     onNavigateToContainerInstallation: (android.net.Uri) -> Unit = {},
     onNavigateToEditContainer: (String) -> Unit = {},
     onNavigateToContainerDetails: (String) -> Unit = {},
+    onNavigateToServices: (String) -> Unit = {},
     onNavigateToTerminal: (String) -> Unit = {},
 ) {
     val context = LocalContext.current
@@ -256,65 +257,70 @@ fun MainTabScreen(
                         Icon(imageVector = Icons.Default.Settings, contentDescription = context.getString(R.string.settings))
                     }
                 },
-                windowInsets = WindowInsets.safeDrawing.only(WindowInsetsSides.Top + WindowInsetsSides.Horizontal)
+                windowInsets = WindowInsets.statusBars
             )
         },
         bottomBar = {
-            NavigationBar {
-                TabItem.entries.forEach { tab ->
-                    NavigationBarItem(
-                        icon = { Icon(tab.icon, contentDescription = null) },
-                        label = { Text(context.getString(tab.titleResId)) },
-                        selected = selectedTab == tab,
-                        onClick = { selectedTab = tab }
-                    )
-                }
-            }
+            // No bottom bar content here to avoid the solid background
         },
         contentWindowInsets = WindowInsets(0)
     ) { innerPadding ->
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
-        ) {
-            when (selectedTab) {
-                TabItem.Home -> {
-                    HomeTabContent(
-                        droidspacesStatus = droidspacesStatus,
-                        isChecking = isChecking,
-                        isRootAvailable = appStateViewModel.isRootAvailable,
-                        onNavigateToInstallation = onNavigateToInstallation,
-                        onNavigateToContainers = { selectedTab = TabItem.Containers },
-                        onNavigateToControlPanel = { selectedTab = TabItem.ControlPanel },
-                        containerCount = containerCount,
-                        runningCount = runningCount,
-                        onRefresh = { performRefresh(TabItem.Home) }
-                    )
-                }
+        Box(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+            ) {
+                when (selectedTab) {
+                    TabItem.Home -> {
+                        HomeTabContent(
+                            droidspacesStatus = droidspacesStatus,
+                            isChecking = isChecking,
+                            isRootAvailable = appStateViewModel.isRootAvailable,
+                            onNavigateToInstallation = onNavigateToInstallation,
+                            onNavigateToContainers = { selectedTab = TabItem.Containers },
+                            onNavigateToControlPanel = { selectedTab = TabItem.ControlPanel },
+                            containerCount = containerCount,
+                            runningCount = runningCount,
+                            onRefresh = { performRefresh(TabItem.Home) }
+                        )
+                    }
 
-                TabItem.Containers -> {
-                    ContainersTabContent(
-                        isBackendAvailable = isBackendAvailable,
-                        isRootAvailable = appStateViewModel.isRootAvailable,
-                        onNavigateToInstallation = onNavigateToContainerInstallation,
-                        onNavigateToEditContainer = onNavigateToEditContainer,
-                        onNavigateToContainerDetails = onNavigateToContainerDetails,
-                        containerViewModel = containerViewModel,
-                        onRefresh = { performRefresh(TabItem.Containers) }
-                    )
-                }
+                    TabItem.Containers -> {
+                        ContainersTabContent(
+                            isBackendAvailable = isBackendAvailable,
+                            isRootAvailable = appStateViewModel.isRootAvailable,
+                            onNavigateToInstallation = onNavigateToContainerInstallation,
+                            onNavigateToEditContainer = onNavigateToEditContainer,
+                            onNavigateToContainerDetails = onNavigateToContainerDetails,
+                            containerViewModel = containerViewModel,
+                            onRefresh = { performRefresh(TabItem.Containers) }
+                        )
+                    }
 
-                TabItem.ControlPanel -> {
-                    ControlPanelTabContent(
-                        isBackendAvailable = isBackendAvailable,
-                        isRootAvailable = appStateViewModel.isRootAvailable,
-                        containerViewModel = containerViewModel,
-                        onRefresh = { performRefresh(TabItem.ControlPanel) },
-                        onNavigateToContainerDetails = onNavigateToContainerDetails,
-                        onNavigateToTerminal = onNavigateToTerminal
-                    )
+                    TabItem.ControlPanel -> {
+                        ControlPanelTabContent(
+                            isBackendAvailable = isBackendAvailable,
+                            isRootAvailable = appStateViewModel.isRootAvailable,
+                            containerViewModel = containerViewModel,
+                            onRefresh = { performRefresh(TabItem.ControlPanel) },
+                            onNavigateToContainerDetails = onNavigateToContainerDetails,
+                            onNavigateToServices = onNavigateToServices,
+                            onNavigateToTerminal = onNavigateToTerminal
+                        )
+                    }
                 }
+            }
+
+            // Floating Bottom Bar Overlay
+            Box(
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .fillMaxWidth()
+            ) {
+                MainBottomBar(
+                    selectedTab = selectedTab,
+                    onTabSelected = { selectedTab = it }
+                )
             }
         }
     }
@@ -347,7 +353,7 @@ private fun HomeTabContent(
                 .fillMaxWidth()
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = 16.dp)
-                .padding(top = 16.dp, bottom = 16.dp)
+                .padding(top = 8.dp, bottom = 120.dp) // Large bottom padding for floating bar + FAB
         ) {
             DroidspacesStatusCard(
                 status = droidspacesStatus,
@@ -379,60 +385,80 @@ private fun HomeTabContent(
                     horizontalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
                     // Container count card
-                    Card(
+                    Surface(
                         onClick = onNavigateToContainers,
                         modifier = Modifier
                             .weight(1f)
-                            .padding(vertical = 8.dp),
-                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
-                        shape = RoundedCornerShape(20.dp)
+                            .height(140.dp),
+                        shape = RoundedCornerShape(24.dp), // Slightly more rounded for home cards
+                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
                     ) {
                         Column(
                             modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(20.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.spacedBy(4.dp)
+                                .fillMaxSize()
+                                .padding(16.dp),
+                            horizontalAlignment = Alignment.Start,
+                            verticalArrangement = Arrangement.SpaceBetween
                         ) {
-                            Text(
-                                text = containerCount.toString(),
-                                style = MaterialTheme.typography.headlineLarge,
-                                fontWeight = FontWeight.Bold
+                            Icon(
+                                imageVector = Icons.Default.Layers,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(28.dp)
                             )
-                            Text(
-                                text = context.getString(R.string.containers),
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.outline
-                            )
+                            Column {
+                                Text(
+                                    text = containerCount.toString(),
+                                    style = MaterialTheme.typography.headlineMedium,
+                                    fontWeight = FontWeight.Black
+                                )
+                                Text(
+                                    text = context.getString(R.string.containers).uppercase(),
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                                    letterSpacing = 1.sp
+                                )
+                            }
                         }
                     }
 
                     // Running count card
-                    Card(
+                    Surface(
                         onClick = onNavigateToControlPanel,
                         modifier = Modifier
                             .weight(1f)
-                            .padding(vertical = 8.dp),
-                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
-                        shape = RoundedCornerShape(20.dp)
+                            .height(140.dp),
+                        shape = RoundedCornerShape(24.dp),
+                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
                     ) {
                         Column(
                             modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(20.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.spacedBy(4.dp)
+                                .fillMaxSize()
+                                .padding(16.dp),
+                            horizontalAlignment = Alignment.Start,
+                            verticalArrangement = Arrangement.SpaceBetween
                         ) {
-                            Text(
-                                text = runningCount.toString(),
-                                style = MaterialTheme.typography.headlineLarge,
-                                fontWeight = FontWeight.Bold
+                            Icon(
+                                imageVector = Icons.Default.PlayCircle,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.secondary,
+                                modifier = Modifier.size(28.dp)
                             )
-                            Text(
-                                text = context.getString(R.string.running),
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.outline
-                            )
+                            Column {
+                                Text(
+                                    text = runningCount.toString(),
+                                    style = MaterialTheme.typography.headlineMedium,
+                                    fontWeight = FontWeight.Black
+                                )
+                                Text(
+                                    text = context.getString(R.string.running).uppercase(),
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                                    letterSpacing = 1.sp
+                                )
+                            }
                         }
                     }
                 }
@@ -480,6 +506,7 @@ private fun ControlPanelTabContent(
     containerViewModel: ContainerViewModel,
     onRefresh: suspend () -> Unit,
     onNavigateToContainerDetails: (String) -> Unit,
+    onNavigateToServices: (String) -> Unit,
     onNavigateToTerminal: (String) -> Unit,
 ) {
     var refreshTrigger by remember { mutableStateOf(0) }
@@ -493,8 +520,102 @@ private fun ControlPanelTabContent(
             isRootAvailable = isRootAvailable,
             containerViewModel = containerViewModel,
             onNavigateToContainerDetails = onNavigateToContainerDetails,
+            onNavigateToServices = onNavigateToServices,
             onNavigateToTerminal = onNavigateToTerminal,
             refreshTrigger = refreshTrigger
         )
+    }
+}
+
+@Composable
+private fun MainBottomBar(
+    selectedTab: TabItem,
+    onTabSelected: (TabItem) -> Unit
+) {
+    val context = LocalContext.current
+    val tabs = TabItem.entries
+    val selectedIndex = tabs.indexOf(selectedTab)
+    
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = androidx.compose.ui.graphics.RectangleShape,
+        color = MaterialTheme.colorScheme.surfaceColorAtElevation(1.dp).copy(alpha = 0.98f),
+        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.15f)),
+        shadowElevation = 16.dp 
+    ) {
+        Column(modifier = Modifier.fillMaxWidth()) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 12.dp, vertical = 8.dp)
+                    .height(56.dp)
+            ) {
+                // Background Indicator
+                BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
+                    val tabWidth = maxWidth / tabs.size
+                    val offset by androidx.compose.animation.core.animateDpAsState(
+                        targetValue = tabWidth * selectedIndex,
+                        animationSpec = androidx.compose.animation.core.spring(
+                            dampingRatio = androidx.compose.animation.core.Spring.DampingRatioLowBouncy,
+                            stiffness = androidx.compose.animation.core.Spring.StiffnessLow
+                        ),
+                        label = "IndicatorOffset"
+                    )
+
+                    Surface(
+                        modifier = Modifier
+                            .width(tabWidth)
+                            .fillMaxHeight()
+                            .offset(x = offset),
+                        shape = RoundedCornerShape(18.dp),
+                        color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f)
+                    ) {}
+                }
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceEvenly,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    tabs.forEach { tab ->
+                        val isSelected = selectedTab == tab
+                        val contentColor by androidx.compose.animation.animateColorAsState(
+                            targetValue = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                            label = "IconColor"
+                        )
+
+                        Surface(
+                            onClick = { onTabSelected(tab) },
+                            modifier = Modifier
+                                .weight(1f)
+                                .fillMaxHeight(),
+                            color = androidx.compose.ui.graphics.Color.Transparent,
+                            shape = RoundedCornerShape(16.dp)
+                        ) {
+                            Column(
+                                modifier = Modifier.fillMaxSize(),
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.Center
+                            ) {
+                                Icon(
+                                    imageVector = tab.icon,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(if (isSelected) 24.dp else 22.dp),
+                                    tint = contentColor
+                                )
+                                Text(
+                                    text = context.getString(tab.titleResId),
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = contentColor,
+                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                                    fontSize = if (isSelected) 11.sp else 10.sp
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+            Spacer(modifier = Modifier.navigationBarsPadding())
+        }
     }
 }

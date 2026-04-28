@@ -18,8 +18,16 @@ object AndroidSystemStatsCollector {
      */
     data class SystemUsage(
         val cpuPercent: Double = 0.0,
-        val ramPercent: Double = 0.0,
+        val ramPercent: Double = 0.0, // Total system RAM used %
+        val activeRamKb: Long = 0,    // Total system RAM used in KB
+        val totalRamKb: Long = 0,     // Total system RAM in KB
         val temperature: String = "N/A"
+    )
+
+    data class ContainerUsage(
+        val cpuPercent: Double = 0.0,
+        val ramKb: Long = 0,
+        val relativeRamPercent: Double = 0.0 // RAM % relative to TOTAL system usage
     )
 
     // Previous values for calculating CPU usage
@@ -31,13 +39,15 @@ object AndroidSystemStatsCollector {
      */
     suspend fun collectUsage(): SystemUsage = withContext(Dispatchers.IO) {
         try {
+            val (ramPercent, activeRam, totalRam) = getDetailedRamUsage()
             val cpuPercent = getCpuUsage()
-            val ramPercent = getRamUsage()
             val temperature = getTemperature()
 
             SystemUsage(
                 cpuPercent = cpuPercent,
                 ramPercent = ramPercent,
+                activeRamKb = activeRam,
+                totalRamKb = totalRam,
                 temperature = temperature
             )
         } catch (e: Exception) {
@@ -89,9 +99,10 @@ object AndroidSystemStatsCollector {
     }
 
     /**
-     * Get RAM usage percentage from Android /proc/meminfo.
+     * Get detailed RAM usage from Android /proc/meminfo.
+     * Returns Triple(percent, used_kb, total_kb)
      */
-    private suspend fun getRamUsage(): Double = withContext(Dispatchers.IO) {
+    private suspend fun getDetailedRamUsage(): Triple<Double, Long, Long> = withContext(Dispatchers.IO) {
         try {
             val result = Shell.cmd("cat /proc/meminfo | grep -E 'MemTotal|MemAvailable'").exec()
 
@@ -118,13 +129,49 @@ object AndroidSystemStatsCollector {
 
                 if (memTotal > 0) {
                     val memUsed = memTotal - memAvailable
-                    return@withContext ((memUsed.toDouble() / memTotal.toDouble()) * 100.0).coerceIn(0.0, 100.0)
+                    val percent = ((memUsed.toDouble() / memTotal.toDouble()) * 100.0).coerceIn(0.0, 100.0)
+                    return@withContext Triple(percent, memUsed, memTotal)
                 }
             }
         } catch (e: Exception) {
             Log.e(TAG, "Error getting RAM usage", e)
         }
-        0.0
+        Triple(0.0, 0L, 0L)
+    }
+
+    /**
+     * Collect resource usage for a specific container PID.
+     */
+    suspend fun collectContainerUsage(pid: String, totalSystemUsedRamKb: Long): ContainerUsage = withContext(Dispatchers.IO) {
+        if (pid == "NONE" || pid.isEmpty()) return@withContext ContainerUsage()
+
+        try {
+            // Get RAM (RSS) from /proc/[pid]/status
+            // We use RSS (Resident Set Size) as the most accurate "real" RAM usage.
+            val ramResult = Shell.cmd("cat /proc/$pid/status | grep VmRSS").exec()
+            var containerRamKb = 0L
+            if (ramResult.isSuccess && ramResult.out.isNotEmpty()) {
+                val parts = ramResult.out[0].trim().split("\\s+".toRegex())
+                if (parts.size >= 2) {
+                    containerRamKb = parts[1].toLongOrNull() ?: 0L
+                }
+            }
+
+            // Calculate relative % compared to what Android is currently using globally
+            val relativeRamPercent = if (totalSystemUsedRamKb > 0) {
+                ((containerRamKb.toDouble() / totalSystemUsedRamKb.toDouble()) * 100.0).coerceIn(0.0, 100.0)
+            } else 0.0
+
+            // CPU usage for container (simplistic - based on top or similar if needed, 
+            // but for now we focus on RAM as the most accurate "GIGACHAD" metric requested)
+            return@withContext ContainerUsage(
+                cpuPercent = 0.0, // TODO: Implement per-pid CPU delta if needed
+                ramKb = containerRamKb,
+                relativeRamPercent = relativeRamPercent
+            )
+        } catch (e: Exception) {
+            return@withContext ContainerUsage()
+        }
     }
 
     /**

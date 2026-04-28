@@ -2,6 +2,7 @@ package com.droidspaces.app.ui.screen
 
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -14,9 +15,11 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.droidspaces.app.ui.component.ContainerUsersCard
 import com.droidspaces.app.util.ContainerInfo
 import com.droidspaces.app.util.ContainerOSInfoManager
@@ -121,11 +124,103 @@ fun ContainerDetailsScreen(
                 contentPadding = PaddingValues(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                // OS Information Card - Stable key prevents recomposition glitches
-                item(key = "os_info_${container.name}") {
-                    ContainerInfoCard(
-                        osInfo = osInfo
-                    )
+                // OS Information - Total Rewrite (Zero Shadow / Flat Design)
+                item(key = "os_info_flat_grid_${container.name}") {
+                    val context = LocalContext.current
+                    Surface(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(20.dp),
+                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(16.dp),
+                            verticalArrangement = Arrangement.spacedBy(16.dp)
+                        ) {
+                            // Header Row
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(10.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Info,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(18.dp),
+                                    tint = MaterialTheme.colorScheme.primary
+                                )
+                                Text(
+                                    text = context.getString(R.string.container_info),
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                            }
+
+                            osInfo?.let { info ->
+                                Column(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                                ) {
+                                    // Row 1: Distro and Hostname
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                                    ) {
+                                        val distroName = info.prettyName ?: info.name ?: "Linux"
+                                        IdentityToken(
+                                            modifier = Modifier.weight(1f),
+                                            label = "Distribution",
+                                            value = distroName,
+                                            icon = when {
+                                                distroName.contains("Ubuntu", true) -> Icons.Default.Adjust
+                                                distroName.contains("Debian", true) -> Icons.Default.Circle
+                                                distroName.contains("Alpine", true) -> Icons.Default.Landscape
+                                                else -> Icons.Default.Dashboard
+                                            },
+                                            containerColor = MaterialTheme.colorScheme.primary
+                                        )
+                                        IdentityToken(
+                                            modifier = Modifier.weight(1f),
+                                            label = "Hostname",
+                                            value = info.hostname ?: "localhost",
+                                            icon = Icons.Default.Computer,
+                                            containerColor = MaterialTheme.colorScheme.secondary
+                                        )
+                                    }
+
+                                    // Row 2: Uptime and IP
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                                    ) {
+                                        IdentityToken(
+                                            modifier = Modifier.weight(1f),
+                                            label = "Uptime",
+                                            value = info.uptime ?: "0s",
+                                            icon = Icons.Default.Timer,
+                                            containerColor = MaterialTheme.colorScheme.tertiary
+                                        )
+                                        IdentityToken(
+                                            modifier = Modifier.weight(1f),
+                                            label = "IP Address",
+                                            value = info.ipAddress ?: "127.0.0.1",
+                                            icon = Icons.Default.Lan,
+                                            containerColor = MaterialTheme.colorScheme.outline
+                                        )
+                                    }
+                                }
+                            } ?: Box(
+                                modifier = Modifier.fillMaxWidth().height(100.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = context.getString(R.string.unable_to_read_container_info),
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                    }
                 }
 
                 // Users Card - Stable key (don't include refreshTrigger to prevent recreation)
@@ -178,136 +273,65 @@ private fun hasOSInfoChanged(old: ContainerOSInfoManager.OSInfo, new: ContainerO
            old.uptime != new.uptime
 }
 
-/**
- * Premium Container Info Card - Smooth animations, instant display
- */
-@Composable
-private fun ContainerInfoCard(
-    osInfo: ContainerOSInfoManager.OSInfo?,
-    modifier: Modifier = Modifier
-) {
-    val context = LocalContext.current
-    // Fade-in animation for smooth appearance
-    var visible by remember { mutableStateOf(false) }
-    LaunchedEffect(Unit) {
-        visible = true
-    }
-
-    val alpha by animateFloatAsState(
-        targetValue = if (visible) 1f else 0f,
-        animationSpec = AnimationUtils.cardFadeSpec(),
-        label = "card_fade"
-    )
-
-    ElevatedCard(
-        modifier = modifier
-            .fillMaxWidth()
-            .heightIn(min = 200.dp) // Fixed minimum height prevents layout shifts
-            .alpha(alpha)
-            .graphicsLayer {
-                // Hardware acceleration for premium animations
-                this.alpha = alpha
-            },
-        shape = RoundedCornerShape(16.dp),
-        elevation = CardDefaults.elevatedCardElevation(
-            defaultElevation = 2.dp,
-            pressedElevation = 4.dp
-        )
-                    ) {
-                        Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                .padding(20.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
-        ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
-                        ) {
-                Icon(
-                    Icons.Default.Info,
-                    contentDescription = null,
-                    modifier = Modifier.size(22.dp),
-                    tint = MaterialTheme.colorScheme.primary
-                )
-                            Text(
-                                text = context.getString(R.string.container_info),
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold
-                            )
-            }
-
-                            // Use Crossfade for smooth transitions when osInfo updates
-                            Crossfade(
-                                targetState = osInfo,
-                                animationSpec = AnimationUtils.mediumSpec(),
-                                label = "os_info_transition"
-                            ) { currentInfo ->
-                                if (currentInfo != null) {
-                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    // Distribution
-                                        (currentInfo.prettyName ?: currentInfo.name)?.let {
-                        InfoRow(label = context.getString(R.string.distribution), value = it)
-                                }
-
-                                // Version
-                                        currentInfo.version?.let {
-                        InfoRow(label = context.getString(R.string.version), value = it)
-                                }
-
-                                // Container Uptime
-                                        currentInfo.uptime?.let {
-                        InfoRow(label = context.getString(R.string.uptime), value = it)
-                                    }
-
-                                    // Hostname
-                                        currentInfo.hostname?.let {
-                        InfoRow(label = context.getString(R.string.hostname), value = it)
-                                    }
-
-                                        // IP Address
-                                        currentInfo.ipAddress?.let {
-                                            InfoRow(label = context.getString(R.string.ip_address), value = it)
-                                        }
-                                }
-                                } else {
-                                    Text(
-                                    text = context.getString(R.string.unable_to_read_container_info),
-                style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                                }
-                            }
-                            }
-                        }
-                    }
 
 /**
  * Info row with optimized layout - no unnecessary recompositions
  */
 @Composable
-private fun InfoRow(
+private fun IdentityToken(
     label: String,
-    value: String
+    value: String,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    containerColor: androidx.compose.ui.graphics.Color,
+    modifier: Modifier = Modifier
 ) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
+    Box(
+        modifier = modifier
+            .heightIn(min = 96.dp)
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(16.dp))
+            .background(containerColor.copy(alpha = 0.08f))
+            .padding(horizontal = 12.dp, vertical = 12.dp),
+        contentAlignment = Alignment.Center
     ) {
-        Text(
-            text = label,
-            style = MaterialTheme.typography.bodyLarge,
-            fontWeight = FontWeight.Medium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.weight(0.4f)
-        )
-        Text(
-            text = value,
-            style = MaterialTheme.typography.bodyLarge,
-            color = MaterialTheme.colorScheme.onSurface,
-            modifier = Modifier.weight(0.6f)
-        )
+        Column(
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            // Header Row (Top-Center)
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Center,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    modifier = Modifier.size(14.dp),
+                    tint = containerColor
+                )
+                Spacer(modifier = Modifier.width(6.dp))
+                Text(
+                    text = label.uppercase(),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = containerColor,
+                    fontWeight = FontWeight.Black,
+                    letterSpacing = 1.sp,
+                    maxLines = 1
+                )
+            }
+
+            // Value Text (Middle-Center)
+            Text(
+                text = value,
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface,
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                maxLines = 2,
+                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+            )
+        }
     }
 }
 
@@ -337,20 +361,15 @@ private fun TerminalCard(
         label = "terminal_card_fade"
     )
 
-    ElevatedCard(
+    Surface(
         modifier = modifier
             .fillMaxWidth()
             .heightIn(min = 88.dp)
             .alpha(alpha)
             .graphicsLayer { this.alpha = alpha },
-        shape = RoundedCornerShape(16.dp),
-        elevation = CardDefaults.elevatedCardElevation(
-            defaultElevation = 2.dp,
-            pressedElevation = 4.dp
-        ),
-        colors = CardDefaults.elevatedCardColors(
-            containerColor = MaterialTheme.colorScheme.primaryContainer
-        )
+        shape = RoundedCornerShape(20.dp),
+        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
+        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
     ) {
         Row(
             modifier = Modifier
@@ -361,13 +380,13 @@ private fun TerminalCard(
         ) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
                 modifier = Modifier.weight(1f)
             ) {
                 Icon(
                     imageVector = Icons.Default.Terminal,
                     contentDescription = null,
-                    modifier = Modifier.size(22.dp),
+                    modifier = Modifier.size(20.dp),
                     tint = MaterialTheme.colorScheme.primary
                 )
                 Column {
@@ -375,7 +394,7 @@ private fun TerminalCard(
                         text = context.getString(R.string.terminal),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onPrimaryContainer
+                        color = MaterialTheme.colorScheme.onSurface
                     )
                     val description = if (sessionCount > 0) {
                         "$sessionCount ${if (sessionCount == 1) "session" else "sessions"} running · tap to restore"
@@ -385,7 +404,7 @@ private fun TerminalCard(
                     Text(
                         text = description,
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
                     )
                 }
             }
@@ -401,7 +420,7 @@ private fun TerminalCard(
                 Icon(
                     if (sessionCount > 0) Icons.Default.Terminal else Icons.Default.ChevronRight,
                     contentDescription = null,
-                    modifier = Modifier.size(18.dp)
+                    modifier = Modifier.size(16.dp)
                 )
                 Spacer(Modifier.width(6.dp))
                 Text(
@@ -441,37 +460,32 @@ private fun PremiumSystemdCard(
         label = "systemd_fade"
     )
 
-    ElevatedCard(
+    Surface(
         modifier = modifier
             .fillMaxWidth()
-            .heightIn(min = 88.dp) // Fixed minimum height prevents glitches
+            .heightIn(min = 88.dp)
             .alpha(alpha)
             .graphicsLayer {
                 this.alpha = alpha
             },
-        shape = RoundedCornerShape(16.dp),
-        elevation = CardDefaults.elevatedCardElevation(
-            defaultElevation = 2.dp,
-            pressedElevation = 4.dp
-        ),
-        colors = CardDefaults.elevatedCardColors(
-            containerColor = when (state) {
-                is SystemdCardState.Available -> MaterialTheme.colorScheme.primaryContainer
-                else -> MaterialTheme.colorScheme.surfaceContainerLow
-            }
-        )
-                    ) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
+        shape = RoundedCornerShape(20.dp),
+        color = when (state) {
+            is SystemdCardState.Available -> MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
+            else -> MaterialTheme.colorScheme.surfaceContainerLow.copy(alpha = 0.5f)
+        },
+        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
                 .padding(20.dp),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
             // Icon + Title
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
                 modifier = Modifier.weight(1f)
             ) {
                 Icon(
@@ -481,7 +495,7 @@ private fun PremiumSystemdCard(
                         is SystemdCardState.Checking -> Icons.Default.HourglassEmpty
                     },
                     contentDescription = null,
-                    modifier = Modifier.size(22.dp),
+                    modifier = Modifier.size(20.dp),
                     tint = when (state) {
                         is SystemdCardState.Available -> MaterialTheme.colorScheme.primary
                         else -> MaterialTheme.colorScheme.onSurfaceVariant
@@ -491,10 +505,7 @@ private fun PremiumSystemdCard(
                     text = context.getString(R.string.systemd),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
-                    color = when (state) {
-                        is SystemdCardState.Available -> MaterialTheme.colorScheme.onPrimaryContainer
-                        else -> MaterialTheme.colorScheme.onSurface
-                    }
+                    color = MaterialTheme.colorScheme.onSurface
                 )
             }
 
@@ -507,9 +518,9 @@ private fun PremiumSystemdCard(
                 when (currentState) {
                     is SystemdCardState.Checking -> {
                         FilledTonalButton(
-                                        onClick = {},
+                            onClick = {},
                             enabled = false,
-                            modifier = Modifier.widthIn(min = 140.dp), // Fixed width prevents shifts
+                            modifier = Modifier.widthIn(min = 140.dp),
                             colors = ButtonDefaults.filledTonalButtonColors(
                                 disabledContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
                                 disabledContentColor = MaterialTheme.colorScheme.onSurfaceVariant
@@ -529,17 +540,17 @@ private fun PremiumSystemdCard(
                     }
                     is SystemdCardState.NotAvailable -> {
                         FilledTonalButton(
-                                        onClick = {},
+                            onClick = {},
                             enabled = false,
                             modifier = Modifier.widthIn(min = 140.dp),
                             colors = ButtonDefaults.filledTonalButtonColors(
-                                disabledContainerColor = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.5f),
+                                disabledContainerColor = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.3f),
                                 disabledContentColor = MaterialTheme.colorScheme.onErrorContainer
                             )
-                                    ) {
-                                        Text(context.getString(R.string.not_available))
-                                    }
-                                }
+                        ) {
+                            Text(context.getString(R.string.not_available))
+                        }
+                    }
                     is SystemdCardState.Available -> {
                         Button(
                             onClick = onNavigateToSystemd,
@@ -552,7 +563,7 @@ private fun PremiumSystemdCard(
                             Icon(
                                 Icons.Default.ChevronRight,
                                 contentDescription = null,
-                                modifier = Modifier.size(18.dp)
+                                modifier = Modifier.size(16.dp)
                             )
                             Spacer(Modifier.width(6.dp))
                             Text(

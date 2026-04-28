@@ -12,6 +12,7 @@ import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -63,6 +64,7 @@ private sealed class SparseOperation {
     data class Resize(val container: ContainerInfo) : SparseOperation()
 }
 
+@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
 fun ContainersScreen(
     isBackendAvailable: Boolean,
@@ -92,6 +94,9 @@ fun ContainersScreen(
 
     // Sparse operation state management
     var pendingSparseOperation by remember { mutableStateOf<SparseOperation?>(null) }
+
+    // Track which container has its action drawer expanded
+    var expandedContainerName by remember { mutableStateOf<String?>(null) }
 
     // Export state - tracks which container is pending export (waiting for file picker)
     var pendingExportContainer by remember { mutableStateOf<ContainerInfo?>(null) }
@@ -584,8 +589,14 @@ fun ContainersScreen(
                 Column(
                     modifier = Modifier
                         .fillMaxSize()
+                        .combinedClickable(
+                            interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
+                            indication = null,
+                            onClick = { expandedContainerName = null }
+                        )
                         .verticalScroll(rememberScrollState())
-                        .padding(16.dp),
+                        .padding(horizontal = 16.dp)
+                        .padding(top = 8.dp, bottom = 120.dp), // Clear floating tab bar
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
                     containers.forEach { container ->
@@ -594,8 +605,12 @@ fun ContainersScreen(
 
                         ContainerCard(
                             container = container,
-                            isOperationRunning = isRunning, // Only used for disabling buttons during operations
-                            onShowLogs = {
+                            isOperationRunning = isRunning,
+                            isExpanded = expandedContainerName == container.name,
+                            onToggleExpand = {
+                                expandedContainerName = if (expandedContainerName == container.name) null else container.name
+                            },
+                             onShowLogs = {
                                 showLogViewerFor = container.name
                             },
                             onStart = {
@@ -644,30 +659,32 @@ fun ContainersScreen(
             }
         }
 
-        // Floating Action Button - Install Container (bottom right, only if backend available)
+        // SNACKBAR LAYER
+        SnackbarHost(
+            hostState = snackbarHostState,
+            modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 100.dp)
+        )
+
+        // FAB LAYER (Above everything, below dialogs)
         if (isBackendAvailable && isRootAvailable) {
             FloatingActionButton(
                 onClick = {
-                    // Launch file picker - accept all files, validation happens in callback
                     filePickerLauncher.launch("*/*")
                 },
                 modifier = Modifier
                     .align(Alignment.BottomEnd)
-                    .padding(16.dp),
-                shape = RoundedCornerShape(16.dp)
+                    .padding(horizontal = 24.dp, vertical = 110.dp), // Positioned above the tab bar
+                shape = RoundedCornerShape(20.dp),
+                containerColor = MaterialTheme.colorScheme.primaryContainer,
+                elevation = FloatingActionButtonDefaults.elevation(4.dp)
             ) {
                 Icon(
                     imageVector = Icons.Default.Add,
-                    contentDescription = context.getString(R.string.install_container)
+                    contentDescription = context.getString(R.string.install_container),
+                    modifier = Modifier.size(28.dp)
                 )
             }
         }
-
-        // Snackbar for error messages
-        SnackbarHost(
-            hostState = snackbarHostState,
-            modifier = Modifier.align(Alignment.BottomCenter)
-        )
 
         // Log viewer dialog - console stays open, user must close manually
         showLogViewerFor?.let { containerName ->

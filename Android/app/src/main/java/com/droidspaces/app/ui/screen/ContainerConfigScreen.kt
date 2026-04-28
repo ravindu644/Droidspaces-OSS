@@ -194,8 +194,9 @@ fun ContainerConfigScreen(
         bottomBar = {
             val isUpstreamValid = netMode != "nat" || upstreamInterfaces.isNotEmpty()
             Surface(
-                tonalElevation = 2.dp,
-                shadowElevation = 8.dp
+                tonalElevation = 0.dp,
+                shadowElevation = 0.dp,
+                color = MaterialTheme.colorScheme.surface
             ) {
                 Button(
                     onClick = {
@@ -206,6 +207,7 @@ fun ContainerConfigScreen(
                         .padding(24.dp)
                         .navigationBarsPadding()
                         .height(56.dp),
+                    shape = RoundedCornerShape(20.dp),
                     enabled = isUpstreamValid
                 ) {
                     Text(context.getString(R.string.next_storage), style = MaterialTheme.typography.labelLarge)
@@ -317,9 +319,11 @@ fun ContainerConfigScreen(
 
                     // Existing selected interfaces
                     upstreamInterfaces.forEach { iface ->
-                        Card(
+                        Surface(
                             modifier = Modifier.fillMaxWidth(),
-                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+                            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
+                            shape = RoundedCornerShape(20.dp),
+                            border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
                         ) {
                             Row(
                                 modifier = Modifier.padding(16.dp),
@@ -496,9 +500,11 @@ fun ContainerConfigScreen(
                     )
 
                     portForwards.forEach { pf ->
-                        Card(
+                        Surface(
                             modifier = Modifier.fillMaxWidth(),
-                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+                            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
+                            shape = RoundedCornerShape(20.dp),
+                            border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
                         ) {
                             Row(
                                 modifier = Modifier.padding(16.dp),

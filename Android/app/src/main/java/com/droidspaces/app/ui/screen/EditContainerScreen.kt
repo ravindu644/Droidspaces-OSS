@@ -270,7 +270,8 @@ fun EditContainerScreen(
                             showDestDialog = false
                         }
                     },
-                    enabled = destPath.startsWith("/")
+                    enabled = destPath.startsWith("/"),
+                    shape = RoundedCornerShape(20.dp)
                 ) {
                     Text(context.getString(R.string.ok))
                 }
@@ -327,8 +328,8 @@ fun EditContainerScreen(
         },
         bottomBar = {
             Surface(
-                tonalElevation = 2.dp,
-                shadowElevation = 8.dp
+                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.2f),
+                border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
             ) {
                 Button(
                     onClick = {
@@ -336,6 +337,7 @@ fun EditContainerScreen(
                         saveChanges()
                     },
                     enabled = !isSaving && !isSaved && hasChanges && (netMode != "nat" || upstreamInterfaces.isNotEmpty()),
+                    shape = RoundedCornerShape(20.dp),
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(24.dp)
@@ -390,50 +392,34 @@ fun EditContainerScreen(
             ) {
             // Warning if container is running
             if (container.isRunning) {
-                val cardShape = RoundedCornerShape(20.dp)
-                val interactionSource = remember { MutableInteractionSource() }
-
-                ElevatedCard(
-                    colors = CardDefaults.elevatedCardColors(
-                        containerColor = MaterialTheme.colorScheme.errorContainer
-                    ),
-                    shape = cardShape,
-                    elevation = CardDefaults.elevatedCardElevation(defaultElevation = 1.dp),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .heightIn(min = 100.dp)
-                        .clip(cardShape)
-                        .combinedClickable(
-                            interactionSource = interactionSource,
-                            indication = rememberRipple(bounded = true),
-                            onClick = { clearFocus() }
-                        )
+                Surface(
+                    color = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.2f),
+                    shape = RoundedCornerShape(20.dp),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.error.copy(alpha = 0.3f)),
+                    modifier = Modifier.fillMaxWidth()
                 ) {
                     Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(28.dp),
+                        modifier = Modifier.padding(20.dp),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
                         Icon(
                             imageVector = Icons.Default.Warning,
                             contentDescription = null,
-                            modifier = Modifier.size(38.dp),
-                            tint = MaterialTheme.colorScheme.onErrorContainer
+                            modifier = Modifier.size(24.dp),
+                            tint = MaterialTheme.colorScheme.error
                         )
-                        Column(
-                            verticalArrangement = Arrangement.spacedBy(4.dp)
-                        ) {
+                        Column {
                             Text(
                                 text = context.getString(R.string.container_is_running),
-                                style = MaterialTheme.typography.titleMedium,
-                                color = MaterialTheme.colorScheme.onErrorContainer
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.error
                             )
                             Text(
                                 text = context.getString(R.string.changes_take_effect_after_restart),
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onErrorContainer
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
                             )
                         }
                     }
@@ -646,9 +632,11 @@ fun EditContainerScreen(
 
                     // Existing selected interfaces
                     upstreamInterfaces.forEach { iface ->
-                        Card(
+                        Surface(
                             modifier = Modifier.fillMaxWidth(),
-                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+                            shape = RoundedCornerShape(20.dp),
+                            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
+                            border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
                         ) {
                             Row(
                                 modifier = Modifier.padding(16.dp),
@@ -797,7 +785,8 @@ fun EditContainerScreen(
                                                     showUpstreamDialog = false
                                                 }
                                             },
-                                            enabled = customIface.isNotBlank() && upstreamInterfaces.size < 8
+                                            enabled = customIface.isNotBlank() && upstreamInterfaces.size < 8,
+                                            shape = RoundedCornerShape(20.dp)
                                         ) {
                                             Text(context.getString(R.string.add))
                                         }
@@ -827,9 +816,11 @@ fun EditContainerScreen(
                     )
 
                     portForwards.forEach { pf ->
-                        Card(
+                        Surface(
                             modifier = Modifier.fillMaxWidth(),
-                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+                            shape = RoundedCornerShape(20.dp),
+                            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
+                            border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
                         ) {
                             Row(
                                 modifier = Modifier.padding(16.dp),
@@ -1260,11 +1251,11 @@ fun EditContainerScreen(
             }
 
             bindMounts.forEach { mount ->
-                Card(
+                Surface(
                     modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
-                    )
+                    shape = RoundedCornerShape(20.dp),
+                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
                 ) {
                     Row(
                         modifier = Modifier.padding(16.dp),
@@ -1305,13 +1296,13 @@ fun EditContainerScreen(
 
             // Error message
             errorMessage?.let { error ->
-                Card(
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.errorContainer,
-                        contentColor = MaterialTheme.colorScheme.onErrorContainer
-                    ),
+                Surface(
+                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
+                    shape = RoundedCornerShape(20.dp),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
                     modifier = Modifier
                         .fillMaxWidth()
+                        .padding(vertical = 16.dp)
                         .clickable { clearFocus() }
                 ) {
                     Text(

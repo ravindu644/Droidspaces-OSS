@@ -56,6 +56,9 @@
     <string name="tap_to_reinstall">Tap here to re-install</string>
     <string name="tap_to_install_module">Tap here to install module</string>
     <string name="device_not_supported">Your device is not supported</string>
+    <string name="backend_attention_required">Backend: Action required</string>
+    <string name="tap_to_fix_system">Tap to fix system configuration</string>
+    <string name="tap_to_fix_root">Tap to grant permission</string>
 
     <!-- Settings Screen -->
     <string name="backend_section">Backend</string>

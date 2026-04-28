@@ -2,6 +2,7 @@ package com.droidspaces.app.ui.component
 
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.spring
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
@@ -18,8 +19,12 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.droidspaces.app.R
+import com.droidspaces.app.service.TerminalSessionService
+import com.droidspaces.app.util.AndroidSystemStatsCollector
 import com.droidspaces.app.util.ContainerInfo
 import com.droidspaces.app.util.ContainerOSInfoManager
+import com.droidspaces.app.util.ContainerSystemdManager
+import kotlinx.coroutines.launch
 
 /**
  * Container card for Panel tab - shows container name, icon, quick actions, and stats.
@@ -35,6 +40,7 @@ fun RunningContainerCard(
     container: ContainerInfo,
     onEnter: () -> Unit = {},
     onTerminalClick: () -> Unit = {},
+    usage: AndroidSystemStatsCollector.ContainerUsage? = null,
     refreshTrigger: Int = 0,
     modifier: Modifier = Modifier
 ) {
@@ -99,16 +105,36 @@ fun RunningContainerCard(
                     modifier = Modifier.weight(1f)
                 )
 
-                IconButton(
+                // Terminal/Restore Pill (Above divider)
+                Surface(
                     onClick = onTerminalClick,
-                    modifier = Modifier.size(32.dp)
+                    shape = RoundedCornerShape(10.dp),
+                    color = MaterialTheme.colorScheme.primary,
+                    contentColor = MaterialTheme.colorScheme.onPrimary,
+                    modifier = Modifier.height(32.dp)
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.Terminal,
-                        contentDescription = "Open Terminal",
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(20.dp)
-                    )
+                    Row(
+                        modifier = Modifier.padding(horizontal = 10.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center
+                    ) {
+                        val sessionCount by remember {
+                            derivedStateOf {
+                                TerminalSessionService.globalSessionList.values.count { it.containerName == container.name }
+                            }
+                        }
+                        Icon(
+                            imageVector = if (sessionCount > 0) Icons.Default.Terminal else Icons.Default.ChevronRight,
+                            contentDescription = null,
+                            modifier = Modifier.size(14.dp)
+                        )
+                        Spacer(Modifier.width(4.dp))
+                        Text(
+                            text = if (sessionCount > 0) "Restore" else "Terminal",
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = FontWeight.Black
+                        )
+                    }
                 }
             }
 
@@ -139,6 +165,36 @@ fun RunningContainerCard(
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
             )
+
+            // --- RESOURCE IMPACT (GIGACHAD METRIC) ---
+            usage?.let { stats ->
+                if (stats.ramKb > 0) {
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(MaterialTheme.colorScheme.surfaceColorAtElevation(2.dp))
+                            .padding(8.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Memory,
+                            contentDescription = null,
+                            modifier = Modifier.size(14.dp),
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                        val ramMb = stats.ramKb / 1024
+                        Text(
+                            text = String.format("Using %d MB RAM (%.1f%% of system load)", ramMb, stats.relativeRamPercent),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.primary,
+                            fontWeight = FontWeight.Medium
+                        )
+                    }
+                }
+            }
         }
     }
 }
