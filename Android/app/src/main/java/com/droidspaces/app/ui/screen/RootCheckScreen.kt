@@ -8,6 +8,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -125,18 +126,17 @@ fun RootCheckScreen(
                     )
 
                     // Root Status Card - fades in second
-                    Card(
+                    Surface(
                         modifier = Modifier
                             .fillMaxWidth()
                             .alpha(cardAlpha),
-                        colors = CardDefaults.cardColors(
-                            containerColor = when (currentRootStatus) {
-                                RootStatus.Granted -> MaterialTheme.colorScheme.primaryContainer
-                                RootStatus.Denied -> MaterialTheme.colorScheme.errorContainer
-                                RootStatus.Checking -> MaterialTheme.colorScheme.surfaceVariant
-                                null -> MaterialTheme.colorScheme.surfaceVariant
-                            }
-                        )
+                        shape = RoundedCornerShape(20.dp),
+                        color = when (currentRootStatus) {
+                            RootStatus.Granted -> MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.6f)
+                            RootStatus.Denied -> MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.6f)
+                            else -> MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
+                        },
+                        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
                     ) {
                         Column(
                             modifier = Modifier
@@ -219,15 +219,12 @@ fun RootCheckScreen(
                             .fillMaxWidth()
                             .height(56.dp)
                             .alpha(buttonAlpha),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.primary
-                        )
-                    ) {
-                        Text(
-                            text = context.getString(R.string.continue_button),
-                            style = MaterialTheme.typography.labelLarge
-                        )
-                    }
+                ) {
+                    Text(
+                        text = context.getString(R.string.continue_button),
+                        style = MaterialTheme.typography.labelLarge
+                    )
+                }
                 } else {
                     Column(
                         modifier = Modifier.fillMaxWidth(),
@@ -239,7 +236,8 @@ fun RootCheckScreen(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .height(56.dp)
-                                .alpha(buttonAlpha)
+                                .alpha(buttonAlpha),
+                            shape = RoundedCornerShape(20.dp)
                         ) {
                             Text(
                                 text = if (isChecking) context.getString(R.string.checking_root) else context.getString(R.string.check_root_access),

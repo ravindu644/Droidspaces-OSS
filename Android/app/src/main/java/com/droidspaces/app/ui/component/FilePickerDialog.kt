@@ -29,6 +29,7 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
@@ -162,8 +163,10 @@ fun FilePickerDialog(
             modifier = Modifier
                 .fillMaxWidth(0.92f)
                 .fillMaxHeight(0.75f),
-            shape = RoundedCornerShape(28.dp),
-            color = MaterialTheme.colorScheme.surface
+            shape = RoundedCornerShape(24.dp),
+            color = MaterialTheme.colorScheme.surfaceContainer,
+            border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)),
+            tonalElevation = 0.dp
         ) {
             ClearFocusOnClickOutside(
                 modifier = Modifier.fillMaxSize()
@@ -228,10 +231,12 @@ fun FilePickerDialog(
                     textStyle = MaterialTheme.typography.bodySmall.copy(
                         fontFamily = FontFamily.Monospace
                     ),
-                    shape = RoundedCornerShape(12.dp),
+                    shape = RoundedCornerShape(14.dp),
                     colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = MaterialTheme.colorScheme.primary,
-                        unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)
+                        focusedBorderColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.8f),
+                        unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
+                        unfocusedContainerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.5f),
+                        focusedContainerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.7f)
                     )
                 )
 
@@ -311,20 +316,30 @@ fun FilePickerDialog(
                 Spacer(modifier = Modifier.height(16.dp))
 
                 // Action buttons
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.End,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    TextButton(onClick = onDismiss) {
-                        Text("Cancel")
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Surface(
+                        modifier = Modifier.weight(1f).clip(RoundedCornerShape(14.dp)).clickable(onClick = onDismiss),
+                        shape = RoundedCornerShape(14.dp),
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.06f),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)),
+                        tonalElevation = 0.dp
+                    ) {
+                        Box(modifier = Modifier.padding(14.dp), contentAlignment = Alignment.Center) {
+                            Text("Cancel", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
+                        }
                     }
-                    Spacer(modifier = Modifier.width(8.dp))
-                    TextButton(onClick = {
-                        clearFocus()
-                        onConfirm(currentPath)
-                    }) {
-                        Text("Select Current Folder")
+                    Surface(
+                        modifier = Modifier.weight(1f).clip(RoundedCornerShape(14.dp)).clickable(onClick = {
+                            clearFocus()
+                            onConfirm(currentPath)
+                        }),
+                        shape = RoundedCornerShape(14.dp),
+                        color = MaterialTheme.colorScheme.primary,
+                        tonalElevation = 0.dp
+                    ) {
+                        Box(modifier = Modifier.padding(14.dp), contentAlignment = Alignment.Center) {
+                            Text("Select Folder", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onPrimary)
+                        }
                     }
                 }
             }

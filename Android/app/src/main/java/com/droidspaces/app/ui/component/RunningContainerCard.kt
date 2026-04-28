@@ -1,49 +1,41 @@
 package com.droidspaces.app.ui.component
 
 import androidx.compose.animation.animateContentSize
-import androidx.compose.animation.core.spring
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
-import androidx.compose.material.ripple.rememberRipple
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.droidspaces.app.R
+import com.droidspaces.app.service.TerminalSessionService
+import com.droidspaces.app.util.AnimationUtils
 import com.droidspaces.app.util.ContainerInfo
 import com.droidspaces.app.util.ContainerOSInfoManager
+import com.droidspaces.app.util.ContainerUsageCollector
 
 /**
- * Container card for Panel tab - shows container name, icon, quick actions, and stats.
- * Tapping opens ContainerDetailsScreen.
- *
- * @param refreshTrigger Increment this to force a live re-fetch of OS info (e.g. on pull-to-refresh
- *                       or tab re-entry). The card always shows cached data instantly and then
- *                       updates in the background when the trigger changes.
+ * Container card for Panel tab — shows container name, OS info, resource usage, and quick actions.
+ * Uses droidspaces --name run commands for accurate in-container metrics.
  */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RunningContainerCard(
     container: ContainerInfo,
     onEnter: () -> Unit = {},
     onTerminalClick: () -> Unit = {},
+    usage: ContainerUsageCollector.ContainerUsage? = null,
     refreshTrigger: Int = 0,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
-    val cardShape = RoundedCornerShape(20.dp)
-    val interactionSource = remember { MutableInteractionSource() }
 
-    // Show cached data instantly (zero delay), then refresh in background whenever
-    // refreshTrigger changes (pull-to-refresh, tab re-entry, etc.)
     var osInfo by remember {
         mutableStateOf(ContainerOSInfoManager.getCachedOSInfo(container.name, context))
     }
@@ -56,42 +48,35 @@ fun RunningContainerCard(
         )
     }
 
-    Card(
-        modifier = modifier
-            .fillMaxWidth()
-            .clip(cardShape)
-            .clickable(
-                onClick = onEnter,
-                indication = rememberRipple(bounded = true),
-                interactionSource = interactionSource
-            ),
+    val cardShape = RoundedCornerShape(20.dp)
+
+    Surface(
+        onClick = onEnter,
+        modifier = modifier.fillMaxWidth().clip(cardShape),
         shape = cardShape,
-        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant
-        )
+        color = MaterialTheme.colorScheme.surfaceContainer,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f))
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .animateContentSize(animationSpec = spring(stiffness = 300f, dampingRatio = 0.8f))
+                .animateContentSize(animationSpec = AnimationUtils.mediumSpec())
                 .padding(horizontal = 16.dp, vertical = 14.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            // --- TOP ROW: Icon, Name, Terminal quick-action ---
+            // Top row: icon, name, terminal pill
             Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth().height(32.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
                 Icon(
                     imageVector = Icons.Default.Storage,
-                    contentDescription = "Container",
+                    contentDescription = null,
                     modifier = Modifier.size(24.dp),
                     tint = MaterialTheme.colorScheme.primary
                 )
-
                 Spacer(modifier = Modifier.width(12.dp))
-
                 Text(
                     text = container.name,
                     style = MaterialTheme.typography.titleMedium,
@@ -99,24 +84,44 @@ fun RunningContainerCard(
                     modifier = Modifier.weight(1f)
                 )
 
-                IconButton(
+                val sessionCount by remember {
+                    derivedStateOf {
+                        TerminalSessionService.globalSessionList.values.count {
+                            it.containerName == container.name
+                        }
+                    }
+                }
+                Surface(
                     onClick = onTerminalClick,
-                    modifier = Modifier.size(32.dp)
+                    shape = RoundedCornerShape(12.dp), // Sharper, refined radius
+                    color = MaterialTheme.colorScheme.primary,
+                    contentColor = MaterialTheme.colorScheme.onPrimary,
+                    modifier = Modifier.height(30.dp).clip(RoundedCornerShape(12.dp)),
+                    tonalElevation = 0.dp
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.Terminal,
-                        contentDescription = "Open Terminal",
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(20.dp)
-                    )
+                    Row(
+                        modifier = Modifier.padding(horizontal = 10.dp), // Tighter padding
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center
+                    ) {
+                        Icon(
+                            imageVector = if (sessionCount > 0) Icons.Default.Terminal else Icons.Default.ChevronRight,
+                            contentDescription = null,
+                            modifier = Modifier.size(14.dp) // Slightly smaller icon
+                        )
+                        Spacer(Modifier.width(6.dp))
+                        Text(
+                            text = if (sessionCount > 0) context.getString(R.string.restore) else context.getString(R.string.terminal),
+                            style = MaterialTheme.typography.labelMedium, // More compact typography
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
                 }
             }
 
-            HorizontalDivider()
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
 
-            // --- INFO ROWS: Distribution, Uptime, IP ---
-
-            // Distribution (e.g. "Debian GNU/Linux 13 (trixie)")
+            // OS info rows
             osInfo?.prettyName?.let { distro ->
                 Text(
                     text = distro,
@@ -124,21 +129,76 @@ fun RunningContainerCard(
                     color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
                 )
             }
-
-            // Uptime
-            // TODO: Add CPU and memory usage
             Text(
                 text = context.getString(R.string.uptime_label, osInfo?.uptime ?: ""),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
             )
-
-            // IP Address
             Text(
                 text = context.getString(R.string.ip_address_label, osInfo?.ipAddress ?: ""),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
             )
+
+            // Resource usage row — only shown when we have real data
+            usage?.let { stats ->
+                if (stats.ramUsedKb > 0 || stats.cpuPercent > 0.0) {
+                    Surface(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(10.dp),
+                        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f))
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(16.dp)
+                        ) {
+                            // CPU
+                            if (stats.cpuPercent > 0.0) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Speed,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(13.dp),
+                                        tint = MaterialTheme.colorScheme.primary
+                                    )
+                                    Text(
+                                        text = "CPU ${String.format("%.1f", stats.cpuPercent)}%",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        fontWeight = FontWeight.Medium,
+                                        color = MaterialTheme.colorScheme.primary
+                                    )
+                                }
+                            }
+                            // RAM
+                            if (stats.ramUsedKb > 0) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Memory,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(13.dp),
+                                        tint = MaterialTheme.colorScheme.secondary
+                                    )
+                                    val ramMb = stats.ramUsedKb / 1024
+                                    Text(
+                                        text = "RAM ${ramMb} MB (${String.format("%.1f", stats.ramPercent)}%)",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        fontWeight = FontWeight.Medium,
+                                        color = MaterialTheme.colorScheme.secondary
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
         }
     }
 }

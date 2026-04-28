@@ -17,7 +17,6 @@ import com.droidspaces.app.ui.component.ErrorState
 import com.droidspaces.app.ui.component.RootUnavailableState
 import com.droidspaces.app.ui.component.PullToRefreshWrapper
 import com.droidspaces.app.ui.component.RunningContainerCard
-import com.droidspaces.app.ui.component.SystemStatisticsCard
 import com.droidspaces.app.ui.viewmodel.ContainerViewModel
 import com.droidspaces.app.ui.viewmodel.SystemStatsViewModel
 import androidx.compose.ui.platform.LocalContext
@@ -37,7 +36,7 @@ fun ControlPanelScreen(
     containerViewModel: ContainerViewModel,
     onNavigateToContainerDetails: (String) -> Unit = {},
     onNavigateToTerminal: (String) -> Unit = {},
-    refreshTrigger: Int = 0,
+    refreshTrigger: Int = 0
 ) {
     val context = LocalContext.current
     val snackbarHostState = remember { SnackbarHostState() }
@@ -51,8 +50,12 @@ fun ControlPanelScreen(
         systemStatsViewModel.startMonitoring()
     }
 
-    // Get system usage stats
-    val systemUsage = systemStatsViewModel.systemUsage
+    // Start container monitoring loop; restarts if running container list changes
+    LaunchedEffect(runningContainers) {
+        systemStatsViewModel.startContainerMonitoring(runningContainers)
+    }
+
+    val containerUsageMap = systemStatsViewModel.containerUsageMap
 
     Box(modifier = Modifier.fillMaxSize()) {
         // Show content based on root and backend availability
@@ -65,37 +68,15 @@ fun ControlPanelScreen(
                 ErrorState()
             }
             else -> {
-                // Main content - System stats and running containers
+                // Main content - Active containers
                 Column(
                     modifier = Modifier
                         .fillMaxSize()
                         .verticalScroll(rememberScrollState())
-                        .padding(16.dp),
+                        .padding(horizontal = 16.dp)
+                        .padding(top = 8.dp, bottom = 120.dp), // Clear floating tab bar
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
-                    // Section 1: System Statistics (always visible)
-                    SystemStatisticsCard(
-                        cpuPercent = systemUsage.cpuPercent,
-                        ramPercent = systemUsage.ramPercent,
-                        temperature = systemUsage.temperature
-                    )
-
-                    // Horizontal divider
-                    HorizontalDivider(
-                        modifier = Modifier.padding(vertical = 8.dp),
-                        thickness = 1.dp,
-                        color = MaterialTheme.colorScheme.outlineVariant
-                    )
-
-                    // Section 2: Active Containers
-                    Text(
-                        text = context.getString(R.string.active_containers),
-                        style = MaterialTheme.typography.titleSmall,
-                        fontWeight = FontWeight.SemiBold,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(bottom = 8.dp)
-                    )
-
                     if (runningContainers.isEmpty()) {
                         // Empty state for no running containers
                         Box(
@@ -137,6 +118,7 @@ fun ControlPanelScreen(
                                 onTerminalClick = {
                                     onNavigateToTerminal(container.name)
                                 },
+                                usage = containerUsageMap[container.name],
                                 refreshTrigger = refreshTrigger
                             )
                         }

@@ -1,32 +1,24 @@
 package com.droidspaces.app.ui.component
 
-import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.combinedClickable
-import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material3.*
-import androidx.compose.material.ripple.rememberRipple
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.droidspaces.app.util.Constants
 import com.droidspaces.app.util.SystemInfoManager
 import com.droidspaces.app.R
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
 
 enum class DroidspacesStatus {
     Working,
@@ -37,7 +29,6 @@ enum class DroidspacesStatus {
     ModuleMissing
 }
 
-@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun DroidspacesStatusCard(
     status: DroidspacesStatus,
@@ -48,227 +39,166 @@ fun DroidspacesStatusCard(
     onClick: () -> Unit = {}
 ) {
     val context = LocalContext.current
-
-    // Load cached values immediately (synchronous, instant display)
-    var rootProviderVersion by remember {
-        mutableStateOf<String?>(
-            if (status == DroidspacesStatus.Working || status == DroidspacesStatus.UpdateAvailable) {
-                SystemInfoManager.getCachedRootProviderVersion(context) ?: context.getString(R.string.unknown)
-            } else null
-        )
-    }
+    val isWorking = isRootAvailable && status == DroidspacesStatus.Working
 
     var droidspacesVersion by remember {
-        mutableStateOf<String?>(
-            if (status == DroidspacesStatus.Working || status == DroidspacesStatus.UpdateAvailable) {
-                SystemInfoManager.getCachedDroidspacesVersion(context) ?: version
-            } else version
-        )
+        mutableStateOf(version ?: SystemInfoManager.getCachedDroidspacesVersion(context))
     }
-
-    // Backend execution mode ("direct" or "daemon")
     var backendMode by remember {
-        mutableStateOf<String?>(
-            if (status == DroidspacesStatus.Working) {
-                SystemInfoManager.getCachedBackendMode(context)
-            } else null
-        )
+        mutableStateOf(if (isWorking) SystemInfoManager.getCachedBackendMode(context) else null)
     }
 
-    // Check actual values in background and update with animation if changed
-    // Use refresh method to bypass cache after backend installation/update
-    LaunchedEffect(status, refreshTrigger) {
-        if (status == DroidspacesStatus.Working || status == DroidspacesStatus.UpdateAvailable) {
-            val actualRootVersion = SystemInfoManager.getRootProviderVersion(context)
-            // Only update if it's different (triggers animation)
-            if (actualRootVersion != rootProviderVersion) {
-                rootProviderVersion = actualRootVersion
-            }
-
-            // Force refresh droidspaces version to get latest after backend updates
-            val actualDroidspacesVersion = SystemInfoManager.refreshDroidspacesVersion(context)
-            // Only update if it's different (triggers animation)
-            if (actualDroidspacesVersion != null && actualDroidspacesVersion != droidspacesVersion) {
-                droidspacesVersion = actualDroidspacesVersion
-            }
-
-            // Query execution mode: "direct" or "daemon"
-            if (status == DroidspacesStatus.Working) {
-                withContext(Dispatchers.IO) {
-                    val actualMode = SystemInfoManager.getBackendMode(context)
-                    if (actualMode != backendMode) {
-                        backendMode = actualMode
-                    }
-                }
-            }
+    LaunchedEffect(status, isRootAvailable, refreshTrigger) {
+        if (isWorking) {
+            droidspacesVersion = SystemInfoManager.getDroidspacesVersion(context)
+            backendMode = SystemInfoManager.getBackendMode(context)
+        } else {
+            backendMode = null
         }
     }
 
-    // Avoid Pair allocation - compute directly
-    // Match KernelSU's error styling: red error container for all error states
-    val containerColor = when {
-        !isRootAvailable -> MaterialTheme.colorScheme.errorContainer
-        status == DroidspacesStatus.Working -> MaterialTheme.colorScheme.secondaryContainer
-        status == DroidspacesStatus.UpdateAvailable -> MaterialTheme.colorScheme.errorContainer
-        status == DroidspacesStatus.NotInstalled -> MaterialTheme.colorScheme.errorContainer // Red like KernelSU
-        status == DroidspacesStatus.Unsupported -> MaterialTheme.colorScheme.errorContainer
-        status == DroidspacesStatus.Corrupted -> MaterialTheme.colorScheme.errorContainer
-        status == DroidspacesStatus.ModuleMissing -> MaterialTheme.colorScheme.errorContainer
-        else -> MaterialTheme.colorScheme.secondaryContainer
+    val accentColor = when {
+        isWorking -> MaterialTheme.colorScheme.primary
+        status == DroidspacesStatus.UpdateAvailable -> Color(0xFFFFB300) // Yellow (Amber) for updates
+        else -> MaterialTheme.colorScheme.error
     }
-
-    val icon = when {
-        !isRootAvailable -> Icons.Default.Error
-        status == DroidspacesStatus.Working -> Icons.Default.Verified
-        status == DroidspacesStatus.UpdateAvailable -> Icons.Default.Update
-        status == DroidspacesStatus.NotInstalled -> Icons.Default.Warning
-        status == DroidspacesStatus.Unsupported -> Icons.Default.Warning
-        status == DroidspacesStatus.Corrupted -> Icons.Default.Cancel
-        status == DroidspacesStatus.ModuleMissing -> Icons.Default.Warning
-        else -> Icons.Default.CheckCircle
-    }
+    val isError = !isWorking
 
     val cardShape = RoundedCornerShape(20.dp)
-    val interactionSource = remember { MutableInteractionSource() }
-
-    ElevatedCard(
-        colors = CardDefaults.elevatedCardColors(
-            containerColor = containerColor
-        ),
+ 
+    Surface(
+        onClick = onClick,
+        modifier = Modifier.fillMaxWidth().clip(cardShape),
         shape = cardShape,
-        elevation = CardDefaults.elevatedCardElevation(defaultElevation = 1.dp),
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(cardShape)
-            .then(
-                // Make clickable if onClick is provided OR if status requires re-installation/update
-                if (onClick != {} || status == DroidspacesStatus.NotInstalled ||
-                    status == DroidspacesStatus.Corrupted || status == DroidspacesStatus.UpdateAvailable ||
-                    status == DroidspacesStatus.ModuleMissing) {
-                    Modifier.combinedClickable(
-                        interactionSource = interactionSource,
-                        indication = rememberRipple(bounded = true),
-                        onClick = onClick
-                    )
-                } else Modifier
-            )
+        color = MaterialTheme.colorScheme.surfaceContainer,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f))
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(20.dp),
-            verticalAlignment = Alignment.CenterVertically
+        Column(
+            modifier = Modifier.padding(16.dp), // Match ContainerCard
+            verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            Icon(
-                modifier = Modifier.size(38.dp),
-                imageVector = icon,
-                contentDescription = null,
-                tint = when {
-                    !isRootAvailable -> MaterialTheme.colorScheme.onErrorContainer
-                    status == DroidspacesStatus.Working -> MaterialTheme.colorScheme.primary
-                    status == DroidspacesStatus.UpdateAvailable -> MaterialTheme.colorScheme.onErrorContainer
-                    status == DroidspacesStatus.NotInstalled -> MaterialTheme.colorScheme.onErrorContainer // Red icon like KernelSU
-                    status == DroidspacesStatus.ModuleMissing -> MaterialTheme.colorScheme.onErrorContainer
-                    else -> MaterialTheme.colorScheme.onErrorContainer
-                }
-            )
-            Spacer(modifier = Modifier.width(16.dp))
-            Column(
+            // Header row — matches ContainerCard's SpaceBetween structure
+            Row(
                 modifier = Modifier.fillMaxWidth(),
-                verticalArrangement = Arrangement.spacedBy(6.dp)
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
+                // Left side: Status Beacon + Status Label
                 Row(
+                    modifier = Modifier.weight(1f),
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
+                    Surface(
+                        modifier = Modifier.size(10.dp),
+                        shape = CircleShape,
+                        color = if (isChecking) MaterialTheme.colorScheme.outline else accentColor
+                    ) {}
                     Text(
                         text = when {
                             !isRootAvailable -> context.getString(R.string.root_unavailable)
                             isChecking -> context.getString(R.string.backend_checking)
-                            status == DroidspacesStatus.Working -> context.getString(R.string.backend_installed)
+                            isWorking -> context.getString(R.string.backend_installed)
                             status == DroidspacesStatus.UpdateAvailable -> context.getString(R.string.backend_update_available)
-                            status == DroidspacesStatus.NotInstalled -> context.getString(R.string.backend_not_installed)
-                            status == DroidspacesStatus.Corrupted -> context.getString(R.string.backend_corrupted)
-                            status == DroidspacesStatus.Unsupported -> context.getString(R.string.backend_unsupported)
-                            status == DroidspacesStatus.ModuleMissing -> context.getString(R.string.backend_module_missing)
-                            else -> context.getString(R.string.backend_unknown)
-                        },
-                        style = MaterialTheme.typography.titleMedium,
-                        color = when {
-                            !isRootAvailable -> MaterialTheme.colorScheme.onErrorContainer
-                            status == DroidspacesStatus.Working -> MaterialTheme.colorScheme.onSecondaryContainer
-                            status == DroidspacesStatus.UpdateAvailable -> MaterialTheme.colorScheme.onErrorContainer
-                            status == DroidspacesStatus.NotInstalled -> MaterialTheme.colorScheme.onErrorContainer
-                            status == DroidspacesStatus.Corrupted -> MaterialTheme.colorScheme.onErrorContainer
-                            status == DroidspacesStatus.Unsupported -> MaterialTheme.colorScheme.onErrorContainer
-                            status == DroidspacesStatus.ModuleMissing -> MaterialTheme.colorScheme.onErrorContainer
-                            else -> MaterialTheme.colorScheme.onSecondaryContainer
-                        },
-                        fontWeight = FontWeight.SemiBold
+                            else -> context.getString(R.string.backend_attention_required)
+                        }.uppercase(),
+                        style = MaterialTheme.typography.labelLarge,
+                        fontWeight = FontWeight.Black,
+                        letterSpacing = 0.5.sp,
+                        color = accentColor,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
                     )
+                }
 
-                    // Execution mode badge (DIRECT / DAEMON)
-                    if (backendMode != null && status == DroidspacesStatus.Working) {
+                // Right side: mode pill (matches container status pill position)
+                if (isWorking && backendMode != null) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        // Spacer matches the Terminal IconButton width in ContainerCard (32dp)
+                        Spacer(modifier = Modifier.size(32.dp))
+
                         Surface(
-                            color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.12f),
-                            shape = RoundedCornerShape(6.dp)
+                            color = accentColor.copy(alpha = 0.1f),
+                            shape = RoundedCornerShape(8.dp),
+                            border = BorderStroke(1.dp, accentColor.copy(alpha = 0.2f))
                         ) {
-                            Text(
-                                text = backendMode!!,
-                                style = MaterialTheme.typography.labelSmall,
-                                fontWeight = FontWeight.Bold,
-                                letterSpacing = 1.sp,
-                                color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.7f),
-                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
-                            )
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                            ) {
+                                Surface(modifier = Modifier.size(6.dp), shape = CircleShape, color = accentColor) {}
+                                Text(
+                                    text = backendMode!!.uppercase(),
+                                    style = MaterialTheme.typography.labelSmall,
+                                    fontWeight = FontWeight.Black,
+                                    letterSpacing = 0.5.sp,
+                                    color = accentColor
+                                )
+                            }
                         }
                     }
                 }
-                // Check root availability first - if root is unavailable, always show the grant message
-                if (!isRootAvailable) {
+            }
+
+            // Wordmark and Version block
+            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Text(
+                    text = when {
+                        isWorking || status == DroidspacesStatus.UpdateAvailable -> "DROIDSPACES"
+                        !isRootAvailable -> context.getString(R.string.root_unavailable)
+                        status == DroidspacesStatus.NotInstalled -> context.getString(R.string.backend_not_installed)
+                        else -> context.getString(R.string.backend_corrupted)
+                    },
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Black,
+                    letterSpacing = (-0.5).sp
+                )
+
+                if (isWorking) {
                     Text(
-                        text = context.getString(R.string.grant_root_message),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onErrorContainer.copy(alpha = 0.8f)
+                        text = "${context.getString(R.string.version).uppercase()}: ${droidspacesVersion ?: "---"}",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                        fontWeight = FontWeight.Bold,
+                        letterSpacing = 0.5.sp,
+                        modifier = Modifier.padding(top = 2.dp)
                     )
-                } else if (status == DroidspacesStatus.Working || status == DroidspacesStatus.UpdateAvailable) {
-                    Text(
-                        text = context.getString(R.string.version_label, droidspacesVersion ?: context.getString(R.string.unknown)),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = when (status) {
-                            DroidspacesStatus.UpdateAvailable -> MaterialTheme.colorScheme.onErrorContainer.copy(alpha = 0.7f)
-                            else -> MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.7f)
+                }
+
+                // Error banner
+                if (isError) {
+                    Surface(
+                        modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
+                        shape = RoundedCornerShape(10.dp),
+                        color = accentColor.copy(alpha = 0.1f)
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(10.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Info,
+                                contentDescription = null,
+                                tint = accentColor,
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = when {
+                                    !isRootAvailable -> context.getString(R.string.grant_root_message)
+                                    status == DroidspacesStatus.UpdateAvailable -> context.getString(R.string.update_available_message)
+                                    else -> context.getString(R.string.tap_to_fix_system)
+                                },
+                                style = MaterialTheme.typography.bodySmall,
+                                fontWeight = FontWeight.Medium,
+                                color = accentColor
+                            )
                         }
-                    )
-                    // Root provider version - instant display, no animations
-                    Text(
-                        text = context.getString(R.string.root_provider_label, rootProviderVersion ?: context.getString(R.string.unknown)),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = when (status) {
-                            DroidspacesStatus.UpdateAvailable -> MaterialTheme.colorScheme.onErrorContainer.copy(alpha = 0.7f)
-                            else -> MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.7f)
-                        }
-                    )
-                } else {
-                    Text(
-                        text = when {
-                            status == DroidspacesStatus.UpdateAvailable -> context.getString(R.string.update_available_message)
-                            status == DroidspacesStatus.NotInstalled -> context.getString(R.string.tap_to_install)
-                            status == DroidspacesStatus.Unsupported -> context.getString(R.string.device_not_supported)
-                            status == DroidspacesStatus.Corrupted -> context.getString(R.string.tap_to_reinstall)
-                            status == DroidspacesStatus.ModuleMissing -> context.getString(R.string.tap_to_install_module)
-                            else -> ""
-                        },
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = when {
-                            status == DroidspacesStatus.UpdateAvailable -> MaterialTheme.colorScheme.onErrorContainer.copy(alpha = 0.8f)
-                            status == DroidspacesStatus.NotInstalled -> MaterialTheme.colorScheme.onErrorContainer.copy(alpha = 0.8f) // Red text like KernelSU
-                            status == DroidspacesStatus.Corrupted -> MaterialTheme.colorScheme.onErrorContainer.copy(alpha = 0.8f)
-                            status == DroidspacesStatus.Unsupported -> MaterialTheme.colorScheme.onErrorContainer.copy(alpha = 0.8f)
-                            status == DroidspacesStatus.ModuleMissing -> MaterialTheme.colorScheme.onErrorContainer.copy(alpha = 0.8f)
-                            else -> MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.7f)
-                        }
-                    )
+                    }
                 }
             }
         }

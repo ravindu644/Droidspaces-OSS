@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.OpenInNew
@@ -32,6 +33,7 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import android.content.Intent
 import android.net.Uri
@@ -486,15 +488,14 @@ private fun AboutDialog(onDismiss: () -> Unit) {
             usePlatformDefaultWidth = false
         )
     ) {
-        Card(
+        Surface(
             modifier = Modifier
                 .fillMaxWidth(0.9f)
                 .fillMaxHeight(0.85f)
                 .padding(16.dp),
-            shape = RoundedCornerShape(28.dp),
-            colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surface
-            )
+            shape = RoundedCornerShape(20.dp),
+            color = MaterialTheme.colorScheme.surfaceContainer,
+            border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f))
         ) {
             Column(
                 modifier = Modifier
@@ -816,91 +817,112 @@ private fun LanguagePickerDialog(
     onLanguageSelected: (String) -> Unit
 ) {
     val context = LocalContext.current
-
-    // Get available languages
-    val availableLanguages = remember {
-        LocaleHelper.getAvailableLanguages(context)
-    }
-
-    // Add "System Default" option
+    val availableLanguages = remember { LocaleHelper.getAvailableLanguages(context) }
     val allOptions = remember(availableLanguages) {
         buildList {
             add("system" to context.getString(R.string.system_default))
-            availableLanguages.forEach { language ->
-                add(language.code to language.nativeName)
-            }
+            availableLanguages.forEach { language -> add(language.code to language.nativeName) }
         }
     }
-
-    // Get current language code
-    val currentLanguage = remember {
-        LocaleHelper.getCurrentLanguageCode()
-    }
-
+    val currentLanguage = remember { LocaleHelper.getCurrentLanguageCode() }
     var selectedIndex by remember {
         mutableIntStateOf(allOptions.indexOfFirst { (code, _) -> code == currentLanguage }.takeIf { it >= 0 } ?: 0)
     }
 
-    AlertDialog(
+    Dialog(
         onDismissRequest = onDismiss,
-        title = {
-            Text(
-                text = context.getString(R.string.language),
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold
-            )
-        },
-        text = {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .heightIn(max = 400.dp)
-                    .verticalScroll(rememberScrollState())
-            ) {
-                allOptions.forEachIndexed { index, (_, displayName) ->
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable {
-                                selectedIndex = index
+        properties = DialogProperties(usePlatformDefaultWidth = false)
+    ) {
+        Surface(
+            modifier = Modifier
+                .fillMaxWidth(0.92f)
+                .wrapContentHeight()
+                .padding(vertical = 24.dp),
+            shape = RoundedCornerShape(24.dp),
+            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.98f),
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)),
+            tonalElevation = 0.dp
+        ) {
+            Column(modifier = Modifier.padding(24.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                Text(
+                    text = context.getString(R.string.language),
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold
+                )
+
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(max = 400.dp)
+                        .verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    allOptions.forEachIndexed { index, (_, displayName) ->
+                        val isSelected = selectedIndex == index
+                        Surface(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(12.dp))
+                                .clickable { selectedIndex = index },
+                            color = if (isSelected) MaterialTheme.colorScheme.primary.copy(alpha = 0.08f) else Color.Transparent,
+                            shape = RoundedCornerShape(12.dp),
+                            tonalElevation = 0.dp
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 12.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                RadioButton(
+                                    selected = isSelected,
+                                    onClick = { selectedIndex = index },
+                                    colors = RadioButtonDefaults.colors(
+                                        selectedColor = MaterialTheme.colorScheme.primary,
+                                        unselectedColor = MaterialTheme.colorScheme.outline
+                                    )
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    text = displayName,
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
+                                    color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                                )
                             }
-                            .padding(horizontal = 8.dp, vertical = 4.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.Start
+                        }
+                    }
+                }
+
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Surface(
+                        modifier = Modifier.weight(1f).clip(RoundedCornerShape(14.dp)).clickable(onClick = onDismiss),
+                        shape = RoundedCornerShape(14.dp),
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.06f),
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)),
+                        tonalElevation = 0.dp
                     ) {
-                        RadioButton(
-                            selected = selectedIndex == index,
-                            onClick = { selectedIndex = index },
-                            modifier = Modifier.padding(end = 8.dp)
-                        )
-                        Text(
-                            text = displayName,
-                            style = MaterialTheme.typography.bodyLarge,
-                            modifier = Modifier.weight(1f)
-                        )
+                        Box(modifier = Modifier.padding(14.dp), contentAlignment = Alignment.Center) {
+                            Text(context.getString(R.string.cancel), style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold)
+                        }
+                    }
+                    Surface(
+                        modifier = Modifier.weight(1f).clip(RoundedCornerShape(14.dp)).clickable {
+                            if (selectedIndex >= 0 && selectedIndex < allOptions.size) {
+                                onLanguageSelected(allOptions[selectedIndex].first)
+                            }
+                            onDismiss()
+                        },
+                        shape = RoundedCornerShape(14.dp),
+                        color = MaterialTheme.colorScheme.primary,
+                        tonalElevation = 0.dp
+                    ) {
+                        Box(modifier = Modifier.padding(14.dp), contentAlignment = Alignment.Center) {
+                            Text(context.getString(R.string.ok), style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onPrimary)
+                        }
                     }
                 }
-            }
-        },
-        confirmButton = {
-            TextButton(
-                onClick = {
-                    if (selectedIndex >= 0 && selectedIndex < allOptions.size) {
-                        val languageCode = allOptions[selectedIndex].first
-                        onLanguageSelected(languageCode)
-                    }
-                    onDismiss()
-                }
-            ) {
-                Text(context.getString(R.string.ok))
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text(context.getString(R.string.cancel))
             }
         }
-    )
+    }
 }
 
 

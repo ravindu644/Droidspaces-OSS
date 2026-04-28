@@ -90,6 +90,17 @@ class ContainerViewModel(application: Application) : AndroidViewModel(applicatio
                 prefsManager.cachedContainerCount = result.size
                 prefsManager.cachedRunningCount = result.count { it.isRunning }
 
+                // Proactive user fetch for running containers - primes cache for terminal picker
+                result.filter { it.isRunning }.forEach { container ->
+                    launch(Dispatchers.IO) {
+                        try {
+                            com.droidspaces.app.util.ContainerUsersManager.getUsers(container.name)
+                        } catch (e: Exception) {
+                            Log.w(TAG, "Failed to prime user cache for ${container.name}")
+                        }
+                    }
+                }
+
                 Log.i(TAG, "Container list refreshed: ${result.size} containers, ${result.count { it.isRunning }} running")
 
             } catch (e: Exception) {
@@ -121,6 +132,17 @@ class ContainerViewModel(application: Application) : AndroidViewModel(applicatio
         _containers = result
         prefsManager.cachedContainerCount = result.size
         prefsManager.cachedRunningCount = result.count { it.isRunning }
+
+        // Proactive user fetch for running containers
+        result.filter { it.isRunning }.forEach { container ->
+            viewModelScope.launch(Dispatchers.IO) {
+                try {
+                    com.droidspaces.app.util.ContainerUsersManager.getUsers(container.name)
+                } catch (e: Exception) {
+                    Log.w(TAG, "Failed to prime user cache for ${container.name}")
+                }
+            }
+        }
     }
 
     /**

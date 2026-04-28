@@ -55,21 +55,21 @@ private fun darkColorSchemeFor(palette: ThemePalette): ColorScheme {
         tertiaryContainer = t.blend(Color.Black, 0.40f),
         onTertiaryContainer = t.blend(Color.White, 0.75f),
 
-        background = base.blend(p, 0.12f),
+        background = base.blend(p, 0.15f), // Heavier tint for "soul"
         onBackground = Color(0xFFE2E2E6),
-        surface = base.blend(p, 0.12f),
+        surface = base.blend(p, 0.15f),
         onSurface = Color(0xFFE2E2E6),
-        surfaceVariant = Color(0xFF2B2B2F).blend(p, 0.18f),
+        surfaceVariant = Color(0xFF2B2B2F).blend(p, 0.25f), // More vibrant variant
         onSurfaceVariant = Color(0xFFC6C6CA),
 
-        surfaceContainer = Color(0xFF1E1E22).blend(p, 0.14f),
-        surfaceContainerHigh = Color(0xFF282830).blend(p, 0.16f),
-        surfaceContainerHighest = Color(0xFF333338).blend(p, 0.18f),
-        surfaceContainerLow = Color(0xFF1A1A1E).blend(p, 0.12f),
-        surfaceContainerLowest = Color(0xFF0F0F13).blend(p, 0.10f),
+        surfaceContainer = Color(0xFF1E1E22).blend(p, 0.20f),
+        surfaceContainerHigh = Color(0xFF282830).blend(p, 0.22f),
+        surfaceContainerHighest = Color(0xFF333338).blend(p, 0.25f),
+        surfaceContainerLow = Color(0xFF1A1A1E).blend(p, 0.18f),
+        surfaceContainerLowest = Color(0xFF0F0F13).blend(p, 0.15f),
 
-        outline = Color(0xFF8E8E93).blend(p, 0.25f),
-        outlineVariant = Color(0xFF46464A).blend(p, 0.20f),
+        outline = Color(0xFF8E8E93).blend(p, 0.35f),
+        outlineVariant = Color(0xFF46464A).blend(p, 0.30f),
         inverseSurface = Color(0xFFE2E2E6),
         inverseOnSurface = Color(0xFF303034),
         inversePrimary = palette.primaryLight
@@ -175,15 +175,15 @@ private object AmoledColorCache {
         return dynamicScheme.copy(
             background = AMOLED_BLACK,
             surface = AMOLED_BLACK,
-            surfaceVariant = dynamicScheme.surfaceVariant.fastBlend(AMOLED_BLACK, 0.3f), // Lighter blend for visibility
-            surfaceContainer = dynamicScheme.surfaceContainer.fastBlend(AMOLED_BLACK, 0.35f), // Slightly lighter
-            surfaceContainerLow = dynamicScheme.surfaceContainerLow.fastBlend(AMOLED_BLACK, AMOLED_BLEND_RATIO),
-            surfaceContainerLowest = dynamicScheme.surfaceContainerLowest.fastBlend(AMOLED_BLACK, AMOLED_BLEND_RATIO),
-            surfaceContainerHigh = dynamicScheme.surfaceContainerHigh.fastBlend(AMOLED_BLACK, 0.35f), // Slightly lighter
-            surfaceContainerHighest = dynamicScheme.surfaceContainerHighest.fastBlend(AMOLED_BLACK, AMOLED_BLEND_RATIO),
-            primaryContainer = dynamicScheme.primaryContainer.fastBlend(AMOLED_BLACK, AMOLED_BLEND_RATIO),
-            secondaryContainer = dynamicScheme.secondaryContainer.fastBlend(AMOLED_BLACK, AMOLED_BLEND_RATIO),
-            tertiaryContainer = dynamicScheme.tertiaryContainer.fastBlend(AMOLED_BLACK, AMOLED_BLEND_RATIO)
+            surfaceVariant = AMOLED_BLACK,
+            surfaceContainer = AMOLED_BLACK,
+            surfaceContainerLow = AMOLED_BLACK,
+            surfaceContainerLowest = AMOLED_BLACK,
+            surfaceContainerHigh = AMOLED_BLACK,
+            surfaceContainerHighest = AMOLED_BLACK,
+            primaryContainer = dynamicScheme.primaryContainer.fastBlend(AMOLED_BLACK, 0.7f),
+            secondaryContainer = dynamicScheme.secondaryContainer.fastBlend(AMOLED_BLACK, 0.7f),
+            tertiaryContainer = dynamicScheme.tertiaryContainer.fastBlend(AMOLED_BLACK, 0.7f)
         )
     }
 
@@ -203,18 +203,18 @@ private object AmoledColorCache {
         val baseScheme = darkColorSchemeFor(palette)
         val p = palette.primaryDark
 
-        // Create palette-tinted dark surface tones instead of generic DARK_GREY
-        val tintedGrey = DARK_GREY.fastBlend(p, 0.25f)
-
         val scheme = baseScheme.copy(
             background = AMOLED_BLACK,
             surface = AMOLED_BLACK,
-            surfaceVariant = tintedGrey.fastBlend(AMOLED_BLACK, 0.4f),
-            surfaceContainer = tintedGrey.fastBlend(AMOLED_BLACK, 0.45f),
-            surfaceContainerLow = tintedGrey.fastBlend(AMOLED_BLACK, 0.5f),
-            surfaceContainerLowest = tintedGrey.fastBlend(AMOLED_BLACK, 0.5f),
-            surfaceContainerHigh = tintedGrey.fastBlend(AMOLED_BLACK, 0.45f),
-            surfaceContainerHighest = tintedGrey.fastBlend(AMOLED_BLACK, 0.5f),
+            surfaceVariant = AMOLED_BLACK,
+            surfaceContainer = AMOLED_BLACK,
+            surfaceContainerLow = AMOLED_BLACK,
+            surfaceContainerLowest = AMOLED_BLACK,
+            surfaceContainerHigh = AMOLED_BLACK,
+            surfaceContainerHighest = AMOLED_BLACK,
+            outlineVariant = p.copy(alpha = 0.25f), // Keep subtle outline for hierarchy
+            primaryContainer = p.copy(alpha = 0.2f),
+            onPrimaryContainer = p.blend(Color.White, 0.85f)
         )
 
         cachedPaletteName = palette.name
