@@ -12,6 +12,7 @@ import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -49,7 +50,10 @@ import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.OutputStream
 import android.util.Log
+import androidx.compose.foundation.clickable
+import androidx.compose.ui.draw.clip
 import com.droidspaces.app.R
+import androidx.compose.ui.window.Dialog
 
 // Uninstall state (similar to SystemdScreen ActionState)
 private sealed class UninstallState {
@@ -63,6 +67,7 @@ private sealed class SparseOperation {
     data class Resize(val container: ContainerInfo) : SparseOperation()
 }
 
+@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
 fun ContainersScreen(
     isBackendAvailable: Boolean,
@@ -70,7 +75,9 @@ fun ContainersScreen(
     onNavigateToInstallation: (Uri) -> Unit = {},
     onNavigateToEditContainer: (String) -> Unit = {},
     onNavigateToContainerDetails: (String) -> Unit = {},
-    containerViewModel: ContainerViewModel
+    containerViewModel: ContainerViewModel,
+    expandedContainerName: String?,
+    onExpandedContainerNameChange: (String?) -> Unit
 ) {
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
@@ -584,8 +591,14 @@ fun ContainersScreen(
                 Column(
                     modifier = Modifier
                         .fillMaxSize()
+                        .combinedClickable(
+                            interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
+                            indication = null,
+                            onClick = { onExpandedContainerNameChange(null) }
+                        )
                         .verticalScroll(rememberScrollState())
-                        .padding(16.dp),
+                        .padding(horizontal = 16.dp)
+                        .padding(top = 8.dp, bottom = 120.dp), // Clear floating tab bar
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
                     containers.forEach { container ->
@@ -594,8 +607,12 @@ fun ContainersScreen(
 
                         ContainerCard(
                             container = container,
-                            isOperationRunning = isRunning, // Only used for disabling buttons during operations
-                            onShowLogs = {
+                            isOperationRunning = isRunning,
+                            isExpanded = expandedContainerName == container.name,
+                            onToggleExpand = {
+                                onExpandedContainerNameChange(if (expandedContainerName == container.name) null else container.name)
+                            },
+                             onShowLogs = {
                                 showLogViewerFor = container.name
                             },
                             onStart = {
@@ -644,30 +661,31 @@ fun ContainersScreen(
             }
         }
 
-        // Floating Action Button - Install Container (bottom right, only if backend available)
+        // SNACKBAR LAYER
+        SnackbarHost(
+            hostState = snackbarHostState,
+            modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 100.dp)
+        )
+
+        // FAB LAYER (Above everything, below dialogs)
         if (isBackendAvailable && isRootAvailable) {
             FloatingActionButton(
-                onClick = {
-                    // Launch file picker - accept all files, validation happens in callback
-                    filePickerLauncher.launch("*/*")
-                },
+                onClick = { filePickerLauncher.launch("*/*") },
                 modifier = Modifier
                     .align(Alignment.BottomEnd)
-                    .padding(16.dp),
-                shape = RoundedCornerShape(16.dp)
+                    .padding(horizontal = 24.dp, vertical = 110.dp),
+                shape = RoundedCornerShape(20.dp),
+                containerColor = MaterialTheme.colorScheme.primary,
+                contentColor = MaterialTheme.colorScheme.onPrimary,
+                elevation = FloatingActionButtonDefaults.elevation(0.dp, 0.dp, 0.dp, 0.dp)
             ) {
                 Icon(
                     imageVector = Icons.Default.Add,
-                    contentDescription = context.getString(R.string.install_container)
+                    contentDescription = context.getString(R.string.install_container),
+                    modifier = Modifier.size(28.dp)
                 )
             }
         }
-
-        // Snackbar for error messages
-        SnackbarHost(
-            hostState = snackbarHostState,
-            modifier = Modifier.align(Alignment.BottomCenter)
-        )
 
         // Log viewer dialog - console stays open, user must close manually
         showLogViewerFor?.let { containerName ->
@@ -772,13 +790,24 @@ private fun SparseSizeDialog(
     var sizeText by remember { mutableStateOf(initialSize.toString()) }
     val size = sizeText.toIntOrNull()
     val isValid = size != null && size in 4..512
+    val dialogShape = RoundedCornerShape(24.dp)
 
-    AlertDialog(
+    Dialog(
         onDismissRequest = onDismiss,
-        title = { Text(title, fontWeight = FontWeight.Bold) },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                Text(message, style = MaterialTheme.typography.bodyMedium)
+        properties = androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth = false)
+    ) {
+        Surface(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 24.dp),
+            shape = dialogShape,
+            color = MaterialTheme.colorScheme.surfaceContainer,
+            border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)),
+            tonalElevation = 0.dp
+        ) {
+            Column(modifier = Modifier.padding(24.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                Text(title, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleLarge)
+                Text(message, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
 
                 OutlinedTextField(
                     value = sizeText,
@@ -787,31 +816,56 @@ private fun SparseSizeDialog(
                     placeholder = { Text("4-512") },
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
-                    isError = !isValid,
+                    shape = RoundedCornerShape(16.dp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
+                        focusedBorderColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.8f),
+                        unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+                        focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                    ),
+                    isError = !isValid && sizeText.isNotEmpty(),
                     supportingText = {
-                        if (!isValid) Text(context.getString(R.string.enter_size_between_4_512_gb))
+                        if (!isValid && sizeText.isNotEmpty()) Text(context.getString(R.string.enter_size_between_4_512_gb))
                     },
                     keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
                         keyboardType = androidx.compose.ui.text.input.KeyboardType.Number
                     )
                 )
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Surface(
+                        modifier = Modifier.weight(1f).clip(RoundedCornerShape(14.dp)).clickable(onClick = onDismiss),
+                        shape = RoundedCornerShape(14.dp),
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.06f),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)),
+                        tonalElevation = 0.dp
+                    ) {
+                        Box(modifier = Modifier.padding(14.dp), contentAlignment = Alignment.Center) {
+                            Text(context.getString(R.string.cancel), style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold)
+                        }
+                    }
+                    Surface(
+                        modifier = Modifier.weight(1f).clip(RoundedCornerShape(14.dp)).clickable(enabled = isValid, onClick = { size?.let { onConfirm(it) } }),
+                        shape = RoundedCornerShape(14.dp),
+                        color = if (isValid) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f),
+                        tonalElevation = 0.dp
+                    ) {
+                        Box(modifier = Modifier.padding(14.dp), contentAlignment = Alignment.Center) {
+                            Text(
+                                context.getString(R.string.continue_button),
+                                style = MaterialTheme.typography.labelLarge,
+                                fontWeight = FontWeight.SemiBold,
+                                color = if (isValid) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+                            )
+                        }
+                    }
+                }
             }
-        },
-        confirmButton = {
-            Button(
-                onClick = { size?.let { onConfirm(it) } },
-                enabled = isValid
-            ) {
-                Text(context.getString(R.string.continue_button))
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text(context.getString(R.string.cancel))
-            }
-        },
-        shape = RoundedCornerShape(28.dp)
-    )
+        }
+    }
 }
 
 @Composable
@@ -821,43 +875,73 @@ private fun UninstallConfirmationDialog(
     onDismiss: () -> Unit
 ) {
     val context = LocalContext.current
-    AlertDialog(
+    val dialogShape = RoundedCornerShape(24.dp)
+
+    Dialog(
         onDismissRequest = onDismiss,
-        icon = {
-            Icon(
-                Icons.Default.Warning,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.error
-            )
-        },
-        title = {
-            Text(
-                text = context.getString(R.string.uninstall_container_title),
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold
-            )
-        },
-        text = {
-            Text(
-                text = context.getString(R.string.uninstall_container_message, containerName),
-                style = MaterialTheme.typography.bodyMedium
-            )
-        },
-        confirmButton = {
-            TextButton(
-                onClick = onConfirm,
-                colors = ButtonDefaults.textButtonColors(
-                    contentColor = MaterialTheme.colorScheme.error
+        properties = androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth = false)
+    ) {
+        Surface(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 24.dp),
+            shape = dialogShape,
+            color = MaterialTheme.colorScheme.surfaceContainer,
+            border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.error.copy(alpha = 0.3f)),
+            tonalElevation = 0.dp
+        ) {
+            Column(modifier = Modifier.padding(24.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Icon(
+                        Icons.Default.Warning, contentDescription = null,
+                        tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(24.dp)
+                    )
+                    Text(
+                        text = context.getString(R.string.uninstall_container_title),
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+                Text(
+                    text = context.getString(R.string.uninstall_container_message, containerName),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
-            ) {
-                Text(context.getString(R.string.uninstall), fontWeight = FontWeight.Bold)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Surface(
+                        modifier = Modifier.weight(1f).clip(RoundedCornerShape(14.dp)).clickable(onClick = onDismiss),
+                        shape = RoundedCornerShape(14.dp),
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.06f),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)),
+                        tonalElevation = 0.dp
+                    ) {
+                        Box(modifier = Modifier.padding(14.dp), contentAlignment = Alignment.Center) {
+                            Text(context.getString(R.string.cancel), style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold)
+                        }
+                    }
+                    Surface(
+                        modifier = Modifier.weight(1f).clip(RoundedCornerShape(14.dp)).clickable(onClick = onConfirm),
+                        shape = RoundedCornerShape(14.dp),
+                        color = MaterialTheme.colorScheme.error,
+                        tonalElevation = 0.dp
+                    ) {
+                        Box(modifier = Modifier.padding(14.dp), contentAlignment = Alignment.Center) {
+                            Text(
+                                context.getString(R.string.uninstall),
+                                style = MaterialTheme.typography.labelLarge,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onError
+                            )
+                        }
+                    }
+                }
             }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text(context.getString(R.string.cancel))
-            }
-        },
-        shape = RoundedCornerShape(28.dp)
-    )
+        }
+    }
 }

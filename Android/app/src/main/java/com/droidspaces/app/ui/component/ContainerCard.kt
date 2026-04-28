@@ -1,32 +1,38 @@
 package com.droidspaces.app.ui.component
 
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateContentSize
-import androidx.compose.foundation.clickable
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.ui.draw.clip
+import androidx.compose.material.ripple.rememberRipple
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
-import androidx.compose.material.ripple.rememberRipple
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.painter.Painter
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.droidspaces.app.R
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.combinedClickable
-import androidx.compose.foundation.ExperimentalFoundationApi
+import com.droidspaces.app.util.AnimationUtils
 import com.droidspaces.app.util.ContainerInfo
 import com.droidspaces.app.util.ContainerStatus
-import com.droidspaces.app.util.AnimationUtils
-import androidx.compose.ui.platform.LocalContext
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
@@ -42,45 +48,42 @@ fun ContainerCard(
     onResize: () -> Unit = {},
     onExport: () -> Unit = {},
     isOperationRunning: Boolean = false,
+    isExpanded: Boolean = false,
+    onToggleExpand: () -> Unit = {},
     onShowLogs: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
-    var showContextMenu by remember { mutableStateOf(false) }
-
     val cardShape = RoundedCornerShape(20.dp)
-    Box {
-    ElevatedCard(
+
+    Surface(
         modifier = modifier
             .fillMaxWidth()
             .clip(cardShape)
             .combinedClickable(
-                onClick = if (container.isRunning) { onEnter } else { {} },
-                onLongClick = {
-                    showContextMenu = true
+                onClick = {
+                    if (container.isRunning) onEnter() else onToggleExpand()
                 },
+                onLongClick = onToggleExpand,
                 indication = rememberRipple(bounded = true),
                 interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
             ),
-        elevation = CardDefaults.elevatedCardElevation(defaultElevation = 1.dp),
-        shape = cardShape
+        shape = cardShape,
+        color = MaterialTheme.colorScheme.surfaceContainer,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f))
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                    .animateContentSize(animationSpec = AnimationUtils.mediumSpec())
-                .padding(16.dp),
+                .animateContentSize(animationSpec = AnimationUtils.mediumSpec())
+                .padding(horizontal = 16.dp, vertical = 14.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            // Header: Name and Status - single row with proper alignment
             Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(IntrinsicSize.Min),
+                modifier = Modifier.fillMaxWidth().height(32.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Left side: Icon + Name (single line for proper alignment)
                 Row(
                     modifier = Modifier.weight(1f),
                     verticalAlignment = Alignment.CenterVertically,
@@ -90,11 +93,7 @@ fun ContainerCard(
                         imageVector = Icons.Default.Storage,
                         contentDescription = null,
                         modifier = Modifier.size(24.dp),
-                        tint = if (container.isRunning) {
-                            MaterialTheme.colorScheme.primary
-                        } else {
-                            MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
-                        }
+                        tint = if (container.isRunning) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
                     )
                     Text(
                         text = container.name,
@@ -104,249 +103,261 @@ fun ContainerCard(
                     )
                 }
 
-                // Right side: Terminal button + Status label
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    // Console button - always visible, stores all logs
-                    IconButton(
-                        onClick = onShowLogs,
-                        modifier = Modifier.size(32.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Terminal,
-                            contentDescription = context.getString(R.string.view_logs),
-                            tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(20.dp)
-                        )
+                    IconButton(onClick = onShowLogs, modifier = Modifier.size(32.dp)) {
+                        Icon(Icons.Default.Terminal, context.getString(R.string.view_logs), tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
                     }
 
-                    // Status card indicator
-                    val (statusText, statusColor, statusBgColor) = when (container.status) {
-                        ContainerStatus.RUNNING -> Triple(
-                            context.getString(R.string.status_running),
-                            MaterialTheme.colorScheme.onPrimaryContainer,
-                            MaterialTheme.colorScheme.primaryContainer
-                        )
-                        ContainerStatus.RESTARTING -> Triple(
-                            context.getString(R.string.status_restarting),
-                            MaterialTheme.colorScheme.onTertiaryContainer,
-                            MaterialTheme.colorScheme.tertiaryContainer
-                        )
-                        ContainerStatus.STOPPED -> Triple(
-                            context.getString(R.string.status_stopped),
-                            MaterialTheme.colorScheme.onSurfaceVariant,
-                            MaterialTheme.colorScheme.surfaceVariant
-                        )
+                    // Premium Pill Status
+                    val (statusText, statusColor) = when (container.status) {
+                        ContainerStatus.RUNNING -> context.getString(R.string.status_running) to MaterialTheme.colorScheme.primary
+                        ContainerStatus.RESTARTING -> context.getString(R.string.status_restarting) to MaterialTheme.colorScheme.tertiary
+                        ContainerStatus.STOPPED -> context.getString(R.string.status_stopped) to MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
                     }
 
                     Surface(
+                        color = statusColor.copy(alpha = 0.1f),
                         shape = RoundedCornerShape(8.dp),
-                        color = statusBgColor
+                        border = BorderStroke(1.dp, statusColor.copy(alpha = 0.2f))
                     ) {
-                        Text(
-                            text = statusText,
-                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
-                            style = MaterialTheme.typography.labelSmall,
-                            fontWeight = FontWeight.SemiBold,
-                            color = statusColor
-                        )
-                    }
-                }
-            }
-
-            // PID info - separate row below header (only show if running)
-            if (container.pid != null) {
-                Text(
-                    text = context.getString(R.string.pid_label, container.pid),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
-                )
-            }
-
-            // Hostname with sparse image indicator
-            val hasHostname = container.hostname.isNotEmpty() && container.hostname != container.name
-            val hasSparseImage = container.useSparseImage && container.sparseImageSizeGB != null
-
-            if (hasHostname || hasSparseImage) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(4.dp)
-                ) {
-                    // Only show hostname if it's not empty and different from container name
-                    if (hasHostname) {
-                        Icon(
-                            imageVector = Icons.Default.Computer,
-                            contentDescription = null,
-                            modifier = Modifier.size(16.dp),
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
-                        )
-                        Text(
-                            text = context.getString(R.string.hostname_label, container.hostname),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
-                        )
-                    }
-                    // Sparse image indicator (disk icon with size)
-                    if (hasSparseImage) {
-                        // Only show comma if hostname is also shown
-                        if (hasHostname) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp),
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                        ) {
+                            Surface(modifier = Modifier.size(6.dp), shape = CircleShape, color = statusColor) {}
                             Text(
-                                text = context.getString(R.string.comma),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                                text = statusText.uppercase(),
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.Black,
+                                letterSpacing = 0.5.sp,
+                                color = statusColor
                             )
                         }
-                        Icon(
-                            painter = painterResource(id = R.drawable.ic_disk),
-                            contentDescription = null,
-                            modifier = Modifier.size(16.dp),
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
-                        )
-                        Text(
-                            text = context.getString(R.string.gb_size, container.sparseImageSizeGB ?: 0),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
-                        )
+                    }
+                }
+            }
+            
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
+
+            if (container.pid != null) {
+                Text(context.getString(R.string.pid_label, container.pid), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f))
+            }
+
+            // Info Rows
+            val hasHostname = container.hostname.isNotEmpty() && container.hostname != container.name
+            val hasSparseImage = container.useSparseImage && container.sparseImageSizeGB != null
+            if (hasHostname || hasSparseImage) {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                    if (hasHostname) {
+                        Icon(Icons.Default.Computer, null, modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f))
+                        Text(context.getString(R.string.hostname_label, container.hostname), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f))
+                    }
+                    if (hasHostname && hasSparseImage) Text(context.getString(R.string.comma), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f))
+                    if (hasSparseImage) {
+                        Icon(painterResource(id = R.drawable.ic_disk), null, modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f))
+                        Text(context.getString(R.string.gb_size, container.sparseImageSizeGB ?: 0), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f))
                     }
                 }
             }
 
-            // Options summary
+            // Options Row
             val options = mutableListOf<String>()
             if (container.disableIPv6) options.add(context.getString(R.string.ipv6_option))
             if (container.enableAndroidStorage) options.add(context.getString(R.string.storage_option))
             if (container.enableHwAccess) options.add(context.getString(R.string.hw_option))
-            if (!container.enableHwAccess && container.enableGpuMode) options.add(context.getString(R.string.gpu_option))
             if (container.enableTermuxX11) options.add(context.getString(R.string.x11_option))
-            if (container.selinuxPermissive) options.add(context.getString(R.string.selinux_option))
             if (container.runAtBoot) options.add(context.getString(R.string.run_at_boot))
-            if (container.volatileMode) options.add(context.getString(R.string.volatile_option))
-            if (container.forceCgroupv1) options.add(context.getString(R.string.cgroupv1_option))
-            if (container.blockNestedNs) options.add(context.getString(R.string.deadlock_shield_option))
-
             if (options.isNotEmpty()) {
-                Text(
-                    text = context.getString(R.string.options_label, options.joinToString(", ")),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
-                )
+                Text(context.getString(R.string.options_label, options.joinToString(", ")), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f))
             }
 
-            HorizontalDivider()
-
-            // Action buttons - evenly distributed, icons only (no labels to save space)
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            // Unified Control Pill
+            Surface(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 4.dp),
+                color = MaterialTheme.colorScheme.surfaceContainerHigh, // Depth for secondary actions
+                shape = RoundedCornerShape(12.dp),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f))
             ) {
-                // Start button (icon only)
-                Button(
-                    onClick = onStart,
-                    enabled = !container.isRunning && !isOperationRunning,
-                    modifier = Modifier.weight(1f),
-                    contentPadding = PaddingValues(0.dp) // Remove default padding for icon-only buttons
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.PlayArrow,
-                        contentDescription = context.getString(R.string.start),
-                        modifier = Modifier.size(20.dp)
-                    )
-                }
+                Row(modifier = Modifier.fillMaxWidth().padding(4.dp), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                    // Start/Stop
+                    val isStartEnabled = !container.isRunning && !isOperationRunning
+                    val isStopEnabled = container.isRunning && !isOperationRunning
+                    
+                    val btnColor = if (isStopEnabled) MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.4f)
+                                   else if (isStartEnabled) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f)
+                                   else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f)
+                    val accentColor = if (isStopEnabled) MaterialTheme.colorScheme.error
+                                      else if (isStartEnabled) MaterialTheme.colorScheme.primary
+                                      else MaterialTheme.colorScheme.outlineVariant
 
-                // Stop button (icon only)
-                Button(
-                    onClick = onStop,
-                    enabled = container.isRunning && !isOperationRunning,
-                    modifier = Modifier.weight(1f),
-                    contentPadding = PaddingValues(0.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Stop,
-                        contentDescription = context.getString(R.string.stop),
-                        modifier = Modifier.size(20.dp)
-                    )
-                }
+                    Surface(
+                        onClick = if (container.isRunning) onStop else onStart,
+                        enabled = isStartEnabled || isStopEnabled,
+                        modifier = Modifier.weight(1f).height(48.dp),
+                        shape = RoundedCornerShape(16.dp),
+                        color = btnColor,
+                        border = BorderStroke(1.dp, accentColor.copy(alpha = 0.2f))
+                    ) {
+                        Row(modifier = Modifier.fillMaxSize(), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                imageVector = if (container.isRunning) Icons.Default.Stop else Icons.Default.PlayArrow,
+                                null, modifier = Modifier.size(20.dp),
+                                tint = if (container.isRunning) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary
+                            )
+                            Spacer(Modifier.width(8.dp))
+                            Text(
+                                if (container.isRunning) context.getString(R.string.stop) else context.getString(R.string.start),
+                                style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold,
+                                color = if (container.isRunning) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary
+                            )
+                        }
+                    }
 
-                // Restart button (icon only)
-                Button(
-                    onClick = onRestart,
-                    enabled = container.isRunning && !isOperationRunning,
-                    modifier = Modifier.weight(1f),
-                    contentPadding = PaddingValues(0.dp)
+                    // Restart (Only show if running)
+                    if (container.isRunning) {
+                        val isRestartEnabled = !isOperationRunning
+                        val restartBtnColor = if (isRestartEnabled) MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.4f) else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f)
+                        val restartAccent = if (isRestartEnabled) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.outlineVariant
+
+                        Surface(
+                            onClick = onRestart,
+                            enabled = isRestartEnabled,
+                            modifier = Modifier.weight(1f).height(48.dp),
+                            shape = RoundedCornerShape(16.dp),
+                            color = restartBtnColor,
+                            border = BorderStroke(1.dp, restartAccent.copy(alpha = 0.2f))
+                        ) {
+                            Row(modifier = Modifier.fillMaxSize(), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
+                                Icon(Icons.Default.Refresh, null, modifier = Modifier.size(20.dp), tint = MaterialTheme.colorScheme.onSecondaryContainer)
+                                Spacer(Modifier.width(8.dp))
+                                Text(
+                                    context.getString(R.string.restart),
+                                    style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onSecondaryContainer
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Integrated Expandable Action Drawer (Sealed & Interactive)
+            AnimatedVisibility(
+                visible = isExpanded,
+                enter = expandVertically(
+                    animationSpec = AnimationUtils.mediumSpec(),
+                    expandFrom = Alignment.Top
+                ) + fadeIn(),
+                exit = shrinkVertically(
+                    animationSpec = AnimationUtils.mediumSpec(),
+                    shrinkTowards = Alignment.Top
+                ) + fadeOut()
+            ) {
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.Refresh,
-                        contentDescription = context.getString(R.string.restart),
-                        modifier = Modifier.size(20.dp)
+                    Spacer(Modifier.height(12.dp))
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
+                    Spacer(Modifier.height(12.dp))
+
+                    ActionItem(
+                        icon = Icons.Default.Edit,
+                        label = context.getString(R.string.edit_container_configuration),
+                        tint = MaterialTheme.colorScheme.primary,
+                        onClick = { onEdit() }
+                    )
+
+                    if (!container.useSparseImage) {
+                        ActionItem(
+                            icon = painterResource(id = R.drawable.ic_disk),
+                            label = context.getString(R.string.migrate_to_sparse_image),
+                            tint = MaterialTheme.colorScheme.secondary,
+                            onClick = { onMigrate() }
+                        )
+                    } else {
+                        ActionItem(
+                            icon = painterResource(id = R.drawable.ic_disk),
+                            label = context.getString(R.string.resize_sparse_image),
+                            tint = MaterialTheme.colorScheme.secondary,
+                            onClick = { onResize() }
+                        )
+                    }
+
+                    ActionItem(
+                        icon = Icons.Default.FileDownload,
+                        label = context.getString(R.string.export_container),
+                        tint = MaterialTheme.colorScheme.tertiary,
+                        onClick = { onExport() }
+                    )
+
+                    ActionItem(
+                        icon = Icons.Default.Delete,
+                        label = context.getString(R.string.uninstall_container_menu),
+                        tint = MaterialTheme.colorScheme.error,
+                        isBold = true,
+                        onClick = { onUninstall() }
                     )
                 }
             }
-            } // Close Column
-        } // Close ElevatedCard
+        }
+    }
+}
 
-        // Context menu for long press - positioned outside card to not affect height
-            DropdownMenu(
-                expanded = showContextMenu,
-                onDismissRequest = { showContextMenu = false }
-            ) {
-                DropdownMenuItem(
-                    text = { Text(context.getString(R.string.edit_container_configuration)) },
-                    onClick = {
-                        showContextMenu = false
-                        onEdit()
-                    },
-                    leadingIcon = {
-                        Icon(Icons.Default.Edit, contentDescription = null)
-                    }
-                )
+@Composable
+private fun ActionItem(
+    icon: ImageVector,
+    label: String,
+    tint: Color,
+    isBold: Boolean = false,
+    onClick: () -> Unit
+) = ActionItemLayout(label, tint, isBold, onClick) {
+    Icon(icon, null, tint = tint, modifier = Modifier.size(22.dp))
+}
 
-                if (!container.useSparseImage) {
-                    DropdownMenuItem(
-                        text = { Text(context.getString(R.string.migrate_to_sparse_image)) },
-                        onClick = {
-                            showContextMenu = false
-                            onMigrate()
-                        },
-                        leadingIcon = {
-                            Icon(painterResource(id = R.drawable.ic_disk), contentDescription = null, modifier = Modifier.size(20.dp))
-                        }
-                    )
-                } else {
-                    DropdownMenuItem(
-                        text = { Text(context.getString(R.string.resize_sparse_image)) },
-                        onClick = {
-                            showContextMenu = false
-                            onResize()
-                        },
-                        leadingIcon = {
-                            Icon(painterResource(id = R.drawable.ic_disk), contentDescription = null, modifier = Modifier.size(20.dp))
-                        }
-                    )
-                }
+@Composable
+private fun ActionItem(
+    icon: Painter,
+    label: String,
+    tint: Color,
+    isBold: Boolean = false,
+    onClick: () -> Unit
+) = ActionItemLayout(label, tint, isBold, onClick) {
+    Icon(icon, null, tint = tint, modifier = Modifier.size(22.dp))
+}
 
-                DropdownMenuItem(
-                    text = { Text(context.getString(R.string.export_container)) },
-                    onClick = {
-                        showContextMenu = false
-                        onExport()
-                    },
-                    leadingIcon = {
-                        Icon(Icons.Default.FileDownload, contentDescription = null)
-                    }
-                )
-
-                DropdownMenuItem(
-                    text = { Text(context.getString(R.string.uninstall_container_menu)) },
-                    onClick = {
-                        showContextMenu = false
-                        onUninstall()
-                    },
-                    leadingIcon = {
-                        Icon(Icons.Default.Delete, contentDescription = null)
-                    }
-                )
+@Composable
+private fun ActionItemLayout(
+    label: String,
+    tint: Color,
+    isBold: Boolean,
+    onClick: () -> Unit,
+    iconSlot: @Composable () -> Unit
+) {
+    Surface(
+        onClick = onClick,
+        modifier = Modifier.fillMaxWidth().height(52.dp),
+        shape = RoundedCornerShape(12.dp),
+        color = Color.Transparent
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            iconSlot()
+            Text(
+                text = label,
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = if (isBold) FontWeight.Bold else FontWeight.Medium,
+                color = if (isBold) tint else MaterialTheme.colorScheme.onSurface
+            )
         }
     }
 }

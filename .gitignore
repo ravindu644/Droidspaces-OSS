@@ -9,6 +9,8 @@ logs/
 *.txt
 *.patch
 *.diff
+*.rej
+*.orig
 *.config
 
 # Keystores

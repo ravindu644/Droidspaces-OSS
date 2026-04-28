@@ -28,7 +28,7 @@ fun HelpCard(
 
     val interactionSource = remember { MutableInteractionSource() }
 
-    ElevatedCard(
+    Surface(
         modifier = modifier
             .fillMaxWidth()
             .clip(cardShape)
@@ -41,10 +41,8 @@ fun HelpCard(
                 }
             ),
         shape = cardShape,
-        colors = CardDefaults.elevatedCardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant
-        ),
-        elevation = CardDefaults.elevatedCardElevation(defaultElevation = 1.dp)
+        color = MaterialTheme.colorScheme.surfaceContainer,
+        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f))
     ) {
         Column(
             modifier = Modifier

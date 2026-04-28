@@ -250,37 +250,74 @@ fun EditContainerScreen(
 
     if (showDestDialog) {
         var destPath by remember { mutableStateOf("") }
-        AlertDialog(
+        Dialog(
             onDismissRequest = { showDestDialog = false },
-            title = { Text(context.getString(R.string.enter_container_path)) },
-            text = {
-                OutlinedTextField(
-                    value = destPath,
-                    onValueChange = { destPath = it },
-                    label = { Text(context.getString(R.string.container_path_placeholder)) },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
-                )
-            },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        if (destPath.isNotBlank()) {
-                            bindMounts = bindMounts + BindMount(tempSrcPath, destPath)
-                            showDestDialog = false
+            properties = DialogProperties(usePlatformDefaultWidth = false)
+        ) {
+            Surface(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 24.dp),
+                shape = RoundedCornerShape(24.dp),
+                color = MaterialTheme.colorScheme.surfaceContainer,
+                border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)),
+                tonalElevation = 0.dp
+            ) {
+                Column(modifier = Modifier.padding(24.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                    Text(context.getString(R.string.enter_container_path), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                    OutlinedTextField(
+                        value = destPath,
+                        onValueChange = { destPath = it },
+                        label = { Text(context.getString(R.string.container_path_placeholder)) },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(16.dp),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
+                            focusedBorderColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.8f),
+                            unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+                            focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                        )
+                    )
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        Surface(
+                            modifier = Modifier.weight(1f).clip(RoundedCornerShape(14.dp)).clickable(onClick = { showDestDialog = false }),
+                            shape = RoundedCornerShape(14.dp),
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.06f),
+                            border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)),
+                            tonalElevation = 0.dp
+                        ) {
+                            Box(modifier = Modifier.padding(14.dp), contentAlignment = Alignment.Center) {
+                                Text(context.getString(R.string.cancel), style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold)
+                            }
                         }
-                    },
-                    enabled = destPath.startsWith("/")
-                ) {
-                    Text(context.getString(R.string.ok))
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showDestDialog = false }) {
-                    Text(context.getString(R.string.cancel))
+                        Surface(
+                            modifier = Modifier.weight(1f).clip(RoundedCornerShape(14.dp)).clickable(
+                                enabled = destPath.startsWith("/"),
+                                onClick = {
+                                    if (destPath.isNotBlank()) {
+                                        bindMounts = bindMounts + BindMount(tempSrcPath, destPath)
+                                        showDestDialog = false
+                                    }
+                                }
+                            ),
+                            shape = RoundedCornerShape(14.dp),
+                            color = if (destPath.startsWith("/")) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f),
+                            tonalElevation = 0.dp
+                        ) {
+                            Box(modifier = Modifier.padding(14.dp), contentAlignment = Alignment.Center) {
+                                Text(
+                                    context.getString(R.string.ok),
+                                    style = MaterialTheme.typography.labelLarge,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = if (destPath.startsWith("/")) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+                                )
+                            }
+                        }
+                    }
                 }
             }
-        )
+        }
     }
 
     var showEnvDialog by remember { mutableStateOf(false) }
@@ -327,8 +364,8 @@ fun EditContainerScreen(
         },
         bottomBar = {
             Surface(
-                tonalElevation = 2.dp,
-                shadowElevation = 8.dp
+                color = MaterialTheme.colorScheme.surfaceContainer.copy(alpha = 0.95f),
+                border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f))
             ) {
                 Button(
                     onClick = {
@@ -336,6 +373,7 @@ fun EditContainerScreen(
                         saveChanges()
                     },
                     enabled = !isSaving && !isSaved && hasChanges && (netMode != "nat" || upstreamInterfaces.isNotEmpty()),
+                    shape = RoundedCornerShape(20.dp),
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(24.dp)
@@ -390,50 +428,34 @@ fun EditContainerScreen(
             ) {
             // Warning if container is running
             if (container.isRunning) {
-                val cardShape = RoundedCornerShape(20.dp)
-                val interactionSource = remember { MutableInteractionSource() }
-
-                ElevatedCard(
-                    colors = CardDefaults.elevatedCardColors(
-                        containerColor = MaterialTheme.colorScheme.errorContainer
-                    ),
-                    shape = cardShape,
-                    elevation = CardDefaults.elevatedCardElevation(defaultElevation = 1.dp),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .heightIn(min = 100.dp)
-                        .clip(cardShape)
-                        .combinedClickable(
-                            interactionSource = interactionSource,
-                            indication = rememberRipple(bounded = true),
-                            onClick = { clearFocus() }
-                        )
+                Surface(
+                    color = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.2f),
+                    shape = RoundedCornerShape(20.dp),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.error.copy(alpha = 0.3f)),
+                    modifier = Modifier.fillMaxWidth()
                 ) {
                     Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(28.dp),
+                        modifier = Modifier.padding(20.dp),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
                         Icon(
                             imageVector = Icons.Default.Warning,
                             contentDescription = null,
-                            modifier = Modifier.size(38.dp),
-                            tint = MaterialTheme.colorScheme.onErrorContainer
+                            modifier = Modifier.size(24.dp),
+                            tint = MaterialTheme.colorScheme.error
                         )
-                        Column(
-                            verticalArrangement = Arrangement.spacedBy(4.dp)
-                        ) {
+                        Column {
                             Text(
                                 text = context.getString(R.string.container_is_running),
-                                style = MaterialTheme.typography.titleMedium,
-                                color = MaterialTheme.colorScheme.onErrorContainer
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.error
                             )
                             Text(
                                 text = context.getString(R.string.changes_take_effect_after_restart),
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onErrorContainer
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
                             )
                         }
                     }
@@ -441,12 +463,21 @@ fun EditContainerScreen(
             }
 
             // Hostname input
+            val modernFieldShape = RoundedCornerShape(16.dp)
+            val modernFieldColors = OutlinedTextFieldDefaults.colors(
+                unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
+                focusedBorderColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.8f),
+                unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+                focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+            )
             OutlinedTextField(
                 value = hostname,
                 onValueChange = { hostname = it },
                 label = { Text(context.getString(R.string.hostname)) },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
+                shape = modernFieldShape,
+                colors = modernFieldColors,
                 leadingIcon = {
                     Icon(Icons.Default.Computer, contentDescription = null)
                 }
@@ -478,6 +509,8 @@ fun EditContainerScreen(
                     label = { Text(context.getString(R.string.network_mode)) },
                     trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
                     leadingIcon = { Icon(Icons.Default.Public, contentDescription = null) },
+                    shape = modernFieldShape,
+                    colors = modernFieldColors,
                     modifier = Modifier.menuAnchor().fillMaxWidth()
                 )
                 ExposedDropdownMenu(
@@ -486,16 +519,17 @@ fun EditContainerScreen(
                 ) {
                     modes.forEach { mode ->
                         DropdownMenuItem(
-                            text = { Text(modeNames[mode] ?: mode) },
+                            text = { Text(modeNames[mode] ?: mode, fontWeight = FontWeight.Medium) },
                             onClick = {
                                 clearFocus()
                                 netMode = mode
-                                // IPv6 is always disabled in NAT/NONE, clear any saved value
-                                if (mode != "host") {
-                                    disableIPv6 = false
-                                }
+                                if (mode != "host") disableIPv6 = false
                                 expanded = false
-                            }
+                            },
+                            leadingIcon = if (mode == netMode) {{
+                                Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(18.dp),
+                                    tint = MaterialTheme.colorScheme.primary)
+                            }} else null
                         )
                     }
                 }
@@ -590,6 +624,8 @@ fun EditContainerScreen(
                             label = { Text(context.getString(R.string.octet_label, 3)) },
                             modifier = Modifier.weight(1f),
                             singleLine = true,
+                            shape = modernFieldShape,
+                            colors = modernFieldColors,
                             isError = !isOctet3Valid,
                             supportingText = { if (!isOctet3Valid) Text(context.getString(R.string.error_octet_range)) },
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
@@ -612,6 +648,8 @@ fun EditContainerScreen(
                             label = { Text(context.getString(R.string.octet_label, 4)) },
                             modifier = Modifier.weight(1f),
                             singleLine = true,
+                            shape = modernFieldShape,
+                            colors = modernFieldColors,
                             isError = !isOctet4Valid,
                             supportingText = { if (!isOctet4Valid) Text(context.getString(R.string.error_octet_range)) },
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
@@ -646,9 +684,11 @@ fun EditContainerScreen(
 
                     // Existing selected interfaces
                     upstreamInterfaces.forEach { iface ->
-                        Card(
+                        Surface(
                             modifier = Modifier.fillMaxWidth(),
-                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+                            shape = RoundedCornerShape(20.dp),
+                            color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                            border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f))
                         ) {
                             Row(
                                 modifier = Modifier.padding(16.dp),
@@ -685,8 +725,10 @@ fun EditContainerScreen(
                                 modifier = Modifier
                                     .fillMaxWidth(0.92f)
                                     .wrapContentHeight(),
-                                shape = RoundedCornerShape(28.dp),
-                                color = MaterialTheme.colorScheme.surface
+                                shape = RoundedCornerShape(24.dp),
+                                color = MaterialTheme.colorScheme.surfaceContainer,
+                                border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)),
+                                tonalElevation = 0.dp
                             ) {
                                 Column(
                                     modifier = Modifier.padding(24.dp),
@@ -777,29 +819,54 @@ fun EditContainerScreen(
                                         onValueChange = { customIface = it },
                                         label = { Text(context.getString(R.string.interface_name_hint)) },
                                         singleLine = true,
+                                        shape = RoundedCornerShape(16.dp),
+                                        colors = OutlinedTextFieldDefaults.colors(
+                                            unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
+                                            focusedBorderColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.8f),
+                                            unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+                                            focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                                        ),
                                         modifier = Modifier.fillMaxWidth()
                                     )
 
                                     Row(
                                         modifier = Modifier.fillMaxWidth(),
-                                        horizontalArrangement = Arrangement.End,
-                                        verticalAlignment = Alignment.CenterVertically
+                                        horizontalArrangement = Arrangement.spacedBy(12.dp)
                                     ) {
-                                        TextButton(onClick = { clearFocus(); showUpstreamDialog = false }) {
-                                            Text(context.getString(R.string.cancel))
-                                        }
-                                        Spacer(modifier = Modifier.width(8.dp))
-                                        Button(
-                                            onClick = {
-                                                clearFocus()
-                                                if (customIface.isNotBlank() && upstreamInterfaces.size < 8 && !upstreamInterfaces.contains(customIface.trim())) {
-                                                    upstreamInterfaces = upstreamInterfaces + customIface.trim()
-                                                    showUpstreamDialog = false
-                                                }
-                                            },
-                                            enabled = customIface.isNotBlank() && upstreamInterfaces.size < 8
+                                        Surface(
+                                            modifier = Modifier.weight(1f).clip(RoundedCornerShape(14.dp)).clickable(onClick = { clearFocus(); showUpstreamDialog = false }),
+                                            shape = RoundedCornerShape(14.dp),
+                                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.06f),
+                                            border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)),
+                                            tonalElevation = 0.dp
                                         ) {
-                                            Text(context.getString(R.string.add))
+                                            Box(modifier = Modifier.padding(14.dp), contentAlignment = Alignment.Center) {
+                                                Text(context.getString(R.string.cancel), style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold)
+                                            }
+                                        }
+                                        Surface(
+                                            modifier = Modifier.weight(1f).clip(RoundedCornerShape(14.dp)).clickable(
+                                                enabled = customIface.isNotBlank() && upstreamInterfaces.size < 8,
+                                                onClick = {
+                                                    clearFocus()
+                                                    if (customIface.isNotBlank() && upstreamInterfaces.size < 8 && !upstreamInterfaces.contains(customIface.trim())) {
+                                                        upstreamInterfaces = upstreamInterfaces + customIface.trim()
+                                                        showUpstreamDialog = false
+                                                    }
+                                                }
+                                            ),
+                                            shape = RoundedCornerShape(14.dp),
+                                            color = if (customIface.isNotBlank() && upstreamInterfaces.size < 8) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f),
+                                            tonalElevation = 0.dp
+                                        ) {
+                                            Box(modifier = Modifier.padding(14.dp), contentAlignment = Alignment.Center) {
+                                                Text(
+                                                    context.getString(R.string.add),
+                                                    style = MaterialTheme.typography.labelLarge,
+                                                    fontWeight = FontWeight.SemiBold,
+                                                    color = if (customIface.isNotBlank() && upstreamInterfaces.size < 8) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+                                                )
+                                            }
                                         }
                                     }
                                 }
@@ -808,13 +875,33 @@ fun EditContainerScreen(
                     }
 
                     if (upstreamInterfaces.size < 8) {
-                        OutlinedButton(
-                            onClick = { clearFocus(); showUpstreamDialog = true },
-                            modifier = Modifier.fillMaxWidth()
+                        val addBtnShape = RoundedCornerShape(16.dp)
+                        Surface(
+                            modifier = Modifier.fillMaxWidth().clip(addBtnShape).clickable(
+                                onClick = { clearFocus(); showUpstreamDialog = true },
+                                indication = rememberRipple(bounded = true),
+                                interactionSource = remember { MutableInteractionSource() }
+                            ),
+                            shape = addBtnShape,
+                            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+                            border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
+                            tonalElevation = 0.dp
                         ) {
-                            Icon(Icons.Default.Add, contentDescription = null)
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(context.getString(R.string.add_upstream_interface))
+                            Row(
+                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.Center
+                            ) {
+                                Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(18.dp),
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    text = context.getString(R.string.add_upstream_interface),
+                                    style = MaterialTheme.typography.labelLarge,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
                         }
                     }
 
@@ -827,9 +914,11 @@ fun EditContainerScreen(
                     )
 
                     portForwards.forEach { pf ->
-                        Card(
+                        Surface(
                             modifier = Modifier.fillMaxWidth(),
-                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+                            shape = RoundedCornerShape(20.dp),
+                            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
+                            border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
                         ) {
                             Row(
                                 modifier = Modifier.padding(16.dp),
@@ -922,10 +1011,12 @@ fun EditContainerScreen(
                         ) {
                             Surface(
                                 modifier = Modifier
-                                    .fillMaxWidth(0.95f)
+                                    .fillMaxWidth(0.92f)
                                     .wrapContentHeight(),
-                                shape = RoundedCornerShape(28.dp),
-                                color = MaterialTheme.colorScheme.surface
+                                shape = RoundedCornerShape(24.dp),
+                                color = MaterialTheme.colorScheme.surfaceContainer,
+                                border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)),
+                                tonalElevation = 0.dp
                             ) {
                                 Column(
                                     modifier = Modifier.padding(24.dp),
@@ -959,6 +1050,13 @@ fun EditContainerScreen(
                                                 label = { Text(context.getString(R.string.host_port_hint)) },
                                                 singleLine = true,
                                                 modifier = Modifier.fillMaxWidth(),
+                                                shape = RoundedCornerShape(16.dp),
+                                                colors = OutlinedTextFieldDefaults.colors(
+                                                    unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
+                                                    focusedBorderColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.8f),
+                                                    unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+                                                    focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                                                ),
                                                 isError = hostError != null || widthError != null || overlapError != null,
                                                 supportingText = { Text(hostError ?: widthError ?: overlapError ?: "") },
                                                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text)
@@ -971,6 +1069,13 @@ fun EditContainerScreen(
                                                 placeholder = { Text(context.getString(R.string.leave_blank_for_symmetric)) },
                                                 singleLine = true,
                                                 modifier = Modifier.fillMaxWidth(),
+                                                shape = RoundedCornerShape(16.dp),
+                                                colors = OutlinedTextFieldDefaults.colors(
+                                                    unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
+                                                    focusedBorderColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.8f),
+                                                    unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+                                                    focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                                                ),
                                                 isError = containerError != null || widthError != null || overlapError != null,
                                                 supportingText = { Text(containerError ?: widthError ?: overlapError ?: context.getString(R.string.optional_symmetric_hint)) },
                                                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text)
@@ -986,14 +1091,23 @@ fun EditContainerScreen(
                                                     readOnly = true,
                                                     label = { Text(context.getString(R.string.protocol)) },
                                                     trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = protoExpanded) },
+                                                    shape = RoundedCornerShape(16.dp),
+                                                    colors = OutlinedTextFieldDefaults.colors(
+                                                        unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
+                                                        focusedBorderColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.8f),
+                                                        unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+                                                        focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                                                    ),
                                                     modifier = Modifier.menuAnchor().fillMaxWidth()
                                                 )
                                                 ExposedDropdownMenu(
                                                     expanded = protoExpanded,
                                                     onDismissRequest = { protoExpanded = false }
                                                 ) {
-                                                    DropdownMenuItem(text = { Text("TCP") }, onClick = { clearFocus(); proto = "tcp"; protoExpanded = false })
-                                                    DropdownMenuItem(text = { Text("UDP") }, onClick = { clearFocus(); proto = "udp"; protoExpanded = false })
+                                                    DropdownMenuItem(text = { Text("TCP", fontWeight = FontWeight.Medium) }, onClick = { clearFocus(); proto = "tcp"; protoExpanded = false },
+                                                        leadingIcon = if (proto == "tcp") {{ Icon(Icons.Default.Check, null, modifier = Modifier.size(18.dp), tint = MaterialTheme.colorScheme.primary) }} else null)
+                                                    DropdownMenuItem(text = { Text("UDP", fontWeight = FontWeight.Medium) }, onClick = { clearFocus(); proto = "udp"; protoExpanded = false },
+                                                        leadingIcon = if (proto == "udp") {{ Icon(Icons.Default.Check, null, modifier = Modifier.size(18.dp), tint = MaterialTheme.colorScheme.primary) }} else null)
                                                 }
                                             }
                                         }
@@ -1001,29 +1115,47 @@ fun EditContainerScreen(
 
                                     Row(
                                         modifier = Modifier.fillMaxWidth(),
-                                        horizontalArrangement = Arrangement.End,
-                                        verticalAlignment = Alignment.CenterVertically
+                                        horizontalArrangement = Arrangement.spacedBy(12.dp)
                                     ) {
-                                        TextButton(onClick = { clearFocus(); showPortDialog = false }) {
-                                            Text(context.getString(R.string.cancel))
-                                        }
-                                        Spacer(modifier = Modifier.width(8.dp))
-                                        Button(
-                                            onClick = {
-                                                clearFocus()
-                                                if (isFormValid) {
-                                                    val pf = PortForward(
-                                                        hostPort.trim(),
-                                                        if (containerPort.isBlank()) null else containerPort.trim(),
-                                                        proto
-                                                    )
-                                                    portForwards = portForwards + pf
-                                                    showPortDialog = false
-                                                }
-                                            },
-                                            enabled = isFormValid && portForwards.size < 32
+                                        Surface(
+                                            modifier = Modifier.weight(1f).clip(RoundedCornerShape(14.dp)).clickable(onClick = { clearFocus(); showPortDialog = false }),
+                                            shape = RoundedCornerShape(14.dp),
+                                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.06f),
+                                            border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)),
+                                            tonalElevation = 0.dp
                                         ) {
-                                            Text(context.getString(R.string.add))
+                                            Box(modifier = Modifier.padding(14.dp), contentAlignment = Alignment.Center) {
+                                                Text(context.getString(R.string.cancel), style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold)
+                                            }
+                                        }
+                                        Surface(
+                                            modifier = Modifier.weight(1f).clip(RoundedCornerShape(14.dp)).clickable(
+                                                enabled = isFormValid && portForwards.size < 32,
+                                                onClick = {
+                                                    clearFocus()
+                                                    if (isFormValid) {
+                                                        val pf = PortForward(
+                                                            hostPort.trim(),
+                                                            if (containerPort.isBlank()) null else containerPort.trim(),
+                                                            proto
+                                                        )
+                                                        portForwards = portForwards + pf
+                                                        showPortDialog = false
+                                                    }
+                                                }
+                                            ),
+                                            shape = RoundedCornerShape(14.dp),
+                                            color = if (isFormValid && portForwards.size < 32) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f),
+                                            tonalElevation = 0.dp
+                                        ) {
+                                            Box(modifier = Modifier.padding(14.dp), contentAlignment = Alignment.Center) {
+                                                Text(
+                                                    context.getString(R.string.add),
+                                                    style = MaterialTheme.typography.labelLarge,
+                                                    fontWeight = FontWeight.SemiBold,
+                                                    color = if (isFormValid && portForwards.size < 32) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+                                                )
+                                            }
                                         }
                                     }
                                 }
@@ -1031,13 +1163,35 @@ fun EditContainerScreen(
                         }
                     }
 
-                    if (portForwards.size < 32) OutlinedButton(
-                        onClick = { clearFocus(); showPortDialog = true },
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Icon(Icons.Default.Add, contentDescription = null)
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(context.getString(R.string.add_port_forward))
+                    if (portForwards.size < 32) {
+                        val addPortBtnShape = RoundedCornerShape(16.dp)
+                        Surface(
+                            modifier = Modifier.fillMaxWidth().clip(addPortBtnShape).clickable(
+                                onClick = { clearFocus(); showPortDialog = true },
+                                indication = rememberRipple(bounded = true),
+                                interactionSource = remember { MutableInteractionSource() }
+                            ),
+                            shape = addPortBtnShape,
+                            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+                            border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
+                            tonalElevation = 0.dp
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.Center
+                            ) {
+                                Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(18.dp),
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    text = context.getString(R.string.add_port_forward),
+                                    style = MaterialTheme.typography.labelLarge,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
                     }
                 }
             }
@@ -1052,14 +1206,14 @@ fun EditContainerScreen(
                 onValueChange = { dnsServers = it },
                 label = { Text(context.getString(R.string.dns_servers_label)) },
                 supportingText = {
-                    if (isDnsError) {
-                        Text(context.getString(R.string.dns_servers_hint))
-                    }
+                    if (isDnsError) Text(context.getString(R.string.dns_servers_hint))
                 },
                 isError = isDnsError,
                 placeholder = { Text(context.getString(R.string.dns_servers_placeholder)) },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
+                shape = modernFieldShape,
+                colors = modernFieldColors,
                 leadingIcon = {
                     Icon(Icons.Default.Dns, contentDescription = null)
                 }
@@ -1260,11 +1414,11 @@ fun EditContainerScreen(
             }
 
             bindMounts.forEach { mount ->
-                Card(
+                Surface(
                     modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
-                    )
+                    shape = RoundedCornerShape(20.dp),
+                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
                 ) {
                     Row(
                         modifier = Modifier.padding(16.dp),
@@ -1294,24 +1448,44 @@ fun EditContainerScreen(
                 }
             }
 
-            OutlinedButton(
-                onClick = { showFilePicker = true },
-                modifier = Modifier.fillMaxWidth()
+            val addBindBtnShape = RoundedCornerShape(16.dp)
+            Surface(
+                modifier = Modifier.fillMaxWidth().clip(addBindBtnShape).clickable(
+                    onClick = { showFilePicker = true },
+                    indication = rememberRipple(bounded = true),
+                    interactionSource = remember { MutableInteractionSource() }
+                ),
+                shape = addBindBtnShape,
+                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+                border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
+                tonalElevation = 0.dp
             ) {
-                Icon(Icons.Default.Add, contentDescription = null)
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(context.getString(R.string.add_bind_mount))
+                Row(
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Center
+                ) {
+                    Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(18.dp),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = context.getString(R.string.add_bind_mount),
+                        style = MaterialTheme.typography.labelLarge,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
             }
 
             // Error message
             errorMessage?.let { error ->
-                Card(
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.errorContainer,
-                        contentColor = MaterialTheme.colorScheme.onErrorContainer
-                    ),
+                Surface(
+                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
+                    shape = RoundedCornerShape(20.dp),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
                     modifier = Modifier
                         .fillMaxWidth()
+                        .padding(vertical = 16.dp)
                         .clickable { clearFocus() }
                 ) {
                     Text(

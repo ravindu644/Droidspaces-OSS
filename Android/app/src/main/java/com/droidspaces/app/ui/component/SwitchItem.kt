@@ -53,7 +53,14 @@ fun SwitchItem(
                 checked = checked,
                 enabled = enabled,
                 onCheckedChange = onCheckedChange,
-                interactionSource = interactionSource
+                interactionSource = interactionSource,
+                colors = SwitchDefaults.colors(
+                    checkedThumbColor = MaterialTheme.colorScheme.onPrimary,
+                    checkedTrackColor = MaterialTheme.colorScheme.primary,
+                    uncheckedThumbColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.8f),
+                    uncheckedTrackColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                    uncheckedBorderColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f),
+                )
             )
         },
         supportingContent = {

@@ -200,6 +200,13 @@ object SystemInfoManager {
     }
 
     /**
+     * Synchronous SELinux status from cache.
+     */
+    fun getSELinuxStatusSync(): String {
+        return selinuxStatusCache ?: "ENFORCING"
+    }
+
+    /**
      * Force refresh SELinux status (bypasses cache).
      * Use this when the user manually refreshes to get the latest status.
      *

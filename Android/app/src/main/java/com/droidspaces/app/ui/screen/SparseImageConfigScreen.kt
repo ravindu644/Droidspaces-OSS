@@ -1,5 +1,7 @@
 package com.droidspaces.app.ui.screen
 
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -7,11 +9,14 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.*
+import androidx.compose.material.ripple.rememberRipple
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
@@ -31,6 +36,16 @@ fun SparseImageConfigScreen(
     var sizeGB by remember { mutableStateOf(initialSizeGB.toString()) }
     var sizeError by remember { mutableStateOf<String?>(null) }
 
+    val fieldShape = RoundedCornerShape(16.dp)
+    val fieldColors = OutlinedTextFieldDefaults.colors(
+        unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
+        focusedBorderColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.8f),
+        unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+        focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+    )
+
+    val isNextEnabled = !useSparseImage || (sizeGB.toIntOrNull()?.let { it in 4..512 } == true)
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -44,28 +59,56 @@ fun SparseImageConfigScreen(
         },
         bottomBar = {
             Surface(
-                tonalElevation = 2.dp,
-                shadowElevation = 8.dp
+                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.2f),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
+                tonalElevation = 0.dp
             ) {
-                Button(
-                    onClick = {
-                        if (useSparseImage) {
-                            val sizeInt = sizeGB.toIntOrNull()
-                            if (sizeInt != null && sizeInt >= 4 && sizeInt <= 512) {
-                                onNext(useSparseImage, sizeInt)
-                            }
-                        } else {
-                            onNext(false, 8)
-                        }
-                    },
+                val btnShape = RoundedCornerShape(20.dp)
+                Surface(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(24.dp)
                         .navigationBarsPadding()
-                        .height(56.dp),
-                    enabled = !useSparseImage || (sizeGB.toIntOrNull()?.let { it in 4..512 } == true)
+                        .clip(btnShape)
+                        .clickable(
+                            enabled = isNextEnabled,
+                            onClick = {
+                                if (useSparseImage) {
+                                    val s = sizeGB.toIntOrNull()
+                                    if (s != null && s in 4..512) onNext(true, s)
+                                } else {
+                                    onNext(false, 8)
+                                }
+                            },
+                            indication = rememberRipple(bounded = true),
+                            interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
+                        ),
+                    shape = btnShape,
+                    color = if (isNextEnabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f),
+                    tonalElevation = 0.dp
                 ) {
-                    Text(context.getString(R.string.next_summary), style = MaterialTheme.typography.labelLarge)
+                    Box(
+                        modifier = Modifier.padding(vertical = 16.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Icon(
+                                Icons.AutoMirrored.Filled.ArrowForward,
+                                contentDescription = null,
+                                modifier = Modifier.size(18.dp),
+                                tint = if (isNextEnabled) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+                            )
+                            Text(
+                                context.getString(R.string.next_summary),
+                                style = MaterialTheme.typography.labelLarge,
+                                fontWeight = FontWeight.SemiBold,
+                                color = if (isNextEnabled) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+                            )
+                        }
+                    }
                 }
             }
         }
@@ -76,7 +119,7 @@ fun SparseImageConfigScreen(
                 .padding(innerPadding)
                 .padding(24.dp)
                 .verticalScroll(rememberScrollState()),
-            verticalArrangement = Arrangement.spacedBy(24.dp)
+            verticalArrangement = Arrangement.spacedBy(20.dp)
         ) {
             Text(
                 text = context.getString(R.string.storage_configuration),
@@ -84,19 +127,16 @@ fun SparseImageConfigScreen(
                 fontWeight = FontWeight.Bold
             )
 
-            // Info Card explaining sparse images
-            ElevatedCard(
+            // Info card
+            Surface(
                 modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.elevatedCardColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceVariant
-                ),
                 shape = RoundedCornerShape(20.dp),
-                elevation = CardDefaults.elevatedCardElevation(defaultElevation = 1.dp)
+                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.06f),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)),
+                tonalElevation = 0.dp
             ) {
                 Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(20.dp),
+                    modifier = Modifier.padding(20.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     Row(
@@ -106,34 +146,37 @@ fun SparseImageConfigScreen(
                         Icon(
                             imageVector = Icons.Default.Info,
                             contentDescription = null,
-                            modifier = Modifier.size(24.dp),
+                            modifier = Modifier.size(22.dp),
                             tint = MaterialTheme.colorScheme.primary
                         )
                         Text(
                             text = context.getString(R.string.about_sparse_images),
                             style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.SemiBold
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.primary
                         )
                     }
-
                     Text(
                         text = context.getString(R.string.sparse_images_recommended),
-                        style = MaterialTheme.typography.bodyLarge,
+                        style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
-
                     Text(
                         text = context.getString(R.string.sparse_images_description),
-                        style = MaterialTheme.typography.bodyMedium,
+                        style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f)
                     )
                 }
             }
 
-            // Toggle for sparse image
-            Card(
+            // Toggle
+            Surface(
                 modifier = Modifier.fillMaxWidth(),
-                onClick = { useSparseImage = !useSparseImage }
+                onClick = { useSparseImage = !useSparseImage },
+                shape = RoundedCornerShape(20.dp),
+                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
+                tonalElevation = 0.dp
             ) {
                 Row(
                     modifier = Modifier
@@ -150,7 +193,7 @@ fun SparseImageConfigScreen(
                         Icon(
                             imageVector = Icons.Default.Storage,
                             contentDescription = null,
-                            modifier = Modifier.size(28.dp),
+                            modifier = Modifier.size(24.dp),
                             tint = MaterialTheme.colorScheme.primary
                         )
                         Column(
@@ -164,22 +207,33 @@ fun SparseImageConfigScreen(
                             )
                             Text(
                                 text = context.getString(R.string.use_sparse_image_description),
-                                style = MaterialTheme.typography.bodyMedium,
+                                style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
                             )
                         }
                     }
                     Switch(
                         checked = useSparseImage,
-                        onCheckedChange = { useSparseImage = it }
+                        onCheckedChange = { useSparseImage = it },
+                        colors = SwitchDefaults.colors(
+                            checkedThumbColor = MaterialTheme.colorScheme.onPrimary,
+                            checkedTrackColor = MaterialTheme.colorScheme.primary,
+                            uncheckedThumbColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.8f),
+                            uncheckedTrackColor = MaterialTheme.colorScheme.surfaceVariant,
+                            uncheckedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f)
+                        )
                     )
                 }
             }
 
-            // Size input (only shown when sparse image is enabled)
+            // Size input
             if (useSparseImage) {
-                Card(
-                    modifier = Modifier.fillMaxWidth()
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(20.dp),
+                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
+                    tonalElevation = 0.dp
                 ) {
                     Column(
                         modifier = Modifier
@@ -194,7 +248,7 @@ fun SparseImageConfigScreen(
                             Icon(
                                 imageVector = Icons.Default.Settings,
                                 contentDescription = null,
-                                modifier = Modifier.size(24.dp),
+                                modifier = Modifier.size(22.dp),
                                 tint = MaterialTheme.colorScheme.primary
                             )
                             Text(
@@ -225,6 +279,8 @@ fun SparseImageConfigScreen(
                             },
                             modifier = Modifier.fillMaxWidth(),
                             singleLine = true,
+                            shape = fieldShape,
+                            colors = fieldColors,
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                             leadingIcon = {
                                 Icon(Icons.Default.Settings, contentDescription = null)
@@ -234,8 +290,7 @@ fun SparseImageConfigScreen(
                 }
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(8.dp))
         }
     }
 }
-

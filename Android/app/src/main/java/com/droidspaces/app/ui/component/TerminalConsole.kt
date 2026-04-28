@@ -3,6 +3,7 @@ package com.droidspaces.app.ui.component
 import android.util.Log
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
@@ -13,8 +14,10 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.Dp
@@ -22,9 +25,9 @@ import com.droidspaces.app.util.AnsiColorParser
 
 private val ShimmerColorShades
     @Composable get() = listOf(
-        MaterialTheme.colorScheme.secondaryContainer.copy(0.9f),
-        MaterialTheme.colorScheme.secondaryContainer.copy(0.2f),
-        MaterialTheme.colorScheme.secondaryContainer.copy(0.9f)
+        androidx.compose.ui.graphics.Color.Transparent,
+        MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.15f),
+        androidx.compose.ui.graphics.Color.Transparent
     )
 
 class ShimmerScope(val brush: Brush)
@@ -67,8 +70,19 @@ fun ShimmerAnimation(
     )
 
     Surface(
-        modifier = modifier.background(brush),
-        border = null,
+        modifier = modifier
+            .clip(RoundedCornerShape(16.dp))
+            // Base background first - Using surfaceContainerHighest for premium field-depth
+            .background(MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.95f))
+            // Shimmer brush on top
+            .background(brush)
+            .border(
+                width = 1.dp,
+                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f),
+                shape = RoundedCornerShape(16.dp)
+            ),
+        color = Color.Transparent,
+        shape = RoundedCornerShape(16.dp),
         tonalElevation = 0.dp,
         shadowElevation = 0.dp
     ) {
@@ -163,8 +177,7 @@ fun TerminalConsole(
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .background(brush = brush, shape = RoundedCornerShape(16.dp))
-                    .padding(horizontal = 10.dp, vertical = 16.dp)
+                    .padding(horizontal = 12.dp, vertical = 16.dp)
                     .verticalScroll(verticalScrollState)
                     .horizontalScroll(horizontalScrollState)
             ) {
