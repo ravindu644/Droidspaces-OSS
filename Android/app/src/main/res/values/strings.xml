@@ -148,7 +148,8 @@
 
     <!-- Running Container Card -->
     <string name="uptime_label">Uptime: %1$s</string>
-    <string name="ip_address_label">IP Address: %1$s</string> 
+    <string name="ip_address_label">IP Address: %1$s</string>
+    <string name="distribution_label">%1$s</string>
 
     <!-- Container Details Screen -->
     <string name="container_info">Container Info</string>

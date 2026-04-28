@@ -63,7 +63,7 @@ fun MainTabScreen(
     onNavigateToContainerInstallation: (android.net.Uri) -> Unit = {},
     onNavigateToEditContainer: (String) -> Unit = {},
     onNavigateToContainerDetails: (String) -> Unit = {},
-    onNavigateToToTerminal: (String) -> Unit = {},
+    onNavigateToTerminal: (String) -> Unit = {},
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -312,7 +312,7 @@ fun MainTabScreen(
                         containerViewModel = containerViewModel,
                         onRefresh = { performRefresh(TabItem.ControlPanel) },
                         onNavigateToContainerDetails = onNavigateToContainerDetails,
-                        onNavigateToToTerminal = onNavigateToToTerminal
+                        onNavigateToTerminal = onNavigateToTerminal
                     )
                 }
             }
@@ -480,15 +480,21 @@ private fun ControlPanelTabContent(
     containerViewModel: ContainerViewModel,
     onRefresh: suspend () -> Unit,
     onNavigateToContainerDetails: (String) -> Unit,
-    onNavigateToToTerminal: (String) -> Unit,
+    onNavigateToTerminal: (String) -> Unit,
 ) {
-    PullToRefreshWrapper(onRefresh = { onRefresh() }) {
+    var refreshTrigger by remember { mutableStateOf(0) }
+
+    PullToRefreshWrapper(onRefresh = {
+        onRefresh()
+        refreshTrigger++
+    }) {
         ControlPanelScreen(
             isBackendAvailable = isBackendAvailable,
             isRootAvailable = isRootAvailable,
             containerViewModel = containerViewModel,
             onNavigateToContainerDetails = onNavigateToContainerDetails,
-            onNavigateToToTerminal = onNavigateToToTerminal
+            onNavigateToTerminal = onNavigateToTerminal,
+            refreshTrigger = refreshTrigger
         )
     }
 }
