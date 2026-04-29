@@ -20,8 +20,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import com.droidspaces.app.ui.theme.JetBrainsMono
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
@@ -108,14 +108,14 @@ fun EnvironmentVariablesDialog(
                     Text(
                         "KEY",
                         style = MaterialTheme.typography.labelSmall,
-                        fontFamily = FontFamily.Monospace,
+                        fontFamily = JetBrainsMono,
                         color = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.weight(1f)
                     )
                     Text(
                         "VALUE",
                         style = MaterialTheme.typography.labelSmall,
-                        fontFamily = FontFamily.Monospace,
+                        fontFamily = JetBrainsMono,
                         color = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.weight(1f)
                     )
@@ -143,13 +143,13 @@ fun EnvironmentVariablesDialog(
                                     vars = vars.toMutableList().also { it[index] = envVar.copy(key = new) }
                                 },
                                 placeholder = {
-                                    Text("KEY", fontFamily = FontFamily.Monospace, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f))
+                                    Text("KEY", fontFamily = JetBrainsMono, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f))
                                 },
                                 modifier = Modifier.weight(1f),
                                 singleLine = true,
                                 shape = fieldShape,
                                 colors = fieldColors,
-                                textStyle = MaterialTheme.typography.bodyMedium.copy(fontFamily = FontFamily.Monospace, fontSize = 13.sp)
+                                textStyle = MaterialTheme.typography.bodyMedium.copy(fontFamily = JetBrainsMono, fontSize = 13.sp)
                             )
                             OutlinedTextField(
                                 value = envVar.value,
@@ -157,13 +157,13 @@ fun EnvironmentVariablesDialog(
                                     vars = vars.toMutableList().also { it[index] = envVar.copy(value = new) }
                                 },
                                 placeholder = {
-                                    Text("value", fontFamily = FontFamily.Monospace, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f))
+                                    Text("value", fontFamily = JetBrainsMono, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f))
                                 },
                                 modifier = Modifier.weight(1f),
                                 singleLine = true,
                                 shape = fieldShape,
                                 colors = fieldColors,
-                                textStyle = MaterialTheme.typography.bodyMedium.copy(fontFamily = FontFamily.Monospace, fontSize = 13.sp)
+                                textStyle = MaterialTheme.typography.bodyMedium.copy(fontFamily = JetBrainsMono, fontSize = 13.sp)
                             )
 
                             // Only show delete button for index > 0 (Added rows)

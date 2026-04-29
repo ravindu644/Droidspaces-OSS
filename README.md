@@ -371,6 +371,7 @@ Droidspaces is built upon the incredible work of the open-source community. Spec
 *   **[Magisk](https://github.com/topjohnwu/Magisk)** - For the `magiskpolicy` utility, providing the core engine for live SELinux patching.
 *   **[KernelSU-Next](https://github.com/KernelSU-Next/KernelSU-Next)**, **[MMRL](https://github.com/MMRLApp/MMRL)**, and **[LSPatch](https://github.com/LSPosed/LSPatch)** - For inspiring our modern UI design language and Android user experience.
 *   **[ReTerminal](https://github.com/RohitKushvaha01/ReTerminal)**, **[Termux](https://github.com/termux/termux-app)** , **[LXC-Manager](https://github.com/Container-On-Android/LXC-Manager)** - Terminal Backend for the built-in Terminal emulator.
+*   **[JetBrains Mono](https://www.jetbrains.com/legalforms/fonts/)** - The monospace typeface used throughout the app's terminal and code UI, licensed under the [SIL Open Font License 1.1](https://scripts.sil.org/OFL).
 
 ---
 

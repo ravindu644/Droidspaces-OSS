@@ -21,6 +21,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.Dp
+import com.droidspaces.app.ui.theme.JetBrainsMono
 import com.droidspaces.app.util.AnsiColorParser
 
 private val ShimmerColorShades
@@ -172,7 +173,7 @@ fun TerminalConsole(
         enabled = isProcessing
     ) {
         androidx.compose.material3.ProvideTextStyle(
-            MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace)
+            MaterialTheme.typography.bodySmall.copy(fontFamily = JetBrainsMono)
         ) {
             Box(
                 modifier = Modifier
@@ -222,7 +223,7 @@ fun TerminalConsole(
 
                         Text(
                             text = annotatedText,
-                            style = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace),
+                            style = MaterialTheme.typography.bodySmall.copy(fontFamily = JetBrainsMono),
                             softWrap = false,
                             modifier = Modifier
                                 .wrapContentWidth()

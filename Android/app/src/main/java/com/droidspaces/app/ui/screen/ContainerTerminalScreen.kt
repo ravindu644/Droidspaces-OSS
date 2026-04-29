@@ -46,6 +46,7 @@ import com.termux.view.TerminalView
 import java.lang.ref.WeakReference
 import java.util.UUID
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.core.content.res.ResourcesCompat
 import com.droidspaces.app.R
 
 private data class TerminalTab(
@@ -297,6 +298,9 @@ private fun TerminalTabView(
     val defaultFontSizePx = remember { with(density) { 10.dp.roundToPx() } }
     val fontSizePx = TerminalSessionService.globalSessionList[tab.id]?.fontSizePx ?: defaultFontSizePx
     val onSurfaceColor = MaterialTheme.colorScheme.onSurface.toArgb()
+    // Loaded once per composition - null = bundled font missing, fallback to system default
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val terminalTypeface = remember { ResourcesCompat.getFont(context, R.font.jetbrains_mono) }
 
     AnimatedVisibility(
         visible = isVisible,
@@ -310,7 +314,8 @@ private fun TerminalTabView(
                 factory = { ctx ->
                     TerminalView(ctx, null).apply {
                         TerminalScreenState.terminalView = WeakReference(this)
-                        setTextSize(fontSizePx)
+                        setTextSize(fontSizePx)      // must run first — initializes mRenderer
+                        setTypeface(terminalTypeface) // JetBrains Mono; null = system default
                         keepScreenOn = true
                         isFocusableInTouchMode = true
 
@@ -349,8 +354,10 @@ private fun TerminalTabView(
                 },
                 update = { tv ->
                     if (isVisible) {
-                        tv.onScreenUpdated()
+                        // Re-apply before setTextSize: termux renderer resets typeface on size changes
+                        tv.setTypeface(terminalTypeface)
                         tv.setTextSize(fontSizePx)
+                        tv.onScreenUpdated()
                         TerminalScreenState.terminalView = WeakReference(tv)
                     }
                 },

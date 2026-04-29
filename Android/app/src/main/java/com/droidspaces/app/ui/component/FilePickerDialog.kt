@@ -30,8 +30,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import com.droidspaces.app.ui.theme.JetBrainsMono
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -196,7 +196,7 @@ fun FilePickerDialog(
                     Text(
                         text = currentPath,
                         style = MaterialTheme.typography.labelSmall.copy(
-                            fontFamily = FontFamily.Monospace,
+                            fontFamily = JetBrainsMono,
                             fontSize = 12.sp
                         ),
                         color = MaterialTheme.colorScheme.secondary,
@@ -229,7 +229,7 @@ fun FilePickerDialog(
                     keyboardOptions = FocusUtils.searchKeyboardOptions,
                     keyboardActions = FocusUtils.clearFocusKeyboardActions(),
                     textStyle = MaterialTheme.typography.bodySmall.copy(
-                        fontFamily = FontFamily.Monospace
+                        fontFamily = JetBrainsMono
                     ),
                     shape = RoundedCornerShape(14.dp),
                     colors = OutlinedTextFieldDefaults.colors(

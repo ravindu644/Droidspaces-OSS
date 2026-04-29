@@ -27,8 +27,8 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import com.droidspaces.app.ui.theme.JetBrainsMono
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.graphics.Color
@@ -367,11 +367,11 @@ private fun CodeBox(
                     .horizontalScroll(horizontalScrollState)
             ) {
                 androidx.compose.material3.ProvideTextStyle(
-                    MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace)
+                    MaterialTheme.typography.bodySmall.copy(fontFamily = JetBrainsMono)
                 ) {
                     Text(
                         text = code,
-                        style = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace),
+                        style = MaterialTheme.typography.bodySmall.copy(fontFamily = JetBrainsMono),
                         color = MaterialTheme.colorScheme.onSurface,
                         softWrap = false, // No word wrap - allows horizontal scrolling
                         modifier = Modifier.wrapContentWidth() // Allow text to be as wide as needed
