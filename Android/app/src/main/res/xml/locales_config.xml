@@ -20,4 +20,5 @@
     <locale android:name="si" />
     <locale android:name="tr" />
     <locale android:name="zh-CN" />
+    <locale android:name="zh-TW" />
 </locale-config>

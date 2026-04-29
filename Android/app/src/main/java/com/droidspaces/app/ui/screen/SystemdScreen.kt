@@ -165,7 +165,7 @@ fun SystemdScreen(
                                     EmptyServicesState(filter = selectedFilter, modifier = Modifier.weight(1f))
                                 } else {
                                     LazyColumn(modifier = Modifier.weight(1f), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                                        items(filteredServices, key = { it.name }) { service ->
+                                        items(filteredServices) { service ->
                                             ServiceCard(service = service, containerName = containerName, onAction = { name, act -> executeAction(service.name, name, act) })
                                         }
                                     }

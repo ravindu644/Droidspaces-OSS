@@ -6,7 +6,25 @@
     <!-- Welcome Screen -->
     <string name="welcome_title">Welcome to Droidspaces</string>
     <string name="welcome_subtitle">LXC-style Linux container manager for Android !</string>
+    <string name="welcome_tagline">Linux containers. Native. No overhead.</string>
     <string name="get_started">Get Started</string>
+    <!-- Welcome feature cards -->
+    <string name="feat_containers_title">Real Linux containers</string>
+    <string name="feat_containers_desc">Same kernel namespace tech as LXC, Podman and Docker. No emulation, no chroot.</string>
+    <string name="feat_overhead_title">Zero overhead</string>
+    <string name="feat_overhead_desc">Talks to the host Linux kernel directly. No hypervisor, no virtual machine layer.</string>
+    <string name="feat_unkillable_title">Unkillable by design</string>
+    <string name="feat_unkillable_desc">Supports native init.rc integration and 2-layer userspace daemons. Completely unkillable.</string>
+    <string name="feat_init_title">systemd / OpenRC as PID 1</string>
+    <string name="feat_init_desc">Full init system support. Real service management, not a simulated environment.</string>
+    <string name="feat_isolation_title">Complete isolation</string>
+    <string name="feat_isolation_desc">Private PID tree, mount table, hostname, IPC, and cgroup hierarchy per container.</string>
+    <string name="feat_hardware_title">Full hardware/GPU access</string>
+    <string name="feat_hardware_desc">Expose host hardware (GPU, sensors, USB, block devices) directly to your containers.</string>
+    <string name="feat_privileged_title">Full privileged containers</string>
+    <string name="feat_privileged_desc">Relax security barriers with privileged mode for advanced users.</string>
+    <string name="feat_autoboot_title">Auto-boot on power up</string>
+    <string name="feat_autoboot_desc">Automatically start containers on boot, even if the screen is locked and data is encrypted.</string>
 
     <!-- Root Check Screen -->
     <string name="root_check_title">Root Access Check</string>
