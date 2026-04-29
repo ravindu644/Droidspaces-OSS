@@ -8,6 +8,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import androidx.lifecycle.ProcessLifecycleOwner
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import com.droidspaces.app.util.AndroidSystemStatsCollector
 import com.droidspaces.app.util.ContainerInfo
 import com.droidspaces.app.util.ContainerUsageCollector
@@ -18,10 +21,29 @@ import kotlinx.coroutines.launch
 
 class SystemStatsViewModel(application: Application) : AndroidViewModel(application) {
 
+    private var isAppInForeground = true
+    private val lifecycleObserver = LifecycleEventObserver { _, event ->
+        when (event) {
+            Lifecycle.Event.ON_START -> {
+                isAppInForeground = true
+            }
+            Lifecycle.Event.ON_STOP -> {
+                isAppInForeground = false
+                stopMonitoring() // Shutdown polling when app backgrounded
+            }
+            else -> {}
+        }
+    }
+
+    init {
+        // Observe app-level lifecycle to stop polling in background
+        ProcessLifecycleOwner.get().lifecycle.addObserver(lifecycleObserver)
+    }
+
     companion object {
         private const val TAG = "SystemStatsViewModel"
         private const val SYSTEM_INTERVAL_MS = 2000L
-        private const val CONTAINER_INTERVAL_MS = 3000L
+        private const val CONTAINER_INTERVAL_MS = 2000L
     }
 
     var systemUsage by mutableStateOf(AndroidSystemStatsCollector.SystemUsage())
@@ -35,6 +57,7 @@ class SystemStatsViewModel(application: Application) : AndroidViewModel(applicat
     private var containerJob: Job? = null
 
     fun startMonitoring() {
+        if (!isAppInForeground) return
         systemJob?.cancel()
         systemJob = viewModelScope.launch(Dispatchers.IO) {
             while (true) {
@@ -49,6 +72,7 @@ class SystemStatsViewModel(application: Application) : AndroidViewModel(applicat
     }
 
     fun startContainerMonitoring(containers: List<ContainerInfo>) {
+        if (!isAppInForeground) return
         containerJob?.cancel()
         val running = containers.filter { it.isRunning }
         if (running.isEmpty()) return
@@ -81,6 +105,7 @@ class SystemStatsViewModel(application: Application) : AndroidViewModel(applicat
 
     override fun onCleared() {
         super.onCleared()
+        ProcessLifecycleOwner.get().lifecycle.removeObserver(lifecycleObserver)
         stopMonitoring()
     }
 }

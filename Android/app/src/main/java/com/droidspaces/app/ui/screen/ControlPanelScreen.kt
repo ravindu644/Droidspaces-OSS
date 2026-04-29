@@ -46,8 +46,12 @@ fun ControlPanelScreen(
     val runningContainers = containerViewModel.containerList.filter { it.isRunning }
 
     // Start system stats monitoring (only once per screen lifetime)
-    LaunchedEffect(Unit) {
+    // Synchronized with DisposableEffect to ensure polling stops when navigating away
+    DisposableEffect(Unit) {
         systemStatsViewModel.startMonitoring()
+        onDispose {
+            systemStatsViewModel.stopMonitoring()
+        }
     }
 
     // Start container monitoring loop; restarts if running container list changes

@@ -130,7 +130,7 @@ fun RunningContainerCard(
                 )
             }
             Text(
-                text = context.getString(R.string.uptime_label, osInfo?.uptime ?: ""),
+                text = context.getString(R.string.uptime_label, usage?.uptime ?: osInfo?.uptime ?: ""),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
             )
@@ -142,7 +142,7 @@ fun RunningContainerCard(
 
             // Resource usage row — only shown when we have real data
             usage?.let { stats ->
-                if (stats.ramUsedKb > 0 || stats.cpuPercent > 0.0) {
+                if (stats.ramUsedKb > 0 || stats.cpuPercent >= 0.0) {
                     Surface(
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(10.dp),
@@ -155,7 +155,7 @@ fun RunningContainerCard(
                             horizontalArrangement = Arrangement.spacedBy(16.dp)
                         ) {
                             // CPU
-                            if (stats.cpuPercent > 0.0) {
+                            if (stats.cpuPercent >= 0.0) {
                                 Row(
                                     verticalAlignment = Alignment.CenterVertically,
                                     horizontalArrangement = Arrangement.spacedBy(4.dp)

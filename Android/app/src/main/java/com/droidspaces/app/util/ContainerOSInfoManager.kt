@@ -31,7 +31,10 @@ object ContainerOSInfoManager {
         val id: String?,
         val hostname: String?,
         val ipAddress: String?,
-        val uptime: String? = null
+        val uptime: String? = null,
+        val cpuUsage: Double? = null,
+        val ramUsageMb: Long? = null,
+        val ramPercent: Double? = null
     )
 
     /**
@@ -111,17 +114,50 @@ object ContainerOSInfoManager {
                 null
             }
 
-            // Get Uptime
-            val uptimeCommand = ContainerCommandBuilder.buildUptimeCommand(containerName)
-            val uptimeResult = Shell.cmd(uptimeCommand).exec()
+            // Get live metrics via unified usage command
+            val usageCommand = ContainerCommandBuilder.buildUsageCommand(containerName)
+            val usageResult = Shell.cmd(usageCommand).exec()
 
-            val uptimeValue = if (uptimeResult.isSuccess && uptimeResult.out.isNotEmpty()) {
-                uptimeResult.out.firstOrNull()?.trim()?.takeIf { it.isNotEmpty() && it != "NONE" }
-            } else {
-                null
+            var uptimeValue: String? = null
+            var cpuUsage: Double? = null
+            var ramUsageMb: Long? = null
+            var ramPercent: Double? = null
+
+            if (usageResult.isSuccess && usageResult.out.isNotEmpty()) {
+                var ramUsedKb = 0L
+                var ramTotalKb = 0L
+
+                usageResult.out.forEach { line ->
+                    val parts = line.trim().split("=", limit = 2)
+                    if (parts.size == 2) {
+                        val key = parts[0].trim()
+                        val value = parts[1].trim()
+                        when (key) {
+                            "UPTIME" -> uptimeValue = value.takeIf { it.isNotEmpty() && it != "NONE" }
+                            "CPU_PERMILL" -> {
+                                val permill = value.toDoubleOrNull() ?: 0.0
+                                cpuUsage = (permill / 10.0).coerceIn(0.0, 100.0)
+                            }
+                            "RAM_USED_KB" -> ramUsedKb = value.toLongOrNull() ?: 0L
+                            "RAM_TOTAL_KB" -> ramTotalKb = value.toLongOrNull() ?: 0L
+                        }
+                    }
+                }
+
+                if (ramTotalKb > 0) {
+                    ramUsageMb = ramUsedKb / 1024
+                    ramPercent = (ramUsedKb.toDouble() / ramTotalKb * 100.0).coerceIn(0.0, 100.0)
+                }
             }
 
-            val finalInfo = osInfo.copy(hostname = hostname, ipAddress = ipAddress, uptime = uptimeValue)
+            val finalInfo = osInfo.copy(
+                hostname = hostname,
+                ipAddress = ipAddress,
+                uptime = uptimeValue,
+                cpuUsage = cpuUsage,
+                ramUsageMb = ramUsageMb,
+                ramPercent = ramPercent
+            )
             // Cache the result (both in-memory and persistent)
             cache[containerName] = finalInfo
             val ctx = context
