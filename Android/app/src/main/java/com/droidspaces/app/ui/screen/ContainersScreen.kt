@@ -663,21 +663,39 @@ fun ContainersScreen(
 
         // FAB LAYER (Above everything, below dialogs)
         if (isBackendAvailable && isRootAvailable) {
-            FloatingActionButton(
-                onClick = { filePickerLauncher.launch("*/*") },
+            val fabShape = RoundedCornerShape(20.dp)
+            Surface(
                 modifier = Modifier
                     .align(Alignment.BottomEnd)
-                    .padding(horizontal = 24.dp, vertical = 110.dp),
-                shape = RoundedCornerShape(20.dp),
-                containerColor = MaterialTheme.colorScheme.primary,
-                contentColor = MaterialTheme.colorScheme.onPrimary,
-                elevation = FloatingActionButtonDefaults.elevation(0.dp, 0.dp, 0.dp, 0.dp)
+                    .padding(horizontal = 24.dp, vertical = 110.dp)
+                    .clip(fabShape)
+                    .clickable(
+                        onClick = { filePickerLauncher.launch("*/*") },
+                        indication = androidx.compose.material.ripple.rememberRipple(bounded = true),
+                        interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
+                    ),
+                shape = fabShape,
+                color = MaterialTheme.colorScheme.primary,
+                tonalElevation = 0.dp
             ) {
-                Icon(
-                    imageVector = Icons.Default.Add,
-                    contentDescription = context.getString(R.string.install_container),
-                    modifier = Modifier.size(28.dp)
-                )
+                Row(
+                    modifier = Modifier.padding(horizontal = 20.dp, vertical = 16.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Add,
+                        contentDescription = null,
+                        modifier = Modifier.size(20.dp),
+                        tint = MaterialTheme.colorScheme.onPrimary
+                    )
+                    Text(
+                        text = context.getString(R.string.install),
+                        style = MaterialTheme.typography.labelLarge,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onPrimary
+                    )
+                }
             }
         }
 

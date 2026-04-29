@@ -167,81 +167,24 @@ fun ContainerDetailsScreen(
                         }
 
                         osInfo?.let { info ->
-                            Column(
-                                modifier = Modifier.fillMaxWidth(),
-                                verticalArrangement = Arrangement.spacedBy(12.dp)
-                            ) {
-                                // Row 1: Distro and Hostname
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                                ) {
-                                    val distroName = info.prettyName ?: info.name ?: "Linux"
-                                    IdentityToken(
-                                        modifier = Modifier.weight(1f),
-                                        label = context.getString(R.string.distribution),
-                                        value = distroName,
-                                        icon = when {
-                                            distroName.contains("Ubuntu", true) -> Icons.Default.Adjust
-                                            distroName.contains("Debian", true) -> Icons.Default.Circle
-                                            distroName.contains("Alpine", true) -> Icons.Default.Landscape
-                                            else -> Icons.Default.Dashboard
-                                        },
-                                        containerColor = MaterialTheme.colorScheme.primary
-                                    )
-                                    IdentityToken(
-                                        modifier = Modifier.weight(1f),
-                                        label = context.getString(R.string.hostname),
-                                        value = info.hostname ?: "localhost",
-                                        icon = Icons.Default.Computer,
-                                        containerColor = MaterialTheme.colorScheme.secondary
-                                    )
-                                }
-
-                                // Row 2: Uptime and IP
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                                ) {
-                                    IdentityToken(
-                                        modifier = Modifier.weight(1f),
-                                        label = context.getString(R.string.uptime),
-                                        value = info.uptime ?: "0s",
-                                        icon = Icons.Default.Timer,
-                                        containerColor = MaterialTheme.colorScheme.tertiary
-                                    )
-                                    IdentityToken(
-                                        modifier = Modifier.weight(1f),
-                                        label = context.getString(R.string.ip_address),
-                                        value = info.ipAddress ?: "127.0.0.1",
-                                        icon = Icons.Default.Lan,
-                                        containerColor = MaterialTheme.colorScheme.outline
-                                    )
-                                }
-
-                                // Row 3: CPU and RAM Usage (Live Sync)
+                            // Dynamic Height Synced Grid - measure all 6 and find max
+                            val tokens = mutableListOf<@Composable () -> Unit>().apply {
+                                add { IdentityToken(context.getString(R.string.distribution), info.prettyName ?: info.name ?: "Linux", when {
+                                    (info.prettyName ?: info.name ?: "").contains("Ubuntu", true) -> Icons.Default.Adjust
+                                    (info.prettyName ?: info.name ?: "").contains("Debian", true) -> Icons.Default.Circle
+                                    (info.prettyName ?: info.name ?: "").contains("Alpine", true) -> Icons.Default.Landscape
+                                    else -> Icons.Default.Dashboard
+                                }, MaterialTheme.colorScheme.primary) }
+                                add { IdentityToken(context.getString(R.string.hostname), info.hostname ?: "localhost", Icons.Default.Computer, MaterialTheme.colorScheme.secondary) }
+                                add { IdentityToken(context.getString(R.string.uptime), info.uptime ?: "0s", Icons.Default.Timer, MaterialTheme.colorScheme.tertiary) }
+                                add { IdentityToken(context.getString(R.string.ip_address), info.ipAddress ?: "127.0.0.1", Icons.Default.Lan, MaterialTheme.colorScheme.outline) }
                                 if (container.isRunning) {
-                                    Row(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        horizontalArrangement = Arrangement.spacedBy(12.dp)
-                                    ) {
-                                        IdentityToken(
-                                            modifier = Modifier.weight(1f),
-                                            label = context.getString(R.string.cpu_usage_label),
-                                            value = info.cpuUsage?.let { context.getString(R.string.cpu_percent_label, it) } ?: "---",
-                                            icon = Icons.Default.Speed,
-                                            containerColor = MaterialTheme.colorScheme.primary
-                                        )
-                                        IdentityToken(
-                                            modifier = Modifier.weight(1f),
-                                            label = context.getString(R.string.ram_usage_label),
-                                            value = info.ramUsageMb?.let { context.getString(R.string.ram_percent_label, it, info.ramPercent ?: 0.0) } ?: "---",
-                                            icon = Icons.Default.Memory,
-                                            containerColor = MaterialTheme.colorScheme.secondary
-                                        )
-                                    }
+                                    add { IdentityToken(context.getString(R.string.cpu_usage_label), info.cpuUsage?.let { context.getString(R.string.cpu_percent_label, it) } ?: "---", Icons.Default.Speed, MaterialTheme.colorScheme.primary) }
+                                    add { IdentityToken(context.getString(R.string.ram_usage_label), info.ramUsageMb?.let { context.getString(R.string.ram_percent_label, it, info.ramPercent ?: 0.0) } ?: "---", Icons.Default.Memory, MaterialTheme.colorScheme.secondary) }
                                 }
                             }
+
+                            SyncedGrid(items = tokens)
                         } ?: Box(
                             modifier = Modifier.fillMaxWidth().height(100.dp),
                             contentAlignment = Alignment.Center
@@ -323,15 +266,14 @@ private fun IdentityToken(
 ) {
     Surface(
         modifier = modifier
-            .heightIn(min = 96.dp)
             .fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
         color = containerColor.copy(alpha = 0.08f),
         border = androidx.compose.foundation.BorderStroke(1.dp, containerColor.copy(alpha = 0.15f))
     ) {
         Column(
-            modifier = Modifier.padding(horizontal = 12.dp, vertical = 12.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 12.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             // Header Row (Top-Center)
@@ -340,21 +282,21 @@ private fun IdentityToken(
                 horizontalArrangement = Arrangement.Center,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(top = 4.dp) // Consistent inner top margin
+                    .padding(top = 2.dp)
             ) {
                 Icon(
                     imageVector = icon,
                     contentDescription = null,
-                    modifier = Modifier.size(14.dp),
+                    modifier = Modifier.size(13.dp),
                     tint = containerColor
                 )
-                Spacer(modifier = Modifier.width(6.dp))
+                Spacer(modifier = Modifier.width(4.dp))
                 Text(
                     text = label.uppercase(),
-                    style = MaterialTheme.typography.labelSmall,
+                    style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp),
                     color = containerColor,
                     fontWeight = FontWeight.Black,
-                    letterSpacing = 1.sp,
+                    letterSpacing = 0.5.sp,
                     maxLines = 1
                 )
             }
@@ -362,12 +304,14 @@ private fun IdentityToken(
             // Value Text (Middle-Center)
             Text(
                 text = value,
-                style = MaterialTheme.typography.titleSmall,
+                style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp),
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onSurface,
                 textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-                maxLines = 2,
-                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                maxLines = 3,
+                minLines = 1,
+                overflow = androidx.compose.ui.text.style.TextOverflow.Visible,
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp)
             )
         }
     }
@@ -617,3 +561,43 @@ private fun PremiumSystemdCard(
     }
 }
 
+
+/**
+ * Dynamic Height Synced Grid - measures all items and applies max height to all.
+ */
+@Composable
+private fun SyncedGrid(
+    items: List<@Composable () -> Unit>,
+    modifier: Modifier = Modifier
+) {
+    androidx.compose.ui.layout.SubcomposeLayout(modifier = modifier.fillMaxWidth()) { constraints ->
+        val gutter = 12.dp.roundToPx()
+        val itemWidth = (constraints.maxWidth - gutter) / 2
+        val itemConstraints = constraints.copy(minWidth = itemWidth, maxWidth = itemWidth, minHeight = 0)
+        
+        // Pass 1: Measure to find the maximum height needed
+        val maxMeasuredHeight = subcompose("measurer") {
+            items.forEach { it() }
+        }.map { it.measure(itemConstraints) }.maxOfOrNull { it.height } ?: 0
+        
+        // Pass 2: Actually layout with the forced uniform height
+        val finalPlaceables = subcompose("content") {
+            items.forEach { it() }
+        }.map { 
+            it.measure(itemConstraints.copy(minHeight = maxMeasuredHeight, maxHeight = maxMeasuredHeight)) 
+        }
+        
+        val rowCount = (items.size + 1) / 2
+        val totalHeight = rowCount * maxMeasuredHeight + (rowCount - 1) * gutter
+        
+        layout(constraints.maxWidth, totalHeight) {
+            finalPlaceables.forEachIndexed { index, placeable ->
+                val row = index / 2
+                val col = index % 2
+                val x = if (col == 0) 0 else constraints.maxWidth - placeable.width
+                val y = row * (maxMeasuredHeight + gutter)
+                placeable.placeRelative(x, y)
+            }
+        }
+    }
+}

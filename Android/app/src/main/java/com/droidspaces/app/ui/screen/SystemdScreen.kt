@@ -301,9 +301,14 @@ private fun ServiceCard(
             ) {
                 Text(
                     text = service.name,
-                    style = MaterialTheme.typography.titleMedium.copy(fontFamily = JetBrainsMono),
+                    style = MaterialTheme.typography.titleMedium.copy(
+                        fontFamily = JetBrainsMono,
+                        fontSize = if (service.name.length > 25) 13.sp else 16.sp
+                    ),
                     fontWeight = FontWeight.Bold,
-                    modifier = Modifier.weight(1f)
+                    modifier = Modifier.weight(1f),
+                    maxLines = 1,
+                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
                 )
 
                 Surface(

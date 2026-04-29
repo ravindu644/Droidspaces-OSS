@@ -839,7 +839,7 @@ private fun LanguagePickerDialog(
                 .wrapContentHeight()
                 .padding(vertical = 24.dp),
             shape = RoundedCornerShape(24.dp),
-            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.98f),
+            color = MaterialTheme.colorScheme.surfaceContainer,
             border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)),
             tonalElevation = 0.dp
         ) {
@@ -893,30 +893,34 @@ private fun LanguagePickerDialog(
                 }
 
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    val btnShape = RoundedCornerShape(14.dp)
+                    // Cancel - mirrors "Clear logs" style
                     Surface(
-                        modifier = Modifier.weight(1f).clip(RoundedCornerShape(14.dp)).clickable(onClick = onDismiss),
-                        shape = RoundedCornerShape(14.dp),
+                        modifier = Modifier.weight(1f).height(48.dp).clip(btnShape).clickable(onClick = onDismiss),
+                        shape = btnShape,
                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.06f),
                         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)),
                         tonalElevation = 0.dp
                     ) {
-                        Box(modifier = Modifier.padding(14.dp), contentAlignment = Alignment.Center) {
-                            Text(context.getString(R.string.cancel), style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold)
+                        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                            Text(context.getString(R.string.cancel), style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                     }
+                    // OK - mirrors "Copy logs" style (primary tinted)
                     Surface(
-                        modifier = Modifier.weight(1f).clip(RoundedCornerShape(14.dp)).clickable {
+                        modifier = Modifier.weight(1f).height(48.dp).clip(btnShape).clickable {
                             if (selectedIndex >= 0 && selectedIndex < allOptions.size) {
                                 onLanguageSelected(allOptions[selectedIndex].first)
                             }
                             onDismiss()
                         },
-                        shape = RoundedCornerShape(14.dp),
-                        color = MaterialTheme.colorScheme.primary,
+                        shape = btnShape,
+                        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.08f),
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.4f)),
                         tonalElevation = 0.dp
                     ) {
-                        Box(modifier = Modifier.padding(14.dp), contentAlignment = Alignment.Center) {
-                            Text(context.getString(R.string.ok), style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onPrimary)
+                        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                            Text(context.getString(R.string.ok), style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.primary)
                         }
                     }
                 }

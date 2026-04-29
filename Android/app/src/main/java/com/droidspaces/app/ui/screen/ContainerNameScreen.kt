@@ -11,6 +11,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.clip
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
@@ -91,32 +94,61 @@ fun ContainerNameScreen(
             )
         },
         bottomBar = {
+            val btnShape = RoundedCornerShape(20.dp)
+            val isNextValid = containerName.isNotBlank() && nameError == null && hostnameError == null
             Surface(
-                tonalElevation = 2.dp,
-                shadowElevation = 8.dp
+                modifier = Modifier.fillMaxWidth(),
+                color = MaterialTheme.colorScheme.surfaceContainer.copy(alpha = 0.98f),
+                tonalElevation = 0.dp
             ) {
-                Button(
-                    onClick = {
-                        clearFocus()
-                        val nameResult = ValidationUtils.validateContainerName(containerName, context)
-                        val hostnameResult = ValidationUtils.validateHostname(hostname, context)
-                        if (!nameResult.isError && !hostnameResult.isError && nameError == null) {
-                            onNext(containerName, hostname.ifEmpty { containerName })
-                        } else {
-                            nameError = nameResult.errorMessage ?: nameError
-                            hostnameError = hostnameResult.errorMessage
+                Column(modifier = Modifier.fillMaxWidth()) {
+                    HorizontalDivider(
+                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.25f),
+                        thickness = 1.dp
+                    )
+                    Surface(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(24.dp)
+                            .navigationBarsPadding()
+                            .clip(btnShape)
+                            .clickable(
+                                enabled = isNextValid,
+                                onClick = {
+                                    clearFocus()
+                                    val nameResult = ValidationUtils.validateContainerName(containerName, context)
+                                    val hostnameResult = ValidationUtils.validateHostname(hostname.ifEmpty { containerName }, context)
+                                    if (!nameResult.isError && !hostnameResult.isError) {
+                                        onNext(containerName, hostname.ifEmpty { containerName })
+                                    } else {
+                                        nameError = nameResult.errorMessage
+                                        hostnameError = hostnameResult.errorMessage
+                                    }
+                                },
+                                indication = androidx.compose.material.ripple.rememberRipple(bounded = true),
+                                interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
+                            ),
+                        shape = btnShape,
+                        color = if (isNextValid) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f),
+                        tonalElevation = 0.dp
+                    ) {
+                        Box(modifier = Modifier.padding(vertical = 16.dp), contentAlignment = Alignment.Center) {
+                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                Icon(
+                                    Icons.AutoMirrored.Filled.ArrowForward,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(18.dp),
+                                    tint = if (isNextValid) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+                                )
+                                Text(
+                                    context.getString(R.string.next_configuration),
+                                    style = MaterialTheme.typography.labelLarge,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = if (isNextValid) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+                                )
+                            }
                         }
-                    },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(24.dp)
-                        .navigationBarsPadding()
-                        .height(56.dp),
-                    enabled = containerName.isNotBlank() &&
-                             nameError == null &&
-                             hostnameError == null
-                ) {
-                    Text(context.getString(R.string.next_configuration), style = MaterialTheme.typography.labelLarge)
+                    }
                 }
             }
         }
@@ -135,7 +167,8 @@ fun ContainerNameScreen(
             Column(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(24.dp),
+                    .padding(horizontal = 24.dp)
+                    .padding(top = 24.dp),
                 verticalArrangement = Arrangement.spacedBy(24.dp)
             ) {
             Text(

@@ -363,52 +363,90 @@ fun EditContainerScreen(
             )
         },
         bottomBar = {
+            val btnShape = RoundedCornerShape(20.dp)
+            val isReadyToSave = !isSaving && !isSaved && hasChanges && (netMode != "nat" || upstreamInterfaces.isNotEmpty())
             Surface(
-                color = MaterialTheme.colorScheme.surfaceContainer.copy(alpha = 0.95f),
-                border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f))
+                modifier = Modifier.fillMaxWidth(),
+                color = MaterialTheme.colorScheme.surfaceContainer.copy(alpha = 0.98f),
+                tonalElevation = 0.dp
             ) {
-                Button(
-                    onClick = {
-                        clearFocus()
-                        saveChanges()
-                    },
-                    enabled = !isSaving && !isSaved && hasChanges && (netMode != "nat" || upstreamInterfaces.isNotEmpty()),
-                    shape = RoundedCornerShape(20.dp),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(24.dp)
-                        .navigationBarsPadding()
-                        .height(56.dp)
-                ) {
-                    when {
-                        isSaved -> {
-                            Icon(
-                                imageVector = Icons.Default.Check,
-                                contentDescription = context.getString(R.string.saved),
-                                modifier = Modifier.size(20.dp)
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(
-                                text = context.getString(R.string.saved),
-                                style = MaterialTheme.typography.labelLarge
-                            )
-                        }
-                        isSaving -> {
-                            LoadingIndicator(
-                                size = LoadingSize.Small,
-                                color = MaterialTheme.colorScheme.onPrimary
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(
-                                text = context.getString(R.string.saving),
-                                style = MaterialTheme.typography.labelLarge
-                            )
-                        }
-                        else -> {
-                            Text(
-                                text = context.getString(R.string.save_changes),
-                                style = MaterialTheme.typography.labelLarge
-                            )
+                Column(modifier = Modifier.fillMaxWidth()) {
+                    HorizontalDivider(
+                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.25f),
+                        thickness = 1.dp
+                    )
+                    Surface(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(24.dp)
+                            .navigationBarsPadding()
+                            .clip(btnShape)
+                            .clickable(
+                                enabled = isReadyToSave,
+                                onClick = {
+                                    clearFocus()
+                                    saveChanges()
+                                },
+                                indication = androidx.compose.material.ripple.rememberRipple(bounded = true),
+                                interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
+                            ),
+                        shape = btnShape,
+                        color = when {
+                            isSaved -> MaterialTheme.colorScheme.primaryContainer
+                            isReadyToSave -> MaterialTheme.colorScheme.primary
+                            else -> MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f)
+                        },
+                        tonalElevation = 0.dp
+                    ) {
+                        Box(modifier = Modifier.padding(vertical = 16.dp), contentAlignment = Alignment.Center) {
+                            when {
+                                isSaved -> {
+                                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                        Icon(
+                                            imageVector = Icons.Default.Check,
+                                            contentDescription = null,
+                                            modifier = Modifier.size(20.dp),
+                                            tint = MaterialTheme.colorScheme.onPrimaryContainer
+                                        )
+                                        Text(
+                                            text = context.getString(R.string.saved),
+                                            style = MaterialTheme.typography.labelLarge,
+                                            fontWeight = FontWeight.SemiBold,
+                                            color = MaterialTheme.colorScheme.onPrimaryContainer
+                                        )
+                                    }
+                                }
+                                isSaving -> {
+                                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                        LoadingIndicator(
+                                            size = LoadingSize.Small,
+                                            color = MaterialTheme.colorScheme.onPrimary
+                                        )
+                                        Text(
+                                            text = context.getString(R.string.saving),
+                                            style = MaterialTheme.typography.labelLarge,
+                                            fontWeight = FontWeight.SemiBold,
+                                            color = MaterialTheme.colorScheme.onPrimary
+                                        )
+                                    }
+                                }
+                                else -> {
+                                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                        Icon(
+                                            imageVector = Icons.Default.Save,
+                                            contentDescription = null,
+                                            modifier = Modifier.size(20.dp),
+                                            tint = if (isReadyToSave) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+                                        )
+                                        Text(
+                                            text = context.getString(R.string.save_changes),
+                                            style = MaterialTheme.typography.labelLarge,
+                                            fontWeight = FontWeight.SemiBold,
+                                            color = if (isReadyToSave) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+                                        )
+                                    }
+                                }
+                            }
                         }
                     }
                 }
@@ -423,7 +461,7 @@ fun EditContainerScreen(
                     .fillMaxSize()
                     .verticalScroll(rememberScrollState())
                     .padding(horizontal = 24.dp)
-                    .padding(top = 8.dp, bottom = 24.dp),
+                    .padding(top = 8.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
             // Warning if container is running

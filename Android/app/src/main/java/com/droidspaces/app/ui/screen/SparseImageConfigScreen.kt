@@ -58,55 +58,55 @@ fun SparseImageConfigScreen(
             )
         },
         bottomBar = {
+            val btnShape = RoundedCornerShape(20.dp)
             Surface(
-                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.2f),
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
+                modifier = Modifier.fillMaxWidth(),
+                color = MaterialTheme.colorScheme.surfaceContainer.copy(alpha = 0.98f),
                 tonalElevation = 0.dp
             ) {
-                val btnShape = RoundedCornerShape(20.dp)
-                Surface(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(24.dp)
-                        .navigationBarsPadding()
-                        .clip(btnShape)
-                        .clickable(
-                            enabled = isNextEnabled,
-                            onClick = {
-                                if (useSparseImage) {
-                                    val s = sizeGB.toIntOrNull()
-                                    if (s != null && s in 4..512) onNext(true, s)
-                                } else {
-                                    onNext(false, 8)
-                                }
-                            },
-                            indication = rememberRipple(bounded = true),
-                            interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
-                        ),
-                    shape = btnShape,
-                    color = if (isNextEnabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f),
-                    tonalElevation = 0.dp
-                ) {
-                    Box(
-                        modifier = Modifier.padding(vertical = 16.dp),
-                        contentAlignment = Alignment.Center
+                Column(modifier = Modifier.fillMaxWidth()) {
+                    HorizontalDivider(
+                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.25f),
+                        thickness = 1.dp
+                    )
+                    Surface(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(24.dp)
+                            .navigationBarsPadding()
+                            .clip(btnShape)
+                            .clickable(
+                                enabled = isNextEnabled,
+                                onClick = {
+                                    if (useSparseImage) {
+                                        val s = sizeGB.toIntOrNull()
+                                        if (s != null && s in 4..512) onNext(true, s)
+                                    } else {
+                                        onNext(false, 8)
+                                    }
+                                },
+                                indication = androidx.compose.material.ripple.rememberRipple(bounded = true),
+                                interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
+                            ),
+                        shape = btnShape,
+                        color = if (isNextEnabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f),
+                        tonalElevation = 0.dp
                     ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            Icon(
-                                Icons.AutoMirrored.Filled.ArrowForward,
-                                contentDescription = null,
-                                modifier = Modifier.size(18.dp),
-                                tint = if (isNextEnabled) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
-                            )
-                            Text(
-                                context.getString(R.string.next_summary),
-                                style = MaterialTheme.typography.labelLarge,
-                                fontWeight = FontWeight.SemiBold,
-                                color = if (isNextEnabled) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
-                            )
+                        Box(modifier = Modifier.padding(vertical = 16.dp), contentAlignment = Alignment.Center) {
+                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                Icon(
+                                    Icons.AutoMirrored.Filled.ArrowForward,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(18.dp),
+                                    tint = if (isNextEnabled) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+                                )
+                                Text(
+                                    context.getString(R.string.next_configuration),
+                                    style = MaterialTheme.typography.labelLarge,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = if (isNextEnabled) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+                                )
+                            }
                         }
                     }
                 }
@@ -117,7 +117,8 @@ fun SparseImageConfigScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
-                .padding(24.dp)
+                .padding(horizontal = 24.dp)
+                .padding(top = 24.dp)
                 .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(20.dp)
         ) {

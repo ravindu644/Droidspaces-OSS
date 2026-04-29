@@ -93,6 +93,7 @@
     <string name="no_containers_installed">No containers installed</string>
     <string name="install_container_description">Install a container using the button below</string>
     <string name="install_container">Install Container</string>
+    <string name="install">Install</string>
     <string name="file_picker_error">Please select a .tar.xz or .tar.gz file. Selected: %1$s</string>
     <string name="file_picker_error_unknown">Please select a .tar.xz or .tar.gz file. Could not determine file type.</string>
     <string name="stopping_container">Stopping container...</string>
@@ -308,6 +309,7 @@
     <string name="fetching_services">Fetching services...</string>
     <string name="systemd_not_available">Systemd Not Available</string>
     <string name="systemd_not_available_desc">This container does not have systemd installed or running</string>
+    <string name="systemd_not_available_message">@string/systemd_not_available_desc</string>
     <string name="search_services">Search services...</string>
     <string name="enabled_legend">Enabled</string>
     <string name="disabled_legend">Disabled</string>
@@ -352,6 +354,7 @@
     <string name="operation_failed_title">Operation Failed</string>
     <string name="no_output_available">No output available</string>
     <string name="dismiss">Dismiss</string>
+    <string name="please_wait_hint">Please wait while we process your request...</string>
 
     <!-- Container Users Card -->
     <string name="available_users">Available Users</string>

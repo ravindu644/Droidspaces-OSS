@@ -1,6 +1,7 @@
 package com.droidspaces.app.ui.screen
 
 import androidx.compose.animation.core.*
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -11,6 +12,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -151,171 +153,199 @@ fun InstallationScreen(
         }
     }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(24.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
-    ) {
-        // Main icon with animation
-        InstallationIcon(
-            isSuccess = isSuccess,
-            hasError = errorMessage != null
-        )
-
-        Spacer(modifier = Modifier.height(32.dp))
-
-        // Title
-        Text(
-            text = when {
-                isSuccess -> context.getString(R.string.installation_complete)
-                errorMessage != null -> context.getString(R.string.installation_failed)
-                isInstallingModule -> context.getString(R.string.installing_module)
-                else -> context.getString(R.string.installing_droidspaces)
-            },
-            style = MaterialTheme.typography.headlineMedium,
-            fontWeight = FontWeight.Bold,
-            textAlign = TextAlign.Center
-        )
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        // Status messages in a card (MMRL style)
-        Surface(
-            modifier = Modifier.fillMaxWidth(),
-            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
-            shape = RoundedCornerShape(20.dp),
-            border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
-        ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(20.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                when {
-                    isSuccess -> {
-                        Text(
-                            text = if (isInstallingModule) {
-                                context.getString(R.string.module_installed_success)
-                            } else {
-                                context.getString(R.string.backend_installed_success)
-                            },
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
-                            textAlign = TextAlign.Center
+    Scaffold(
+        bottomBar = {
+            if (isSuccess) {
+                val btnShape = RoundedCornerShape(20.dp)
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    color = MaterialTheme.colorScheme.surfaceContainer.copy(alpha = 0.98f),
+                    tonalElevation = 0.dp
+                ) {
+                    Column(modifier = Modifier.fillMaxWidth()) {
+                        HorizontalDivider(
+                            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.25f),
+                            thickness = 1.dp
                         )
-
-                    }
-                    errorMessage != null -> {
-                        Text(
-                            text = errorMessage ?: context.getString(R.string.unknown_error),
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = MaterialTheme.colorScheme.error,
-                            textAlign = TextAlign.Center
-                        )
-                    }
-                    else -> {
-                        // Show current step
-                        if (isInstallingModule) {
-                            when (currentModuleStep) {
-                                is ModuleInstallationStep.RemovingOldModule -> {
-                                    StepText(context.getString(R.string.removing_old_module))
-                                }
-                                is ModuleInstallationStep.ExtractingAssets -> {
-                                    StepText(context.getString(R.string.extracting_module_files))
-                                }
-                                is ModuleInstallationStep.CopyingModule -> {
-                                    StepText(context.getString(R.string.installing_module_step))
-                                }
-                                is ModuleInstallationStep.SettingPermissions -> {
-                                    StepText(context.getString(R.string.setting_permissions))
-                                }
-                                is ModuleInstallationStep.Verifying -> {
-                                    StepText(context.getString(R.string.verifying_installation))
-                                }
-                                else -> {
-                                    StepText(context.getString(R.string.preparing_module_installation))
-                                }
-                            }
-                        } else {
-                            when (val step = currentStep) {
-                                is InstallationStep.DetectingArchitecture -> {
-                                    StepText(context.getString(R.string.detected_architecture, step.arch))
-                                }
-                                is InstallationStep.CreatingDirectories -> {
-                                    StepText(context.getString(R.string.creating_directories))
-                                }
-                                is InstallationStep.CopyingBinary -> {
-                                    StepText(context.getString(R.string.installing_binary, step.binary))
-                                }
-                                is InstallationStep.SettingPermissions -> {
-                                    StepText(context.getString(R.string.granting_permissions))
-                                }
-                                is InstallationStep.Verifying -> {
-                                    StepText(context.getString(R.string.verifying_installation))
-                                }
-                                else -> {
-                                    StepText(context.getString(R.string.preparing_installation))
+                        Surface(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(24.dp)
+                                .navigationBarsPadding()
+                                .clip(btnShape)
+                                .clickable(
+                                    onClick = onInstallationComplete,
+                                    indication = androidx.compose.material.ripple.rememberRipple(bounded = true),
+                                    interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
+                                ),
+                            shape = btnShape,
+                            color = MaterialTheme.colorScheme.primary,
+                            tonalElevation = 0.dp
+                        ) {
+                            Box(modifier = Modifier.padding(vertical = 16.dp), contentAlignment = Alignment.Center) {
+                                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    Icon(
+                                        imageVector = Icons.Default.Check,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(18.dp),
+                                        tint = MaterialTheme.colorScheme.onPrimary
+                                    )
+                                    Text(
+                                        text = context.getString(R.string.continue_button),
+                                        style = MaterialTheme.typography.labelLarge,
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = MaterialTheme.colorScheme.onPrimary
+                                    )
                                 }
                             }
                         }
                     }
                 }
-
-                if (rebootRecommended) {
-                    HorizontalDivider(
-                        modifier = Modifier.padding(vertical = 12.dp),
-                        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)
-                    )
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.Center
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Info,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(20.dp)
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            text = context.getString(R.string.reboot_recommended),
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.primary,
-                            fontWeight = FontWeight.Medium,
-                            textAlign = TextAlign.Center
-                        )
-                    }
-                }
             }
         }
-
-        // Success button (only show when successful)
-        if (isSuccess) {
+    ) { innerPadding ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding)
+                .padding(horizontal = 24.dp)
+                .padding(top = 24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            // Main icon with animation
+            InstallationIcon(
+                isSuccess = isSuccess,
+                hasError = errorMessage != null
+            )
+    
             Spacer(modifier = Modifier.height(32.dp))
-            Button(
-                onClick = onInstallationComplete,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(56.dp),
+    
+            // Title
+            Text(
+                text = when {
+                    isSuccess -> context.getString(R.string.installation_complete)
+                    errorMessage != null -> context.getString(R.string.installation_failed)
+                    isInstallingModule -> context.getString(R.string.installing_module)
+                    else -> context.getString(R.string.installing_droidspaces)
+                },
+                style = MaterialTheme.typography.headlineMedium,
+                fontWeight = FontWeight.Bold,
+                textAlign = TextAlign.Center
+            )
+    
+            Spacer(modifier = Modifier.height(16.dp))
+    
+            // Status messages in a card (MMRL style)
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
                 shape = RoundedCornerShape(20.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.primary
-                )
+                border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
             ) {
-                Icon(
-                    imageVector = Icons.Default.CheckCircle,
-                    contentDescription = null,
-                    modifier = Modifier.size(24.dp)
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(
-                    text = context.getString(R.string.continue_button),
-                    style = MaterialTheme.typography.labelLarge
-                )
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(20.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    when {
+                        isSuccess -> {
+                            Text(
+                                text = if (isInstallingModule) {
+                                    context.getString(R.string.module_installed_success)
+                                } else {
+                                    context.getString(R.string.backend_installed_success)
+                                },
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                                textAlign = TextAlign.Center
+                            )
+    
+                        }
+                        errorMessage != null -> {
+                            Text(
+                                text = errorMessage ?: context.getString(R.string.unknown_error),
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = MaterialTheme.colorScheme.error,
+                                textAlign = TextAlign.Center
+                            )
+                        }
+                        else -> {
+                            // Show current step
+                            if (isInstallingModule) {
+                                when (currentModuleStep) {
+                                    is ModuleInstallationStep.RemovingOldModule -> {
+                                        StepText(context.getString(R.string.removing_old_module))
+                                    }
+                                    is ModuleInstallationStep.ExtractingAssets -> {
+                                        StepText(context.getString(R.string.extracting_module_files))
+                                    }
+                                    is ModuleInstallationStep.CopyingModule -> {
+                                        StepText(context.getString(R.string.installing_module_step))
+                                    }
+                                    is ModuleInstallationStep.SettingPermissions -> {
+                                        StepText(context.getString(R.string.setting_permissions))
+                                    }
+                                    is ModuleInstallationStep.Verifying -> {
+                                        StepText(context.getString(R.string.verifying_installation))
+                                    }
+                                    else -> {
+                                        StepText(context.getString(R.string.preparing_module_installation))
+                                    }
+                                }
+                            } else {
+                                when (val step = currentStep) {
+                                    is InstallationStep.DetectingArchitecture -> {
+                                        StepText(context.getString(R.string.detected_architecture, step.arch))
+                                    }
+                                    is InstallationStep.CreatingDirectories -> {
+                                        StepText(context.getString(R.string.creating_directories))
+                                    }
+                                    is InstallationStep.CopyingBinary -> {
+                                        StepText(context.getString(R.string.installing_binary, step.binary))
+                                    }
+                                    is InstallationStep.SettingPermissions -> {
+                                        StepText(context.getString(R.string.granting_permissions))
+                                    }
+                                    is InstallationStep.Verifying -> {
+                                        StepText(context.getString(R.string.verifying_installation))
+                                    }
+                                    else -> {
+                                        StepText(context.getString(R.string.preparing_installation))
+                                    }
+                                }
+                            }
+                        }
+                    }
+    
+                    if (rebootRecommended) {
+                        HorizontalDivider(
+                            modifier = Modifier.padding(vertical = 12.dp),
+                            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)
+                        )
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Info,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(20.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = context.getString(R.string.reboot_recommended),
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.primary,
+                                fontWeight = FontWeight.Medium,
+                                textAlign = TextAlign.Center
+                            )
+                        }
+                    }
+                }
             }
         }
     }

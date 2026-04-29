@@ -233,43 +233,51 @@ fun ContainerConfigScreen(
             )
         },
         bottomBar = {
-            val isUpstreamValid = netMode != "nat" || upstreamInterfaces.isNotEmpty()
             val btnShape = RoundedCornerShape(20.dp)
+            val isUpstreamValid = netMode != "nat" || upstreamInterfaces.isNotEmpty()
             Surface(
-                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.2f),
-                border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
+                modifier = Modifier.fillMaxWidth(),
+                color = MaterialTheme.colorScheme.surfaceContainer.copy(alpha = 0.98f),
                 tonalElevation = 0.dp
             ) {
-                Surface(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(24.dp)
-                        .navigationBarsPadding()
-                        .clip(btnShape)
-                        .clickable(
-                            enabled = isUpstreamValid,
-                            onClick = {
-                                onNext(netMode, disableIPv6, enableAndroidStorage, enableHwAccess, enableGpuMode, enableTermuxX11, selinuxPermissive, volatileMode, bindMounts, dnsServers, runAtBoot, forceCgroupv1, blockNestedNs, privileged, if (envFileContent.isBlank()) null else envFileContent, upstreamInterfaces, portForwards)
-                            },
-                            indication = androidx.compose.material.ripple.rememberRipple(bounded = true),
-                            interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
-                        ),
-                    shape = btnShape,
-                    color = if (isUpstreamValid) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f),
-                    tonalElevation = 0.dp
-                ) {
-                    Box(modifier = Modifier.padding(vertical = 16.dp), contentAlignment = Alignment.Center) {
-                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            Icon(
-                                Icons.AutoMirrored.Filled.ArrowForward, contentDescription = null, modifier = Modifier.size(18.dp),
-                                tint = if (isUpstreamValid) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
-                            )
-                            Text(
-                                context.getString(R.string.next_storage),
-                                style = MaterialTheme.typography.labelLarge,
-                                fontWeight = FontWeight.SemiBold,
-                                color = if (isUpstreamValid) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
-                            )
+                Column(modifier = Modifier.fillMaxWidth()) {
+                    HorizontalDivider(
+                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.25f),
+                        thickness = 1.dp
+                    )
+                    Surface(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(24.dp)
+                            .navigationBarsPadding()
+                            .clip(btnShape)
+                            .clickable(
+                                enabled = isUpstreamValid,
+                                onClick = {
+                                    onNext(netMode, disableIPv6, enableAndroidStorage, enableHwAccess, enableGpuMode, enableTermuxX11, selinuxPermissive, volatileMode, bindMounts, dnsServers, runAtBoot, forceCgroupv1, blockNestedNs, privileged, if (envFileContent.isBlank()) null else envFileContent, upstreamInterfaces, portForwards)
+                                },
+                                indication = androidx.compose.material.ripple.rememberRipple(bounded = true),
+                                interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
+                            ),
+                        shape = btnShape,
+                        color = if (isUpstreamValid) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f),
+                        tonalElevation = 0.dp
+                    ) {
+                        Box(modifier = Modifier.padding(vertical = 16.dp), contentAlignment = Alignment.Center) {
+                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                Icon(
+                                    Icons.AutoMirrored.Filled.ArrowForward,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(18.dp),
+                                    tint = if (isUpstreamValid) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+                                )
+                                Text(
+                                    context.getString(R.string.next_storage),
+                                    style = MaterialTheme.typography.labelLarge,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = if (isUpstreamValid) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+                                )
+                            }
                         }
                     }
                 }
@@ -280,7 +288,8 @@ fun ContainerConfigScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
-                .padding(24.dp)
+                .padding(horizontal = 24.dp)
+                .padding(top = 24.dp)
                 .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
