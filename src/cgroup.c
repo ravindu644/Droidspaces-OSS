@@ -347,10 +347,12 @@ int ds_cgroup_attach(pid_t target_pid) {
  * created for a single enter/run session.  Must be called by the parent after
  * waitpid() so the leaf is guaranteed to be empty.
  * ---------------------------------------------------------------------------*/
-void ds_cgroup_detach(pid_t child_pid) {
+void ds_cgroup_detach(pid_t child_pid, const char *container_name) {
   /* After child exits, we clean up the leaf cgroups we created in attach.
    * Since we create them in every mounted hierarchy under /sys/fs/cgroup,
    * we just iterate that dir again. */
+  (void)container_name; /* reserved for future per-layout targeting */
+
   DIR *d = opendir("/sys/fs/cgroup");
   if (!d)
     return;

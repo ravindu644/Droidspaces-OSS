@@ -31,8 +31,7 @@ void print_usage(void) {
       "  enter [user]              Enter a running container\n"
       "  run <cmd> [args]          Run a command in a running container\n"
       "  status                    Show container status\n"
-      "  uptime                    Show how long the container has been "
-      "running\n"
+      "  usage                     Show container uptime, CPU and RAM usage\n"
       "  info                      Show detailed container info\n"
       "  pid                       Show the live PID of the container init\n"
       "  show                      List all running containers\n"
@@ -465,7 +464,7 @@ int main(int argc, char **argv) {
                           strcmp(discovered_cmd, "status") == 0 ||
                           strcmp(discovered_cmd, "pid") == 0 ||
                           strcmp(discovered_cmd, "info") == 0 ||
-                          strcmp(discovered_cmd, "uptime") == 0 ||
+                          strcmp(discovered_cmd, "usage") == 0 ||
                           strcmp(discovered_cmd, "enter") == 0 ||
                           strcmp(discovered_cmd, "run") == 0));
 
@@ -1074,8 +1073,8 @@ int main(int argc, char **argv) {
     goto cleanup;
   }
 
-  if (strcmp(cmd, "uptime") == 0) {
-    ret = show_container_uptime(&cfg);
+  if (strcmp(cmd, "usage") == 0) {
+    ret = show_container_usage(&cfg);
     goto cleanup;
   }
 

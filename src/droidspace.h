@@ -477,7 +477,7 @@ int setup_cgroups(int is_systemd, int force_cgroupv1);
 void ds_cgroup_host_bootstrap(int force_cgroupv1);
 int ds_cgroup_attach(pid_t target_pid);
 /* Remove the ds-enter-<child_pid> leaf cgroup after an enter/run session. */
-void ds_cgroup_detach(pid_t child_pid);
+void ds_cgroup_detach(pid_t child_pid, const char *container_name);
 /* Remove the entire /sys/fs/cgroup/droidspaces/<name>/ subtree on stop. */
 void ds_cgroup_cleanup_container(const char *container_name);
 void print_cgroup_status(struct ds_config *cfg);
@@ -698,7 +698,7 @@ int enter_rootfs(struct ds_config *cfg, const char *user);
 int run_in_rootfs(struct ds_config *cfg, int argc, char **argv,
                   const char *as_user);
 int show_info(struct ds_config *cfg, int trust_cfg_pid);
-int show_container_uptime(struct ds_config *cfg);
+int show_container_usage(struct ds_config *cfg);
 int restart_rootfs(struct ds_config *cfg);
 
 /* ---------------------------------------------------------------------------

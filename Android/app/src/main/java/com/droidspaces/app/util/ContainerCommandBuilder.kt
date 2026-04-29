@@ -68,8 +68,16 @@ object ContainerCommandBuilder {
     /**
      * Build uptime command for a container.
      */
+    @Deprecated("Use buildUsageCommand instead for synchronized metrics", ReplaceWith("buildUsageCommand(containerName)"))
     fun buildUptimeCommand(containerName: String): String {
         return "$DROIDSPACES_BINARY_PATH --name=${quote(containerName)} uptime"
+    }
+
+    /**
+     * Build unified usage command for a container (UPTIME, RAM, CPU).
+     */
+    fun buildUsageCommand(containerName: String): String {
+        return "$DROIDSPACES_BINARY_PATH --name=${quote(containerName)} usage"
     }
 }
 

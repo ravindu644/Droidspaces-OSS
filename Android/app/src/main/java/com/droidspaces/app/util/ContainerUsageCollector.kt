@@ -16,110 +16,68 @@ object ContainerUsageCollector {
         val cpuPercent: Double = 0.0,
         val ramUsedKb: Long = 0,
         val ramTotalKb: Long = 0,
-        val ramPercent: Double = 0.0
+        val ramPercent: Double = 0.0,
+        val uptime: String? = null
     )
 
-    // Per-container CPU delta state (containerName -> Pair(prevTotal, prevIdle))
-    private val cpuPrevState = mutableMapOf<String, Pair<Long, Long>>()
+    // Per-container CPU delta state - Not needed with the new usage command
+    // as the backend handles the delta logic and returns permill
+    // private val cpuPrevState = mutableMapOf<String, Pair<Long, Long>>()
 
     /**
-     * Collect CPU and RAM stats for a running container.
-     * CPU uses two-sample delta against cached previous values.
+     * Collect CPU, RAM, and Uptime stats for a running container.
+     * Uses the unified `usage` command for synchronized data.
      */
     suspend fun collectUsage(containerName: String): ContainerUsage = withContext(Dispatchers.IO) {
-        val cmd = Constants.DROIDSPACES_BINARY_PATH
-        val name = ContainerCommandBuilder.quote(containerName)
-
-        val cpuPercent = getCpuUsage(cmd, name, containerName)
-        val (ramUsed, ramTotal, ramPercent) = getRamUsage(cmd, name)
-
-        ContainerUsage(
-            cpuPercent = cpuPercent,
-            ramUsedKb = ramUsed,
-            ramTotalKb = ramTotal,
-            ramPercent = ramPercent
-        )
-    }
-
-    /**
-     * Clear CPU delta state for a container (call on stop/removal).
-     */
-    fun clearState(containerName: String) {
-        cpuPrevState.remove(containerName)
-    }
-
-    // --- CPU ---
-
-    private suspend fun getCpuUsage(
-        cmd: String,
-        name: String,
-        containerName: String
-    ): Double = withContext(Dispatchers.IO) {
         try {
-            val result = Shell.cmd("$cmd --name=$name run 'cat /proc/stat | head -1'").exec()
-            if (!result.isSuccess || result.out.isEmpty()) return@withContext 0.0
+            val cmd = ContainerCommandBuilder.buildUsageCommand(containerName)
+            val result = Shell.cmd(cmd).exec()
 
-            val parts = result.out[0].trim().split("\\s+".toRegex())
-            if (parts.size < 5) return@withContext 0.0
+            if (result.isSuccess && result.out.isNotEmpty()) {
+                var uptime: String? = null
+                var cpuPercent = 0.0
+                var ramUsed = 0L
+                var ramTotal = 0L
 
-            val user   = parts[1].toLongOrNull() ?: 0L
-            val nice   = parts[2].toLongOrNull() ?: 0L
-            val system = parts[3].toLongOrNull() ?: 0L
-            val idle   = parts[4].toLongOrNull() ?: 0L
-            val iowait = parts.getOrNull(5)?.toLongOrNull() ?: 0L
-            val irq    = parts.getOrNull(6)?.toLongOrNull() ?: 0L
-            val sirq   = parts.getOrNull(7)?.toLongOrNull() ?: 0L
-
-            val total = user + nice + system + idle + iowait + irq + sirq
-            val prev = cpuPrevState[containerName]
-
-            cpuPrevState[containerName] = total to idle
-
-            if (prev != null) {
-                val (prevTotal, prevIdle) = prev
-                val totalDelta = total - prevTotal
-                val idleDelta  = idle  - prevIdle
-                if (totalDelta > 0) {
-                    return@withContext ((totalDelta - idleDelta).toDouble() / totalDelta * 100.0)
-                        .coerceIn(0.0, 100.0)
-                }
-            }
-        } catch (e: Exception) {
-            Log.e(TAG, "Error getting CPU for $containerName", e)
-        }
-        0.0
-    }
-
-    // --- RAM ---
-
-    /** Returns Triple(usedKb, totalKb, percent) from `free` inside container */
-    private suspend fun getRamUsage(cmd: String, name: String): Triple<Long, Long, Double> =
-        withContext(Dispatchers.IO) {
-            try {
-                // `free -k` outputs KB; fall back to plain `free` (also KB on most distros)
-                val result = Shell.cmd(
-                    "$cmd --name=$name run 'free -k 2>/dev/null || free'"
-                ).exec()
-
-                if (result.isSuccess) {
-                    // Find the "Mem:" line
-                    val memLine = result.out.firstOrNull { it.trimStart().startsWith("Mem:") }
-                    if (memLine != null) {
-                        val parts = memLine.trim().split("\\s+".toRegex())
-                        // free format: Mem: total used free shared buff/cache available
-                        if (parts.size >= 3) {
-                            val total = parts[1].toLongOrNull() ?: 0L
-                            val used  = parts[2].toLongOrNull() ?: 0L
-                            if (total > 0) {
-                                val percent = (used.toDouble() / total * 100.0).coerceIn(0.0, 100.0)
-                                return@withContext Triple(used, total, percent)
+                result.out.forEach { line ->
+                    val parts = line.trim().split("=", limit = 2)
+                    if (parts.size == 2) {
+                        val key = parts[0].trim()
+                        val value = parts[1].trim()
+                        when (key) {
+                            "UPTIME" -> uptime = value.takeIf { it != "NONE" && it.isNotEmpty() }
+                            "CPU_PERMILL" -> {
+                                val permill = value.toDoubleOrNull() ?: 0.0
+                                cpuPercent = (permill / 10.0).coerceIn(0.0, 100.0)
                             }
+                            "RAM_USED_KB" -> ramUsed = value.toLongOrNull() ?: 0L
+                            "RAM_TOTAL_KB" -> ramTotal = value.toLongOrNull() ?: 0L
                         }
                     }
                 }
-            } catch (e: Exception) {
-                Log.e(TAG, "Error getting RAM", e)
+
+                val ramPercent = if (ramTotal > 0) {
+                    (ramUsed.toDouble() / ramTotal * 100.0).coerceIn(0.0, 100.0)
+                } else 0.0
+
+                return@withContext ContainerUsage(
+                    cpuPercent = cpuPercent,
+                    ramUsedKb = ramUsed,
+                    ramTotalKb = ramTotal,
+                    ramPercent = ramPercent,
+                    uptime = uptime
+                )
             }
-            Triple(0L, 0L, 0.0)
+        } catch (e: Exception) {
+            Log.e(TAG, "Error collecting usage for $containerName", e)
         }
+        ContainerUsage()
+    }
+
+    /**
+     * Clear state for a container - legacy, kept for compatibility.
+     */
+    fun clearState() {
+        // Not used with the new usage command
+    }
 }

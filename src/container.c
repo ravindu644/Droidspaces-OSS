@@ -1597,7 +1597,7 @@ int enter_rootfs(struct ds_config *cfg, const char *user) {
   if (master_fd < 0) {
     ds_error("Failed to receive PTY master from child");
     waitpid(child, NULL, 0);
-    ds_cgroup_detach(child);
+    ds_cgroup_detach(child, cfg->container_name);
     return -1;
   }
 
@@ -1622,7 +1622,7 @@ int enter_rootfs(struct ds_config *cfg, const char *user) {
 
   close(master_fd);
   waitpid(child, NULL, 0);
-  ds_cgroup_detach(child);
+  ds_cgroup_detach(child, cfg->container_name);
   free_config_env_vars(cfg);
   return 0;
 }
@@ -1732,7 +1732,7 @@ int run_in_rootfs(struct ds_config *cfg, int argc, char **argv,
 
   int status;
   waitpid(child, &status, 0);
-  ds_cgroup_detach(child);
+  ds_cgroup_detach(child, cfg->container_name);
   free_config_env_vars(cfg);
   return WIFEXITED(status) ? WEXITSTATUS(status) : -1;
 }

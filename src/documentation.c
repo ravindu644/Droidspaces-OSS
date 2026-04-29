@@ -395,7 +395,7 @@ static void print_page(int page, const char *bin) {
            "--hw-access start\n",
            bin);
     printf("  %s --name=test status\n", bin);
-    printf("  %s --name=test uptime\n", bin);
+    printf("  %s --name=test usage\n", bin);
     printf("  %s --name=test enter developer\n", bin);
     printf("  %s --name=test run systemctl status\n", bin);
     printf("  %s --name=test run journalctl -n 50\n", bin);
@@ -428,11 +428,11 @@ static void print_page(int page, const char *bin) {
     printf("  %s show\n", bin);
     printf("  %s stop --name=web,db,app\n\n", bin);
 
-    printf("%sChecking individual container uptime:%s\n", bold, reset);
-    printf("  %s --name=mycontainer uptime\n", bin);
-    printf("  (Shows how long the container has been running, independent\n");
-    printf("   of the device's global uptime - reads from /proc/1/stat\n");
-    printf("   inside the container's namespace via the host-side path)\n\n");
+    printf("%sChecking container resource usage:%s\n", bold, reset);
+    printf("  %s --name=mycontainer usage\n", bin);
+    printf("  (Shows uptime, CPU%, and RAM usage for the container\n");
+    printf("   Uses PID namespace walk + /proc/uptime - no ns entry needed\n");
+    printf("   Works on kernel 3.10+ with both cgroup v1 and v2)\n\n");
 
     printf("%sError recovery and troubleshooting:%s\n", bold, reset);
     printf("  %s --name=broken status\n", bin);

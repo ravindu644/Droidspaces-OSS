@@ -32,6 +32,10 @@ import com.droidspaces.app.ui.util.LoadingSize
 import androidx.compose.ui.platform.LocalContext
 import com.droidspaces.app.R
 import com.droidspaces.app.service.TerminalSessionService
+import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.repeatOnLifecycle
+import androidx.lifecycle.LifecycleOwner
 
 /**
  * Premium Container Details Screen - Zero glitches, buttery smooth animations
@@ -52,7 +56,6 @@ fun ContainerDetailsScreen(
     onNavigateToTerminal: () -> Unit = {}
 ) {
     val context = LocalContext.current
-    val scope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
     var refreshTrigger by remember { mutableIntStateOf(0) }
 
@@ -65,33 +68,41 @@ fun ContainerDetailsScreen(
     // Systemd state - stabilized to prevent mid-refresh changes
     var systemdState by remember { mutableStateOf<SystemdCardState>(SystemdCardState.Checking) }
 
-    // Background systemd check - happens once, never during refresh
+    // Background systemd check - happens once per container load
     LaunchedEffect(container.name) {
-        scope.launch {
-            val isAvailable = ContainerSystemdManager.isSystemdAvailable(container.name)
-            systemdState = if (isAvailable) {
-                SystemdCardState.Available
-            } else {
-                SystemdCardState.NotAvailable
-            }
+        val isAvailable = ContainerSystemdManager.isSystemdAvailable(container.name)
+        systemdState = if (isAvailable) {
+            SystemdCardState.Available
+        } else {
+            SystemdCardState.NotAvailable
         }
-        }
+    }
 
-    // Auto-refresh when entering the screen - refresh both container info and users
+    val lifecycleOwner = LocalLifecycleOwner.current
+
+    // Auto-refresh loop - refreshes both container info and uptime every 2s
     // Only updates UI if data actually changed (prevents unnecessary recompositions)
+    // Uses repeatOnLifecycle to pause polling when the app is in background
     LaunchedEffect(container.name) {
-        scope.launch {
-            // Refresh container info in background (always fetch fresh data)
-            val newOSInfo = ContainerOSInfoManager.getOSInfo(container.name, useCache = false, appContext = context)
+        lifecycleOwner.lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
+            while (true) {
+                try {
+                    val newOSInfo = ContainerOSInfoManager.getOSInfo(container.name, useCache = false, appContext = context)
+                    val currentInfo = osInfo
+                    if (currentInfo == null || hasOSInfoChanged(currentInfo, newOSInfo)) {
+                        osInfo = newOSInfo
+                    }
 
-            // Only update UI if data actually changed
-            val currentInfo = osInfo
-            if (currentInfo == null || hasOSInfoChanged(currentInfo, newOSInfo)) {
-                osInfo = newOSInfo
+                    // If container is not running, we don't need real-time updates for usage
+                    if (!container.isRunning) break
+
+                    // Refresh users on the first run, then leave it to manual/specific refreshes
+                    if (refreshTrigger == 0) refreshTrigger++
+                } catch (e: Exception) {
+                    // Silently ignore refresh errors to keep the UI smooth
+                }
+                delay(2000)
             }
-
-            // Trigger users refresh by incrementing refreshTrigger
-            refreshTrigger++
         }
     }
 
@@ -117,134 +128,157 @@ fun ContainerDetailsScreen(
         },
         snackbarHost = { SnackbarHost(snackbarHostState) }
     ) { padding ->
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(padding),
-                contentPadding = PaddingValues(16.dp),
+        LazyColumn(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding),
+            contentPadding = PaddingValues(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                // OS Information - Total Rewrite (Zero Shadow / Flat Design)
-                item(key = "os_info_flat_grid_${container.name}") {
-                    Surface(
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(20.dp),
-                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
-                        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+        ) {
+            // OS Information - Total Rewrite (Zero Shadow / Flat Design)
+            item(key = "os_info_flat_grid_${container.name}") {
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(20.dp),
+                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                ) {
+                    Column(
+                        modifier = Modifier.padding(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
-                        Column(
-                            modifier = Modifier.padding(16.dp),
-                            verticalArrangement = Arrangement.spacedBy(16.dp)
+                        // Header Row
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(10.dp)
                         ) {
-                            // Header Row
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(10.dp)
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.Info,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(18.dp),
-                                    tint = MaterialTheme.colorScheme.primary
-                                )
-                                Text(
-                                    text = context.getString(R.string.container_info),
-                                    style = MaterialTheme.typography.titleMedium,
-                                    fontWeight = FontWeight.Bold,
-                                    color = MaterialTheme.colorScheme.onSurface
-                                )
-                            }
+                            Icon(
+                                imageVector = Icons.Default.Info,
+                                contentDescription = null,
+                                modifier = Modifier.size(18.dp),
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                            Text(
+                                text = context.getString(R.string.container_info),
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                        }
 
-                            osInfo?.let { info ->
-                                Column(
+                        osInfo?.let { info ->
+                            Column(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                // Row 1: Distro and Hostname
+                                Row(
                                     modifier = Modifier.fillMaxWidth(),
-                                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                                    horizontalArrangement = Arrangement.spacedBy(12.dp)
                                 ) {
-                                    // Row 1: Distro and Hostname
+                                    val distroName = info.prettyName ?: info.name ?: "Linux"
+                                    IdentityToken(
+                                        modifier = Modifier.weight(1f),
+                                        label = "Distribution",
+                                        value = distroName,
+                                        icon = when {
+                                            distroName.contains("Ubuntu", true) -> Icons.Default.Adjust
+                                            distroName.contains("Debian", true) -> Icons.Default.Circle
+                                            distroName.contains("Alpine", true) -> Icons.Default.Landscape
+                                            else -> Icons.Default.Dashboard
+                                        },
+                                        containerColor = MaterialTheme.colorScheme.primary
+                                    )
+                                    IdentityToken(
+                                        modifier = Modifier.weight(1f),
+                                        label = "Hostname",
+                                        value = info.hostname ?: "localhost",
+                                        icon = Icons.Default.Computer,
+                                        containerColor = MaterialTheme.colorScheme.secondary
+                                    )
+                                }
+
+                                // Row 2: Uptime and IP
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                                ) {
+                                    IdentityToken(
+                                        modifier = Modifier.weight(1f),
+                                        label = "Uptime",
+                                        value = info.uptime ?: "0s",
+                                        icon = Icons.Default.Timer,
+                                        containerColor = MaterialTheme.colorScheme.tertiary
+                                    )
+                                    IdentityToken(
+                                        modifier = Modifier.weight(1f),
+                                        label = "IP Address",
+                                        value = info.ipAddress ?: "127.0.0.1",
+                                        icon = Icons.Default.Lan,
+                                        containerColor = MaterialTheme.colorScheme.outline
+                                    )
+                                }
+
+                                // Row 3: CPU and RAM Usage (Live Sync)
+                                if (container.isRunning) {
                                     Row(
                                         modifier = Modifier.fillMaxWidth(),
                                         horizontalArrangement = Arrangement.spacedBy(12.dp)
                                     ) {
-                                        val distroName = info.prettyName ?: info.name ?: "Linux"
                                         IdentityToken(
                                             modifier = Modifier.weight(1f),
-                                            label = "Distribution",
-                                            value = distroName,
-                                            icon = when {
-                                                distroName.contains("Ubuntu", true) -> Icons.Default.Adjust
-                                                distroName.contains("Debian", true) -> Icons.Default.Circle
-                                                distroName.contains("Alpine", true) -> Icons.Default.Landscape
-                                                else -> Icons.Default.Dashboard
-                                            },
+                                            label = "CPU Usage",
+                                            value = info.cpuUsage?.let { "${String.format("%.1f", it)}%" } ?: "---",
+                                            icon = Icons.Default.Speed,
                                             containerColor = MaterialTheme.colorScheme.primary
                                         )
                                         IdentityToken(
                                             modifier = Modifier.weight(1f),
-                                            label = "Hostname",
-                                            value = info.hostname ?: "localhost",
-                                            icon = Icons.Default.Computer,
+                                            label = "RAM Usage",
+                                            value = info.ramUsageMb?.let { "${it} MB (${String.format("%.1f", info.ramPercent ?: 0.0)}%)" } ?: "---",
+                                            icon = Icons.Default.Memory,
                                             containerColor = MaterialTheme.colorScheme.secondary
                                         )
                                     }
-
-                                    // Row 2: Uptime and IP
-                                    Row(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        horizontalArrangement = Arrangement.spacedBy(12.dp)
-                                    ) {
-                                        IdentityToken(
-                                            modifier = Modifier.weight(1f),
-                                            label = "Uptime",
-                                            value = info.uptime ?: "0s",
-                                            icon = Icons.Default.Timer,
-                                            containerColor = MaterialTheme.colorScheme.tertiary
-                                        )
-                                        IdentityToken(
-                                            modifier = Modifier.weight(1f),
-                                            label = "IP Address",
-                                            value = info.ipAddress ?: "127.0.0.1",
-                                            icon = Icons.Default.Lan,
-                                            containerColor = MaterialTheme.colorScheme.outline
-                                        )
-                                    }
                                 }
-                            } ?: Box(
-                                modifier = Modifier.fillMaxWidth().height(100.dp),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Text(
-                                    text = context.getString(R.string.unable_to_read_container_info),
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
                             }
+                        } ?: Box(
+                            modifier = Modifier.fillMaxWidth().height(100.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = context.getString(R.string.unable_to_read_container_info),
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
                         }
                     }
                 }
-
-                // Users Card - Stable key (don't include refreshTrigger to prevent recreation)
-                item(key = "users_${container.name}") {
-                    ContainerUsersCard(
-                        containerName = container.name,
-                        refreshTrigger = refreshTrigger,
-                        snackbarHostState = snackbarHostState
-                    )
-                }
-
-                item(key = "terminal_${container.name}") {
-                    TerminalCard(
-                        containerName = container.name,
-                        onOpenTerminal = onNavigateToTerminal
-                    )
-                }
-
-                item(key = "systemd_${container.name}") {
-                    PremiumSystemdCard(
-                        state = systemdState,
-                        onNavigateToSystemd = onNavigateToSystemd
-                    )
-                }
             }
+
+            // Users Card - Stable key (don't include refreshTrigger to prevent recreation)
+            item(key = "users_${container.name}") {
+                ContainerUsersCard(
+                    containerName = container.name,
+                    refreshTrigger = refreshTrigger,
+                    snackbarHostState = snackbarHostState
+                )
+            }
+
+            item(key = "terminal_${container.name}") {
+                TerminalCard(
+                    containerName = container.name,
+                    onOpenTerminal = onNavigateToTerminal
+                )
+            }
+
+            item(key = "systemd_${container.name}") {
+                PremiumSystemdCard(
+                    state = systemdState,
+                    onNavigateToSystemd = onNavigateToSystemd
+                )
+            }
+        }
     }
 }
 
@@ -269,7 +303,10 @@ private fun hasOSInfoChanged(old: ContainerOSInfoManager.OSInfo, new: ContainerO
            old.id != new.id ||
            old.hostname != new.hostname ||
            old.ipAddress != new.ipAddress ||
-           old.uptime != new.uptime
+           old.uptime != new.uptime ||
+           old.cpuUsage != new.cpuUsage ||
+           old.ramUsageMb != new.ramUsageMb ||
+           old.ramPercent != new.ramPercent
 }
 
 
