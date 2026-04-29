@@ -27,27 +27,18 @@
 
     <string name="container_singular">Container</string>
     <string name="running">Nagdagan</string>
-    <string name="container_count">%1$d ka container</string>
-    <string name="containers_count">%1$d ka mga container</string>
 
     <string name="backend_checking">Backend: Gisusi...</string>
     <string name="backend_installed">Backend: Naka-install</string>
     <string name="backend_update_available">Backend: Nay update nga available</string>
     <string name="backend_not_installed">Backend: Wala naka-install</string>
     <string name="backend_corrupted">Backend: Corrupted</string>
-    <string name="backend_unsupported">Backend: Wala gisuportahan</string>
-    <string name="backend_module_missing">Backend: Nawala</string>
-    <string name="backend_unknown">Backend: Ambot</string>
     <string name="root_unavailable">Dili magamit ang root access.</string>
     <string name="grant_root_message">Hatagi og root access aron magpadayon sa pagsuhid sa droidspaces !</string>
     <string name="version_label">Bersyon: %1$s</string>
     <string name="root_provider_label">Root Provider: %1$s</string>
     <string name="unknown">Wala mahibal-an</string>
     <string name="update_available_message">Adunay available nga backend update, i-klik dinhi aron ma-update</string>
-    <string name="tap_to_install">I-tap dinhi aron ma-install</string>
-    <string name="tap_to_reinstall">I-tap dinhi aron ma-install pag-usab</string>
-    <string name="tap_to_install_module">I-tap dinhi aron ma-install ang module</string>
-    <string name="device_not_supported">Wala gisuportahan ang imong device</string>
 
     <string name="backend_section">Backend</string>
     <string name="reinstall_backend">I-install pag-usab ang Backend</string>
@@ -57,7 +48,6 @@
     <string name="copy">Kopyaha</string>
     <string name="appearance_section">Hitsura</string>
     <string name="language">Pinulongan</string>
-    <string name="language_description">Usba ang pinulongan sa app</string>
     <string name="system_default">Default sa System</string>
     <string name="follow_system_theme">Sunda ang Tema sa System</string>
     <string name="follow_system_theme_description">Awtomatikong iparehas sa tema sa system</string>
@@ -113,7 +103,6 @@
     <string name="ipv6_option">IPv6</string>
     <string name="storage_option">Storage</string>
     <string name="hw_option">HW</string>
-    <string name="selinux_option">SELinux</string>
 
     <string name="container_info">Impormasyon sa Container</string>
     <string name="distribution">Distribusyon</string>
@@ -179,13 +168,8 @@
     <string name="granting_permissions">Naghatag og mga permiso...</string>
     <string name="preparing_installation">Giandam ang pag-install...</string>
 
-    <string name="active_containers">Mga Aktibong Container</string>
     <string name="no_containers_running">Walay container nga nagdagan</string>
     <string name="start_container_first">Pagsugod una og container aron makita kini dinhi</string>
-    <string name="system_statistics">Estadistika sa System</string>
-    <string name="cpu">CPU</string>
-    <string name="ram">RAM</string>
-    <string name="temp">Temp</string>
 
     <string name="systemd_services">Mga Serbisyo sa Systemd</string>
     <string name="fetching_services">Gikuha ang mga serbisyo...</string>
@@ -241,7 +225,6 @@
     <string name="copy_login">Kopyaha ang login</string>
 
 
-    <string name="error_generic">Error</string>
     <string name="comma">,</string>
     <string name="gb_size">%1$dGB</string>
 
@@ -264,13 +247,11 @@
     <string name="logs_title">Mga Log: %1$s</string>
     <string name="clear_logs">Papasa ang mga log</string>
     <string name="copy_logs">Kopyaha ang mga log</string>
-    <string name="container_logs">Mga Log sa Container</string>
 
     <string name="error_container_name_empty">Dili mahimong walay sulod ang ngalan sa container</string>
     <string name="error_container_name_invalid">Ang ngalan sa container mahimo lang maglangkob og mga letra, numero, hyphen (-), underscore (_), tuldok (.), ug space</string>
     <string name="error_hostname_invalid">Ang hostname mahimo lang maglangkob og mga letra, numero, ug dash (-)</string>
 
-    <string name="user_in_parentheses">(%1$s)</string>
 
     <string name="check_requirements">Susiha ang mga Kinahanglanon</string>
     <string name="requirements_check_title">Pagsusi sa mga Kinahanglanon</string>

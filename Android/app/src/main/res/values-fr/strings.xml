@@ -28,27 +28,18 @@
     <!-- Main Tab Screen -->
     <string name="container_singular">Conteneur</string>
     <string name="running">En cours</string>
-    <string name="container_count">%1$d conteneur</string>
-    <string name="containers_count">%1$d conteneurs</string>
     <!-- Droidspaces Status Card -->
     <string name="backend_checking">Backend : Vérification…</string>
     <string name="backend_installed">Backend : Installé</string>
     <string name="backend_update_available">Backend : Mise à jour disponible</string>
     <string name="backend_not_installed">Backend : Pas installé</string>
     <string name="backend_corrupted">Backend : Corrompu</string>
-    <string name="backend_unsupported">Backend : Non supporté</string>
-    <string name="backend_module_missing">Backend : Manquant</string>
-    <string name="backend_unknown">Backend : Inconnu</string>
     <string name="root_unavailable">L\'accès root n\'est pas disponible.</string>
     <string name="grant_root_message">Accordez l\'accès root pour continuer à explorer Droidspaces !</string>
     <string name="version_label">Version : %1$s</string>
     <string name="root_provider_label">Fournisseur root : %1$s</string>
     <string name="unknown">Inconnu</string>
     <string name="update_available_message">Mise à jour du backend disponible, cliquez ici pour mettre à jour</string>
-    <string name="tap_to_install">Appuyez ici pour installer</string>
-    <string name="tap_to_reinstall">Appuyez ici pour réinstaller</string>
-    <string name="tap_to_install_module">Appuyez ici pour installer le module</string>
-    <string name="device_not_supported">Votre appareil n\'est pas pris en charge</string>
     <!-- Settings Screen -->
     <string name="backend_section">Backend</string>
     <string name="reinstall_backend">Réinstaller le backend</string>
@@ -58,7 +49,6 @@
     <string name="copy">Copier</string>
     <string name="appearance_section">Apparence</string>
     <string name="language">Langue</string>
-    <string name="language_description">Changer la langue de l\'application</string>
     <string name="system_default">Par défaut du système</string>
     <string name="follow_system_theme">Suivre le thème système</string>
     <string name="follow_system_theme_description">Correspond automatiquement au thème du système</string>
@@ -114,7 +104,6 @@
     <string name="ipv6_option">IPv6</string>
     <string name="storage_option">Stockage</string>
     <string name="hw_option">HW</string>
-    <string name="selinux_option">SELinux</string>
     <!-- Container Details Screen -->
     <string name="container_info">Infos du conteneur</string>
     <string name="distribution">Distribution</string>
@@ -180,13 +169,8 @@
     <string name="granting_permissions">Attribution des permissions...</string>
     <string name="preparing_installation">Préparation de l\'installation...</string>
     <!-- Control Panel Screen -->
-    <string name="active_containers">Conteneurs actifs</string>
     <string name="no_containers_running">Aucun conteneur en cours</string>
     <string name="start_container_first">Démarrez d\'abord un conteneur pour le voir ici</string>
-    <string name="system_statistics">Statistiques système</string>
-    <string name="cpu">CPU</string>
-    <string name="ram">RAM</string>
-    <string name="temp">Temp</string>
     <!-- Systemd Screen -->
     <string name="systemd_services">Services systemd</string>
     <string name="fetching_services">Récupération des services...</string>
@@ -243,7 +227,6 @@
     <!-- Process List Screen -->
 
     <!-- Common -->
-    <string name="error_generic">Erreur</string>
     <string name="comma">,</string>
     <string name="gb_size">%1$dGB</string>
     <!-- Sparse Image Config Screen -->
@@ -266,13 +249,11 @@
     <string name="logs_title">Logs : %1$s</string>
     <string name="clear_logs">Effacer les logs</string>
     <string name="copy_logs">Copier les logs</string>
-    <string name="container_logs">Logs du conteneur</string>
     <!-- Validation Error Messages -->
     <string name="error_container_name_empty">Le nom du conteneur ne peut pas être vide</string>
     <string name="error_container_name_invalid">Le nom du conteneur ne peut contenir que des lettres, chiffres, tirets (-), underscores (_), points (.) et espaces</string>
     <string name="error_hostname_invalid">Le nom d\'hôte ne peut contenir que des lettres, des chiffres et des tirets (-)</string>
     <!-- Process List -->
-    <string name="user_in_parentheses">(%1$s)</string>
     <!-- Requirements -->
     <string name="check_requirements">Vérifier les exigences</string>
     <string name="requirements_check_title">Vérification des exigences</string>

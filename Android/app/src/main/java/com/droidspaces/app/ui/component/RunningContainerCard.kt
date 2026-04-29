@@ -130,12 +130,12 @@ fun RunningContainerCard(
                 )
             }
             Text(
-                text = context.getString(R.string.uptime_label, usage?.uptime ?: osInfo?.uptime ?: ""),
+                text = context.getString(R.string.uptime_label, context.getString(R.string.uptime), usage?.uptime ?: osInfo?.uptime ?: ""),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
             )
             Text(
-                text = context.getString(R.string.ip_address_label, osInfo?.ipAddress ?: ""),
+                text = context.getString(R.string.ip_address_label, context.getString(R.string.ip_address), osInfo?.ipAddress ?: ""),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
             )
@@ -167,7 +167,7 @@ fun RunningContainerCard(
                                         tint = MaterialTheme.colorScheme.primary
                                     )
                                     Text(
-                                        text = "CPU ${String.format("%.1f", stats.cpuPercent)}%",
+                                        text = "${context.getString(R.string.cpu)} ${context.getString(R.string.cpu_percent_label, stats.cpuPercent)}",
                                         style = MaterialTheme.typography.labelSmall,
                                         fontWeight = FontWeight.Medium,
                                         color = MaterialTheme.colorScheme.primary
@@ -188,7 +188,7 @@ fun RunningContainerCard(
                                     )
                                     val ramMb = stats.ramUsedKb / 1024
                                     Text(
-                                        text = "RAM ${ramMb} MB (${String.format("%.1f", stats.ramPercent)}%)",
+                                        text = "${context.getString(R.string.ram)} ${context.getString(R.string.ram_percent_label, ramMb.toInt(), stats.ramPercent)}",
                                         style = MaterialTheme.typography.labelSmall,
                                         fontWeight = FontWeight.Medium,
                                         color = MaterialTheme.colorScheme.secondary

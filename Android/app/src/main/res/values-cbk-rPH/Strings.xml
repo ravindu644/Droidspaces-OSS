@@ -27,27 +27,18 @@
 
     <string name="container_singular">Container</string>
     <string name="running">Ta anda</string>
-    <string name="container_count">%1$d container</string>
-    <string name="containers_count">%1$d maga container</string>
 
     <string name="backend_checking">Backend: Ta chequea...</string>
     <string name="backend_installed">Backend: Instalado</string>
     <string name="backend_update_available">Backend: Tiene update disponible</string>
     <string name="backend_not_installed">Backend: No instalado</string>
     <string name="backend_corrupted">Backend: Corrupto</string>
-    <string name="backend_unsupported">Backend: No soportado</string>
-    <string name="backend_module_missing">Backend: Falta</string>
-    <string name="backend_unknown">Backend: No sabe</string>
     <string name="root_unavailable">Hende disponible el acceso root.</string>
     <string name="grant_root_message">Dale acceso root para continua explora el droidspaces !</string>
     <string name="version_label">Version: %1$s</string>
     <string name="root_provider_label">Root Provider: %1$s</string>
     <string name="unknown">Hende sabe</string>
     <string name="update_available_message">Tiene backend update disponible, hace click aqui para hace update</string>
-    <string name="tap_to_install">Toca aqui para instala</string>
-    <string name="tap_to_reinstall">Toca aqui para instala otra vez</string>
-    <string name="tap_to_install_module">Toca aqui para instala el module</string>
-    <string name="device_not_supported">Hende suportao el de tuyu device</string>
 
     <string name="backend_section">Backend</string>
     <string name="reinstall_backend">Instala otra vez el Backend</string>
@@ -57,7 +48,6 @@
     <string name="copy">Copia</string>
     <string name="appearance_section">Apariencia</string>
     <string name="language">Lenguaje</string>
-    <string name="language_description">Cambia el lenguaje del app</string>
     <string name="system_default">System Default</string>
     <string name="follow_system_theme">Sigu el Tema del System</string>
     <string name="follow_system_theme_description">Automatico iguala el tema del system</string>
@@ -113,7 +103,6 @@
     <string name="ipv6_option">IPv6</string>
     <string name="storage_option">Storage</string>
     <string name="hw_option">HW</string>
-    <string name="selinux_option">SELinux</string>
 
     <string name="container_info">Informacion del Container</string>
     <string name="distribution">Distribucion</string>
@@ -179,13 +168,8 @@
     <string name="granting_permissions">Ta dale maga permiso...</string>
     <string name="preparing_installation">Ta prepara el instalacion...</string>
 
-    <string name="active_containers">Maga Activo Container</string>
     <string name="no_containers_running">No hay container ta anda</string>
     <string name="start_container_first">Empeza un container anay para mira aqui</string>
-    <string name="system_statistics">Maga Estadistica del System</string>
-    <string name="cpu">CPU</string>
-    <string name="ram">RAM</string>
-    <string name="temp">Temp</string>
 
     <string name="systemd_services">Maga Servicio del Systemd</string>
     <string name="fetching_services">Ta saca el maga servicio...</string>
@@ -241,7 +225,6 @@
     <string name="copy_login">Copia login</string>
 
 
-    <string name="error_generic">Error</string>
     <string name="comma">,</string>
     <string name="gb_size">%1$dGB</string>
 
@@ -264,13 +247,11 @@
     <string name="logs_title">Maga Log: %1$s</string>
     <string name="clear_logs">Bura maga log</string>
     <string name="copy_logs">Copia maga log</string>
-    <string name="container_logs">Maga Log del Container</string>
 
     <string name="error_container_name_empty">El nombre del container hende puede vacio</string>
     <string name="error_container_name_invalid">El nombre del container puede lang tene maga letra, numero, hyphen (-), underscore (_), punto (.), y espacio</string>
     <string name="error_hostname_invalid">El hostname puede lang tene maga letra, numero, y dash (-)</string>
 
-    <string name="user_in_parentheses">(%1$s)</string>
 
     <string name="check_requirements">Chequea maga Requisito</string>
     <string name="requirements_check_title">Chequeo de maga Requisito</string>

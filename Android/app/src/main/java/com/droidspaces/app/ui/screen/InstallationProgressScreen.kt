@@ -18,6 +18,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.droidspaces.app.R
 import com.droidspaces.app.ui.component.TerminalConsole
 import com.droidspaces.app.util.ContainerInfo
 import com.droidspaces.app.util.ContainerInstaller
@@ -91,9 +92,9 @@ fun InstallationProgressScreen(
                 title = {
                     Text(
                         when (installationState) {
-                            InstallationState.INSTALLING -> "Installing Container"
-                            InstallationState.SUCCESS -> "Installation Complete"
-                            InstallationState.ERROR -> "Installation Failed"
+                            InstallationState.INSTALLING -> context.getString(R.string.installing_container)
+                            InstallationState.SUCCESS -> context.getString(R.string.installation_complete)
+                            InstallationState.ERROR -> context.getString(R.string.installation_failed)
                         }
                     )
                 }
@@ -140,7 +141,7 @@ fun InstallationProgressScreen(
                         ) {
                             Icon(Icons.Default.CheckCircle, contentDescription = null)
                             Spacer(modifier = Modifier.width(8.dp))
-                            Text("Done", style = MaterialTheme.typography.labelLarge)
+                            Text(context.getString(R.string.done), style = MaterialTheme.typography.labelLarge)
                         }
                     }
                     InstallationState.ERROR -> {
@@ -155,16 +156,16 @@ fun InstallationProgressScreen(
                                     .weight(1f)
                                     .height(56.dp)
                             ) {
-                                Text("Close", style = MaterialTheme.typography.labelLarge)
+                                Text(context.getString(R.string.close), style = MaterialTheme.typography.labelLarge)
                             }
                             Button(
                                 onClick = {
                                     // Copy logs to clipboard
                                     val logText = logs.joinToString("\n") { it.second }
                                     val clipboard = context.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
-                                    val clip = android.content.ClipData.newPlainText("Installation Logs", logText)
+                                    val clip = android.content.ClipData.newPlainText(context.getString(R.string.installation_logs), logText)
                                     clipboard.setPrimaryClip(clip)
-                                    Toast.makeText(context, com.droidspaces.app.R.string.logs_copied, Toast.LENGTH_SHORT).show()
+                                    Toast.makeText(context, R.string.logs_copied, Toast.LENGTH_SHORT).show()
                                 },
                                 modifier = Modifier
                                     .weight(1f)
@@ -172,7 +173,7 @@ fun InstallationProgressScreen(
                             ) {
                                 Icon(Icons.Default.ContentCopy, contentDescription = null)
                                 Spacer(modifier = Modifier.width(8.dp))
-                                Text("Copy Logs", style = MaterialTheme.typography.labelLarge)
+                                Text(context.getString(R.string.copy_logs), style = MaterialTheme.typography.labelLarge)
                             }
                         }
                     }

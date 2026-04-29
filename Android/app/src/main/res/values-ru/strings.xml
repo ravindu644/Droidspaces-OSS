@@ -28,27 +28,18 @@
     <!-- Main Tab Screen -->
     <string name="container_singular">Контейнер</string>
     <string name="running">Запущено</string>
-    <string name="container_count">%1$d контейнер</string>
-    <string name="containers_count">%1$d контейнеров</string>
     <!-- Droidspaces Status Card -->
     <string name="backend_checking">Backend: Проверка...</string>
     <string name="backend_installed">Backend: Установлен</string>
     <string name="backend_update_available">Backend: Доступно обновление</string>
     <string name="backend_not_installed">Backend: Не установлен</string>
     <string name="backend_corrupted">Backend: Повреждён</string>
-    <string name="backend_unsupported">Backend: Не поддерживается</string>
-    <string name="backend_module_missing">Backend: Отсутствует</string>
-    <string name="backend_unknown">Backend: Неизвестно</string>
     <string name="root_unavailable">Root-доступ недоступен.</string>
     <string name="grant_root_message">Предоставьте root-доступ для продолжения работы с Droidspaces!</string>
     <string name="version_label">Версия: %1$s</string>
     <string name="root_provider_label">Провайдер Root: %1$s</string>
     <string name="unknown">Неизвестно</string>
     <string name="update_available_message">Доступно обновление бэкенда, нажмите здесь для обновления</string>
-    <string name="tap_to_install">Нажмите здесь для установки</string>
-    <string name="tap_to_reinstall">Нажмите здесь для переустановки</string>
-    <string name="tap_to_install_module">Нажмите здесь для установки модуля</string>
-    <string name="device_not_supported">Ваше устройство не поддерживается</string>
     <!-- Settings Screen -->
     <string name="backend_section">Бэкенд</string>
     <string name="reinstall_backend">Переустановить бэкенд</string>
@@ -58,7 +49,6 @@
     <string name="copy">Копировать</string>
     <string name="appearance_section">Внешний вид</string>
     <string name="language">Язык</string>
-    <string name="language_description">Изменить язык приложения</string>
     <string name="system_default">По умолчанию</string>
     <string name="follow_system_theme">Следовать системной теме</string>
     <string name="follow_system_theme_description">Автоматически использовать системную тему</string>
@@ -114,7 +104,6 @@
     <string name="ipv6_option">IPv6</string>
     <string name="storage_option">Хранилище</string>
     <string name="hw_option">HW</string>
-    <string name="selinux_option">SELinux</string>
     <!-- Container Details Screen -->
     <string name="container_info">Информация о контейнере</string>
     <string name="distribution">Дистрибутив</string>
@@ -180,13 +169,8 @@
     <string name="granting_permissions">Предоставление разрешений...</string>
     <string name="preparing_installation">Подготовка установки...</string>
     <!-- Control Panel Screen -->
-    <string name="active_containers">Активные контейнеры</string>
     <string name="no_containers_running">Нет запущенных контейнеров</string>
     <string name="start_container_first">Сначала запустите контейнер, чтобы увидеть его здесь</string>
-    <string name="system_statistics">Статистика системы</string>
-    <string name="cpu">CPU</string>
-    <string name="ram">RAM</string>
-    <string name="temp">Температура</string>
     <!-- Systemd Screen -->
     <string name="systemd_services">Службы Systemd</string>
     <string name="fetching_services">Получение служб...</string>
@@ -243,7 +227,6 @@
     <!-- Process List Screen -->
 
     <!-- Common -->
-    <string name="error_generic">Ошибка</string>
     <string name="comma">,</string>
     <string name="gb_size">%1$d ГБ</string>
     <!-- Sparse Image Config Screen -->
@@ -266,13 +249,11 @@
     <string name="logs_title">Логи: %1$s</string>
     <string name="clear_logs">Очистить логи</string>
     <string name="copy_logs">Копировать логи</string>
-    <string name="container_logs">Логи контейнера</string>
     <!-- Validation Error Messages -->
     <string name="error_container_name_empty">Имя контейнера не может быть пустым</string>
     <string name="error_container_name_invalid">Имя контейнера может содержать только латинские буквы, цифры, дефисы (-), подчёркивания (_), точки (.) и пробелы</string>
     <string name="error_hostname_invalid">Имя хоста может содержать только буквы, цифры и дефисы (-)</string>
     <!-- Process List -->
-    <string name="user_in_parentheses">(%1$s)</string>
     <!-- Requirements -->
     <string name="check_requirements">Проверить требования</string>
     <string name="requirements_check_title">Проверка требований</string>

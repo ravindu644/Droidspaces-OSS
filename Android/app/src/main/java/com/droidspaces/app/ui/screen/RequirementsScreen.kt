@@ -164,9 +164,6 @@ fun RequirementsScreen(
             onDismiss = {
                 showLogViewer = false
             },
-            onClear = {
-                checkLogs.clear()
-            },
             isBlocking = isCheckRunning
         )
     }

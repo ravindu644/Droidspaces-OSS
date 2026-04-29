@@ -179,7 +179,7 @@ fun ContainerDetailsScreen(
                                     val distroName = info.prettyName ?: info.name ?: "Linux"
                                     IdentityToken(
                                         modifier = Modifier.weight(1f),
-                                        label = "Distribution",
+                                        label = context.getString(R.string.distribution),
                                         value = distroName,
                                         icon = when {
                                             distroName.contains("Ubuntu", true) -> Icons.Default.Adjust
@@ -191,7 +191,7 @@ fun ContainerDetailsScreen(
                                     )
                                     IdentityToken(
                                         modifier = Modifier.weight(1f),
-                                        label = "Hostname",
+                                        label = context.getString(R.string.hostname),
                                         value = info.hostname ?: "localhost",
                                         icon = Icons.Default.Computer,
                                         containerColor = MaterialTheme.colorScheme.secondary
@@ -205,14 +205,14 @@ fun ContainerDetailsScreen(
                                 ) {
                                     IdentityToken(
                                         modifier = Modifier.weight(1f),
-                                        label = "Uptime",
+                                        label = context.getString(R.string.uptime),
                                         value = info.uptime ?: "0s",
                                         icon = Icons.Default.Timer,
                                         containerColor = MaterialTheme.colorScheme.tertiary
                                     )
                                     IdentityToken(
                                         modifier = Modifier.weight(1f),
-                                        label = "IP Address",
+                                        label = context.getString(R.string.ip_address),
                                         value = info.ipAddress ?: "127.0.0.1",
                                         icon = Icons.Default.Lan,
                                         containerColor = MaterialTheme.colorScheme.outline
@@ -227,15 +227,15 @@ fun ContainerDetailsScreen(
                                     ) {
                                         IdentityToken(
                                             modifier = Modifier.weight(1f),
-                                            label = "CPU Usage",
-                                            value = info.cpuUsage?.let { "${String.format("%.1f", it)}%" } ?: "---",
+                                            label = context.getString(R.string.cpu_usage_label),
+                                            value = info.cpuUsage?.let { context.getString(R.string.cpu_percent_label, it) } ?: "---",
                                             icon = Icons.Default.Speed,
                                             containerColor = MaterialTheme.colorScheme.primary
                                         )
                                         IdentityToken(
                                             modifier = Modifier.weight(1f),
-                                            label = "RAM Usage",
-                                            value = info.ramUsageMb?.let { "${it} MB (${String.format("%.1f", info.ramPercent ?: 0.0)}%)" } ?: "---",
+                                            label = context.getString(R.string.ram_usage_label),
+                                            value = info.ramUsageMb?.let { context.getString(R.string.ram_percent_label, it, info.ramPercent ?: 0.0) } ?: "---",
                                             icon = Icons.Default.Memory,
                                             containerColor = MaterialTheme.colorScheme.secondary
                                         )
@@ -435,7 +435,8 @@ private fun TerminalCard(
                         color = MaterialTheme.colorScheme.onSurface
                     )
                     val description = if (sessionCount > 0) {
-                        "$sessionCount ${if (sessionCount == 1) "session" else "sessions"} running · tap to restore"
+                        if (sessionCount == 1) context.getString(R.string.session_running_singular)
+                        else context.getString(R.string.sessions_running_plural, sessionCount)
                     } else {
                         context.getString(R.string.terminal_card_desc)
                     }
@@ -462,7 +463,7 @@ private fun TerminalCard(
                 )
                 Spacer(Modifier.width(6.dp))
                 Text(
-                    if (sessionCount > 0) "Restore" else context.getString(R.string.open),
+                    if (sessionCount > 0) context.getString(R.string.restore) else context.getString(R.string.open),
                     fontWeight = FontWeight.SemiBold
                 )
             }

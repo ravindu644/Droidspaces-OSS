@@ -27,27 +27,18 @@
 
     <string name="container_singular">Container</string>
     <string name="running">Agtartaray</string>
-    <string name="container_count">%1$d a container</string>
-    <string name="containers_count">%1$d a dagiti container</string>
 
     <string name="backend_checking">Backend: Suksukimaten...</string>
     <string name="backend_installed">Backend: Nakainstalar</string>
     <string name="backend_update_available">Backend: Adda update nga available</string>
     <string name="backend_not_installed">Backend: Saan a nakainstalar</string>
     <string name="backend_corrupted">Backend: Corrupted</string>
-    <string name="backend_unsupported">Backend: Saan a suportado</string>
-    <string name="backend_module_missing">Backend: Kurang</string>
-    <string name="backend_unknown">Backend: Di ammo</string>
     <string name="root_unavailable">Saan nga available ti root access.</string>
     <string name="grant_root_message">Ikkan ti root access tapno ituloy ti panag-explore iti droidspaces !</string>
     <string name="version_label">Bersyon: %1$s</string>
     <string name="root_provider_label">Root Provider: %1$s</string>
     <string name="unknown">Saan nga ammo</string>
     <string name="update_available_message">Adda backend update, i-klik ditoy tapno i-update</string>
-    <string name="tap_to_install">I-tap ditoy tapno i-install</string>
-    <string name="tap_to_reinstall">I-tap ditoy tapno i-reinstall</string>
-    <string name="tap_to_install_module">I-tap ditoy tapno i-install ti module</string>
-    <string name="device_not_supported">Saan a suportado ti device mo</string>
 
     <string name="backend_section">Backend</string>
     <string name="reinstall_backend">I-install manen ti Backend</string>
@@ -57,7 +48,6 @@
     <string name="copy">Kopiaen</string>
     <string name="appearance_section">Parang</string>
     <string name="language">Pagsasao</string>
-    <string name="language_description">Sukatan ti pagsasao ti app</string>
     <string name="system_default">Default ti Sistema</string>
     <string name="follow_system_theme">Suroten ti Tema ti Sistema</string>
     <string name="follow_system_theme_description">Automatiko a itugma iti tema ti sistema</string>
@@ -113,7 +103,6 @@
     <string name="ipv6_option">IPv6</string>
     <string name="storage_option">Storage</string>
     <string name="hw_option">HW</string>
-    <string name="selinux_option">SELinux</string>
 
     <string name="container_info">Impormasyon ti Container</string>
     <string name="distribution">Distribusyon</string>
@@ -179,13 +168,8 @@
     <string name="granting_permissions">Mangmangted kadagiti permiso...</string>
     <string name="preparing_installation">Is-isagana ti panag-install...</string>
 
-    <string name="active_containers">Dagiti Aktibo a Container</string>
     <string name="no_containers_running">Awan ti agtartaray a container</string>
     <string name="start_container_first">Mangirugi nga umuna ti container tapno makitam ditoy</string>
-    <string name="system_statistics">Estadistika ti Sistema</string>
-    <string name="cpu">CPU</string>
-    <string name="ram">RAM</string>
-    <string name="temp">Temp</string>
 
     <string name="systemd_services">Dagiti Serbisyo ti Systemd</string>
     <string name="fetching_services">Kukuaen dagiti serbisyo...</string>
@@ -241,7 +225,6 @@
     <string name="copy_login">Kopiaen ti login</string>
 
 
-    <string name="error_generic">Error</string>
     <string name="comma">,</string>
     <string name="gb_size">%1$dGB</string>
 
@@ -264,13 +247,11 @@
     <string name="logs_title">Dagiti Log: %1$s</string>
     <string name="clear_logs">Daldalen dagiti log</string>
     <string name="copy_logs">Kopiaen dagiti log</string>
-    <string name="container_logs">Dagiti Log ti Container</string>
 
     <string name="error_container_name_empty">Saan a mabalin nga awan nagan ti container</string>
     <string name="error_container_name_invalid">Ti nagan ti container ket mabalin laeng nga aglaon kadagiti letra, numero, gitling (-), underscores (_), tuldok (.), ken espasyo</string>
     <string name="error_hostname_invalid">Ti hostname ket mabalin laeng nga aglaon kadagiti letra, numero, ken gitling (-)</string>
 
-    <string name="user_in_parentheses">(%1$s)</string>
 
     <string name="check_requirements">I-tsek dagiti Kasapulan</string>
     <string name="requirements_check_title">Panag-tsek kadagiti Kasapulan</string>

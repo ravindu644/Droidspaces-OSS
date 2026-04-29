@@ -29,9 +29,11 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import com.droidspaces.app.ui.theme.JetBrainsMono
+import com.droidspaces.app.R
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -83,13 +85,6 @@ private fun Modifier.lazyListVerticalScrollbar(
 /**
  * A root-aware file and directory picker dialog that allows browsing from the root (/).
  * Uses libsu (Shell) to bypass Android's scoped storage restrictions for administrative tasks.
- *
- * Features:
- * - Responsive sizing (~92% width, ~75% height) adapting to phones, tablets, and TVs
- * - Search bar: type a name to filter current directory, or type an absolute path
- *   (e.g. /data/data/com.termux) to navigate to the parent and filter by the last segment
- * - Visible vertical scrollbar indicator when items overflow
- * - Horizontal scroll on long file names (no path truncation)
  */
 @Composable
 fun FilePickerDialog(
@@ -103,48 +98,40 @@ fun FilePickerDialog(
     var isLoading by remember { mutableStateOf(true) }
     var searchQuery by remember { mutableStateOf("") }
 
+    val context = LocalContext.current
+
     LaunchedEffect(currentPath) {
         isLoading = true
         items = fetchItems(currentPath, showFiles)
         isLoading = false
     }
 
-    // Smart filtering: if the query is an absolute path, navigate to its parent
-    // and filter by the last segment. Otherwise, filter items in the current directory.
+    // Smart filtering
     val filteredItems = remember(items, searchQuery) {
         if (searchQuery.isEmpty()) {
             items
         } else if (searchQuery.startsWith("/")) {
-            // Absolute path mode: filter by the last path segment
             val lastSegment = searchQuery.substringAfterLast("/")
-            if (lastSegment.isEmpty()) {
-                items
-            } else {
-                items.filter { it.name.contains(lastSegment, ignoreCase = true) }
-            }
+            if (lastSegment.isEmpty()) items else items.filter { it.name.contains(lastSegment, ignoreCase = true) }
         } else {
             items.filter { it.name.contains(searchQuery, ignoreCase = true) }
         }
     }
 
-    // When the search query is an absolute path, navigate to its parent directory
     LaunchedEffect(searchQuery) {
         if (searchQuery.startsWith("/") && searchQuery.length > 1) {
             val targetDir = if (searchQuery.endsWith("/")) {
                 searchQuery.trimEnd('/')
             } else {
-                val parent = File(searchQuery).parent ?: "/"
-                parent
+                File(searchQuery).parent ?: "/"
             }
             if (targetDir != currentPath && targetDir.isNotEmpty()) {
-                // Verify the directory exists before navigating
                 val exists = withContext(Dispatchers.IO) {
                     val result = Shell.cmd("[ -d \"$targetDir\" ] && echo yes").exec()
                     result.isSuccess && result.out.firstOrNull() == "yes"
                 }
                 if (exists) {
                     currentPath = targetDir
-                    // Don't reset searchQuery here - keep the filter active
                     isLoading = true
                     items = fetchItems(targetDir, showFiles)
                     isLoading = false
@@ -171,181 +158,175 @@ fun FilePickerDialog(
             ClearFocusOnClickOutside(
                 modifier = Modifier.fillMaxSize()
             ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(24.dp)
-            ) {
-                // Title
-                Text(
-                    text = title,
-                    style = MaterialTheme.typography.headlineSmall,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-
-                // Current path breadcrumb (monospace, horizontally scrollable)
-                val pathScrollState = rememberScrollState()
-                Row(
+                Column(
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(top = 4.dp)
-                        .horizontalScroll(pathScrollState),
-                    verticalAlignment = Alignment.CenterVertically
+                        .fillMaxSize()
+                        .padding(24.dp)
                 ) {
                     Text(
-                        text = currentPath,
-                        style = MaterialTheme.typography.labelSmall.copy(
-                            fontFamily = JetBrainsMono,
-                            fontSize = 12.sp
-                        ),
-                        color = MaterialTheme.colorScheme.secondary,
-                        maxLines = 1,
-                        softWrap = false
+                        text = title,
+                        style = MaterialTheme.typography.headlineSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface
                     )
-                }
 
-                Spacer(modifier = Modifier.height(12.dp))
-
-                // Search bar - filters or navigates when an absolute path is typed
-                OutlinedTextField(
-                    value = searchQuery,
-                    onValueChange = { searchQuery = it },
-                    modifier = Modifier.fillMaxWidth(),
-                    placeholder = {
+                    val pathScrollState = rememberScrollState()
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 4.dp)
+                            .horizontalScroll(pathScrollState),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
                         Text(
-                            "Filter or type absolute path…",
-                            style = MaterialTheme.typography.bodySmall
+                            text = currentPath,
+                            style = MaterialTheme.typography.labelSmall.copy(
+                                fontFamily = JetBrainsMono,
+                                fontSize = 12.sp
+                            ),
+                            color = MaterialTheme.colorScheme.secondary,
+                            maxLines = 1,
+                            softWrap = false
                         )
-                    },
-                    leadingIcon = {
-                        Icon(
-                            Icons.Default.Search,
-                            contentDescription = null,
-                            modifier = Modifier.size(20.dp)
+                    }
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    OutlinedTextField(
+                        value = searchQuery,
+                        onValueChange = { searchQuery = it },
+                        modifier = Modifier.fillMaxWidth(),
+                        placeholder = {
+                            Text(
+                                context.getString(R.string.filter_absolute_path_hint),
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                        },
+                        leadingIcon = {
+                            Icon(
+                                Icons.Default.Search,
+                                contentDescription = null,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        },
+                        singleLine = true,
+                        keyboardOptions = FocusUtils.searchKeyboardOptions,
+                        keyboardActions = FocusUtils.clearFocusKeyboardActions(),
+                        textStyle = MaterialTheme.typography.bodySmall.copy(
+                            fontFamily = JetBrainsMono
+                        ),
+                        shape = RoundedCornerShape(14.dp),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.8f),
+                            unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
+                            unfocusedContainerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.5f),
+                            focusedContainerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.7f)
                         )
-                    },
-                    singleLine = true,
-                    keyboardOptions = FocusUtils.searchKeyboardOptions,
-                    keyboardActions = FocusUtils.clearFocusKeyboardActions(),
-                    textStyle = MaterialTheme.typography.bodySmall.copy(
-                        fontFamily = JetBrainsMono
-                    ),
-                    shape = RoundedCornerShape(14.dp),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.8f),
-                        unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
-                        unfocusedContainerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.5f),
-                        focusedContainerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.7f)
                     )
-                )
 
-                Spacer(modifier = Modifier.height(12.dp))
+                    Spacer(modifier = Modifier.height(12.dp))
 
-                // File list area - fills remaining space with visible scrollbar
-                val listState = rememberLazyListState()
-                val scrollbarColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.45f)
+                    val listState = rememberLazyListState()
+                    val scrollbarColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.45f)
 
-                Box(
-                    modifier = Modifier
-                        .weight(1f)
-                        .fillMaxWidth()
-                        .lazyListVerticalScrollbar(listState, scrollbarColor)
-                ) {
-                    if (isLoading) {
-                        Box(
-                            modifier = Modifier.fillMaxSize(),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            CircularProgressIndicator()
-                        }
-                    } else {
-                        LazyColumn(
-                            state = listState,
-                            modifier = Modifier.fillMaxSize()
-                        ) {
-                            // Go up (..) item
-                            if (currentPath != "/") {
-                                item {
-                                    FileItemRow(
-                                        name = "..",
-                                        isDirectory = true,
-                                        icon = {
-                                            Icon(
-                                                Icons.Default.ArrowUpward,
-                                                contentDescription = null,
-                                                modifier = Modifier.size(24.dp),
-                                                tint = MaterialTheme.colorScheme.tertiary
-                                            )
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxWidth()
+                            .lazyListVerticalScrollbar(listState, scrollbarColor)
+                    ) {
+                        if (isLoading) {
+                            Box(
+                                modifier = Modifier.fillMaxSize(),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                CircularProgressIndicator()
+                            }
+                        } else {
+                            LazyColumn(
+                                state = listState,
+                                modifier = Modifier.fillMaxSize()
+                            ) {
+                                if (currentPath != "/") {
+                                    item {
+                                        FileItemRow(
+                                            name = "..",
+                                            isDirectory = true,
+                                            icon = {
+                                                Icon(
+                                                    Icons.Default.ArrowUpward,
+                                                    contentDescription = null,
+                                                    modifier = Modifier.size(24.dp),
+                                                    tint = MaterialTheme.colorScheme.tertiary
+                                                )
+                                            }
+                                        ) {
+                                            clearFocus()
+                                            searchQuery = ""
+                                            val parent = File(currentPath).parent ?: "/"
+                                            currentPath = parent
                                         }
-                                    ) {
+                                    }
+                                }
+
+                                items(filteredItems) { item ->
+                                    FileItemRow(name = item.name, isDirectory = item.isDirectory) {
                                         clearFocus()
-                                        searchQuery = ""  // Reset search when manually navigating up
-                                        val parent = File(currentPath).parent ?: "/"
-                                        currentPath = parent
+                                        searchQuery = ""
+                                        if (item.isDirectory) {
+                                            currentPath = if (currentPath == "/") "/${item.name}" else "$currentPath/${item.name}"
+                                        } else {
+                                            onConfirm(if (currentPath == "/") "/${item.name}" else "$currentPath/${item.name}")
+                                        }
                                     }
                                 }
-                            }
 
-                            items(filteredItems) { item ->
-                                FileItemRow(name = item.name, isDirectory = item.isDirectory) {
-                                    clearFocus()
-                                    searchQuery = ""  // Reset search when manually tapping a folder
-                                    if (item.isDirectory) {
-                                        currentPath = if (currentPath == "/") "/${item.name}" else "$currentPath/${item.name}"
-                                    } else {
-                                        onConfirm(if (currentPath == "/") "/${item.name}" else "$currentPath/${item.name}")
+                                if (filteredItems.isEmpty() && !isLoading) {
+                                    item {
+                                        Text(
+                                            text = if (searchQuery.isNotEmpty()) context.getString(R.string.no_matches) else context.getString(R.string.empty_directory),
+                                            modifier = Modifier.padding(16.dp),
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            color = MaterialTheme.colorScheme.outline
+                                        )
                                     }
-                                }
-                            }
-
-                            if (filteredItems.isEmpty() && !isLoading) {
-                                item {
-                                    Text(
-                                        text = if (searchQuery.isNotEmpty()) "No matches" else "Empty directory",
-                                        modifier = Modifier.padding(16.dp),
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        color = MaterialTheme.colorScheme.outline
-                                    )
                                 }
                             }
                         }
                     }
-                }
 
-                Spacer(modifier = Modifier.height(16.dp))
+                    Spacer(modifier = Modifier.height(16.dp))
 
-                // Action buttons
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Surface(
-                        modifier = Modifier.weight(1f).clip(RoundedCornerShape(14.dp)).clickable(onClick = onDismiss),
-                        shape = RoundedCornerShape(14.dp),
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.06f),
-                        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)),
-                        tonalElevation = 0.dp
-                    ) {
-                        Box(modifier = Modifier.padding(14.dp), contentAlignment = Alignment.Center) {
-                            Text("Cancel", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        Surface(
+                            modifier = Modifier.weight(1f).clip(RoundedCornerShape(14.dp)).clickable(onClick = onDismiss),
+                            shape = RoundedCornerShape(14.dp),
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.06f),
+                            border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)),
+                            tonalElevation = 0.dp
+                        ) {
+                            Box(modifier = Modifier.padding(14.dp), contentAlignment = Alignment.Center) {
+                                Text(context.getString(R.string.cancel), style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
+                            }
                         }
-                    }
-                    Surface(
-                        modifier = Modifier.weight(1f).clip(RoundedCornerShape(14.dp)).clickable(onClick = {
-                            clearFocus()
-                            onConfirm(currentPath)
-                        }),
-                        shape = RoundedCornerShape(14.dp),
-                        color = MaterialTheme.colorScheme.primary,
-                        tonalElevation = 0.dp
-                    ) {
-                        Box(modifier = Modifier.padding(14.dp), contentAlignment = Alignment.Center) {
-                            Text("Select Folder", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onPrimary)
+                        Surface(
+                            modifier = Modifier.weight(1f).clip(RoundedCornerShape(14.dp)).clickable(onClick = {
+                                clearFocus()
+                                onConfirm(currentPath)
+                            }),
+                            shape = RoundedCornerShape(14.dp),
+                            color = MaterialTheme.colorScheme.primary,
+                            tonalElevation = 0.dp
+                        ) {
+                            Box(modifier = Modifier.padding(14.dp), contentAlignment = Alignment.Center) {
+                                Text(context.getString(R.string.select_folder), style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onPrimary)
+                            }
                         }
                     }
                 }
             }
         }
     }
-}
 }
 
 data class FileItem(val name: String, val isDirectory: Boolean)
@@ -375,7 +356,6 @@ private fun FileItemRow(
             )
         }
         Spacer(modifier = Modifier.width(16.dp))
-        // Horizontally scrollable file name - no truncation
         val nameScrollState = rememberScrollState()
         Box(
             modifier = Modifier
@@ -393,22 +373,16 @@ private fun FileItemRow(
 }
 
 private suspend fun fetchItems(path: String, showFiles: Boolean): List<FileItem> = withContext(Dispatchers.IO) {
-    // We use ls -F to identify directories safely across different Android versions/busybox configs
-    // The trailing slash identifies directories.
     val result = Shell.cmd("ls -F \"$path\" 2>/dev/null").exec()
     if (!result.isSuccess) return@withContext emptyList()
 
     result.out.mapNotNull { line ->
         if (line.isEmpty()) return@mapNotNull null
-
         val rawName = line.trim()
         val isDirectory = rawName.endsWith("/")
-
-        // Remove trailing indicators
         val cleanName = if (isDirectory) {
             rawName.dropLast(1)
         } else {
-            // Remove common ls -F suffixes (* = exec, @ = link, etc.)
             val last = rawName.last()
             if (last == '*' || last == '@' || last == '=' || last == '|' || last == '>') {
                 rawName.dropLast(1)
@@ -416,10 +390,8 @@ private suspend fun fetchItems(path: String, showFiles: Boolean): List<FileItem>
                 rawName
             }
         }
-
         if (cleanName.isEmpty()) return@mapNotNull null
         if (!showFiles && !isDirectory) return@mapNotNull null
-
         FileItem(cleanName, isDirectory)
     }.sortedWith(compareBy({ !it.isDirectory }, { it.name }))
 }

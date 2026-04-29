@@ -92,7 +92,7 @@ fun EnvironmentVariablesDialog(
                     fontWeight = FontWeight.Bold
                 )
                 Text(
-                    "Each row is one KEY=VALUE pair",
+                    context.getString(R.string.env_hint_row),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
                     modifier = Modifier.padding(top = 2.dp)
@@ -106,14 +106,14 @@ fun EnvironmentVariablesDialog(
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     Text(
-                        "KEY",
+                        context.getString(R.string.key_label),
                         style = MaterialTheme.typography.labelSmall,
                         fontFamily = JetBrainsMono,
                         color = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.weight(1f)
                     )
                     Text(
-                        "VALUE",
+                        context.getString(R.string.value_label),
                         style = MaterialTheme.typography.labelSmall,
                         fontFamily = JetBrainsMono,
                         color = MaterialTheme.colorScheme.primary,
@@ -143,7 +143,7 @@ fun EnvironmentVariablesDialog(
                                     vars = vars.toMutableList().also { it[index] = envVar.copy(key = new) }
                                 },
                                 placeholder = {
-                                    Text("KEY", fontFamily = JetBrainsMono, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f))
+                                    Text(context.getString(R.string.key_label), fontFamily = JetBrainsMono, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f))
                                 },
                                 modifier = Modifier.weight(1f),
                                 singleLine = true,
@@ -157,7 +157,7 @@ fun EnvironmentVariablesDialog(
                                     vars = vars.toMutableList().also { it[index] = envVar.copy(value = new) }
                                 },
                                 placeholder = {
-                                    Text("value", fontFamily = JetBrainsMono, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f))
+                                    Text(context.getString(R.string.value_label).lowercase(), fontFamily = JetBrainsMono, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f))
                                 },
                                 modifier = Modifier.weight(1f),
                                 singleLine = true,
@@ -206,7 +206,7 @@ fun EnvironmentVariablesDialog(
                     ) {
                         Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
                         Spacer(modifier = Modifier.width(6.dp))
-                        Text("Add variable", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(context.getString(R.string.add_variable), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
 

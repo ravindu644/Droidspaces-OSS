@@ -34,8 +34,6 @@
     <!-- Main Tab Screen -->
     <string name="container_singular">Container</string>
     <string name="running">Running</string>
-    <string name="container_count">%1$d container</string>
-    <string name="containers_count">%1$d containers</string>
 
     <!-- Backend Status Card -->
     <string name="backend_checking">Backend: Checking...</string>
@@ -43,22 +41,14 @@
     <string name="backend_update_available">Backend: Update available</string>
     <string name="backend_not_installed">Backend: Not installed</string>
     <string name="backend_corrupted">Backend: Corrupted</string>
-    <string name="backend_unsupported">Backend: Unsupported</string>
-    <string name="backend_module_missing">Backend: Missing</string>
-    <string name="backend_unknown">Backend: Unknown</string>
     <string name="root_unavailable">Root access is unavailable.</string>
     <string name="grant_root_message">Grant root access to continue exploring droidspaces !</string>
     <string name="version_label">Version: %1$s</string>
     <string name="root_provider_label">Root Provider: %1$s</string>
     <string name="unknown">Unknown</string>
     <string name="update_available_message">Backend update available, click here to update</string>
-    <string name="tap_to_install">Tap here to install</string>
-    <string name="tap_to_reinstall">Tap here to re-install</string>
-    <string name="tap_to_install_module">Tap here to install module</string>
-    <string name="device_not_supported">Your device is not supported</string>
     <string name="backend_attention_required">Backend: Action required</string>
     <string name="tap_to_fix_system">Tap to fix system configuration</string>
-    <string name="tap_to_fix_root">Tap to grant permission</string>
 
     <!-- Settings Screen -->
     <string name="backend_section">Backend</string>
@@ -69,7 +59,6 @@
     <string name="copy">Copy</string>
     <string name="appearance_section">Appearance</string>
     <string name="language">Language</string>
-    <string name="language_description">Change app language</string>
     <string name="system_default">System Default</string>
     <string name="follow_system_theme">Follow System Theme</string>
     <string name="follow_system_theme_description">Automatically match system theme</string>
@@ -135,12 +124,7 @@
     <string name="ipv6_option">No IPv6</string>
     <string name="storage_option">Storage</string>
     <string name="hw_option">HW</string>
-    <string name="gpu_option">GPU</string>
     <string name="x11_option">X11</string>
-    <string name="selinux_option">SELinux</string>
-    <string name="volatile_option">Volatile</string>
-    <string name="cgroupv1_option">Cgroup V1</string>
-    <string name="deadlock_shield_option">Deadlock Shield</string>
     <string name="installation_setup_summary">Installation Summary</string>
     <string name="review_configuration">Review Configuration</string>
     <string name="tarball_label">Tarball</string>
@@ -150,9 +134,8 @@
     <string name="options">Options</string>
 
     <!-- Running Container Card -->
-    <string name="uptime_label">Uptime: %1$s</string>
-    <string name="ip_address_label">IP Address: %1$s</string>
-    <string name="distribution_label">%1$s</string>
+    <string name="uptime_label">%1$s: %2$s</string>
+    <string name="ip_address_label">%1$s: %2$s</string>
 
     <!-- Container Details Screen -->
     <string name="container_info">Container Info</string>
@@ -237,25 +220,21 @@
     <string name="volatile_mode_description">RAM-only mode (changes vanish after stop)</string>
     <string name="bind_mounts">Bind Mounts</string>
     <string name="add">Add</string>
-    <string name="bind_mounts_description">Mount host directories or files</string>
     <string name="add_bind_mount">Add Bind Mount</string>
-    <string name="select_host_path_title">Select Host path</string>
     <string name="enter_container_path">Enter Container Path</string>
     <string name="container_path_placeholder">e.g. /mnt/sdcard</string>
-    <string name="invalid_path">Invalid path</string>
     <string name="host_path">Host path: %1$s</string>
     <string name="container_path">Container path: %1$s</string>
     <string name="dns_servers_label">DNS Servers</string>
-    <string name="dns_servers_description">Custom DNS servers (comma separated)</string>
     <string name="dns_servers_placeholder">e.g. 1.1.1.1,8.8.8.8 (Optional)</string>
     <string name="dns_servers_hint">Numbers, dots, and colons only</string>
-    <string name="optional">Optional</string>
-    <string name="error_dns_servers_invalid">DNS servers list contains invalid characters</string>
-    <string name="max_dns_servers_reached">Maximum %1$d DNS servers reached</string>
     <string name="environment_variables">Environment Variables</string>
     <string name="environment_variables_configured">%1$d variable(s) configured</string>
     <string name="not_configured">Not configured</string>
-    <string name="environment_variables_hint"># Paste your environment variables here\n# One per line, KEY=VALUE format\n# Lines starting with # are ignored\n\nDISPLAY=:0\nPULSE_SERVER=tcp:127.0.0.1:4713\nXDG_RUNTIME_DIR=/run/user/0\nLIBGL_ALWAYS_SOFTWARE=1</string>
+    <string name="env_hint_row">Each row is one KEY=VALUE pair</string>
+    <string name="key_label">KEY</string>
+    <string name="value_label">VALUE</string>
+    <string name="add_variable">Add variable</string>
 
     <!-- Container Name Screen -->
     <string name="container_setup">Container Setup</string>
@@ -273,8 +252,10 @@
     <string name="next_storage">Next: Storage</string>
 
     <!-- Installation Screen -->
+    <string name="installing_container">Installing Container</string>
     <string name="installation_complete">Installation Complete</string>
     <string name="installation_failed">Installation Failed</string>
+    <string name="done">Done</string>
     <string name="installing_module">Installing Module</string>
     <string name="installing_droidspaces">Installing Droidspaces</string>
     <string name="module_installed_success">Magisk module installed successfully</string>
@@ -294,14 +275,33 @@
     <string name="granting_permissions">Granting permissions...</string>
     <string name="preparing_installation">Preparing installation...</string>
 
+    <!-- File Picker Screen -->
+    <string name="filter_absolute_path_hint">Filter or type absolute path…</string>
+    <string name="no_matches">No matches</string>
+    <string name="empty_directory">Empty directory</string>
+    <string name="select_folder">Select Folder</string>
+
+    <!-- Protocols -->
+    <string name="tcp">TCP</string>
+    <string name="udp">UDP</string>
+    <string name="cpu">CPU:</string>
+    <string name="ram">RAM:</string>
+
+    <string name="terminal_logs">Terminal Logs</string>
+    <string name="installation_logs">Installation Logs</string>
+    <string name="terminal_label">Terminal</string>
+    <string name="default_size_gb_hint">8</string>
+    <string name="size_range_4_512_hint">4-512</string>
+
     <!-- Control Panel Screen -->
-    <string name="active_containers">Active Containers</string>
     <string name="no_containers_running">No containers running</string>
     <string name="start_container_first">Start a container first to see it here</string>
-    <string name="system_statistics">System Statistics</string>
-    <string name="cpu">CPU</string>
-    <string name="ram">RAM</string>
-    <string name="temp">Temp</string>
+    <string name="cpu_usage_label">CPU Usage</string>
+    <string name="ram_usage_label">RAM Usage</string>
+    <string name="cpu_percent_label">%1$.1f%%</string>
+    <string name="ram_percent_label">%1$d MB (%2$.1f%%)</string>
+    <string name="sessions_running_plural">%1$d sessions running · tap to restore</string>
+    <string name="session_running_singular">1 session running · tap to restore</string>
 
     <!-- Systemd Screen -->
     <string name="systemd_services">Systemd Services</string>
@@ -364,7 +364,6 @@
     <!-- Process List Screen -->
 
     <!-- Common -->
-    <string name="error_generic">Error</string>
     <string name="comma">,</string>
     <string name="gb_size">%1$dGB</string>
 
@@ -388,8 +387,7 @@
     <!-- Container Log Viewer -->
     <string name="logs_title">Logs: %1$s</string>
     <string name="clear_logs">Clear logs</string>
-    <string name="copy_logs">Copy logs</string>
-    <string name="container_logs">Container Logs</string>
+    <string name="copy_logs">Copy Logs</string>
 
     <!-- Validation Error Messages -->
     <string name="error_container_name_empty">Container name cannot be empty</string>
@@ -397,7 +395,6 @@
     <string name="error_hostname_invalid">Hostname can only contain letters, numbers, and dashes (-)</string>
 
     <!-- Process List -->
-    <string name="user_in_parentheses">(%1$s)</string>
 
     <!-- Requirements -->
     <string name="check_requirements">Check Requirements</string>
@@ -421,7 +418,6 @@
     <string name="notification_permission_title">Notification Permission</string>
     <string name="notification_permission_rationale">Droidspaces needs to show a persistent notification to keep your terminal sessions running in the background. Without this, Android (especially on Samsung devices) might kill the terminal service unexpectedly.</string>
     <string name="grant_permission">Grant Permission</string>
-    <string name="open_settings">Open Settings</string>
     <string name="i_understand">I Understand</string>
 
     <!-- Sparse Image Management -->
@@ -434,11 +430,8 @@
     <string name="resize_dialog_title">Resize Sparse Image</string>
     <string name="migrate_dialog_message">Migrating \"%1$s\" to a sparse image will create a dedicated ext4 filesystem. This operation is destructive if interrupted. Please backup your data.</string>
     <string name="resize_dialog_message">Resizing the sparse image for \"%1$s\". Increasing size is safer than shrinking. Please backup your data.</string>
-    <string name="operation_in_progress">Operation in progress, please wait...</string>
     <string name="starting_migration">Starting migration operation...</string>
     <string name="starting_resizing">Starting resizing operation...</string>
-    <string name="migrating">Migrating...</string>
-    <string name="resizing">Resizing...</string>
     <string name="help_card_title">New to Droidspaces?</string>
     <string name="help_card_message">Tap here to learn how to setup your first Android container !</string>
     <string name="help_card_url">https://github.com/ravindu644/Droidspaces-OSS/blob/main/Documentation/Installation-Android.md</string>

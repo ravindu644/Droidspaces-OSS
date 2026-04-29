@@ -771,8 +771,8 @@ fun ContainerConfigScreen(
                                                     expanded = protoExpanded,
                                                     onDismissRequest = { protoExpanded = false }
                                                 ) {
-                                                    DropdownMenuItem(text = { Text("TCP") }, onClick = { proto = "tcp"; protoExpanded = false })
-                                                    DropdownMenuItem(text = { Text("UDP") }, onClick = { proto = "udp"; protoExpanded = false })
+                                                    DropdownMenuItem(text = { Text(context.getString(R.string.tcp)) }, onClick = { proto = "tcp"; protoExpanded = false })
+                                                    DropdownMenuItem(text = { Text(context.getString(R.string.udp)) }, onClick = { proto = "udp"; protoExpanded = false })
                                                 }
                                             }
                                         }

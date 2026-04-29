@@ -37,7 +37,7 @@ class TerminalBackEnd(
 
     override fun onCopyTextToClipboard(session: TerminalSession, text: String) {
         val cb = activity.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-        cb.setPrimaryClip(ClipData.newPlainText("Terminal", text))
+        cb.setPrimaryClip(ClipData.newPlainText(activity.getString(com.droidspaces.app.R.string.terminal_label), text))
     }
 
     override fun onPasteTextFromClipboard(session: TerminalSession) {

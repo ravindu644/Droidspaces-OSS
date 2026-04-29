@@ -819,7 +819,7 @@ private fun SparseSizeDialog(
                     value = sizeText,
                     onValueChange = { if (it.isEmpty() || it.all { c -> c.isDigit() }) sizeText = it },
                     label = { Text(context.getString(R.string.size_gb)) },
-                    placeholder = { Text("4-512") },
+                    placeholder = { Text(context.getString(R.string.size_range_4_512_hint)) },
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
                     shape = RoundedCornerShape(16.dp),

@@ -272,7 +272,7 @@ fun SparseImageConfigScreen(
                                 }
                             },
                             label = { Text(context.getString(R.string.size_gb)) },
-                            placeholder = { Text("8") },
+                            placeholder = { Text(context.getString(R.string.default_size_gb_hint)) },
                             isError = sizeError != null,
                             supportingText = sizeError?.let { { Text(it) } } ?: {
                                 Text(context.getString(R.string.enter_size_between_4_512_gb))

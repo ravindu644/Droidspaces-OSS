@@ -27,27 +27,18 @@
 
     <string name="container_singular">Container</string>
     <string name="running">Aandar</string>
-    <string name="container_count">%1$d ya container</string>
-    <string name="containers_count">%1$d ya saray container</string>
 
     <string name="backend_checking">Backend: Tsek-tseken...</string>
     <string name="backend_installed">Backend: Nan-install</string>
     <string name="backend_update_available">Backend: Walay update ya available</string>
     <string name="backend_not_installed">Backend: Ag aka-install</string>
     <string name="backend_corrupted">Backend: Corrupted</string>
-    <string name="backend_unsupported">Backend: Ag suportado</string>
-    <string name="backend_module_missing">Backend: Anggapo</string>
-    <string name="backend_unknown">Backend: Ag-amta</string>
     <string name="root_unavailable">Ag-available so root access.</string>
     <string name="grant_root_message">Ikdan na root access pian ituloy so pan-explore ed droidspaces !</string>
     <string name="version_label">Bersyon: %1$s</string>
     <string name="root_provider_label">Root Provider: %1$s</string>
     <string name="unknown">Ag-amta</string>
     <string name="update_available_message">Walay available ya backend update, i-klik diya pian i-update</string>
-    <string name="tap_to_install">I-tap diya pian i-install</string>
-    <string name="tap_to_reinstall">I-tap diya pian i-reinstall</string>
-    <string name="tap_to_install_module">I-tap diya pian i-install so module</string>
-    <string name="device_not_supported">Ag suportado so device mo</string>
 
     <string name="backend_section">Backend</string>
     <string name="reinstall_backend">I-reinstall so Backend</string>
@@ -57,7 +48,6 @@
     <string name="copy">Kopyaen</string>
     <string name="appearance_section">Porma</string>
     <string name="language">Salita</string>
-    <string name="language_description">Salatan so salita na app</string>
     <string name="system_default">System Default</string>
     <string name="follow_system_theme">Unoren so Tema na System</string>
     <string name="follow_system_theme_description">Automatikon itugma ed tema na system</string>
@@ -113,7 +103,6 @@
     <string name="ipv6_option">IPv6</string>
     <string name="storage_option">Storage</string>
     <string name="hw_option">HW</string>
-    <string name="selinux_option">SELinux</string>
     <string name="run_at_boot">Paanadaren ed Boot</string>
 
     <string name="container_info">Impormasyon na Container</string>
@@ -179,13 +168,8 @@
     <string name="granting_permissions">Mangiter na saray permiso...</string>
     <string name="preparing_installation">Ipararaan so pan-install...</string>
 
-    <string name="active_containers">Saray Aktibon Container</string>
     <string name="no_containers_running">Anggapoy container ya aandar</string>
     <string name="start_container_first">Igapo ni so container pian nanengneng diya</string>
-    <string name="system_statistics">Estadistika na System</string>
-    <string name="cpu">CPU</string>
-    <string name="ram">RAM</string>
-    <string name="temp">Temp</string>
 
     <string name="systemd_services">Saray Serbisyo na Systemd</string>
     <string name="fetching_services">Aalaen iray serbisyo...</string>
@@ -241,7 +225,6 @@
     <string name="copy_login">Kopyaen so login</string>
 
 
-    <string name="error_generic">Eror</string>
     <string name="comma">,</string>
     <string name="gb_size">%1$dGB</string>
 
@@ -264,13 +247,11 @@
     <string name="logs_title">Saray Log: %1$s</string>
     <string name="clear_logs">Buraen iray log</string>
     <string name="copy_logs">Kopyaen iray log</string>
-    <string name="container_logs">Saray Log na Container</string>
 
     <string name="error_container_name_empty">Ag nayarin anggapoy karga so ngaran na container</string>
     <string name="error_container_name_invalid">Say ngaran na container et nayari labat ya walaay letra, numero, gitling (-), underscores (_), tuldok (.), tan espasyo</string>
     <string name="error_hostname_invalid">Say hostname et nayari labat ya walaay letra, numero, tan gitling (-)</string>
 
-    <string name="user_in_parentheses">(%1$s)</string>
 
     <string name="check_requirements">I-chek iray Kaukolan</string>
     <string name="requirements_check_title">Pan-chek na saray Kaukolan</string>

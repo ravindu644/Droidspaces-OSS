@@ -170,7 +170,7 @@ fun TerminalDialog(
                                 onClick = {
                                     val logText = logs.joinToString("\n") { AnsiColorParser.stripAnsi(it.second) }
                                     val clipboard = context.getSystemService(ClipboardManager::class.java)
-                                    val clip = ClipData.newPlainText("Terminal Logs", logText)
+                                    val clip = ClipData.newPlainText(context.getString(R.string.terminal_logs), logText)
                                     clipboard.setPrimaryClip(clip)
                                     Toast.makeText(context, R.string.logs_copied, Toast.LENGTH_SHORT).show()
                                 },

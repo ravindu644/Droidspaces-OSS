@@ -1104,9 +1104,9 @@ fun EditContainerScreen(
                                                     expanded = protoExpanded,
                                                     onDismissRequest = { protoExpanded = false }
                                                 ) {
-                                                    DropdownMenuItem(text = { Text("TCP", fontWeight = FontWeight.Medium) }, onClick = { clearFocus(); proto = "tcp"; protoExpanded = false },
+                                                    DropdownMenuItem(text = { Text(context.getString(R.string.tcp), fontWeight = FontWeight.Medium) }, onClick = { clearFocus(); proto = "tcp"; protoExpanded = false },
                                                         leadingIcon = if (proto == "tcp") {{ Icon(Icons.Default.Check, null, modifier = Modifier.size(18.dp), tint = MaterialTheme.colorScheme.primary) }} else null)
-                                                    DropdownMenuItem(text = { Text("UDP", fontWeight = FontWeight.Medium) }, onClick = { clearFocus(); proto = "udp"; protoExpanded = false },
+                                                    DropdownMenuItem(text = { Text(context.getString(R.string.udp), fontWeight = FontWeight.Medium) }, onClick = { clearFocus(); proto = "udp"; protoExpanded = false },
                                                         leadingIcon = if (proto == "udp") {{ Icon(Icons.Default.Check, null, modifier = Modifier.size(18.dp), tint = MaterialTheme.colorScheme.primary) }} else null)
                                                 }
                                             }

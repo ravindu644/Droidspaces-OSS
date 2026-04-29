@@ -30,27 +30,18 @@
     <!-- Main Tab Screen -->
     <string name="container_singular">Container</string>
     <string name="running">Läuft</string>
-    <string name="container_count">%1$d Container</string>
-    <string name="containers_count">%1$d Container</string>
     <!-- Backend Status Card -->
     <string name="backend_checking">Backend: Überprüft...</string>
     <string name="backend_installed">Backend: Installiert</string>
     <string name="backend_update_available">Backend: Update verfügbar</string>
     <string name="backend_not_installed">Backend: Nicht installiert</string>
     <string name="backend_corrupted">Backend: Beschädigt</string>
-    <string name="backend_unsupported">Backend: Nicht unterstützt</string>
-    <string name="backend_module_missing">Backend: Fehlt</string>
-    <string name="backend_unknown">Backend: Unbekannt</string>
     <string name="root_unavailable">Root-Zugriff ist nicht verfügbar.</string>
     <string name="grant_root_message">Gewähren Sie Root-Zugriff, um Droidspaces weiter zu verwenden!</string>
     <string name="version_label">Version: %1$s</string>
     <string name="root_provider_label">Root-Provider: %1$s</string>
     <string name="unknown">Unbekannt</string>
     <string name="update_available_message">Backend-Update verfügbar, hier klicken, um zu aktualisieren</string>
-    <string name="tap_to_install">Hier tippen, um zu installieren</string>
-    <string name="tap_to_reinstall">Hier tippen, um neu zu installieren</string>
-    <string name="tap_to_install_module">Hier tippen, um Modul zu installieren</string>
-    <string name="device_not_supported">Ihr Gerät wird nicht unterstützt</string>
     <!-- Settings Screen -->
     <string name="backend_section">Backend</string>
     <string name="reinstall_backend">Backend neu installieren</string>
@@ -60,7 +51,6 @@
     <string name="copy">Kopieren</string>
     <string name="appearance_section">Darstellung</string>
     <string name="language">Sprache</string>
-    <string name="language_description">App-Sprache ändern</string>
     <string name="system_default">Systemstandard</string>
     <string name="follow_system_theme">Systemthema übernehmen</string>
     <string name="follow_system_theme_description">Automatisch das Systemthema übernehmen</string>
@@ -116,7 +106,6 @@
     <string name="ipv6_option">IPv6</string>
     <string name="storage_option">Speicher</string>
     <string name="hw_option">HW</string>
-    <string name="selinux_option">SELinux</string>
     <!-- Container Details Screen -->
     <string name="container_info">Container-Info</string>
     <string name="distribution">Distribution</string>
@@ -182,13 +171,8 @@
     <string name="granting_permissions">Berechtigungen werden vergeben...</string>
     <string name="preparing_installation">Vorbereitung der Installation...</string>
     <!-- Control Panel Screen -->
-    <string name="active_containers">Aktive Container</string>
     <string name="no_containers_running">Keine Container laufen</string>
     <string name="start_container_first">Starten Sie zuerst einen Container, um ihn hier zu sehen</string>
-    <string name="system_statistics">System-Statistiken</string>
-    <string name="cpu">CPU</string>
-    <string name="ram">RAM</string>
-    <string name="temp">Temp</string>
     <!-- Systemd Screen -->
     <string name="systemd_services">Systemd-Dienste</string>
     <string name="fetching_services">Dienste werden abgerufen...</string>
@@ -245,7 +229,6 @@
     <!-- Process List Screen -->
 
     <!-- Common -->
-    <string name="error_generic">Fehler</string>
     <string name="comma">,</string>
     <string name="gb_size">%1$dGB</string>
     <!-- Sparse Image Config Screen -->
@@ -268,13 +251,11 @@
     <string name="logs_title">Logs: %1$s</string>
     <string name="clear_logs">Logs löschen</string>
     <string name="copy_logs">Logs kopieren</string>
-    <string name="container_logs">Container-Logs</string>
     <!-- Validation Error Messages -->
     <string name="error_container_name_empty">Container-Name darf nicht leer sein</string>
     <string name="error_container_name_invalid">Container-Name darf nur Buchstaben, Zahlen, Bindestriche (-), Unterstriche (_), Punkte (.) und Leerzeichen enthalten</string>
     <string name="error_hostname_invalid">Hostname darf nur Buchstaben, Zahlen und Bindestriche (-) enthalten</string>
     <!-- Process List -->
-    <string name="user_in_parentheses">(%1$s)</string>
     <!-- Requirements -->
     <string name="check_requirements">Anforderungen prüfen</string>
     <string name="requirements_check_title">Anforderungsprüfung</string>

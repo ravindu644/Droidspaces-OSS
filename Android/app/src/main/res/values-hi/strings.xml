@@ -28,27 +28,18 @@
     <!-- Main Tab Screen -->
     <string name="container_singular">कंटेनर</string>
     <string name="running">चल रहा है</string>
-    <string name="container_count">%1$d कंटेनर</string>
-    <string name="containers_count">%1$d कंटेनर</string>
     <!-- Droidspaces Status Card -->
     <string name="backend_checking">Backend: जांच हो रही है...</string>
     <string name="backend_installed">Backend: स्थापित</string>
     <string name="backend_update_available">Backend: अपडेट उपलब्ध है</string>
     <string name="backend_not_installed">Backend: स्थापित नहीं है</string>
     <string name="backend_corrupted">Backend: दूषित</string>
-    <string name="backend_unsupported">Backend: असमर्थित</string>
-    <string name="backend_module_missing">Backend: अनुपलब्ध</string>
-    <string name="backend_unknown">Backend: अज्ञात</string>
     <string name="root_unavailable">रूट एक्सेस उपलब्ध नहीं है।</string>
     <string name="grant_root_message">Droidspaces का उपयोग जारी रखने के लिए रूट एक्सेस दें!</string>
     <string name="version_label">संस्करण: %1$s</string>
     <string name="root_provider_label">रूट प्रदाता: %1$s</string>
     <string name="unknown">अज्ञात</string>
     <string name="update_available_message">बैकएंड अपडेट उपलब्ध है, अपडेट करने के लिए यहां क्लिक करें</string>
-    <string name="tap_to_install">इंस्टॉल करने के लिए यहां टैप करें</string>
-    <string name="tap_to_reinstall">पुनः इंस्टॉल करने के लिए यहां टैप करें</string>
-    <string name="tap_to_install_module">मॉड्यूल इंस्टॉल करने के लिए यहां टैप करें</string>
-    <string name="device_not_supported">आपका डिवाइस समर्थित नहीं है</string>
     <!-- Settings Screen -->
     <string name="backend_section">बैकएंड</string>
     <string name="reinstall_backend">बैकएंड पुनः इंस्टॉल करें</string>
@@ -58,7 +49,6 @@
     <string name="copy">कॉपी करें</string>
     <string name="appearance_section">दिखावट</string>
     <string name="language">भाषा</string>
-    <string name="language_description">ऐप की भाषा बदलें</string>
     <string name="system_default">सिस्टम डिफ़ॉल्ट</string>
     <string name="follow_system_theme">सिस्टम थीम का पालन करें</string>
     <string name="follow_system_theme_description">स्वतः सिस्टम थीम से मेल करें</string>
@@ -114,7 +104,6 @@
     <string name="ipv6_option">IPv6</string>
     <string name="storage_option">स्टोरेज</string>
     <string name="hw_option">HW</string>
-    <string name="selinux_option">SELinux</string>
     <!-- Container Details Screen -->
     <string name="container_info">कंटेनर जानकारी</string>
     <string name="distribution">डिस्ट्रिब्यूशन</string>
@@ -180,13 +169,8 @@
     <string name="granting_permissions">अनुमतियाँ दी जा रही हैं...</string>
     <string name="preparing_installation">इंस्टॉलेशन की तैयारी...</string>
     <!-- Control Panel Screen -->
-    <string name="active_containers">सक्रिय कंटेनर</string>
     <string name="no_containers_running">कोई कंटेनर नहीं चल रहा</string>
     <string name="start_container_first">यहाँ देखने के लिए पहले कंटेनर शुरू करें</string>
-    <string name="system_statistics">सिस्टम आँकड़े</string>
-    <string name="cpu">CPU</string>
-    <string name="ram">RAM</string>
-    <string name="temp">तापमान</string>
     <!-- Systemd Screen -->
     <string name="systemd_services">Systemd सेवाएँ</string>
     <string name="fetching_services">सेवाएँ प्राप्त की जा रही हैं...</string>
@@ -243,7 +227,6 @@
     <!-- Process List Screen -->
 
     <!-- Common -->
-    <string name="error_generic">त्रुटि</string>
     <string name="comma">,</string>
     <string name="gb_size">%1$dGB</string>
     <!-- Sparse Image Config Screen -->
@@ -266,13 +249,11 @@
     <string name="logs_title">लॉग्स: %1$s</string>
     <string name="clear_logs">लॉग साफ करें</string>
     <string name="copy_logs">लॉग कॉपी करें</string>
-    <string name="container_logs">कंटेनर लॉग्स</string>
     <!-- Validation Error Messages -->
     <string name="error_container_name_empty">कंटेनर नाम खाली नहीं हो सकता</string>
     <string name="error_container_name_invalid">कंटेनर नाम में केवल अक्षर, अंक, हाइफ़न (-), अंडरस्कोर (_), डॉट (.) और स्पेस हो सकते हैं</string>
     <string name="error_hostname_invalid">होस्टनेम में केवल अक्षर, अंक और डैश (-) हो सकते हैं</string>
     <!-- Process List -->
-    <string name="user_in_parentheses">(%1$s)</string>
     <!-- Requirements -->
     <string name="check_requirements">आवश्यकताएँ जांचें</string>
     <string name="requirements_check_title">आवश्यकता जांच</string>

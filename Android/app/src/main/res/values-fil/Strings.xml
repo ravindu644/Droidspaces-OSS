@@ -27,27 +27,18 @@
 
     <string name="container_singular">Container</string>
     <string name="running">Gumagana</string>
-    <string name="container_count">%1$d container</string>
-    <string name="containers_count">%1$d mga container</string>
 
     <string name="backend_checking">Backend: Sinusuri...</string>
     <string name="backend_installed">Backend: Nakainstall</string>
     <string name="backend_update_available">Backend: May update na available</string>
     <string name="backend_not_installed">Backend: Hindi nakainstall</string>
     <string name="backend_corrupted">Backend: Corrupted</string>
-    <string name="backend_unsupported">Backend: Hindi suportado</string>
-    <string name="backend_module_missing">Backend: Nawawala</string>
-    <string name="backend_unknown">Backend: Hindi alam</string>
     <string name="root_unavailable">Hindi available ang root access.</string>
     <string name="grant_root_message">Magbigay ng root access upang patuloy na galugarin ang droidspaces !</string>
     <string name="version_label">Bersyon: %1$s</string>
     <string name="root_provider_label">Root Provider: %1$s</string>
     <string name="unknown">Hindi alam</string>
     <string name="update_available_message">May available na backend update, i-click dito upang mag-update</string>
-    <string name="tap_to_install">I-tap dito upang i-install</string>
-    <string name="tap_to_reinstall">I-tap dito upang i-reinstall</string>
-    <string name="tap_to_install_module">I-tap dito upang i-install ang module</string>
-    <string name="device_not_supported">Hindi suportado ang iyong device</string>
 
     <string name="backend_section">Backend</string>
     <string name="reinstall_backend">I-install muli ang Backend</string>
@@ -57,7 +48,6 @@
     <string name="copy">Kopyahin</string>
     <string name="appearance_section">Hitsura</string>
     <string name="language">Wika</string>
-    <string name="language_description">Palitan ang wika ng app</string>
     <string name="system_default">Default ng System</string>
     <string name="follow_system_theme">Sundin ang Tema ng System</string>
     <string name="follow_system_theme_description">Awtomatikong itugma sa tema ng system</string>
@@ -113,7 +103,6 @@
     <string name="ipv6_option">IPv6</string>
     <string name="storage_option">Storage</string>
     <string name="hw_option">HW</string>
-    <string name="selinux_option">SELinux</string>
 
     <string name="container_info">Impormasyon ng Container</string>
     <string name="distribution">Distribusyon</string>
@@ -179,13 +168,8 @@
     <string name="granting_permissions">Nagbibigay ng mga pahintulot...</string>
     <string name="preparing_installation">Inihahanda ang pag-install...</string>
 
-    <string name="active_containers">Mga Aktibong Container</string>
     <string name="no_containers_running">Walang container na gumagana</string>
     <string name="start_container_first">Magsimula muna ng container upang makita ito dito</string>
-    <string name="system_statistics">Estadistika ng System</string>
-    <string name="cpu">CPU</string>
-    <string name="ram">RAM</string>
-    <string name="temp">Temp</string>
 
     <string name="systemd_services">Mga Serbisyo ng Systemd</string>
     <string name="fetching_services">Kinukuha ang mga serbisyo...</string>
@@ -241,7 +225,6 @@
     <string name="copy_login">Kopyahin ang login</string>
 
 
-    <string name="error_generic">Error</string>
     <string name="comma">,</string>
     <string name="gb_size">%1$dGB</string>
 
@@ -264,13 +247,11 @@
     <string name="logs_title">Logs: %1$s</string>
     <string name="clear_logs">I-clear ang logs</string>
     <string name="copy_logs">Kopyahin ang logs</string>
-    <string name="container_logs">Logs ng Container</string>
 
     <string name="error_container_name_empty">Hindi maaaring walang laman ang pangalan ng container</string>
     <string name="error_container_name_invalid">Ang pangalan ng container ay maaari lamang maglaman ng mga letra, numero, gitling (-), underscores (_), tuldok (.), at puwang</string>
     <string name="error_hostname_invalid">Ang hostname ay maaari lamang maglaman ng mga letra, numero, at gitling (-)</string>
 
-    <string name="user_in_parentheses">(%1$s)</string>
 
     <string name="check_requirements">Suriin ang mga Kinakailangan</string>
     <string name="requirements_check_title">Pagsusuri ng mga Kinakailangan</string>
