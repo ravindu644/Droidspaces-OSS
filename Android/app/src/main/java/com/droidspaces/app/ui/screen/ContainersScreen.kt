@@ -661,12 +661,6 @@ fun ContainersScreen(
             }
         }
 
-        // SNACKBAR LAYER
-        SnackbarHost(
-            hostState = snackbarHostState,
-            modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 100.dp)
-        )
-
         // FAB LAYER (Above everything, below dialogs)
         if (isBackendAvailable && isRootAvailable) {
             FloatingActionButton(
@@ -686,6 +680,12 @@ fun ContainersScreen(
                 )
             }
         }
+
+        // SNACKBAR LAYER (Highest Z-index in the root Box)
+        SnackbarHost(
+            hostState = snackbarHostState,
+            modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 100.dp)
+        )
 
         // Log viewer dialog - console stays open, user must close manually
         showLogViewerFor?.let { containerName ->
@@ -707,10 +707,16 @@ fun ContainersScreen(
                     containerViewModel.refresh()
                 },
                 onClear = {
-                    // Clear logs from memory and cache
-                    containerLogs[containerName]?.clear()
+                    // Force-clear memory list (initialize if null) to ensure UI reacts immediately
+                    val buffer = containerLogs[containerName] ?: androidx.compose.runtime.mutableStateListOf<Pair<Int, String>>().also {
+                        containerLogs = containerLogs.toMutableMap().apply { put(containerName, it) }
+                    }
+                    buffer.clear()
+
+                    // Clear persistent cache synchronously
                     prefsManager.clearContainerLogs(containerName)
-                    // Force recomposition by updating the map
+
+                    // Trigger map recomposition for safety
                     containerLogs = containerLogs.toMutableMap()
                 },
                 isBlocking = isBlocking // Block dismissal when operation is running

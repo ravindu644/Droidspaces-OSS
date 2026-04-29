@@ -210,7 +210,7 @@ class PreferencesManager private constructor(context: Context) {
      * Clear cached container logs.
      */
     fun clearContainerLogs(containerName: String) {
-        prefs.edit().remove("${KEY_CONTAINER_LOG_PREFIX}$containerName").apply()
+        prefs.edit().remove("${KEY_CONTAINER_LOG_PREFIX}$containerName").commit()
     }
 
     /**
