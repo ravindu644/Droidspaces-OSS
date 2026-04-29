@@ -1,57 +1,44 @@
 package com.droidspaces.app.ui.screen
 
-import androidx.compose.foundation.background
-import com.droidspaces.app.util.AnimationUtils
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.horizontalScroll
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.animateContentSize
+import androidx.compose.foundation.*
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.Font
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
-import com.droidspaces.app.ui.util.rememberClearFocus
-import com.droidspaces.app.ui.util.ClearFocusOnClickOutside
-import com.droidspaces.app.ui.util.FocusUtils
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import com.droidspaces.app.R
+import com.droidspaces.app.ui.util.*
+import com.droidspaces.app.util.AnimationUtils
 import com.droidspaces.app.util.ContainerSystemdManager
 import com.droidspaces.app.util.ContainerSystemdManager.ServiceFilter
 import com.droidspaces.app.util.ContainerSystemdManager.ServiceInfo
 import com.droidspaces.app.util.ContainerSystemdManager.ServiceStatus
-import com.droidspaces.app.ui.util.ProgressDialog
-import com.droidspaces.app.ui.util.ErrorLogsDialog
-import com.droidspaces.app.ui.util.FullScreenLoading
-import com.droidspaces.app.ui.util.LoadingIndicator
-import com.droidspaces.app.ui.util.LoadingSize
-import com.droidspaces.app.ui.util.showError
-import com.droidspaces.app.ui.util.showSuccess
 import kotlinx.coroutines.launch
-import com.droidspaces.app.R
 
-// Premium animation specs - now using centralized AnimationUtils
-
-// Status colors - Material You inspired
-private val ColorGreen = Color(0xFF4CAF50)
-private val ColorYellow = Color(0xFFFFCA28)
-private val ColorRed = Color(0xFFEF5350)
-private val ColorStatic = Color(0xFF607D8B)
-private val ColorAbnormal = Color(0xFFFF7043)
-private val ColorWhite = Color(0xFFE0E0E0)
+// Premium Font Stack
+private val JetBrainsMono = FontFamily(
+    Font(R.font.jetbrains_mono_regular, FontWeight.Normal),
+    Font(R.font.jetbrains_mono_bold, FontWeight.Bold)
+)
 
 // UI States
 private sealed class ScreenState {
@@ -75,139 +62,69 @@ fun SystemdScreen(
     val scope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
 
-    // Initialize script on first composition
-    LaunchedEffect(Unit) {
-        ContainerSystemdManager.initialize(context)
-    }
+    LaunchedEffect(Unit) { ContainerSystemdManager.initialize(context) }
 
-    // Core state
     var screenState by remember { mutableStateOf<ScreenState>(ScreenState.Loading) }
     var actionState by remember { mutableStateOf<ActionState>(ActionState.Idle) }
     var selectedFilter by remember { mutableStateOf(ServiceFilter.RUNNING) }
     var logsDialogContent by remember { mutableStateOf<List<String>?>(null) }
     var searchQuery by remember { mutableStateOf("") }
 
-    // Track ongoing operations to prevent concurrent execution
     var fetchJob by remember { mutableStateOf<kotlinx.coroutines.Job?>(null) }
     var actionJob by remember { mutableStateOf<kotlinx.coroutines.Job?>(null) }
 
-    // Fetch services - always shows loading first, cancels previous fetch
     fun fetchServices() {
-        // Cancel previous fetch if still running
         fetchJob?.cancel()
-
         screenState = ScreenState.Loading
         fetchJob = scope.launch {
             try {
-            val available = ContainerSystemdManager.isSystemdAvailable(containerName)
-            if (!available) {
-                screenState = ScreenState.SystemdNotAvailable
-                return@launch
-            }
-
-            val services = ContainerSystemdManager.getAllServices(containerName)
-            screenState = ScreenState.Ready(services)
-            } catch (e: kotlinx.coroutines.CancellationException) {
-                // Ignore cancellation
-                throw e
-            } catch (e: Exception) {
-                // On error, keep current state or show error
-                if (screenState is ScreenState.Loading) {
+                val available = ContainerSystemdManager.isSystemdAvailable(containerName)
+                if (!available) {
                     screenState = ScreenState.SystemdNotAvailable
+                    return@launch
                 }
+                val services = ContainerSystemdManager.getAllServices(containerName)
+                screenState = ScreenState.Ready(services)
+            } catch (e: Exception) {
+                if (e is kotlinx.coroutines.CancellationException) throw e
+                screenState = ScreenState.SystemdNotAvailable
             }
         }
     }
 
-    // Execute action with proper state management - prevents concurrent actions
-    fun executeAction(
-        serviceName: String,
-        actionName: String,
-        action: suspend () -> ContainerSystemdManager.CommandResult
-    ) {
-        // Cancel any ongoing action
+    fun executeAction(serviceName: String, actionName: String, action: suspend () -> ContainerSystemdManager.CommandResult) {
         actionJob?.cancel()
-
-        // Cancel any ongoing fetch
         fetchJob?.cancel()
-
-        // Show action dialog immediately
         actionState = ActionState.InProgress(serviceName, actionName)
-
         actionJob = scope.launch {
             try {
-            val result = action()
-
-            // Action complete - dismiss dialog
-            actionState = ActionState.Idle
-
-            when {
-                result.isSuccess -> {
-                    // Immediately show loading screen
+                val result = action()
+                actionState = ActionState.Idle
+                if (result.isSuccess) {
                     screenState = ScreenState.Loading
-
-                    // Show snackbar in background (non-blocking)
                     scope.showSuccess(snackbarHostState, context.getString(R.string.action_successful, actionName, serviceName))
-
-                        // Fetch fresh data (cancel any previous fetch first)
-                        fetchJob?.cancel()
-                        fetchJob = scope.launch {
-                            try {
-                    val services = ContainerSystemdManager.getAllServices(containerName)
-                    screenState = ScreenState.Ready(services)
-                            } catch (e: kotlinx.coroutines.CancellationException) {
-                                throw e
-                            } catch (e: Exception) {
-                                // On error, keep loading state
-                            }
-                        }
-                }
-                else -> {
-                    // Failed - show logs dialog if there's output, otherwise snackbar
+                    fetchServices()
+                } else {
                     val allLogs = result.output + result.error
-                    if (allLogs.isNotEmpty()) {
-                        logsDialogContent = allLogs
-                    } else {
-                        scope.showError(snackbarHostState, context.getString(R.string.failed_to_action, actionName, serviceName))
+                    if (allLogs.isNotEmpty()) logsDialogContent = allLogs
+                    else scope.showError(snackbarHostState, context.getString(R.string.failed_to_action, actionName, serviceName))
                 }
-                }
-                }
-            } catch (e: kotlinx.coroutines.CancellationException) {
-                // Action was cancelled - reset state
-                actionState = ActionState.Idle
-                throw e
             } catch (e: Exception) {
-                // On error, reset action state
                 actionState = ActionState.Idle
+                if (e is kotlinx.coroutines.CancellationException) throw e
                 scope.showError(snackbarHostState, context.getString(R.string.error_unknown, e.message ?: context.getString(R.string.unknown)))
             }
         }
     }
 
-    // Initial fetch
-    LaunchedEffect(containerName) {
-        fetchServices()
-    }
+    LaunchedEffect(containerName) { fetchServices() }
 
-    // Cleanup on dispose
-    DisposableEffect(Unit) {
-        onDispose {
-            fetchJob?.cancel()
-            actionJob?.cancel()
-        }
-    }
-
-    // Computed values from state
     val allServices = (screenState as? ScreenState.Ready)?.services ?: emptyList()
     val filteredServices = remember(allServices, selectedFilter, searchQuery) {
-        if (searchQuery.isBlank()) {
-            // No search - apply filter normally
-            ContainerSystemdManager.filterServices(allServices, selectedFilter)
-        } else {
-            // Search always searches from ALL services
-            allServices.filter { it.name.contains(searchQuery, ignoreCase = true) }
-        }
+        if (searchQuery.isBlank()) ContainerSystemdManager.filterServices(allServices, selectedFilter)
+        else allServices.filter { it.name.contains(searchQuery, ignoreCase = true) }
     }
+    
     val serviceCounts = remember(allServices) {
         mapOf(
             ServiceFilter.RUNNING to allServices.count { it.isRunning && it.isEnabled && !it.isMasked },
@@ -222,102 +139,37 @@ fun SystemdScreen(
 
     val clearFocus = rememberClearFocus()
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = {
-                    Text(context.getString(R.string.systemd_services))
-                },
-                navigationIcon = {
-                    IconButton(
-                        onClick = {
-                            clearFocus()
-                            onNavigateBack()
-                        }
-                    ) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = context.getString(R.string.back))
-                    }
-                },
-                actions = {
-                    IconButton(
-                        onClick = {
-                            clearFocus()
-                            fetchServices()
-                        },
-                        enabled = screenState !is ScreenState.Loading && actionState is ActionState.Idle
-                    ) {
-                        Icon(Icons.Default.Refresh, contentDescription = context.getString(R.string.refresh))
-                    }
-                }
-            )
-        },
-        snackbarHost = { SnackbarHost(snackbarHostState) }
-    ) { padding ->
-        when (screenState) {
-            is ScreenState.Loading -> {
-                FullScreenLoading(
-                    message = context.getString(R.string.fetching_services),
-                    modifier = Modifier.padding(padding)
+    Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
+        Scaffold(
+            topBar = {
+                CenterAlignedTopAppBar(
+                    title = { Text(context.getString(R.string.systemd_services), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold) },
+                    navigationIcon = { IconButton(onClick = onNavigateBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, context.getString(R.string.back)) } },
+                    actions = { IconButton(onClick = { fetchServices() }, enabled = screenState !is ScreenState.Loading && actionState is ActionState.Idle) { Icon(Icons.Default.Refresh, context.getString(R.string.refresh)) } },
+                    colors = TopAppBarDefaults.centerAlignedTopAppBarColors(containerColor = Color.Transparent, scrolledContainerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.95f))
                 )
-            }
-            is ScreenState.SystemdNotAvailable -> {
-                SystemdNotAvailable(modifier = Modifier.padding(padding))
-            }
-            is ScreenState.Ready -> {
-                ClearFocusOnClickOutside(
-                    modifier = Modifier.padding(padding)
-                ) {
-                    Column(
-                        modifier = Modifier.fillMaxSize()
-                ) {
-                    //ColorLegend(
-                    //    onTap = { clearFocus() }
-                    //)
-
-                    // Search bar
-                    SearchBar(
-                        query = searchQuery,
-                        onQueryChange = { searchQuery = it }
-                    )
-
-                    FilterChipsRow(
-                        selectedFilter = selectedFilter,
-                        serviceCounts = serviceCounts,
-                        onFilterSelected = {
-                            selectedFilter = it
-                            clearFocus()
-                        }
-                    )
-
-                    if (filteredServices.isEmpty()) {
-                        EmptyServicesState(
-                            filter = selectedFilter,
-                            modifier = Modifier
-                                .weight(1f)
-                                .clickable(
-                                    indication = null,
-                                    interactionSource = remember { MutableInteractionSource() }
-                                ) {
-                                    clearFocus()
-                                }
-                        )
-                    } else {
-                LazyColumn(
-                            modifier = Modifier.weight(1f),
-                            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
-                            verticalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                            items(filteredServices, key = { it.name }) { service ->
-                                ServiceCard(
-                                    service = service,
-                                    containerName = containerName,
-                                    clearFocus = clearFocus,
-                                    onAction = { actionName, action ->
-                                        clearFocus()
-                                        executeAction(service.name, actionName, action)
+            },
+            snackbarHost = { SnackbarHost(snackbarHostState) },
+            containerColor = Color.Transparent
+        ) { padding ->
+            ClearFocusOnClickOutside(modifier = Modifier.padding(padding).fillMaxSize()) {
+                Box(modifier = Modifier.fillMaxSize()) {
+                    when (screenState) {
+                        is ScreenState.Loading -> FullScreenLoading(message = context.getString(R.string.fetching_services))
+                        is ScreenState.SystemdNotAvailable -> SystemdNotAvailable()
+                        is ScreenState.Ready -> {
+                            Column(modifier = Modifier.fillMaxSize()) {
+                                SearchBar(query = searchQuery, onQueryChange = { searchQuery = it })
+                                FilterChipsRow(selectedFilter = selectedFilter, serviceCounts = serviceCounts, onFilterSelected = { selectedFilter = it; clearFocus() })
+                                if (filteredServices.isEmpty()) {
+                                    EmptyServicesState(filter = selectedFilter, modifier = Modifier.weight(1f))
+                                } else {
+                                    LazyColumn(modifier = Modifier.weight(1f), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                                        items(filteredServices, key = { it.name }) { service ->
+                                            ServiceCard(service = service, containerName = containerName, onAction = { name, act -> executeAction(service.name, name, act) })
+                                        }
                                     }
-                                )
-                            }
+                                }
                             }
                         }
                     }
@@ -326,124 +178,45 @@ fun SystemdScreen(
         }
     }
 
-    // Action progress dialog
-    (actionState as? ActionState.InProgress)?.let { state ->
-        ProgressDialog(
-            message = context.getString(R.string.actioning_service, state.actionName, state.serviceName)
-        )
-    }
-
-    // Logs dialog
-    logsDialogContent?.let { logs ->
-        ErrorLogsDialog(
-            logs = logs,
-            onDismiss = { logsDialogContent = null }
-        )
-    }
-                        }
-
-
-/*
-@Composable
-private fun ColorLegend(
-    onTap: () -> Unit = {}
-) {
-    val context = LocalContext.current
-    Surface(
-        color = MaterialTheme.colorScheme.surfaceContainerLow,
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(
-                indication = null,
-                interactionSource = remember { MutableInteractionSource() }
-            ) {
-                onTap()
-            }
-    ) {
-        Row(
-            modifier = Modifier
-                .horizontalScroll(rememberScrollState())
-                .padding(horizontal = 16.dp, vertical = 10.dp),
-            horizontalArrangement = Arrangement.spacedBy(20.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            LegendItem(ColorGreen, context.getString(R.string.running))
-            LegendItem(ColorYellow, context.getString(R.string.enabled_legend))
-            LegendItem(ColorRed, context.getString(R.string.disabled_legend))
-            LegendItem(ColorAbnormal, context.getString(R.string.abnormal_legend))
-            LegendItem(ColorStatic, context.getString(R.string.static_legend))
-            LegendItem(ColorWhite, context.getString(R.string.masked_legend))
-        }
-    }
+    (actionState as? ActionState.InProgress)?.let { state -> ProgressDialog(message = context.getString(R.string.actioning_service, state.actionName, state.serviceName)) }
+    logsDialogContent?.let { logs -> ErrorLogsDialog(logs = logs, onDismiss = { logsDialogContent = null }) }
 }
-*/
 
 @Composable
-private fun SearchBar(
-    query: String,
-    onQueryChange: (String) -> Unit
-) {
+private fun SearchBar(query: String, onQueryChange: (String) -> Unit) {
     val context = LocalContext.current
-    OutlinedTextField(
-        value = query,
-        onValueChange = onQueryChange,
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 8.dp),
-        placeholder = {
-            Text(
-                context.getString(R.string.search_services),
-                style = MaterialTheme.typography.bodyLarge
-            )
-        },
-        leadingIcon = {
-            Icon(
-                Icons.Default.Search,
-                contentDescription = context.getString(R.string.search),
-                tint = MaterialTheme.colorScheme.onSurfaceVariant
-                                        )
-        },
-        trailingIcon = {
-            if (query.isNotEmpty()) {
-                IconButton(onClick = { onQueryChange("") }) {
-                    Icon(
-                        Icons.Default.Clear,
-                        contentDescription = context.getString(R.string.clear),
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            }
-        },
-        singleLine = true,
-        shape = RoundedCornerShape(16.dp),
-        colors = OutlinedTextFieldDefaults.colors(
-            focusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-            unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerLow,
-            focusedBorderColor = MaterialTheme.colorScheme.primary,
-            unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)
-        ),
-        textStyle = MaterialTheme.typography.bodyLarge,
-        keyboardOptions = FocusUtils.searchKeyboardOptions,
-        keyboardActions = FocusUtils.clearFocusKeyboardActions()
+    val interactionSource = remember { MutableInteractionSource() }
+    val isFocused by interactionSource.collectIsFocusedAsState()
+    val borderColor by animateColorAsState(
+        targetValue = if (isFocused) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f),
+        animationSpec = AnimationUtils.fastSpec()
     )
-}
 
-@Composable
-private fun LegendItem(color: Color, label: String) {
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(6.dp)
+    Surface(
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+        color = MaterialTheme.colorScheme.surfaceContainer,
+        shape = RoundedCornerShape(16.dp),
+        border = BorderStroke(1.dp, borderColor)
     ) {
-        Box(
-            modifier = Modifier
-                .size(8.dp)
-                .clip(CircleShape)
-                .background(color)
-        )
-        Text(
-            text = label,
-            style = MaterialTheme.typography.labelMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
+        TextField(
+            value = query,
+            onValueChange = onQueryChange,
+            modifier = Modifier.fillMaxWidth(),
+            interactionSource = interactionSource,
+            placeholder = { Text(context.getString(R.string.search_services), color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)) },
+            leadingIcon = { Icon(Icons.Default.Search, null, tint = if (isFocused) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)) },
+            trailingIcon = { if (query.isNotEmpty()) { IconButton(onClick = { onQueryChange("") }) { Icon(Icons.Default.Clear, null) } } },
+            colors = TextFieldDefaults.colors(
+                focusedContainerColor = Color.Transparent,
+                unfocusedContainerColor = Color.Transparent,
+                focusedIndicatorColor = Color.Transparent,
+                unfocusedIndicatorColor = Color.Transparent,
+                cursorColor = MaterialTheme.colorScheme.primary
+            ),
+            singleLine = true,
+            textStyle = MaterialTheme.typography.bodyLarge,
+            keyboardOptions = FocusUtils.searchKeyboardOptions,
+            keyboardActions = FocusUtils.clearFocusKeyboardActions()
         )
     }
 }
@@ -455,312 +228,153 @@ private fun FilterChipsRow(
     onFilterSelected: (ServiceFilter) -> Unit
 ) {
     val context = LocalContext.current
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .horizontalScroll(rememberScrollState())
-            .padding(horizontal = 16.dp, vertical = 8.dp),
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
-    ) {
-        FilterChipItem(context.getString(R.string.running), serviceCounts[ServiceFilter.RUNNING] ?: 0, selectedFilter == ServiceFilter.RUNNING, ColorGreen) { onFilterSelected(ServiceFilter.RUNNING) }
-        FilterChipItem(context.getString(R.string.enabled_legend), serviceCounts[ServiceFilter.ENABLED] ?: 0, selectedFilter == ServiceFilter.ENABLED, ColorYellow) { onFilterSelected(ServiceFilter.ENABLED) }
-        FilterChipItem(context.getString(R.string.disabled_legend), serviceCounts[ServiceFilter.DISABLED] ?: 0, selectedFilter == ServiceFilter.DISABLED, ColorRed) { onFilterSelected(ServiceFilter.DISABLED) }
-        FilterChipItem(context.getString(R.string.abnormal_legend), serviceCounts[ServiceFilter.ABNORMAL] ?: 0, selectedFilter == ServiceFilter.ABNORMAL, ColorAbnormal) { onFilterSelected(ServiceFilter.ABNORMAL) }
-        FilterChipItem(context.getString(R.string.static_legend), serviceCounts[ServiceFilter.STATIC] ?: 0, selectedFilter == ServiceFilter.STATIC, ColorStatic) { onFilterSelected(ServiceFilter.STATIC) }
-        FilterChipItem(context.getString(R.string.masked_legend), serviceCounts[ServiceFilter.MASKED] ?: 0, selectedFilter == ServiceFilter.MASKED, ColorWhite) { onFilterSelected(ServiceFilter.MASKED) }
-        FilterChipItem(context.getString(R.string.all_legend), serviceCounts[ServiceFilter.ALL] ?: 0, selectedFilter == ServiceFilter.ALL, null) { onFilterSelected(ServiceFilter.ALL) }
-    }
-}
+    val filters = listOf(
+        Triple(ServiceFilter.RUNNING, R.string.running, Color(0xFF4CAF50)),
+        Triple(ServiceFilter.ENABLED, R.string.enabled_legend, Color(0xFFFFCA28)),
+        Triple(ServiceFilter.DISABLED, R.string.disabled_legend, Color(0xFFEF5350)),
+        Triple(ServiceFilter.ABNORMAL, R.string.abnormal_legend, Color(0xFFFF7043)),
+        Triple(ServiceFilter.STATIC, R.string.static_legend, Color(0xFF607D8B)),
+        Triple(ServiceFilter.MASKED, R.string.masked_legend, MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)),
+        Triple(ServiceFilter.ALL, R.string.all_legend, null)
+    )
 
-@Composable
-private fun FilterChipItem(
-    label: String,
-    count: Int,
-    selected: Boolean,
-    dotColor: Color?,
-    onClick: () -> Unit
-) {
-    FilterChip(
-        selected = selected,
-        onClick = onClick,
-        label = {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                if (dotColor != null) {
-                    Box(
-                        modifier = Modifier
-                            .size(8.dp)
-                            .clip(CircleShape)
-                            .background(dotColor)
-                    )
-                }
-                Text(
-                    "$label ($count)",
-                    style = MaterialTheme.typography.labelLarge
+    Row(
+        modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 8.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        filters.forEach { (filter, labelRes, dotColor) ->
+            val count = serviceCounts[filter] ?: 0
+            val isSelected = selectedFilter == filter
+            
+            FilterChip(
+                selected = isSelected,
+                onClick = { onFilterSelected(filter) },
+                label = {
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        if (dotColor != null) {
+                            Surface(modifier = Modifier.size(6.dp), shape = CircleShape, color = dotColor) {}
+                        }
+                        Text("${context.getString(labelRes)} ($count)", style = MaterialTheme.typography.labelLarge)
+                    }
+                },
+                shape = RoundedCornerShape(12.dp),
+                colors = FilterChipDefaults.filterChipColors(selectedContainerColor = MaterialTheme.colorScheme.primaryContainer),
+                border = FilterChipDefaults.filterChipBorder(selected = isSelected, enabled = true, 
+                    borderColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f), 
+                    selectedBorderColor = MaterialTheme.colorScheme.primary)
             )
         }
-        },
-        shape = RoundedCornerShape(12.dp)
-    )
+    }
 }
 
 @Composable
 private fun ServiceCard(
     service: ServiceInfo,
     containerName: String,
-    clearFocus: () -> Unit,
     onAction: (String, suspend () -> ContainerSystemdManager.CommandResult) -> Unit
 ) {
     val context = LocalContext.current
     var showMenu by remember { mutableStateOf(false) }
 
-    val statusDotColor = when (service.status) {
-        ServiceStatus.ENABLED_RUNNING -> ColorGreen
-        ServiceStatus.ENABLED_STOPPED -> ColorYellow
-        ServiceStatus.DISABLED_STOPPED -> ColorRed
-        ServiceStatus.STATIC -> ColorStatic
-        ServiceStatus.ABNORMAL -> ColorAbnormal
-        ServiceStatus.MASKED -> ColorWhite
+    val statusColor = when (service.status) {
+        ServiceStatus.ENABLED_RUNNING -> Color(0xFF4CAF50)
+        ServiceStatus.ENABLED_STOPPED -> Color(0xFFFFCA28)
+        ServiceStatus.DISABLED_STOPPED -> Color(0xFFEF5350)
+        ServiceStatus.STATIC -> Color(0xFF607D8B)
+        ServiceStatus.ABNORMAL -> Color(0xFFFF7043)
+        ServiceStatus.MASKED -> MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
     }
 
-    ElevatedCard(
-        modifier = Modifier.fillMaxWidth(),
+    Surface(
+        modifier = Modifier.fillMaxWidth().animateContentSize(AnimationUtils.mediumSpec()),
         shape = RoundedCornerShape(20.dp),
-        elevation = CardDefaults.elevatedCardElevation(defaultElevation = 2.dp),
-        colors = CardDefaults.elevatedCardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainerLow
-        )
+        color = MaterialTheme.colorScheme.surfaceContainer,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f))
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(14.dp)
-        ) {
-            // Header row
+        Column {
+            // Premium Header Row (Symmetric) - Fixed Height 32dp + Padding
             Row(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 14.dp).height(32.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(14.dp),
+                Text(
+                    text = service.name,
+                    style = MaterialTheme.typography.titleMedium.copy(fontFamily = JetBrainsMono),
+                    fontWeight = FontWeight.Bold,
                     modifier = Modifier.weight(1f)
-                ) {
-                    // Status dot with glow effect
-                    Box(
-                        modifier = Modifier
-                            .size(12.dp)
-                            .clip(CircleShape)
-                            .background(statusDotColor)
-                    )
-                    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                        Text(
-                            text = service.name,
-                            style = MaterialTheme.typography.titleSmall,
-                            fontWeight = FontWeight.SemiBold,
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                        if (service.description.isNotEmpty()) {
-                            Text(
-                                text = service.description,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        }
-                    }
-                }
+                )
 
-                // Status badge
                 Surface(
-                    shape = RoundedCornerShape(10.dp),
-                    color = when (service.status) {
-                        ServiceStatus.ENABLED_RUNNING -> MaterialTheme.colorScheme.primaryContainer
-                        ServiceStatus.ENABLED_STOPPED -> MaterialTheme.colorScheme.tertiaryContainer
-                        ServiceStatus.STATIC -> MaterialTheme.colorScheme.secondaryContainer
-                        ServiceStatus.ABNORMAL -> MaterialTheme.colorScheme.errorContainer
-                        ServiceStatus.DISABLED_STOPPED -> MaterialTheme.colorScheme.surfaceContainerHighest
-                        ServiceStatus.MASKED -> MaterialTheme.colorScheme.surfaceContainerHighest
-                    }
+                    color = statusColor.copy(alpha = 0.1f),
+                    shape = RoundedCornerShape(8.dp),
+                    border = BorderStroke(1.dp, statusColor.copy(alpha = 0.2f))
                 ) {
-                    Text(
-                        text = when (service.status) {
-                            ServiceStatus.ENABLED_RUNNING -> context.getString(R.string.running)
-                            ServiceStatus.ENABLED_STOPPED -> context.getString(R.string.enabled_legend)
-                            ServiceStatus.STATIC -> context.getString(R.string.static_legend)
-                            ServiceStatus.ABNORMAL -> context.getString(R.string.abnormal_legend)
-                            ServiceStatus.DISABLED_STOPPED -> context.getString(R.string.disabled_legend)
-                            ServiceStatus.MASKED -> context.getString(R.string.masked_legend)
-                        },
-                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
-                        style = MaterialTheme.typography.labelMedium,
-                        fontWeight = FontWeight.Medium,
-                        color = when (service.status) {
-                            ServiceStatus.ENABLED_RUNNING -> MaterialTheme.colorScheme.onPrimaryContainer
-                            ServiceStatus.ENABLED_STOPPED -> MaterialTheme.colorScheme.onTertiaryContainer
-                            ServiceStatus.STATIC -> MaterialTheme.colorScheme.onSecondaryContainer
-                            ServiceStatus.ABNORMAL -> MaterialTheme.colorScheme.onErrorContainer
-                            else -> MaterialTheme.colorScheme.onSurfaceVariant
-                        }
-                    )
+                    Row(
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Surface(modifier = Modifier.size(6.dp), shape = CircleShape, color = statusColor) {}
+                        Text(
+                            text = when (service.status) {
+                                ServiceStatus.ENABLED_RUNNING -> context.getString(R.string.running)
+                                ServiceStatus.ENABLED_STOPPED -> context.getString(R.string.enabled_legend)
+                                ServiceStatus.STATIC -> context.getString(R.string.static_legend)
+                                ServiceStatus.ABNORMAL -> context.getString(R.string.abnormal_legend)
+                                ServiceStatus.DISABLED_STOPPED -> context.getString(R.string.disabled_legend)
+                                ServiceStatus.MASKED -> context.getString(R.string.masked_legend)
+                            }.uppercase(),
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = FontWeight.Black,
+                            letterSpacing = 0.5.sp,
+                            color = statusColor
+                        )
+                    }
                 }
             }
 
-            HorizontalDivider(
-                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
-            )
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
 
-            // Action buttons row
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(10.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                    if (service.isMasked) {
-                    FilledTonalButton(
-                        onClick = {
-                            clearFocus()
-                            onAction(context.getString(R.string.unmask)) { ContainerSystemdManager.unmaskService(containerName, service.name) }
-                        },
-                        modifier = Modifier.weight(1f),
-                        shape = RoundedCornerShape(12.dp)
-                    ) {
-                        Icon(Icons.Default.LockOpen, null, Modifier.size(18.dp))
-                        Spacer(Modifier.width(6.dp))
-                        Text(context.getString(R.string.unmask), style = MaterialTheme.typography.labelLarge)
-                    }
-                } else {
-                    // Start/Stop button
-                    if (service.isRunning) {
-                        Button(
-                            onClick = {
-                                clearFocus()
-                                onAction(context.getString(R.string.stop)) { ContainerSystemdManager.stopService(containerName, service.name) }
-                            },
-                            modifier = Modifier.weight(1f),
-                            shape = RoundedCornerShape(12.dp),
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = MaterialTheme.colorScheme.error
-                            )
-                        ) {
-                            Icon(Icons.Default.Stop, null, Modifier.size(18.dp))
-                            Spacer(Modifier.width(6.dp))
-                            Text(context.getString(R.string.stop), style = MaterialTheme.typography.labelLarge)
-                        }
-                    } else {
-                        Button(
-                            onClick = {
-                                clearFocus()
-                                onAction(context.getString(R.string.start)) { ContainerSystemdManager.startService(containerName, service.name) }
-                            },
-                            modifier = Modifier.weight(1f),
-                            shape = RoundedCornerShape(12.dp)
-                        ) {
-                            Icon(Icons.Default.PlayArrow, null, Modifier.size(18.dp))
-                            Spacer(Modifier.width(6.dp))
-                            Text(context.getString(R.string.start), style = MaterialTheme.typography.labelLarge)
-                        }
-                    }
+            Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                if (service.description.isNotEmpty()) {
+                    Text(
+                        text = service.description,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f)
+                    )
+                }
 
-                    // Enable/Disable button - Hidden for static services
-                    if (!service.isStatic) {
-                        if (service.isEnabled) {
-                            OutlinedButton(
-                                onClick = {
-                                    clearFocus()
-                                    onAction(context.getString(R.string.disable_service)) { ContainerSystemdManager.disableService(containerName, service.name) }
-                                },
-                                modifier = Modifier.weight(1f),
-                                shape = RoundedCornerShape(12.dp)
-                            ) {
-                                Icon(Icons.Default.Block, null, Modifier.size(18.dp))
-                                Spacer(Modifier.width(6.dp))
-                                Text(context.getString(R.string.disable_service), style = MaterialTheme.typography.labelLarge)
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                    shape = RoundedCornerShape(12.dp),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f))
+                ) {
+                    Row(modifier = Modifier.fillMaxWidth().padding(4.dp), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                        if (service.isMasked) {
+                            Surface(onClick = { onAction(context.getString(R.string.unmask)) { ContainerSystemdManager.unmaskService(containerName, service.name) } }, modifier = Modifier.weight(1f).height(48.dp), shape = RoundedCornerShape(16.dp), color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f), border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.2f))) {
+                                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) { Icon(Icons.Default.LockOpen, null, Modifier.size(18.dp), tint = MaterialTheme.colorScheme.primary); Text(context.getString(R.string.unmask), style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary) }
+                                }
                             }
                         } else {
-                            OutlinedButton(
-                                onClick = {
-                                    clearFocus()
-                                    onAction(context.getString(R.string.enable_service)) { ContainerSystemdManager.enableService(containerName, service.name) }
-                                },
-                                modifier = Modifier.weight(1f),
-                                shape = RoundedCornerShape(12.dp)
-                            ) {
-                                Icon(Icons.Default.CheckCircle, null, Modifier.size(18.dp))
-                                Spacer(Modifier.width(6.dp))
-                                Text(context.getString(R.string.enable_service), style = MaterialTheme.typography.labelLarge)
+                            val btnColor = if (service.isRunning) MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.4f) else MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f)
+                            val accentColor = if (service.isRunning) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary
+                            Surface(onClick = { if (service.isRunning) onAction(context.getString(R.string.stop)) { ContainerSystemdManager.stopService(containerName, service.name) } else onAction(context.getString(R.string.start)) { ContainerSystemdManager.startService(containerName, service.name) } }, modifier = Modifier.weight(1f).height(48.dp), shape = RoundedCornerShape(16.dp), color = btnColor, border = BorderStroke(1.dp, accentColor.copy(alpha = 0.2f))) {
+                                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) { Icon(if (service.isRunning) Icons.Default.Stop else Icons.Default.PlayArrow, null, Modifier.size(18.dp), tint = accentColor); Text(if (service.isRunning) context.getString(R.string.stop) else context.getString(R.string.start), style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold, color = accentColor) } }
                             }
-                        }
-                    }
-
-                    // 3-dot menu for all non-masked services
-                    if (!service.isMasked) {
-                        Box {
-                            IconButton(
-                                onClick = {
-                                    clearFocus()
-                                    showMenu = true
+                            if (!service.isStatic) {
+                                Surface(onClick = { if (service.isEnabled) onAction(context.getString(R.string.disable_service)) { ContainerSystemdManager.disableService(containerName, service.name) } else onAction(context.getString(R.string.enable_service)) { ContainerSystemdManager.enableService(containerName, service.name) } }, modifier = Modifier.weight(1f).height(48.dp), shape = RoundedCornerShape(16.dp), color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.05f), border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f))) {
+                                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) { Icon(if (service.isEnabled) Icons.Default.Block else Icons.Default.CheckCircle, null, Modifier.size(18.dp)); Text(if (service.isEnabled) context.getString(R.string.disable_service) else context.getString(R.string.enable_service), style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold) } }
                                 }
-                            ) {
-                                Icon(
-                                    Icons.Default.MoreVert,
-                                    contentDescription = context.getString(R.string.more_options),
-                                    tint = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
                             }
-                            DropdownMenu(
-                                expanded = showMenu,
-                                onDismissRequest = { showMenu = false }
-                            ) {
-                                // Restart option for running services
-                                if (service.isRunning) {
-                                    DropdownMenuItem(
-                                        text = {
-                                            Text(
-                                                context.getString(R.string.restart_service),
-                                                style = MaterialTheme.typography.bodyLarge
-                                            )
-                                        },
-                                        onClick = {
-                                            clearFocus()
-                                            showMenu = false
-                                            onAction(context.getString(R.string.restart_service)) { ContainerSystemdManager.restartService(containerName, service.name) }
-                                        },
-                                        leadingIcon = {
-                                            Icon(
-                                                Icons.Default.Refresh,
-                                                contentDescription = null,
-                                                tint = MaterialTheme.colorScheme.onSurfaceVariant
-                                            )
-                                        }
-                                    )
-                                }
-
-                                // Mask option for all non-masked services
-                                if (!service.isMasked) {
-                                    DropdownMenuItem(
-                                        text = {
-                                            Text(
-                                                context.getString(R.string.mask_service),
-                                                style = MaterialTheme.typography.bodyLarge
-                                            )
-                                        },
-                                        onClick = {
-                                            clearFocus()
-                                            showMenu = false
-                                            onAction(context.getString(R.string.mask_service)) { ContainerSystemdManager.maskService(containerName, service.name) }
-                                        },
-                                        leadingIcon = {
-                                            Icon(
-                                                Icons.Default.Lock,
-                                                contentDescription = null,
-                                                tint = MaterialTheme.colorScheme.onSurfaceVariant
-                                            )
-                                        }
-                                    )
+                            Box {
+                                Surface(onClick = { showMenu = true }, modifier = Modifier.size(48.dp), shape = RoundedCornerShape(16.dp), color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.05f), border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f))) { Box(contentAlignment = Alignment.Center) { Icon(Icons.Default.MoreVert, null, tint = MaterialTheme.colorScheme.onSurfaceVariant) } }
+                                DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
+                                    if (service.isRunning) { DropdownMenuItem(text = { Text(context.getString(R.string.restart_service)) }, leadingIcon = { Icon(Icons.Default.Refresh, null) }, onClick = { showMenu = false; onAction(context.getString(R.string.restart_service)) { ContainerSystemdManager.restartService(containerName, service.name) } }) }
+                                    DropdownMenuItem(text = { Text(context.getString(R.string.mask_service)) }, leadingIcon = { Icon(Icons.Default.Lock, null) }, onClick = { showMenu = false; onAction(context.getString(R.string.mask_service)) { ContainerSystemdManager.maskService(containerName, service.name) } })
                                 }
                             }
                         }
@@ -771,46 +385,16 @@ private fun ServiceCard(
     }
 }
 
-
 @Composable
-private fun SystemdNotAvailable(modifier: Modifier = Modifier) {
+private fun SystemdNotAvailable() {
     val context = LocalContext.current
-    Box(
-        modifier = modifier.fillMaxSize(),
-        contentAlignment = Alignment.Center
-    ) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(16.dp),
-            modifier = Modifier.padding(32.dp)
-        ) {
-            Surface(
-                shape = CircleShape,
-                color = MaterialTheme.colorScheme.errorContainer,
-                modifier = Modifier.size(80.dp)
-            ) {
-                Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
-                    Icon(
-                        Icons.Default.Warning,
-                        contentDescription = null,
-                        modifier = Modifier.size(40.dp),
-                        tint = MaterialTheme.colorScheme.onErrorContainer
-                    )
-                }
+    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(24.dp), modifier = Modifier.padding(32.dp)) {
+            Surface(shape = CircleShape, color = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.2f), modifier = Modifier.size(120.dp), border = BorderStroke(2.dp, MaterialTheme.colorScheme.error.copy(alpha = 0.2f))) { Box(contentAlignment = Alignment.Center) { Icon(Icons.Default.Warning, null, modifier = Modifier.size(56.dp), tint = MaterialTheme.colorScheme.error) } }
+            Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(context.getString(R.string.systemd_not_available), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
+                Text(context.getString(R.string.systemd_not_available_desc), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.Center)
             }
-            Text(
-                text = context.getString(R.string.systemd_not_available),
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.SemiBold,
-                color = MaterialTheme.colorScheme.onSurface,
-                textAlign = TextAlign.Center
-            )
-            Text(
-                text = context.getString(R.string.systemd_not_available_message),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                textAlign = TextAlign.Center
-            )
         }
     }
 }
@@ -818,50 +402,18 @@ private fun SystemdNotAvailable(modifier: Modifier = Modifier) {
 @Composable
 private fun EmptyServicesState(filter: ServiceFilter, modifier: Modifier = Modifier) {
     val context = LocalContext.current
-    Box(
-        modifier = modifier.fillMaxSize(),
-        contentAlignment = Alignment.Center
-    ) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(12.dp),
-            modifier = Modifier.padding(32.dp)
-        ) {
-            Surface(
-                shape = CircleShape,
-                color = MaterialTheme.colorScheme.surfaceContainerHigh,
-                modifier = Modifier.size(72.dp)
-            ) {
-                Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
-                    Icon(
-                        Icons.AutoMirrored.Filled.List,
-                        contentDescription = null,
-                        modifier = Modifier.size(36.dp),
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-}
-            }
-            Text(
-                text = context.getString(R.string.no_services_found),
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Medium,
-                color = MaterialTheme.colorScheme.onSurface,
-                textAlign = TextAlign.Center
-            )
-            Text(
-                text = when (filter) {
-                    ServiceFilter.ALL -> context.getString(R.string.no_systemd_services)
-                    ServiceFilter.RUNNING -> context.getString(R.string.no_running_services)
-                    ServiceFilter.ENABLED -> context.getString(R.string.no_enabled_services)
-                    ServiceFilter.DISABLED -> context.getString(R.string.no_disabled_services)
-                    ServiceFilter.STATIC -> context.getString(R.string.no_static_services)
-                    ServiceFilter.ABNORMAL -> context.getString(R.string.no_abnormal_services)
-                    ServiceFilter.MASKED -> context.getString(R.string.no_masked_services)
-                },
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                textAlign = TextAlign.Center
-            )
+    Box(modifier = modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(16.dp)) {
+            Icon(Icons.Default.SearchOff, null, modifier = Modifier.size(64.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f))
+            Text(text = when (filter) {
+                ServiceFilter.RUNNING -> context.getString(R.string.no_running_services)
+                ServiceFilter.ENABLED -> context.getString(R.string.no_enabled_services)
+                ServiceFilter.DISABLED -> context.getString(R.string.no_disabled_services)
+                ServiceFilter.STATIC -> context.getString(R.string.no_static_services)
+                ServiceFilter.ABNORMAL -> context.getString(R.string.no_abnormal_services)
+                ServiceFilter.MASKED -> context.getString(R.string.no_masked_services)
+                ServiceFilter.ALL -> context.getString(R.string.no_services_found)
+            }, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f))
         }
     }
 }
