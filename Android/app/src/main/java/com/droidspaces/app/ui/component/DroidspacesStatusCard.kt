@@ -74,12 +74,14 @@ fun DroidspacesStatusCard(
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f))
     ) {
         Column(
-            modifier = Modifier.padding(16.dp), // Match ContainerCard
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 14.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            // Header row — matches ContainerCard's SpaceBetween structure
+            // Premium Header Row (Symmetric) - Fixed Height 32dp, Padding from Column
             Row(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier.fillMaxWidth().height(32.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -111,38 +113,35 @@ fun DroidspacesStatusCard(
                     )
                 }
 
-                // Right side: mode pill (matches container status pill position)
+                // Right side: mode pill
                 if (isWorking && backendMode != null) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    Surface(
+                        color = accentColor.copy(alpha = 0.1f),
+                        shape = RoundedCornerShape(8.dp),
+                        border = BorderStroke(1.dp, accentColor.copy(alpha = 0.2f))
                     ) {
-                        // Spacer matches the Terminal IconButton width in ContainerCard (32dp)
-                        Spacer(modifier = Modifier.size(32.dp))
-
-                        Surface(
-                            color = accentColor.copy(alpha = 0.1f),
-                            shape = RoundedCornerShape(8.dp),
-                            border = BorderStroke(1.dp, accentColor.copy(alpha = 0.2f))
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp),
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
                         ) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(6.dp),
-                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-                            ) {
-                                Surface(modifier = Modifier.size(6.dp), shape = CircleShape, color = accentColor) {}
-                                Text(
-                                    text = backendMode!!.uppercase(),
-                                    style = MaterialTheme.typography.labelSmall,
-                                    fontWeight = FontWeight.Black,
-                                    letterSpacing = 0.5.sp,
-                                    color = accentColor
-                                )
-                            }
+                            Surface(modifier = Modifier.size(6.dp), shape = CircleShape, color = accentColor) {}
+                            Text(
+                                text = backendMode!!.uppercase(),
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.Black,
+                                letterSpacing = 0.5.sp,
+                                color = accentColor
+                            )
                         }
                     }
                 }
             }
+
+            HorizontalDivider(
+                modifier = Modifier.fillMaxWidth(),
+                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)
+            )
 
             // Wordmark and Version block
             Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
@@ -168,40 +167,39 @@ fun DroidspacesStatusCard(
                         modifier = Modifier.padding(top = 2.dp)
                     )
                 }
+            }
 
-                // Error banner
-                if (isError) {
-                    Surface(
-                        modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
-                        shape = RoundedCornerShape(10.dp),
-                        color = accentColor.copy(alpha = 0.1f)
+            // Error banner
+            if (isError) {
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(10.dp),
+                    color = accentColor.copy(alpha = 0.1f)
+                ) {
+                    Row(
+                        modifier = Modifier.padding(10.dp),
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Row(
-                            modifier = Modifier.padding(10.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Info,
-                                contentDescription = null,
-                                tint = accentColor,
-                                modifier = Modifier.size(16.dp)
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(
-                                text = when {
-                                    !isRootAvailable -> context.getString(R.string.grant_root_message)
-                                    status == DroidspacesStatus.UpdateAvailable -> context.getString(R.string.update_available_message)
-                                    else -> context.getString(R.string.tap_to_fix_system)
-                                },
-                                style = MaterialTheme.typography.bodySmall,
-                                fontWeight = FontWeight.Medium,
-                                color = accentColor
-                            )
-                        }
+                        Icon(
+                            imageVector = Icons.Default.Info,
+                            contentDescription = null,
+                            tint = accentColor,
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = when {
+                                !isRootAvailable -> context.getString(R.string.grant_root_message)
+                                status == DroidspacesStatus.UpdateAvailable -> context.getString(R.string.update_available_message)
+                                else -> context.getString(R.string.tap_to_fix_system)
+                            },
+                            style = MaterialTheme.typography.bodySmall,
+                            fontWeight = FontWeight.Medium,
+                            color = accentColor
+                        )
                     }
                 }
             }
         }
     }
 }
-
