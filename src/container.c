@@ -265,9 +265,10 @@ int is_valid_container_pid(pid_t pid) {
 int start_rootfs(struct ds_config *cfg) {
 
   int has_side_effects = 0;
+  int lock_acquired = 0;
+
   /* 0. Early restart detection: check for external lock from previous stop
    *    command to detect a preserved mount for reuse. */
-  int lock_acquired = 0;
   if (cfg->container_name[0]) {
     char lock_path[PATH_MAX];
     get_lock_path(cfg->container_name, lock_path, sizeof(lock_path));
@@ -287,7 +288,6 @@ int start_rootfs(struct ds_config *cfg) {
             read_mount_path(cfg->pidfile, existing_mount,
                             sizeof(existing_mount)) > 0 &&
             is_mountpoint(existing_mount)) {
-          ds_log("Reusing existing mount at %s (restart)", existing_mount);
           safe_strncpy(cfg->rootfs_path, existing_mount,
                        sizeof(cfg->rootfs_path));
           cfg->is_img_mount = 1;
@@ -301,6 +301,24 @@ int start_rootfs(struct ds_config *cfg) {
       }
     }
   }
+
+  /* 1. Logo & Uniqueness Check */
+  print_ds_banner();
+
+  /* 1b. Name Uniqueness Check
+   * We no longer auto-generate or increment names. The name must be provided
+   * by the user and it must be unique. */
+  if (!lock_acquired) {
+    pid_t existing_pid = 0;
+    if (is_container_running(cfg, &existing_pid)) {
+      ds_error("Container name '%s' is already in use by PID %d.",
+               cfg->container_name, existing_pid);
+      goto cleanup;
+    }
+  }
+
+  /* 2. Preparation */
+  ensure_workspace();
 
   /* 0a. Resolve any symlinks in rootfs paths to canonical absolute paths.
    *     This prevents symlink-based attacks and ensures that all subsequent
@@ -327,23 +345,6 @@ int start_rootfs(struct ds_config *cfg) {
     safe_strncpy(cfg->rootfs_img_path, abs_path, sizeof(cfg->rootfs_img_path));
     free(abs_path);
   }
-
-  /* 1. Preparation */
-  ensure_workspace();
-
-  /* 1b. Name Uniqueness Check
-   * We no longer auto-generate or increment names. The name must be provided
-   * by the user and it must be unique. */
-  if (!lock_acquired) {
-    pid_t existing_pid = 0;
-    if (is_container_running(cfg, &existing_pid)) {
-      ds_error("Container name '%s' is already in use by PID %d.",
-               cfg->container_name, existing_pid);
-      goto cleanup;
-    }
-  }
-
-  print_ds_banner();
 
   /* if foreground was requested but we have no interactive terminal (piped,
    * scripted, config foreground=1, etc.), flip the switch once here and warn
