@@ -55,6 +55,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.ui.graphics.graphicsLayer
 import kotlinx.coroutines.delay
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 
@@ -365,6 +366,16 @@ fun EditContainerScreen(
         bottomBar = {
             val btnShape = RoundedCornerShape(20.dp)
             val isReadyToSave = !isSaving && !isSaved && hasChanges && (netMode != "nat" || upstreamInterfaces.isNotEmpty())
+            val targetBtnColor = when {
+                isSaved -> MaterialTheme.colorScheme.primaryContainer
+                isSaving || isReadyToSave -> MaterialTheme.colorScheme.primary
+                else -> MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f)
+            }
+            val animatedBtnColor by animateColorAsState(
+                targetValue = targetBtnColor,
+                animationSpec = tween(durationMillis = 250),
+                label = "btn_color"
+            )
             Surface(
                 modifier = Modifier.fillMaxWidth(),
                 color = MaterialTheme.colorScheme.surfaceContainer.copy(alpha = 0.98f),
@@ -391,14 +402,10 @@ fun EditContainerScreen(
                                 interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
                             ),
                         shape = btnShape,
-                        color = when {
-                            isSaved -> MaterialTheme.colorScheme.primaryContainer
-                            isReadyToSave -> MaterialTheme.colorScheme.primary
-                            else -> MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f)
-                        },
+                        color = animatedBtnColor,
                         tonalElevation = 0.dp
                     ) {
-                        Box(modifier = Modifier.padding(vertical = 16.dp), contentAlignment = Alignment.Center) {
+                        Box(modifier = Modifier.padding(vertical = 16.dp).fillMaxWidth(), contentAlignment = Alignment.Center) {
                             when {
                                 isSaved -> {
                                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -419,7 +426,7 @@ fun EditContainerScreen(
                                 isSaving -> {
                                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                         LoadingIndicator(
-                                            size = LoadingSize.Small,
+                                            modifier = Modifier.size(20.dp),
                                             color = MaterialTheme.colorScheme.onPrimary
                                         )
                                         Text(
