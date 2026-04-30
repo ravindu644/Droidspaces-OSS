@@ -193,6 +193,9 @@
     <string name="manual_deadlock_shield">Manual Deadlock Shield</string>
     <string name="manual_deadlock_shield_description">Prevents kernel-level VFS deadlocks on legacy kernels (e.g., 4.14.x) by blocking nested namespace creation.
 \n\nWARNING: Enabling this will block Docker, Podman, LXC, and Systemd sandboxing support inside the container.</string>
+    <string name="users">Users</string>
+    <string name="default_user">Default User</string>
+    <string name="always_ask">Always Ask</string>
 
     <!-- Config Categories and Network Mode -->
     <string name="cat_networking">Networking</string>

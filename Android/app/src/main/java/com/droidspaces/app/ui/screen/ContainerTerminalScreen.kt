@@ -40,6 +40,7 @@ import com.droidspaces.app.ui.terminal.virtualkeys.VirtualKeysInfo
 import com.droidspaces.app.ui.terminal.virtualkeys.VirtualKeysListener
 import com.droidspaces.app.ui.terminal.virtualkeys.VirtualKeysView
 import com.droidspaces.app.util.AnimationUtils
+import com.droidspaces.app.util.ContainerInfo
 import com.droidspaces.app.util.ContainerOSInfoManager
 import com.termux.terminal.TerminalSession
 import com.termux.view.TerminalView
@@ -58,7 +59,7 @@ private data class TerminalTab(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ContainerTerminalScreen(
-    containerName: String,
+    container: ContainerInfo,
     initialUsers: List<String>,
     onNavigateBack: () -> Unit,
 ) {
@@ -85,49 +86,18 @@ fun ContainerTerminalScreen(
         list
     }
 
-    val hostname = remember(containerName) {
-        ContainerOSInfoManager.getCachedOSInfo(containerName, context)?.hostname
-            ?: containerName.take(12)
+    val hostname = remember(container.name) {
+        ContainerOSInfoManager.getCachedOSInfo(container.name, context)?.hostname
+            ?: container.name.take(12)
     }
 
     val tabs = remember { mutableStateListOf<TerminalTab>() }
     var activeTabId by remember { mutableStateOf("") }
     var showUserPicker by remember { mutableStateOf(false) }
 
-    LaunchedEffect(binder) {
-        binder ?: return@LaunchedEffect
-        if (tabs.isNotEmpty()) return@LaunchedEffect
-        val existing = TerminalSessionService.globalSessionList
-            .filter { (_, info) -> info.containerName == containerName }
-        if (existing.isNotEmpty()) {
-            existing.forEach { (id, info) ->
-                tabs.add(TerminalTab(id = id, user = info.user, label = "${info.user}@$hostname"))
-            }
-            activeTabId = existing.keys.last()
-        } else {
-            showUserPicker = true
-        }
-    }
-
-    // Sync UI tabs with background service reality.
-    // If sessions are killed externally (e.g. Notification Exit), remove them here.
-    LaunchedEffect(TerminalSessionService.globalSessionList.size) {
-        val currentGlobalIds = TerminalSessionService.globalSessionList.keys
-        val toRemove = tabs.filter { it.id !in currentGlobalIds }
-        if (toRemove.isNotEmpty()) {
-            val wasActiveRemoved = activeTabId in toRemove.map { it.id }
-            tabs.removeAll(toRemove)
-            if (tabs.isEmpty()) {
-                onNavigateBack()
-            } else if (wasActiveRemoved) {
-                activeTabId = tabs.last().id
-            }
-        }
-    }
-
     fun addTab(user: String) {
         TerminalSessionService.start(context)
-        val id = "${containerName}_${UUID.randomUUID().toString().take(8)}"
+        val id = "${container.name}_${UUID.randomUUID().toString().take(8)}"
         val newTab = TerminalTab(id = id, user = user, label = "$user@$hostname")
         val currentIndex = tabs.indexOfFirst { it.id == activeTabId }
         if (currentIndex != -1) {
@@ -148,6 +118,39 @@ fun ContainerTerminalScreen(
         tabs.remove(tab)
         if (tabs.isEmpty()) onNavigateBack()
         else activeTabId = tabs.getOrElse(idx.coerceAtMost(tabs.lastIndex)) { tabs.last() }.id
+    }
+
+    LaunchedEffect(binder) {
+        binder ?: return@LaunchedEffect
+        if (tabs.isNotEmpty()) return@LaunchedEffect
+        val existing = TerminalSessionService.globalSessionList
+            .filter { (_, info) -> info.containerName == container.name }
+        if (existing.isNotEmpty()) {
+            existing.forEach { (id, info) ->
+                tabs.add(TerminalTab(id = id, user = info.user, label = "${info.user}@$hostname"))
+            }
+            activeTabId = existing.keys.last()
+        } else if (container.defaultUser.isEmpty() || container.defaultUser == "always_ask") {
+            showUserPicker = true
+        } else {
+            addTab(container.defaultUser)
+        }
+    }
+
+    // Sync UI tabs with background service reality.
+    // If sessions are killed externally (e.g. Notification Exit), remove them here.
+    LaunchedEffect(TerminalSessionService.globalSessionList.size) {
+        val currentGlobalIds = TerminalSessionService.globalSessionList.keys
+        val toRemove = tabs.filter { it.id !in currentGlobalIds }
+        if (toRemove.isNotEmpty()) {
+            val wasActiveRemoved = activeTabId in toRemove.map { it.id }
+            tabs.removeAll(toRemove)
+            if (tabs.isEmpty()) {
+                onNavigateBack()
+            } else if (wasActiveRemoved) {
+                activeTabId = tabs.last().id
+            }
+        }
     }
 
     val exitScreen = {
@@ -178,7 +181,7 @@ fun ContainerTerminalScreen(
                 TopAppBar(
                     title = {
                         Text(
-                            containerName,
+                            container.name,
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.SemiBold,
                             maxLines = 1,
@@ -271,7 +274,7 @@ fun ContainerTerminalScreen(
                         TerminalTabView(
                             tab = tab,
                             binder = binder!!,
-                            containerName = containerName,
+                            containerName = container.name,
                             isVisible = tab.id == activeTabId,
                             activity = activity,
                             onSessionFinished = { closeTab(tab) },

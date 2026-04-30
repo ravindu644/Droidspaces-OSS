@@ -49,6 +49,7 @@ import com.droidspaces.app.ui.component.PrivilegedModeDialog
 import com.droidspaces.app.ui.component.NetworkModeSelector
 import com.droidspaces.app.ui.component.UpstreamInterfaceList
 import com.droidspaces.app.ui.component.PortForwardingList
+import com.droidspaces.app.ui.component.DefaultUserSelector
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.compose.foundation.lazy.LazyColumn
@@ -94,6 +95,7 @@ fun EditContainerScreen(
     var blockNestedNs by remember { mutableStateOf(container.blockNestedNs) }
     var staticNatIp by remember { mutableStateOf(container.staticNatIp) }
     var privileged by remember { mutableStateOf(container.privileged) }
+    var defaultUser by remember { mutableStateOf(container.defaultUser) }
 
     // Track the "saved" baseline values - updated after each successful save
     var savedHostname by remember { mutableStateOf(container.hostname) }
@@ -115,6 +117,7 @@ fun EditContainerScreen(
     var savedBlockNestedNs by remember { mutableStateOf(container.blockNestedNs) }
     var savedStaticNatIp by remember { mutableStateOf(container.staticNatIp) }
     var savedPrivileged by remember { mutableStateOf(container.privileged) }
+    var savedDefaultUser by remember { mutableStateOf(container.defaultUser) }
 
     // Navigation and internal UI states
     var showFilePicker by remember { mutableStateOf(false) }
@@ -147,7 +150,8 @@ fun EditContainerScreen(
             forceCgroupv1 != savedForceCgroupv1 ||
             blockNestedNs != savedBlockNestedNs ||
             staticNatIp != savedStaticNatIp ||
-            privileged != savedPrivileged
+            privileged != savedPrivileged ||
+            defaultUser != savedDefaultUser
         }
     }
 
@@ -185,7 +189,8 @@ fun EditContainerScreen(
                     forceCgroupv1 = forceCgroupv1,
                     blockNestedNs = blockNestedNs,
                     staticNatIp = staticNatIp,
-                    privileged = privileged
+                    privileged = privileged,
+                    defaultUser = defaultUser
                 )
 
                 // Update config file
@@ -215,6 +220,7 @@ fun EditContainerScreen(
                         savedBlockNestedNs = blockNestedNs
                         savedStaticNatIp = staticNatIp
                         savedPrivileged = privileged
+                        savedDefaultUser = defaultUser
 
                         // Refresh container list and SELinux status using ViewModel
                         containerViewModel.refresh()
@@ -525,6 +531,22 @@ fun EditContainerScreen(
                 colors = modernFieldColors,
                 leadingIcon = {
                     Icon(Icons.Default.Computer, contentDescription = null)
+                }
+            )
+
+            Text(
+                text = context.getString(R.string.users),
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.padding(top = 8.dp)
+            )
+
+            DefaultUserSelector(
+                defaultUser = defaultUser,
+                containerName = container.name,
+                onUserChange = { user ->
+                    clearFocus()
+                    defaultUser = user
                 }
             )
 

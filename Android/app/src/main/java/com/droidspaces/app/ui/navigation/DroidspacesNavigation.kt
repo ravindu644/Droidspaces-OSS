@@ -570,16 +570,25 @@ fun DroidspacesNavigation(
             popExitTransition = defaultExitTransition
         ) { backStackEntry ->
             val containerName = backStackEntry.arguments?.getString("containerName") ?: ""
+            // Use shared ViewModel to ensure we see updated details
+            val containerViewModel: ContainerViewModel = sharedContainerViewModel
+            val container = containerViewModel.containerList.find { it.name == containerName }
+
             // Resolve cached users for the user picker dialog
             val users = remember(containerName) {
                 com.droidspaces.app.util.ContainerUsersManager.getCachedUsers(containerName)
                     ?: listOf("root")
             }
-            ContainerTerminalScreen(
-                containerName = containerName,
-                initialUsers = users,
-                onNavigateBack = { navController.popBackStack() }
-            )
+
+            container?.let {
+                ContainerTerminalScreen(
+                    container = it,
+                    initialUsers = users,
+                    onNavigateBack = { navController.popBackStack() }
+                )
+            } ?: LaunchedEffect(Unit) {
+                navController.popBackStack()
+            }
         }
     }
 }
