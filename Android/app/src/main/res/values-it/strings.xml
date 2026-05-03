@@ -112,7 +112,7 @@
     <string name="stop">Arresta</string>
     <string name="restart">Riavvia</string>
     <string name="ipv6_option">No IPv6</string>
-    <string name="storage_option">Storage</string>
+    <string name="storage_option">Archiviazione</string>
     <string name="hw_option">HW</string>
     <string name="x11_option">X11</string>
     <string name="installation_setup_summary">Riepilogo installazione</string>
@@ -173,7 +173,7 @@
     <string name="available_system_interfaces">Interfacce di sistema disponibili:</string>
     <string name="enter_manually">O inseriscila manualmente (i wildcard sono supportati):</string>
     <string name="interface_name_hint">Nome interfaccia (es. wlan0, v4-rmnet_data*)</string>
-    <string name="port_forwarding">Port Forwarding</string>
+    <string name="port_forwarding">Inoltro Porte</string>
     <string name="add_port_forward">Aggiungi Port Forward</string>
     <string name="host_port_hint">Porta Host (1-65535 o intervallo 100-200)</string>
     <string name="container_port_hint">Porta Contenitore (1-65535 o intervallo)</string>
@@ -254,7 +254,7 @@
     <string name="systemd_services">Servizi Systemd</string>
     <string name="fetching_services">Recupero servizi...</string>
     <string name="systemd_not_available">Systemd non disponibile</string>
-    <string name="systemd_not_available_message">Questo contenitore non ha systemd installato o in esecuzione</string>
+    <string name="systemd_not_available_message">\@string/systemd_not_available_desc</string>
     <string name="search_services">Cerca servizi...</string>
     <string name="enabled_legend">Abilitato</string>
     <string name="disabled_legend">Disabilitato</string>
@@ -377,4 +377,40 @@
     <string name="privileged_confirm_instruction">Digita \"I WON\'T REPORT ANY BUGS\" esattamente in maiuscolo per confermare:</string>
     <string name="i_understand_caps">I WON\'T REPORT ANY BUGS</string>
     <string name="reboot_recommended">Riavvio consigliato per applicare le regole SELinux e avviare il daemon all\'avvio.</string>
+    <string name="backend_attention_required">Backend: Azione richiesta</string>
+    <string name="tap_to_fix_system">Tocca per correggere la configurazione di sistema</string>
+    <string name="install">Installa</string>
+    <string name="uptime_label">%1$s: %2$s</string>
+    <string name="ip_address_label">%1$s: %2$s</string>
+    <string name="env_hint_row">Ogni riga è una coppia CHIAVE=VALORE</string>
+    <string name="key_label">KEY</string>
+    <string name="value_label">VALUE</string>
+    <string name="add_variable">Aggiungi variabile</string>
+    <string name="installing_container">Installazione Contenitore</string>
+    <string name="done">Fatto</string>
+    <string name="filter_absolute_path_hint">Filtra o digita il percorso assoluto…</string>
+    <string name="no_matches">Nessuna corrispondenza</string>
+    <string name="empty_directory">Directory vuota</string>
+    <string name="select_folder">Seleziona Cartella</string>
+    <string name="tcp">TCP</string>
+    <string name="udp">UDP</string>
+    <string name="cpu">CPU:</string>
+    <string name="ram">RAM:</string>
+    <string name="terminal_logs">Log Terminale</string>
+    <string name="installation_logs">Log di Installazione</string>
+    <string name="terminal_label">Terminale</string>
+    <string name="default_size_gb_hint">8</string>
+    <string name="size_range_4_512_hint">4-512</string>
+    <string name="cpu_usage_label">Utilizzo CPU</string>
+    <string name="ram_usage_label">Utilizzo RAM</string>
+    <string name="cpu_percent_label">%1$.1f%%</string>
+    <string name="ram_percent_label">%1$d MB (%2$.1f%%)</string>
+    <string name="sessions_running_plural">%1$d sessioni in esecuzione · toccare per ripristinare</string>
+    <string name="session_running_singular">1 sessione in esecuzione · toccare per ripristinare</string>
+    <string name="systemd_not_available_desc">Questo contenitore non ha systemd installato o in esecuzione</string>
+    <string name="please_wait_hint">Attendi mentre elaboriamo la tua richiesta...</string>
+    <string name="restore">Ripristina</string>
+    <string name="export_container">Esporta il contenitore come tarball</string>
+    <string name="export_container_failed">Esportazione del contenitore %1$s non riuscita</string>
+    <string name="starting_export">Avvio dell\'esportazione in corso...</string>
 </resources>
