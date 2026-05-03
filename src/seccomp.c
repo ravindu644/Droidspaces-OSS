@@ -8,6 +8,7 @@
 #include "droidspace.h"
 #include <linux/audit.h>
 #include <linux/filter.h>
+#include <linux/if_alg.h>
 #include <linux/seccomp.h>
 #include <stddef.h>
 #include <sys/prctl.h>
@@ -24,8 +25,18 @@
  */
 int ds_seccomp_apply_minimal(int hw_access, int privileged_mask) {
   (void)hw_access;
-  static struct sock_filter filter[64];
+  static struct sock_filter filter[72];
   int curr = 0;
+
+  /*
+   * CVE-2026-31431 ("Copy Fail") mitigation layer 1:
+   * Prevent the exploit's setuid cashout regardless of whether the
+   * AF_ALG primitive is blocked below.  Must be set before the seccomp
+   * filter is loaded because prctl(PR_SET_NO_NEW_PRIVS) itself is a
+   * syscall that the filter could theoretically see.
+   */
+  if (prctl(PR_SET_NO_NEW_PRIVS, 1, 0, 0, 0) < 0)
+    ds_warn("[SEC] PR_SET_NO_NEW_PRIVS failed: %s", strerror(errno));
 
   /* 1. Validate Architecture */
   filter[curr++] = (struct sock_filter)BPF_STMT(
@@ -114,6 +125,31 @@ int ds_seccomp_apply_minimal(int hw_access, int privileged_mask) {
                                                   0x10000000, 0, 1);
     filter[curr++] = (struct sock_filter)BPF_STMT(
         BPF_RET | BPF_K, SECCOMP_RET_ERRNO | (EPERM & SECCOMP_RET_DATA));
+
+    /*
+     * 9. CVE-2026-31431 ("Copy Fail") - mitigation layer 2.
+     *
+     * Block socket(AF_ALG, ...) - the mandatory first step of the exploit.
+     * AF_ALG == 38.  The filter must reload the syscall number after the
+     * argument-inspecting unshare/clone blocks above (those leave the acc
+     * pointing at args[0]).  Pattern mirrors the unshare handler above.
+     *
+     * Instruction budget: JEQ/socket(5) + JEQ/arg(4) = 6 insns.
+     * filter[] was sized to 72 to accommodate this.
+     */
+    filter[curr++] = (struct sock_filter)BPF_STMT(
+        BPF_LD | BPF_W | BPF_ABS, offsetof(struct seccomp_data, nr));
+    filter[curr++] = (struct sock_filter)BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K,
+                                                  __NR_socket, 0, 4);
+    filter[curr++] = (struct sock_filter)BPF_STMT(
+        BPF_LD | BPF_W | BPF_ABS, offsetof(struct seccomp_data, args[0]));
+    filter[curr++] = (struct sock_filter)BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K,
+                                                  AF_ALG, 0, 1);
+    filter[curr++] = (struct sock_filter)BPF_STMT(
+        BPF_RET | BPF_K, SECCOMP_RET_ERRNO | (EPERM & SECCOMP_RET_DATA));
+    /* Reload nr for any rules that follow this block. */
+    filter[curr++] = (struct sock_filter)BPF_STMT(
+        BPF_LD | BPF_W | BPF_ABS, offsetof(struct seccomp_data, nr));
   }
 
   /* Allow everything else */
