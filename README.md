@@ -124,6 +124,7 @@ What makes Droidspaces unique is its **zero-dependency, native execution** on bo
 
 - [What is Droidspaces?](#what-is-droidspaces)
 - [Features](#features)
+- [Security & Isolation Philosophy](#security-model)
 - [Droidspaces vs Chroot](#droidspaces-vs-chroot)
 - [Droidspaces vs LXC/Docker on Android](#droidspaces-vs-lxcdocker-on-android)
 - [Requirements](#requirements)
@@ -185,6 +186,37 @@ The entire runtime is a **single static binary** under 300KB, compiled against m
 | **Cgroup Isolation (v1/v2)** | Per-container cgroup hierarchies (`/sys/fs/cgroup/droidspaces/<name>`) with full systemd compatibility. Supports both legacy v1 and modern v2 hierarchies. |
 | **Adaptive Security & Deadlock Shield** | Kernel-aware BPF filters resolve FBE keyring conflicts automatically on legacy kernels. A manual **Deadlock Shield** toggle is available to fix the specific VFS `grab_super()` deadlock on affected legacy devices (e.g., kernel 4.14.113). When the shield is disabled (default), Droidspaces grants full namespace freedom enabling features like **nested containers/Docker** natively on all kernels. |
 | **Privileged Mode** | Gain full access with the `--privileged` flag! Use with caution: do not report bugs when using this flag as it relaxes several security barriers for features like Flatpak/Bwrap/K3S. |
+
+---
+
+<a id="security-model"></a>
+
+## Security & Isolation Philosophy
+
+> [!IMPORTANT]
+>
+> Droidspaces is a **privileged container runtime** built for **power users** who prioritize simplicity, performance, and native integration over complex, production-grade jailing.
+>
+> To provide full systemd support, native hardware acceleration (GPU), and complex mounts/networking on Android, the container root needs real privileges. Even though Droidspaces does not use the heavily restricted "unprivileged" (User Namespace) mode, it applies several security layers:
+> - **Capability Dropping**: By default, Droidspaces drops high-risk capabilities (e.g., `CAP_SYS_MODULE`, `CAP_SYS_RAWIO`).
+> - **Mount Hardening**: Critical host paths are masked or remounted as read-only.
+> - **Seccomp Filters**: Common exploit vectors (like CVE-2026-31431 and malicious kernel module loading, remounting as RW) are blocked by default.
+
+> [!WARNING]
+>
+> **A Container is not a Jail**
+> If a process runs as **root** inside a Droidspaces container, it has significant power.
+> 
+> A malicious root user can attempt to escape or manipulate the host. **Droidspaces is not a sandbox for untrusted code.**
+>
+> We focus on bringing a full Linux server experience to your pocket, not on building a production-grade fortress.
+
+> [!NOTE]
+>
+> **Our Security Advice:**
+> 1. **Don't daily-drive root**: Just as you would on a standard Linux PC, create a normal user inside your container and use `sudo`.
+> 2. **Be Careful with Modes**: Flags like `--privileged` and `--hw-access` intentionally relax security barriers. Use them only when necessary.
+> 3. **Respect the Host**: If you compromise your container's root, you compromise your device.
 
 ---
 
