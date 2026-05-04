@@ -43,8 +43,6 @@ fun RootCheckScreen(
     var currentRootStatus by remember { mutableStateOf<RootStatus?>(rootStatus) }
     var isChecking by remember { mutableStateOf(false) }
     var hasCheckedRoot by remember { mutableStateOf(false) }
-    var skipButtonVisible by remember { mutableStateOf(false) }
-
     var titleVisible by remember { mutableStateOf(false) }
     var cardVisible by remember { mutableStateOf(false) }
 
@@ -55,7 +53,6 @@ fun RootCheckScreen(
 
     val titleAlpha by animateFloatAsState(if (titleVisible) 1f else 0f, AnimationUtils.fadeInSpec(), label = "titleAlpha")
     val cardAlpha by animateFloatAsState(if (cardVisible) 1f else 0f, AnimationUtils.fadeInSpec(), label = "cardAlpha")
-    val skipButtonAlpha by animateFloatAsState(if (skipButtonVisible) 1f else 0f, AnimationUtils.slowSpec(), label = "skipButtonAlpha")
 
     fun checkRoot() {
         if (isChecking) return
@@ -67,8 +64,6 @@ fun RootCheckScreen(
             currentRootStatus = result
             onRootCheck?.invoke(result)
             isChecking = false
-            delay(100)
-            skipButtonVisible = true
         }
     }
 

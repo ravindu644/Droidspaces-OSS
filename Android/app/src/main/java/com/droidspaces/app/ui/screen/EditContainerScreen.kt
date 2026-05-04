@@ -1,6 +1,7 @@
 package com.droidspaces.app.ui.screen
 
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -45,6 +46,9 @@ import com.droidspaces.app.ui.component.SettingsRowCard
 import com.droidspaces.app.ui.component.EnvironmentVariablesDialog
 import com.droidspaces.app.util.PortForward
 import com.droidspaces.app.ui.component.PrivilegedModeDialog
+import com.droidspaces.app.ui.component.NetworkModeSelector
+import com.droidspaces.app.ui.component.UpstreamInterfaceList
+import com.droidspaces.app.ui.component.PortForwardingList
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.compose.foundation.lazy.LazyColumn
@@ -121,11 +125,6 @@ fun EditContainerScreen(
     var isSaving by remember { mutableStateOf(false) }
     var isSaved by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
-
-    var availableUpstreams by remember { mutableStateOf<List<String>>(emptyList()) }
-    LaunchedEffect(Unit) {
-        availableUpstreams = ContainerManager.listUpstreamInterfaces()
-    }
 
     // Track if any field has changed from SAVED values (not original)
     val hasChanges by remember {
@@ -260,8 +259,8 @@ fun EditContainerScreen(
                     .fillMaxWidth()
                     .padding(horizontal = 24.dp),
                 shape = RoundedCornerShape(24.dp),
-                color = MaterialTheme.colorScheme.surfaceContainer,
-                border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)),
+                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.98f),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)),
                 tonalElevation = 0.dp
             ) {
                 Column(modifier = Modifier.padding(24.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
@@ -282,10 +281,10 @@ fun EditContainerScreen(
                     )
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                         Surface(
-                            modifier = Modifier.weight(1f).clip(RoundedCornerShape(14.dp)).clickable(onClick = { showDestDialog = false }),
+                            modifier = Modifier.weight(1f).clip(RoundedCornerShape(14.dp)).clickable(onClick = { clearFocus(); showDestDialog = false }),
                             shape = RoundedCornerShape(14.dp),
                             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.06f),
-                            border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)),
+                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)),
                             tonalElevation = 0.dp
                         ) {
                             Box(modifier = Modifier.padding(14.dp), contentAlignment = Alignment.Center) {
@@ -296,6 +295,7 @@ fun EditContainerScreen(
                             modifier = Modifier.weight(1f).clip(RoundedCornerShape(14.dp)).clickable(
                                 enabled = destPath.startsWith("/"),
                                 onClick = {
+                                    clearFocus()
                                     if (destPath.isNotBlank()) {
                                         bindMounts = bindMounts + BindMount(tempSrcPath, destPath)
                                         showDestDialog = false
@@ -535,50 +535,14 @@ fun EditContainerScreen(
                 modifier = Modifier.padding(top = 8.dp)
             )
 
-            var expanded by remember { mutableStateOf(false) }
-            val modes = listOf("host", "nat", "none")
-            val modeNames = mapOf(
-                "host" to context.getString(R.string.network_mode_host),
-                "nat" to context.getString(R.string.network_mode_nat),
-                "none" to context.getString(R.string.network_mode_none)
-            )
-
-            ExposedDropdownMenuBox(
-                expanded = expanded,
-                onExpandedChange = { expanded = !expanded }
-            ) {
-                OutlinedTextField(
-                    value = modeNames[netMode] ?: netMode,
-                    onValueChange = {},
-                    readOnly = true,
-                    label = { Text(context.getString(R.string.network_mode)) },
-                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
-                    leadingIcon = { Icon(Icons.Default.Public, contentDescription = null) },
-                    shape = modernFieldShape,
-                    colors = modernFieldColors,
-                    modifier = Modifier.menuAnchor().fillMaxWidth()
-                )
-                ExposedDropdownMenu(
-                    expanded = expanded,
-                    onDismissRequest = { expanded = false }
-                ) {
-                    modes.forEach { mode ->
-                        DropdownMenuItem(
-                            text = { Text(modeNames[mode] ?: mode, fontWeight = FontWeight.Medium) },
-                            onClick = {
-                                clearFocus()
-                                netMode = mode
-                                if (mode != "host") disableIPv6 = false
-                                expanded = false
-                            },
-                            leadingIcon = if (mode == netMode) {{
-                                Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(18.dp),
-                                    tint = MaterialTheme.colorScheme.primary)
-                            }} else null
-                        )
-                    }
+            NetworkModeSelector(
+                netMode = netMode,
+                onModeChange = { mode ->
+                    clearFocus()
+                    netMode = mode
+                    if (mode != "host") disableIPv6 = false
                 }
-            }
+            )
 
             androidx.compose.animation.AnimatedVisibility(
                 visible = netMode == "nat",
@@ -727,228 +691,10 @@ fun EditContainerScreen(
                         )
                     }
 
-                    // Existing selected interfaces
-                    upstreamInterfaces.forEach { iface ->
-                        Surface(
-                            modifier = Modifier.fillMaxWidth(),
-                            shape = RoundedCornerShape(20.dp),
-                            color = MaterialTheme.colorScheme.surfaceContainerHigh,
-                            border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f))
-                        ) {
-                            Row(
-                                modifier = Modifier.padding(16.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Text(text = iface, modifier = Modifier.weight(1f))
-                                IconButton(onClick = { clearFocus(); upstreamInterfaces = upstreamInterfaces - iface }) {
-                                    Icon(Icons.Default.Delete, contentDescription = null, tint = MaterialTheme.colorScheme.error)
-                                }
-                            }
-                        }
-                    }
-
-                    // Add Interface dialog logic
-                    var showUpstreamDialog by remember { mutableStateOf(false) }
-                    if (showUpstreamDialog) {
-                        var customIface by remember { mutableStateOf("") }
-                        var isManuallyRefreshing by remember { mutableStateOf(false) }
-                        val rotation by animateFloatAsState(
-                            targetValue = if (isManuallyRefreshing) 360f else 0f,
-                            animationSpec = if (isManuallyRefreshing) {
-                                tween(durationMillis = 600, easing = LinearEasing)
-                            } else {
-                                tween(durationMillis = 0, easing = LinearEasing)
-                            },
-                            label = "refresh_rotation"
-                        )
-
-                        Dialog(
-                            onDismissRequest = { showUpstreamDialog = false },
-                            properties = DialogProperties(usePlatformDefaultWidth = false)
-                        ) {
-                            Surface(
-                                modifier = Modifier
-                                    .fillMaxWidth(0.92f)
-                                    .wrapContentHeight(),
-                                shape = RoundedCornerShape(24.dp),
-                                color = MaterialTheme.colorScheme.surfaceContainer,
-                                border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)),
-                                tonalElevation = 0.dp
-                            ) {
-                                Column(
-                                    modifier = Modifier.padding(24.dp),
-                                    verticalArrangement = Arrangement.spacedBy(16.dp)
-                                ) {
-                                    Row(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        horizontalArrangement = Arrangement.SpaceBetween,
-                                        verticalAlignment = Alignment.CenterVertically
-                                    ) {
-                                        Text(
-                                            text = context.getString(R.string.add_upstream_interface),
-                                            style = MaterialTheme.typography.headlineSmall,
-                                            fontWeight = FontWeight.Bold,
-                                            color = MaterialTheme.colorScheme.onSurface
-                                        )
-                                        IconButton(
-                                            onClick = {
-                                                clearFocus()
-                                                if (!isManuallyRefreshing) {
-                                                    isManuallyRefreshing = true
-                                                    scope.launch {
-                                                        val startTime = System.currentTimeMillis()
-                                                        val newUpstreams = ContainerManager.listUpstreamInterfaces()
-                                                        availableUpstreams = newUpstreams
-                                                        val elapsed = System.currentTimeMillis() - startTime
-                                                        val minRotationTime = 600L
-                                                        if (elapsed < minRotationTime) {
-                                                            delay(minRotationTime - elapsed)
-                                                        }
-                                                        isManuallyRefreshing = false
-                                                    }
-                                                }
-                                            },
-                                            enabled = !isManuallyRefreshing,
-                                            modifier = Modifier.size(40.dp)
-                                        ) {
-                                            Icon(
-                                                Icons.Default.Refresh,
-                                                contentDescription = "Refresh Interfaces",
-                                                modifier = Modifier
-                                                    .size(20.dp)
-                                                    .graphicsLayer { rotationZ = rotation },
-                                                tint = MaterialTheme.colorScheme.onSurfaceVariant
-                                            )
-                                        }
-                                    }
-
-                                    if (availableUpstreams.isNotEmpty()) {
-                                        Text(context.getString(R.string.available_system_interfaces), style = MaterialTheme.typography.labelMedium)
-
-                                        Box(
-                                            modifier = Modifier
-                                                .fillMaxWidth()
-                                                .weight(1f, fill = false)
-                                                .heightIn(max = 240.dp)
-                                        ) {
-                                            FlowRow(
-                                                modifier = Modifier
-                                                    .fillMaxWidth()
-                                                    .verticalScroll(rememberScrollState()),
-                                                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                                verticalArrangement = Arrangement.spacedBy(8.dp)
-                                            ) {
-                                                availableUpstreams.forEach { iface ->
-                                                    OutlinedButton(
-                                                        onClick = {
-                                                            clearFocus()
-                                                            if (upstreamInterfaces.size < 8 && !upstreamInterfaces.contains(iface)) {
-                                                                upstreamInterfaces = upstreamInterfaces + iface
-                                                                showUpstreamDialog = false
-                                                            }
-                                                        },
-                                                        enabled = !upstreamInterfaces.contains(iface),
-                                                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 0.dp)
-                                                    ) {
-                                                        Text(iface)
-                                                    }
-                                                }
-                                            }
-                                        }
-                                    }
-
-                                    Spacer(modifier = Modifier.height(8.dp))
-                                    Text(context.getString(R.string.enter_manually), style = MaterialTheme.typography.labelMedium)
-                                    OutlinedTextField(
-                                        value = customIface,
-                                        onValueChange = { customIface = it },
-                                        label = { Text(context.getString(R.string.interface_name_hint)) },
-                                        singleLine = true,
-                                        shape = RoundedCornerShape(16.dp),
-                                        colors = OutlinedTextFieldDefaults.colors(
-                                            unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
-                                            focusedBorderColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.8f),
-                                            unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
-                                            focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
-                                        ),
-                                        modifier = Modifier.fillMaxWidth()
-                                    )
-
-                                    Row(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        horizontalArrangement = Arrangement.spacedBy(12.dp)
-                                    ) {
-                                        Surface(
-                                            modifier = Modifier.weight(1f).clip(RoundedCornerShape(14.dp)).clickable(onClick = { clearFocus(); showUpstreamDialog = false }),
-                                            shape = RoundedCornerShape(14.dp),
-                                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.06f),
-                                            border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)),
-                                            tonalElevation = 0.dp
-                                        ) {
-                                            Box(modifier = Modifier.padding(14.dp), contentAlignment = Alignment.Center) {
-                                                Text(context.getString(R.string.cancel), style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold)
-                                            }
-                                        }
-                                        Surface(
-                                            modifier = Modifier.weight(1f).clip(RoundedCornerShape(14.dp)).clickable(
-                                                enabled = customIface.isNotBlank() && upstreamInterfaces.size < 8,
-                                                onClick = {
-                                                    clearFocus()
-                                                    if (customIface.isNotBlank() && upstreamInterfaces.size < 8 && !upstreamInterfaces.contains(customIface.trim())) {
-                                                        upstreamInterfaces = upstreamInterfaces + customIface.trim()
-                                                        showUpstreamDialog = false
-                                                    }
-                                                }
-                                            ),
-                                            shape = RoundedCornerShape(14.dp),
-                                            color = if (customIface.isNotBlank() && upstreamInterfaces.size < 8) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f),
-                                            tonalElevation = 0.dp
-                                        ) {
-                                            Box(modifier = Modifier.padding(14.dp), contentAlignment = Alignment.Center) {
-                                                Text(
-                                                    context.getString(R.string.add),
-                                                    style = MaterialTheme.typography.labelLarge,
-                                                    fontWeight = FontWeight.SemiBold,
-                                                    color = if (customIface.isNotBlank() && upstreamInterfaces.size < 8) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
-                                                )
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-
-                    if (upstreamInterfaces.size < 8) {
-                        val addBtnShape = RoundedCornerShape(16.dp)
-                        Surface(
-                            modifier = Modifier.fillMaxWidth().clip(addBtnShape).clickable(
-                                onClick = { clearFocus(); showUpstreamDialog = true },
-                                indication = rememberRipple(bounded = true),
-                                interactionSource = remember { MutableInteractionSource() }
-                            ),
-                            shape = addBtnShape,
-                            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
-                            border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
-                            tonalElevation = 0.dp
-                        ) {
-                            Row(
-                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.Center
-                            ) {
-                                Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(18.dp),
-                                    tint = MaterialTheme.colorScheme.onSurfaceVariant)
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Text(
-                                    text = context.getString(R.string.add_upstream_interface),
-                                    style = MaterialTheme.typography.labelLarge,
-                                    fontWeight = FontWeight.SemiBold,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
-                        }
-                    }
+                    UpstreamInterfaceList(
+                        upstreamInterfaces = upstreamInterfaces,
+                        onInterfacesChange = { upstreamInterfaces = it }
+                    )
 
                     // Port Forwards
                     Text(
@@ -958,286 +704,10 @@ fun EditContainerScreen(
                         modifier = Modifier.padding(top = 16.dp)
                     )
 
-                    portForwards.forEach { pf ->
-                        Surface(
-                            modifier = Modifier.fillMaxWidth(),
-                            shape = RoundedCornerShape(20.dp),
-                            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
-                            border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
-                        ) {
-                            Row(
-                                modifier = Modifier.padding(16.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                val targetText = if (pf.containerPort != null) " → ${pf.containerPort}" else " ${context.getString(R.string.symmetric_label)}"
-                                Text(
-                                    text = "${pf.hostPort}$targetText [${pf.proto.uppercase()}]",
-                                    modifier = Modifier.weight(1f)
-                                )
-                                IconButton(onClick = { clearFocus(); portForwards = portForwards - pf }) {
-                                    Icon(Icons.Default.Delete, contentDescription = null, tint = MaterialTheme.colorScheme.error)
-                                }
-                            }
-                        }
-                    }
-
-                    var showPortDialog by remember { mutableStateOf(false) }
-                    if (showPortDialog) {
-                        var hostPort by remember { mutableStateOf("") }
-                        var containerPort by remember { mutableStateOf("") }
-                        var protoExpanded by remember { mutableStateOf(false) }
-                        var proto by remember { mutableStateOf("tcp") }
-
-                        fun validatePortSpec(spec: String): String? {
-                            if (spec.isBlank()) return null
-                            if (spec.contains("-")) {
-                                val parts = spec.split("-")
-                                if (parts.size != 2) return context.getString(R.string.error_invalid_range_format)
-                                val start = parts[0].toIntOrNull()
-                                val end = parts[1].toIntOrNull()
-                                if (start == null || end == null) return context.getString(R.string.error_ports_must_be_numbers)
-                                if (start !in 1..65535 || end !in 1..65535) return context.getString(R.string.error_port_out_of_range)
-                                if (start >= end) return context.getString(R.string.error_start_must_be_less_than_end)
-                                return null
-                            }
-                            val p = spec.toIntOrNull() ?: return context.getString(R.string.error_port_must_be_number)
-                            if (p !in 1..65535) return context.getString(R.string.error_port_out_of_range)
-                            return null
-                        }
-
-                        fun getWidth(spec: String): Int {
-                            if (spec.contains("-")) {
-                                val parts = spec.split("-")
-                                return (parts[1].toIntOrNull() ?: 0) - (parts[0].toIntOrNull() ?: 0)
-                            }
-                            return 0
-                        }
-
-                        val hostError = validatePortSpec(hostPort)
-                        val containerError = validatePortSpec(containerPort)
-
-                        var widthError: String? = null
-                        if (hostError == null && containerError == null && hostPort.isNotBlank() && containerPort.isNotBlank()) {
-                            if (getWidth(hostPort) != getWidth(containerPort)) {
-                                widthError = context.getString(R.string.error_port_width_mismatch)
-                            }
-                        }
-
-                        // Overlap detection - computed reactively like widthError
-                        fun parseRange(spec: String): Pair<Int, Int> {
-                            if (spec.contains("-")) {
-                                val parts = spec.split("-")
-                                return (parts[0].toIntOrNull() ?: 0) to (parts[1].toIntOrNull() ?: 0)
-                            }
-                            val p = spec.toIntOrNull() ?: 0
-                            return p to p
-                        }
-                        fun rangesOverlap(a: Pair<Int, Int>, b: Pair<Int, Int>): Boolean =
-                            a.first <= b.second && b.first <= a.second
-
-                        var overlapError: String? = null
-                        if (hostError == null && containerError == null && widthError == null && hostPort.isNotBlank()) {
-                            val newHost = parseRange(hostPort.trim())
-                            val newCont = parseRange((if (containerPort.isBlank()) hostPort else containerPort).trim())
-                            val hasOverlap = portForwards.any { ex ->
-                                if (ex.proto != proto) return@any false
-                                val exHost = parseRange(ex.hostPort)
-                                val exCont = parseRange(ex.containerPort ?: ex.hostPort)
-                                rangesOverlap(newHost, exHost) || rangesOverlap(newCont, exCont)
-                            }
-                            if (hasOverlap) overlapError = context.getString(R.string.error_port_overlap)
-                        }
-
-                        val isFormValid = hostPort.isNotBlank() && hostError == null && containerError == null && widthError == null && overlapError == null
-
-                        Dialog(
-                            onDismissRequest = { showPortDialog = false },
-                            properties = DialogProperties(usePlatformDefaultWidth = false)
-                        ) {
-                            Surface(
-                                modifier = Modifier
-                                    .fillMaxWidth(0.92f)
-                                    .wrapContentHeight(),
-                                shape = RoundedCornerShape(24.dp),
-                                color = MaterialTheme.colorScheme.surfaceContainer,
-                                border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)),
-                                tonalElevation = 0.dp
-                            ) {
-                                Column(
-                                    modifier = Modifier.padding(24.dp),
-                                    verticalArrangement = Arrangement.spacedBy(16.dp)
-                                ) {
-                                    Text(
-                                        text = context.getString(R.string.add_port_forward),
-                                        style = MaterialTheme.typography.headlineSmall,
-                                        fontWeight = FontWeight.Bold,
-                                        color = MaterialTheme.colorScheme.onSurface
-                                    )
-
-                                    Box(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .weight(1f, fill = false)
-                                    ) {
-                                        Column(
-                                            verticalArrangement = Arrangement.spacedBy(10.dp),
-                                            modifier = Modifier.verticalScroll(rememberScrollState())
-                                        ) {
-                                            Text(
-                                                text = context.getString(R.string.port_forward_examples),
-                                                style = MaterialTheme.typography.bodySmall,
-                                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                                            )
-
-                                            OutlinedTextField(
-                                                value = hostPort,
-                                                onValueChange = { if (it.isEmpty() || it.all { c -> c.isDigit() || c == '-' }) hostPort = it },
-                                                label = { Text(context.getString(R.string.host_port_hint)) },
-                                                singleLine = true,
-                                                modifier = Modifier.fillMaxWidth(),
-                                                shape = RoundedCornerShape(16.dp),
-                                                colors = OutlinedTextFieldDefaults.colors(
-                                                    unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
-                                                    focusedBorderColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.8f),
-                                                    unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
-                                                    focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
-                                                ),
-                                                isError = hostError != null || widthError != null || overlapError != null,
-                                                supportingText = { Text(hostError ?: widthError ?: overlapError ?: "") },
-                                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text)
-                                            )
-
-                                            OutlinedTextField(
-                                                value = containerPort,
-                                                onValueChange = { if (it.isEmpty() || it.all { c -> c.isDigit() || c == '-' }) containerPort = it },
-                                                label = { Text(context.getString(R.string.container_port_hint)) },
-                                                placeholder = { Text(context.getString(R.string.leave_blank_for_symmetric)) },
-                                                singleLine = true,
-                                                modifier = Modifier.fillMaxWidth(),
-                                                shape = RoundedCornerShape(16.dp),
-                                                colors = OutlinedTextFieldDefaults.colors(
-                                                    unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
-                                                    focusedBorderColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.8f),
-                                                    unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
-                                                    focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
-                                                ),
-                                                isError = containerError != null || widthError != null || overlapError != null,
-                                                supportingText = { Text(containerError ?: widthError ?: overlapError ?: context.getString(R.string.optional_symmetric_hint)) },
-                                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text)
-                                            )
-
-                                            ExposedDropdownMenuBox(
-                                                expanded = protoExpanded,
-                                                onExpandedChange = { protoExpanded = !protoExpanded }
-                                            ) {
-                                                OutlinedTextField(
-                                                    value = proto.uppercase(),
-                                                    onValueChange = {},
-                                                    readOnly = true,
-                                                    label = { Text(context.getString(R.string.protocol)) },
-                                                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = protoExpanded) },
-                                                    shape = RoundedCornerShape(16.dp),
-                                                    colors = OutlinedTextFieldDefaults.colors(
-                                                        unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
-                                                        focusedBorderColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.8f),
-                                                        unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
-                                                        focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
-                                                    ),
-                                                    modifier = Modifier.menuAnchor().fillMaxWidth()
-                                                )
-                                                ExposedDropdownMenu(
-                                                    expanded = protoExpanded,
-                                                    onDismissRequest = { protoExpanded = false }
-                                                ) {
-                                                    DropdownMenuItem(text = { Text(context.getString(R.string.tcp), fontWeight = FontWeight.Medium) }, onClick = { clearFocus(); proto = "tcp"; protoExpanded = false },
-                                                        leadingIcon = if (proto == "tcp") {{ Icon(Icons.Default.Check, null, modifier = Modifier.size(18.dp), tint = MaterialTheme.colorScheme.primary) }} else null)
-                                                    DropdownMenuItem(text = { Text(context.getString(R.string.udp), fontWeight = FontWeight.Medium) }, onClick = { clearFocus(); proto = "udp"; protoExpanded = false },
-                                                        leadingIcon = if (proto == "udp") {{ Icon(Icons.Default.Check, null, modifier = Modifier.size(18.dp), tint = MaterialTheme.colorScheme.primary) }} else null)
-                                                }
-                                            }
-                                        }
-                                    }
-
-                                    Row(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        horizontalArrangement = Arrangement.spacedBy(12.dp)
-                                    ) {
-                                        Surface(
-                                            modifier = Modifier.weight(1f).clip(RoundedCornerShape(14.dp)).clickable(onClick = { clearFocus(); showPortDialog = false }),
-                                            shape = RoundedCornerShape(14.dp),
-                                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.06f),
-                                            border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)),
-                                            tonalElevation = 0.dp
-                                        ) {
-                                            Box(modifier = Modifier.padding(14.dp), contentAlignment = Alignment.Center) {
-                                                Text(context.getString(R.string.cancel), style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold)
-                                            }
-                                        }
-                                        Surface(
-                                            modifier = Modifier.weight(1f).clip(RoundedCornerShape(14.dp)).clickable(
-                                                enabled = isFormValid && portForwards.size < 32,
-                                                onClick = {
-                                                    clearFocus()
-                                                    if (isFormValid) {
-                                                        val pf = PortForward(
-                                                            hostPort.trim(),
-                                                            if (containerPort.isBlank()) null else containerPort.trim(),
-                                                            proto
-                                                        )
-                                                        portForwards = portForwards + pf
-                                                        showPortDialog = false
-                                                    }
-                                                }
-                                            ),
-                                            shape = RoundedCornerShape(14.dp),
-                                            color = if (isFormValid && portForwards.size < 32) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f),
-                                            tonalElevation = 0.dp
-                                        ) {
-                                            Box(modifier = Modifier.padding(14.dp), contentAlignment = Alignment.Center) {
-                                                Text(
-                                                    context.getString(R.string.add),
-                                                    style = MaterialTheme.typography.labelLarge,
-                                                    fontWeight = FontWeight.SemiBold,
-                                                    color = if (isFormValid && portForwards.size < 32) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
-                                                )
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-
-                    if (portForwards.size < 32) {
-                        val addPortBtnShape = RoundedCornerShape(16.dp)
-                        Surface(
-                            modifier = Modifier.fillMaxWidth().clip(addPortBtnShape).clickable(
-                                onClick = { clearFocus(); showPortDialog = true },
-                                indication = rememberRipple(bounded = true),
-                                interactionSource = remember { MutableInteractionSource() }
-                            ),
-                            shape = addPortBtnShape,
-                            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
-                            border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
-                            tonalElevation = 0.dp
-                        ) {
-                            Row(
-                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.Center
-                            ) {
-                                Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(18.dp),
-                                    tint = MaterialTheme.colorScheme.onSurfaceVariant)
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Text(
-                                    text = context.getString(R.string.add_port_forward),
-                                    style = MaterialTheme.typography.labelLarge,
-                                    fontWeight = FontWeight.SemiBold,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
-                        }
-                    }
+                    PortForwardingList(
+                        portForwards = portForwards,
+                        onPortForwardsChange = { portForwards = it }
+                    )
                 }
             }
 
@@ -1543,7 +1013,7 @@ fun EditContainerScreen(
             }
 
             Spacer(modifier = Modifier.height(16.dp))
-            }
         }
     }
+}
 }
