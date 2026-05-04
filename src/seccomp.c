@@ -28,16 +28,6 @@ int ds_seccomp_apply_minimal(int hw_access, int privileged_mask) {
   static struct sock_filter filter[72];
   int curr = 0;
 
-  /*
-   * CVE-2026-31431 ("Copy Fail") mitigation layer 1:
-   * Prevent the exploit's setuid cashout regardless of whether the
-   * AF_ALG primitive is blocked below.  Must be set before the seccomp
-   * filter is loaded because prctl(PR_SET_NO_NEW_PRIVS) itself is a
-   * syscall that the filter could theoretically see.
-   */
-  if (prctl(PR_SET_NO_NEW_PRIVS, 1, 0, 0, 0) < 0)
-    ds_warn("[SEC] PR_SET_NO_NEW_PRIVS failed: %s", strerror(errno));
-
   /* 1. Validate Architecture */
   filter[curr++] = (struct sock_filter)BPF_STMT(
       BPF_LD | BPF_W | BPF_ABS, offsetof(struct seccomp_data, arch));
@@ -143,8 +133,8 @@ int ds_seccomp_apply_minimal(int hw_access, int privileged_mask) {
                                                   __NR_socket, 0, 4);
     filter[curr++] = (struct sock_filter)BPF_STMT(
         BPF_LD | BPF_W | BPF_ABS, offsetof(struct seccomp_data, args[0]));
-    filter[curr++] = (struct sock_filter)BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K,
-                                                  AF_ALG, 0, 1);
+    filter[curr++] =
+        (struct sock_filter)BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, AF_ALG, 0, 1);
     filter[curr++] = (struct sock_filter)BPF_STMT(
         BPF_RET | BPF_K, SECCOMP_RET_ERRNO | (EPERM & SECCOMP_RET_DATA));
     /* Reload nr for any rules that follow this block. */
