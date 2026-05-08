@@ -143,10 +143,23 @@ char *ds_resolve_path_arg(const char *path) {
  * container namespace and is always absolute by convention.
  */
 static char *resolve_bind_src(const char *val) {
-  /* Worst case: every token expands to PATH_MAX, times DS_MAX_BIND_MOUNTS.
+  if (!val)
+    return strdup("");
+
+  size_t len = strlen(val);
+  size_t tokens = 1;
+  for (size_t i = 0; i < len; i++) {
+    if (val[i] == ',')
+      tokens++;
+  }
+
+  if (tokens > (SIZE_MAX - len - 1) / PATH_MAX)
+    return strdup(val);
+
+  /* Worst case: every token expands to PATH_MAX.
    * Use the heap - not the stack - to avoid blowing the stack in the daemon
    * handler process (which may have a smaller stack than main). */
-  size_t bufsz = strlen(val) + PATH_MAX * 16 + 1;
+  size_t bufsz = len + PATH_MAX * tokens + 1;
   char *copy = malloc(bufsz);
   char *out = malloc(bufsz);
   if (!copy || !out) {
@@ -154,7 +167,7 @@ static char *resolve_bind_src(const char *val) {
     free(out);
     return strdup(val);
   }
-  memcpy(copy, val, strlen(val) + 1);
+  memcpy(copy, val, len + 1);
   out[0] = '\0';
 
   char *sv, *tok = strtok_r(copy, ",", &sv);
@@ -170,10 +183,23 @@ static char *resolve_bind_src(const char *val) {
     char *abs_src = ds_resolve_path_arg(tok);
     const char *src = abs_src ? abs_src : tok;
 
-    int n = snprintf(out + off, bufsz - off, "%s%s%s%s", first ? "" : ",", src,
+    if (off >= bufsz) {
+      free(abs_src);
+      free(copy);
+      free(out);
+      return strdup(val);
+    }
+
+    size_t avail = bufsz - off;
+    int n = snprintf(out + off, avail, "%s%s%s%s", first ? "" : ",", src,
                      col ? ":" : "", dest);
-    if (n > 0)
-      off += (size_t)n;
+    if (n < 0 || (size_t)n >= avail) {
+      free(abs_src);
+      free(copy);
+      free(out);
+      return strdup(val);
+    }
+    off += (size_t)n;
     free(abs_src);
     first = 0;
     tok = strtok_r(NULL, ",", &sv);
