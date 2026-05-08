@@ -122,6 +122,62 @@ static int get_table(int fd, const char *table_name, struct ipt_getinfo *info,
 #define ENTRIES_BLOB(base)                                                     \
   ((unsigned char *)((struct ipt_get_entries *)(base))->entrytable)
 
+#define DS_IPT_MATCH_IN 0x01u
+#define DS_IPT_MATCH_OUT 0x02u
+
+static int hook_contains_offset(const struct ipt_getinfo *info,
+                                unsigned int hook_id, unsigned int offset) {
+  if (!info || hook_id >= NF_INET_NUMHOOKS ||
+      !(info->valid_hooks & (1u << hook_id)))
+    return 0;
+  return offset >= info->hook_entry[hook_id] &&
+         offset < info->underflow[hook_id];
+}
+
+static int iface_empty(const char *iface, const unsigned char *mask) {
+  for (int i = 0; i < IFNAMSIZ; i++) {
+    if (iface[i] != '\0' || mask[i] != 0)
+      return 0;
+  }
+  return 1;
+}
+
+static int iface_exact_match(const char *rule_iface,
+                             const unsigned char *rule_mask,
+                             const char *iface) {
+  size_t len;
+
+  if (!iface || !iface[0])
+    return 0;
+
+  len = strnlen(iface, IFNAMSIZ);
+  if (len == 0 || len >= IFNAMSIZ)
+    return 0;
+  if (strncmp(rule_iface, iface, IFNAMSIZ) != 0)
+    return 0;
+
+  for (size_t i = 0; i <= len; i++) {
+    if (rule_mask[i] != 0xff)
+      return 0;
+  }
+  for (size_t i = len + 1; i < IFNAMSIZ; i++) {
+    if (rule_mask[i] != 0)
+      return 0;
+  }
+  return 1;
+}
+
+static int target_is_accept(const struct xt_entry_target *t) {
+  if (strcmp(t->u.user.name, "ACCEPT") == 0)
+    return 1;
+  if (t->u.user.name[0] == '\0' &&
+      t->u.target_size >= XT_ALIGN(sizeof(struct xt_standard_target))) {
+    const struct xt_standard_target *st = (const struct xt_standard_target *)t;
+    return st->verdict == -NF_ACCEPT - 1;
+  }
+  return 0;
+}
+
 /* ---------------------------------------------------------------------------
  * Internal: walk the blob to find an existing rule matching our fingerprint.
  *
@@ -133,15 +189,20 @@ static int rule_exists_in_hook(const struct ipt_getinfo *info,
                                const char *iface_in, const char *iface_out,
                                uint32_t src, uint32_t src_mask,
                                const char *target_name) {
-  if (!(info->valid_hooks & (1u << hook_id)))
+  if (!info || !blob || hook_id >= NF_INET_NUMHOOKS ||
+      !(info->valid_hooks & (1u << hook_id)))
     return 0;
 
   unsigned int off = info->hook_entry[hook_id];
   unsigned int end = info->underflow[hook_id];
+  if (off > end || end > info->size)
+    return 0;
 
-  while (off < end) {
+  while (off + sizeof(struct ipt_entry) <= end) {
     const struct ipt_entry *e = (const struct ipt_entry *)(blob + off);
-    if (e->next_offset == 0 || e->next_offset > end - off)
+    if (e->next_offset < sizeof(struct ipt_entry) ||
+        e->next_offset > end - off ||
+        e->target_offset + sizeof(struct xt_entry_target) > e->next_offset)
       break;
 
     const struct xt_entry_target *t =
@@ -149,9 +210,14 @@ static int rule_exists_in_hook(const struct ipt_getinfo *info,
 
     int match = 1;
 
-    if (target_name && target_name[0] &&
-        strcmp(t->u.user.name, target_name) != 0)
-      match = 0;
+    if (target_name && target_name[0]) {
+      if (strcmp(target_name, "ACCEPT") == 0) {
+        if (!target_is_accept(t))
+          match = 0;
+      } else if (strcmp(t->u.user.name, target_name) != 0) {
+        match = 0;
+      }
+    }
     if (match && iface_in && iface_in[0] &&
         strncmp(e->ip.iniface, iface_in, IFNAMSIZ) != 0)
       match = 0;
@@ -365,8 +431,14 @@ static int insert_rule_at_hook(int fd, const char *table_name,
 
 static int remove_matching_rules(int fd, const char *table_name,
                                  struct ipt_getinfo *info_in,
-                                 unsigned char *blob_in, uint32_t match_src,
-                                 uint32_t match_mask, const char *match_iface) {
+                                 unsigned char *blob_in, unsigned int hook_id,
+                                 uint32_t match_src, uint32_t match_mask,
+                                 const char *match_iface,
+                                 unsigned int iface_flags) {
+  if (!info_in || !blob_in || hook_id >= NF_INET_NUMHOOKS ||
+      !(info_in->valid_hooks & (1u << hook_id)))
+    return 0;
+
   /*
    * cur_info / cur_blob track the table state we are working from.
    * They start as the caller-supplied values.  On EAGAIN we refetch the table
@@ -409,9 +481,12 @@ static int remove_matching_rules(int fd, const char *table_name,
     unsigned int ei = 0;
 
     /* Pass 1: walk, classify, build new_blob */
-    while (offset < cur_info.size && ei < cur_info.num_entries) {
+    while (offset + sizeof(struct ipt_entry) <= cur_info.size &&
+           ei < cur_info.num_entries) {
       const struct ipt_entry *e = (const struct ipt_entry *)(cur_blob + offset);
-      if (e->next_offset == 0)
+      if (e->next_offset < sizeof(struct ipt_entry) ||
+          e->next_offset > cur_info.size - offset ||
+          e->target_offset + sizeof(struct xt_entry_target) > e->next_offset)
         break;
 
       old_offsets[ei] = offset;
@@ -424,26 +499,31 @@ static int remove_matching_rules(int fd, const char *table_name,
 
       int is_ours = 0;
 
+      if (!hook_contains_offset(&cur_info, hook_id, offset))
+        goto keep_rule;
+
       /* MASQUERADE for our subnet */
       if (match_src && strcmp(tname, "MASQUERADE") == 0 &&
-          e->ip.src.s_addr == match_src && e->ip.smsk.s_addr == match_mask)
+          e->ip.src.s_addr == match_src && e->ip.smsk.s_addr == match_mask &&
+          e->ip.dst.s_addr == match_src && e->ip.dmsk.s_addr == match_mask &&
+          (e->ip.invflags & IPT_INV_DSTIP))
         is_ours = 1;
 
-      /* ACCEPT on our bridge interface */
-      if (!is_ours && match_iface && match_iface[0] &&
-          strcmp(tname, "ACCEPT") == 0) {
-        if (strncmp(e->ip.iniface, match_iface, IFNAMSIZ) == 0 ||
-            strncmp(e->ip.outiface, match_iface, IFNAMSIZ) == 0)
+      /* ACCEPT on the exact interface/direction we inserted. */
+      if (!is_ours && match_iface && match_iface[0] && target_is_accept(t)) {
+        if ((iface_flags & DS_IPT_MATCH_IN) &&
+            iface_exact_match(e->ip.iniface, e->ip.iniface_mask,
+                              match_iface) &&
+            iface_empty(e->ip.outiface, e->ip.outiface_mask))
           is_ours = 1;
-      }
-      /* ACCEPT on our bridge interface - raw-path variant (empty name, standard
-       * target) */
-      if (!is_ours && match_iface && match_iface[0] && tname[0] == '\0') {
-        if (strncmp(e->ip.iniface, match_iface, IFNAMSIZ) == 0 ||
-            strncmp(e->ip.outiface, match_iface, IFNAMSIZ) == 0)
+        if ((iface_flags & DS_IPT_MATCH_OUT) &&
+            iface_exact_match(e->ip.outiface, e->ip.outiface_mask,
+                              match_iface) &&
+            iface_empty(e->ip.iniface, e->ip.iniface_mask))
           is_ours = 1;
       }
 
+    keep_rule:
       if (is_ours) {
         /* Safety: never remove an underflow (chain policy) entry. */
         int is_underflow = 0;
@@ -759,7 +839,7 @@ int ds_ipt_ensure_forward_accept(const char *iface) {
     }
 
     if (!rule_exists_in_hook(&info, ENTRIES_BLOB(base), NF_INET_FORWARD, iface,
-                             NULL, 0, 0, NULL)) {
+                             NULL, 0, 0, "ACCEPT")) {
       unsigned char rule_buf[XT_ALIGN(sizeof(struct ipt_entry)) +
                              XT_ALIGN(sizeof(struct xt_standard_target))];
       memset(rule_buf, 0, sizeof(rule_buf));
@@ -812,7 +892,7 @@ int ds_ipt_ensure_forward_accept(const char *iface) {
     }
 
     if (!rule_exists_in_hook(&info, ENTRIES_BLOB(base), NF_INET_FORWARD, NULL,
-                             iface, 0, 0, NULL)) {
+                             iface, 0, 0, "ACCEPT")) {
       unsigned char rule_buf[XT_ALIGN(sizeof(struct ipt_entry)) +
                              XT_ALIGN(sizeof(struct xt_standard_target))];
       memset(rule_buf, 0, sizeof(rule_buf));
@@ -898,7 +978,7 @@ int ds_ipt_ensure_input_accept(const char *iface) {
   }
 
   if (!rule_exists_in_hook(&info, ENTRIES_BLOB(base), NF_INET_LOCAL_IN, iface,
-                           NULL, 0, 0, NULL)) {
+                           NULL, 0, 0, "ACCEPT")) {
     unsigned char rule_buf[XT_ALIGN(sizeof(struct ipt_entry)) +
                            XT_ALIGN(sizeof(struct xt_standard_target))];
     memset(rule_buf, 0, sizeof(rule_buf));
@@ -1015,16 +1095,26 @@ int ds_ipt_remove_iface_rules(const char *iface) {
   struct ipt_getinfo info;
   unsigned char *base = NULL;
 
-  /* FORWARD */
+  /* FORWARD -i */
   if (get_table(fd, "filter", &info, &base) == 0) {
-    remove_matching_rules(fd, "filter", &info, ENTRIES_BLOB(base), 0, 0, iface);
+    remove_matching_rules(fd, "filter", &info, ENTRIES_BLOB(base),
+                          NF_INET_FORWARD, 0, 0, iface, DS_IPT_MATCH_IN);
     free(base);
   }
 
-  /* INPUT */
+  /* FORWARD -o */
   base = NULL;
   if (get_table(fd, "filter", &info, &base) == 0) {
-    remove_matching_rules(fd, "filter", &info, ENTRIES_BLOB(base), 0, 0, iface);
+    remove_matching_rules(fd, "filter", &info, ENTRIES_BLOB(base),
+                          NF_INET_FORWARD, 0, 0, iface, DS_IPT_MATCH_OUT);
+    free(base);
+  }
+
+  /* INPUT -i */
+  base = NULL;
+  if (get_table(fd, "filter", &info, &base) == 0) {
+    remove_matching_rules(fd, "filter", &info, ENTRIES_BLOB(base),
+                          NF_INET_LOCAL_IN, 0, 0, iface, DS_IPT_MATCH_IN);
     free(base);
   }
 
@@ -1053,26 +1143,35 @@ int ds_ipt_remove_ds_rules(void) {
     struct ipt_getinfo info;
     unsigned char *base = NULL;
     if (get_table(fd, "nat", &info, &base) == 0) {
-      remove_matching_rules(fd, "nat", &info, ENTRIES_BLOB(base), ds_src,
-                            ds_mask, NULL);
+      remove_matching_rules(fd, "nat", &info, ENTRIES_BLOB(base),
+                            NF_INET_POST_ROUTING, ds_src, ds_mask, NULL, 0);
       free(base);
     }
 
-    /* 2. Filter table: remove our bridge ACCEPT rules */
+    /* 2. Filter table: remove our bridge FORWARD -i rule */
     base = NULL;
     if (get_table(fd, "filter", &info, &base) == 0) {
-      /* Remove FORWARD rules */
-      remove_matching_rules(fd, "filter", &info, ENTRIES_BLOB(base), 0, 0,
-                            DS_NAT_BRIDGE);
+      remove_matching_rules(fd, "filter", &info, ENTRIES_BLOB(base),
+                            NF_INET_FORWARD, 0, 0, DS_NAT_BRIDGE,
+                            DS_IPT_MATCH_IN);
       free(base);
     }
-    /* 3. Filter table: remove our bridge INPUT rules (Fixed: was missing) */
+
+    /* 3. Filter table: remove our bridge FORWARD -o rule */
     base = NULL;
     if (get_table(fd, "filter", &info, &base) == 0) {
-      /* remove_matching_rules handles both iniface and outiface.
-       * For INPUT, only iniface matters, which it checks. */
-      remove_matching_rules(fd, "filter", &info, ENTRIES_BLOB(base), 0, 0,
-                            DS_NAT_BRIDGE);
+      remove_matching_rules(fd, "filter", &info, ENTRIES_BLOB(base),
+                            NF_INET_FORWARD, 0, 0, DS_NAT_BRIDGE,
+                            DS_IPT_MATCH_OUT);
+      free(base);
+    }
+
+    /* 4. Filter table: remove our bridge INPUT rule */
+    base = NULL;
+    if (get_table(fd, "filter", &info, &base) == 0) {
+      remove_matching_rules(fd, "filter", &info, ENTRIES_BLOB(base),
+                            NF_INET_LOCAL_IN, 0, 0, DS_NAT_BRIDGE,
+                            DS_IPT_MATCH_IN);
       free(base);
     }
     close(fd);
