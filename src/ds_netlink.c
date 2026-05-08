@@ -506,6 +506,9 @@ int ds_nl_rename(ds_nl_ctx_t *ctx, const char *ifname, const char *newname) {
 
 int ds_nl_add_addr4(ds_nl_ctx_t *ctx, const char *ifname, uint32_t ip_be,
                     uint8_t prefix) {
+  if (prefix > 32)
+    return -EINVAL;
+
   int idx = ds_nl_get_ifindex(ctx, ifname);
   if (idx <= 0)
     return -ENODEV;
@@ -527,8 +530,10 @@ int ds_nl_add_addr4(ds_nl_ctx_t *ctx, const char *ifname, uint32_t ip_be,
   nl_addattr(&req.n, (int)sizeof(req), IFA_LOCAL, &ip_be, 4);
   nl_addattr(&req.n, (int)sizeof(req), IFA_ADDRESS, &ip_be, 4);
 
-  uint32_t bcast = ip_be | htonl(0xffffffffu >> prefix);
-  nl_addattr(&req.n, (int)sizeof(req), IFA_BROADCAST, &bcast, 4);
+  if (prefix < 32) {
+    uint32_t bcast = ip_be | htonl(0xffffffffu >> prefix);
+    nl_addattr(&req.n, (int)sizeof(req), IFA_BROADCAST, &bcast, 4);
+  }
 
   return ds_nl_talk(ctx, &req.n);
 }
