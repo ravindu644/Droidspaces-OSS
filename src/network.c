@@ -29,12 +29,12 @@
 
 /* Derive the host-side veth name from a container init PID */
 static void veth_host_name(pid_t pid, char *buf, size_t sz) {
-  snprintf(buf, sz, "ds-v%d", (int)(pid % 100000));
+  snprintf(buf, sz, "ds-v%d", (int)pid);
 }
 
 /* Derive the peer (container-side) veth name from a container init PID */
 static void veth_peer_name(pid_t pid, char *buf, size_t sz) {
-  snprintf(buf, sz, "ds-p%d", (int)(pid % 100000));
+  snprintf(buf, sz, "ds-p%d", (int)pid);
 }
 
 /* Derive a deterministic IP from a PID (avoids sequential collisions) */
