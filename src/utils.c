@@ -1071,8 +1071,7 @@ void ds_log_internal(const char *prefix, const char *color, int is_err,
         strncmp(raw_msg, "[IPT]", 5) == 0 ||
         strncmp(raw_msg, "[NET]", 5) == 0 ||
         strncmp(raw_msg, "[SEC]", 5) == 0 ||
-        strncmp(raw_msg, "[GPU]", 5) == 0 ||
-        strncmp(raw_msg, "[DNS]", 5) == 0 || strncmp(raw_msg, "[FW]", 4) == 0 ||
+        strncmp(raw_msg, "[GPU]", 5) == 0 || strncmp(raw_msg, "[FW]", 4) == 0 ||
         strncmp(raw_msg, "[DHCP]", 6) == 0) {
       return;
     }
@@ -1340,7 +1339,8 @@ int show_container_usage(struct ds_config *cfg) {
    * UPTIME: starttime field 22 of container init's /proc/pid/stat
    * -----------------------------------------------------------------------*/
   char stat_path[PATH_MAX];
-  if (build_proc_root_path(pid, "/proc/1/stat", stat_path, sizeof(stat_path)) < 0) {
+  if (build_proc_root_path(pid, "/proc/1/stat", stat_path, sizeof(stat_path)) <
+      0) {
     ds_error("Failed to build stat path for container PID %d", (int)pid);
     return -1;
   }
@@ -1351,7 +1351,8 @@ int show_container_usage(struct ds_config *cfg) {
   }
   unsigned long long start_ticks = 0;
   for (int i = 1; i <= 21; i++) {
-    if (fscanf(f, "%*s") == EOF) break;
+    if (fscanf(f, "%*s") == EOF)
+      break;
   }
   if (fscanf(f, "%llu", &start_ticks) != 1)
     start_ticks = 0;
@@ -1371,8 +1372,10 @@ int show_container_usage(struct ds_config *cfg) {
     host_uptime_sec = 0.0;
   fclose(f);
 
-  long uptime_sec = (long)(host_uptime_sec - (double)start_ticks / (double)clk_tck);
-  if (uptime_sec < 0) uptime_sec = 0;
+  long uptime_sec =
+      (long)(host_uptime_sec - (double)start_ticks / (double)clk_tck);
+  if (uptime_sec < 0)
+    uptime_sec = 0;
   int ud = uptime_sec / 86400;
   int uh = (uptime_sec % 86400) / 3600;
   int um = (uptime_sec % 3600) / 60;
@@ -1384,9 +1387,11 @@ int show_container_usage(struct ds_config *cfg) {
   char ns_init_path[PATH_MAX];
   snprintf(ns_init_path, sizeof(ns_init_path), "/proc/%d/ns/pid", (int)pid);
   char container_ns[256] = {0};
-  ssize_t ns_len = readlink(ns_init_path, container_ns, sizeof(container_ns) - 1);
+  ssize_t ns_len =
+      readlink(ns_init_path, container_ns, sizeof(container_ns) - 1);
   if (ns_len <= 0) {
-    ds_error("Failed to read PID namespace of container init: %s", strerror(errno));
+    ds_error("Failed to read PID namespace of container init: %s",
+             strerror(errno));
     return -1;
   }
   container_ns[ns_len] = '\0';
@@ -1413,9 +1418,11 @@ int show_container_usage(struct ds_config *cfg) {
     snprintf(ns_path, sizeof(ns_path), "/proc/%s/ns/pid", de->d_name);
     char ns_buf[256] = {0};
     ssize_t r = readlink(ns_path, ns_buf, sizeof(ns_buf) - 1);
-    if (r <= 0) continue;
+    if (r <= 0)
+      continue;
     ns_buf[r] = '\0';
-    if (strcmp(ns_buf, container_ns) != 0) continue;
+    if (strcmp(ns_buf, container_ns) != 0)
+      continue;
 
     /* RAM: VmRSS from /proc/<pid>/status */
     char status_path[64];
@@ -1441,7 +1448,8 @@ int show_container_usage(struct ds_config *cfg) {
     if (pf) {
       long long utime = 0, stime = 0;
       for (int i = 1; i <= 13; i++)
-        if (fscanf(pf, "%*s") == EOF) break;
+        if (fscanf(pf, "%*s") == EOF)
+          break;
       if (fscanf(pf, "%lld %lld", &utime, &stime) == 2)
         cpu_t1 += utime + stime;
       fclose(pf);
@@ -1453,8 +1461,8 @@ int show_container_usage(struct ds_config *cfg) {
   f = fopen("/proc/stat", "r");
   if (f) {
     long long u, n, s, i, iow, irq, sirq;
-    if (fscanf(f, "cpu %lld %lld %lld %lld %lld %lld %lld",
-               &u, &n, &s, &i, &iow, &irq, &sirq) == 7)
+    if (fscanf(f, "cpu %lld %lld %lld %lld %lld %lld %lld", &u, &n, &s, &i,
+               &iow, &irq, &sirq) == 7)
       cpu_host_t1 = u + n + s + i + iow + irq + sirq;
     fclose(f);
   }
@@ -1494,9 +1502,11 @@ int show_container_usage(struct ds_config *cfg) {
       snprintf(ns_path, sizeof(ns_path), "/proc/%s/ns/pid", de->d_name);
       char ns_buf[256] = {0};
       ssize_t r = readlink(ns_path, ns_buf, sizeof(ns_buf) - 1);
-      if (r <= 0) continue;
+      if (r <= 0)
+        continue;
       ns_buf[r] = '\0';
-      if (strcmp(ns_buf, container_ns) != 0) continue;
+      if (strcmp(ns_buf, container_ns) != 0)
+        continue;
 
       char pstat_path[64];
       snprintf(pstat_path, sizeof(pstat_path), "/proc/%s/stat", de->d_name);
@@ -1504,7 +1514,8 @@ int show_container_usage(struct ds_config *cfg) {
       if (pf) {
         long long utime = 0, stime = 0;
         for (int i = 1; i <= 13; i++)
-          if (fscanf(pf, "%*s") == EOF) break;
+          if (fscanf(pf, "%*s") == EOF)
+            break;
         if (fscanf(pf, "%lld %lld", &utime, &stime) == 2)
           cpu_t2 += utime + stime;
         fclose(pf);
@@ -1516,19 +1527,20 @@ int show_container_usage(struct ds_config *cfg) {
   f = fopen("/proc/stat", "r");
   if (f) {
     long long u, n, s, i, iow, irq, sirq;
-    if (fscanf(f, "cpu %lld %lld %lld %lld %lld %lld %lld",
-               &u, &n, &s, &i, &iow, &irq, &sirq) == 7)
+    if (fscanf(f, "cpu %lld %lld %lld %lld %lld %lld %lld", &u, &n, &s, &i,
+               &iow, &irq, &sirq) == 7)
       cpu_host_t2 = u + n + s + i + iow + irq + sirq;
     fclose(f);
   }
 
   long long delta_container = cpu_t2 - cpu_t1;
-  long long delta_host      = cpu_host_t2 - cpu_host_t1;
-  if (delta_container < 0) delta_container = 0;
-  long cpu_permill = (delta_host > 0)
-                     ? (long)(delta_container * 1000 / delta_host)
-                     : 0;
-  if (cpu_permill > 1000) cpu_permill = 1000;
+  long long delta_host = cpu_host_t2 - cpu_host_t1;
+  if (delta_container < 0)
+    delta_container = 0;
+  long cpu_permill =
+      (delta_host > 0) ? (long)(delta_container * 1000 / delta_host) : 0;
+  if (cpu_permill > 1000)
+    cpu_permill = 1000;
 
   /* -----------------------------------------------------------------------
    * Output - machine-parseable key=value, one per line

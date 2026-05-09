@@ -371,7 +371,6 @@ static void print_page(int page, const char *bin) {
 
     printf("%sMulti-DNS Configuration (Comma-separated):%s\n", bold, reset);
     printf("  %s -r rootfs/ start -d 1.1.1.1,8.8.4.4,9.9.9.9\n", bin);
-    printf("  (Bypasses default Android/host DNS lookup)\n\n");
 
     printf("%sContainer with maximum features (not secure):%s\n", bold, reset);
     printf("  %s --name=featureful --rootfs-img=/path/to/rootfs.img \\\n", bin);

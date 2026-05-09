@@ -512,8 +512,7 @@ static int remove_matching_rules(int fd, const char *table_name,
       /* ACCEPT on the exact interface/direction we inserted. */
       if (!is_ours && match_iface && match_iface[0] && target_is_accept(t)) {
         if ((iface_flags & DS_IPT_MATCH_IN) &&
-            iface_exact_match(e->ip.iniface, e->ip.iniface_mask,
-                              match_iface) &&
+            iface_exact_match(e->ip.iniface, e->ip.iniface_mask, match_iface) &&
             iface_empty(e->ip.outiface, e->ip.outiface_mask))
           is_ours = 1;
         if ((iface_flags & DS_IPT_MATCH_OUT) &&

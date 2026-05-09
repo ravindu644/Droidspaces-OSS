@@ -75,7 +75,6 @@ static int find_host_cgroup2_mount(char *buf, size_t size) {
   return found;
 }
 
-
 /* Scans mountinfo to find any cgroup2 mount - covers /dev/cg2_bpf (Android)
  * and /sys/fs/cgroup placed by ds_cgroup_host_bootstrap(). */
 int ds_cgroup_host_is_v2(void) { return find_host_cgroup2_mount(NULL, 0); }
@@ -133,7 +132,6 @@ void ds_cgroup_host_bootstrap(int force_cgroupv1) {
   }
   ds_log("Auto-mounted cgroup2 on /sys/fs/cgroup.");
 }
-
 
 /*
  * mount_v1_controllers - unified v1 controller setup, works on every host.
@@ -316,7 +314,8 @@ int ds_cgroup_attach(pid_t target_pid) {
     if (subpath[0] == '\0')
       continue;
 
-    /* 2. Create leaf and move self - same logic as before but uses local sysfs */
+    /* 2. Create leaf and move self - same logic as before but uses local sysfs
+     */
     char leaf_dir[PATH_MAX];
     snprintf(leaf_dir, sizeof(leaf_dir), "%s%s/ds-enter-%d", cg_root, subpath,
              (int)getpid());
@@ -334,7 +333,8 @@ int ds_cgroup_attach(pid_t target_pid) {
       close(pfd);
     }
 
-    if (strcmp(de->d_name, "cgroup.procs") == 0) break;
+    if (strcmp(de->d_name, "cgroup.procs") == 0)
+      break;
   }
   closedir(d);
   return 0;
@@ -395,11 +395,13 @@ void ds_cgroup_detach(pid_t child_pid, const char *container_name) {
       if (inner->d_name[0] == '.')
         continue;
       char leaf[PATH_MAX];
-      snprintf(leaf, sizeof(leaf), "%s/%s%s", ds_dir, inner->d_name, enter_suffix);
+      snprintf(leaf, sizeof(leaf), "%s/%s%s", ds_dir, inner->d_name,
+               enter_suffix);
       rmdir(leaf);
     }
     closedir(top);
-    if (strcmp(de->d_name, "cgroup.procs") == 0) break;
+    if (strcmp(de->d_name, "cgroup.procs") == 0)
+      break;
   }
   closedir(d);
 }
@@ -524,7 +526,8 @@ void ds_cgroup_cleanup_container(const char *container_name) {
     if (access(cg_path, F_OK) != 0)
       continue;
     rmdir_cgroup_tree(cg_path);
-    if (strcmp(de->d_name, "cgroup.procs") == 0) break;
+    if (strcmp(de->d_name, "cgroup.procs") == 0)
+      break;
   }
   closedir(d);
 }

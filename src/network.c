@@ -838,28 +838,11 @@ int fix_networking_rootfs(struct ds_config *cfg) {
 
   write_file("/etc/hosts", hosts_content);
 
-  /* 3. resolv.conf
-   *
-   * NAT mode without --dns:  write "nameserver 172.28.0.1" so every DNS query
-   * from inside the container goes to the proxy running on the bridge gateway.
-   * The proxy dynamically discovers and tracks the real upstream DNS - the
-   * container's resolv.conf never needs to change when interfaces switch.
-   *
-   * NAT mode with --dns / host mode / none mode:  write the explicit servers
-   * from the in-memory cfg (set by fix_networking_host) or fall back to the
-   * compiled-in defaults. */
+  /* 3. resolv.conf - always use dns_server_content which ds_get_dns_servers()
+   * already populated with either the user's --dns servers or the compiled-in
+   * defaults (1.1.1.1 / 8.8.8.8). */
   mkdir("/run/resolvconf", 0755);
-  if (cfg->net_mode == DS_NET_NAT && !cfg->dns_servers[0]) {
-    write_file("/run/resolvconf/resolv.conf", "nameserver " DS_NAT_GW_IP "\n");
-  } else if (cfg->dns_server_content[0]) {
-    write_file("/run/resolvconf/resolv.conf", cfg->dns_server_content);
-  } else {
-    char dns_fallback[256];
-    snprintf(dns_fallback, sizeof(dns_fallback),
-             "nameserver %s\nnameserver %s\n", DS_DNS_DEFAULT_1,
-             DS_DNS_DEFAULT_2);
-    write_file("/run/resolvconf/resolv.conf", dns_fallback);
-  }
+  write_file("/run/resolvconf/resolv.conf", cfg->dns_server_content);
 
   /* Link /etc/resolv.conf */
   unlink("/etc/resolv.conf");
@@ -1084,11 +1067,6 @@ static void do_upstream_reprobe(void) {
 
     if (is_android())
       write_file("/proc/sys/net/ipv4/ip_forward", "1");
-
-    /* Re-probe ISP DNS for the new upstream interface and hot-swap it into
-     * the proxy.  The container's resolv.conf still says 172.28.0.1 - no
-     * container-side changes needed at all. */
-    ds_dns_proxy_update_upstream(new_iface);
   } else {
     ds_warn("[NET] Route monitor: failed to install new rule for table %d",
             new_table);
@@ -1292,7 +1270,7 @@ void ds_net_cleanup(struct ds_config *cfg, pid_t container_pid) {
   }
 
   /* Check how many ds-v* veths remain AFTER deleting ours.
-   * Shared resources (DHCP server, DNS proxy, MASQUERADE, FORWARD, Android
+   * Shared resources (DHCP server, MASQUERADE, FORWARD, Android
    * policy rules) must only be torn down when we are the last container.
    * Stopping them while others are running kills their networking. */
   int surviving = ds_nl_count_ifaces_with_prefix(ctx, "ds-v");
@@ -1309,7 +1287,6 @@ void ds_net_cleanup(struct ds_config *cfg, pid_t container_pid) {
 
   /* Last container - safe to stop shared services and remove shared rules */
   ds_dhcp_server_stop();
-  ds_dns_proxy_stop();
 
   /* 2. Remove Android policy rules (last container - safe to clean up) */
   if (is_android()) {

@@ -555,37 +555,26 @@ void ds_dhcp_server_start(struct ds_config *cfg, const char *veth_host,
   }
 
   /* Resolve DNS to advertise in the DHCP lease.
-   *
-   * NAT mode without --dns → the DNS proxy is running on 172.28.0.1:53.
-   * Offer that as the sole nameserver so the container's DHCP client writes
-   * "nameserver 172.28.0.1" into its resolv.conf automatically - consistent
-   * with what fix_networking_rootfs() already wrote for static init systems.
-   *
-   * Any other case → use the explicit --dns servers or fall back to the
-   * compiled-in defaults. */
-  if (cfg && cfg->net_mode == DS_NET_NAT && !cfg->dns_servers[0]) {
-    g_dhcp.dns1_be = inet_addr(DS_NAT_GW_IP);
-    g_dhcp.dns2_be = 0; /* single server is enough - proxy does the rest */
-  } else {
-    g_dhcp.dns1_be = inet_addr(DS_DNS_DEFAULT_1);
-    g_dhcp.dns2_be = inet_addr(DS_DNS_DEFAULT_2);
-    if (cfg && cfg->dns_servers[0]) {
-      char tmp[256];
-      strncpy(tmp, cfg->dns_servers, sizeof(tmp) - 1);
-      tmp[sizeof(tmp) - 1] = '\0';
-      char *saveptr = NULL;
-      char *tok = strtok_r(tmp, ", ", &saveptr);
-      if (tok) {
-        in_addr_t a = inet_addr(tok);
-        if (a != (in_addr_t)(-1))
-          g_dhcp.dns1_be = (uint32_t)a;
-      }
-      tok = strtok_r(NULL, ", ", &saveptr);
-      if (tok) {
-        in_addr_t a = inet_addr(tok);
-        if (a != (in_addr_t)(-1))
-          g_dhcp.dns2_be = (uint32_t)a;
-      }
+   * Always use the explicit --dns servers if given, otherwise fall back to
+   * the compiled-in defaults (1.1.1.1 / 8.8.8.8). */
+  g_dhcp.dns1_be = inet_addr(DS_DNS_DEFAULT_1);
+  g_dhcp.dns2_be = inet_addr(DS_DNS_DEFAULT_2);
+  if (cfg && cfg->dns_servers[0]) {
+    char tmp[256];
+    strncpy(tmp, cfg->dns_servers, sizeof(tmp) - 1);
+    tmp[sizeof(tmp) - 1] = '\0';
+    char *saveptr = NULL;
+    char *tok = strtok_r(tmp, ", ", &saveptr);
+    if (tok) {
+      in_addr_t a = inet_addr(tok);
+      if (a != (in_addr_t)(-1))
+        g_dhcp.dns1_be = (uint32_t)a;
+    }
+    tok = strtok_r(NULL, ", ", &saveptr);
+    if (tok) {
+      in_addr_t a = inet_addr(tok);
+      if (a != (in_addr_t)(-1))
+        g_dhcp.dns2_be = (uint32_t)a;
     }
   }
 

@@ -895,12 +895,6 @@ int start_rootfs(struct ds_config *cfg) {
             /* Start the dynamic route monitor thread to handle WiFi/Mobile
              * switches */
             ds_net_start_route_monitor();
-
-            /* Start the DNS proxy on 172.28.0.1:53.  Must come after
-             * setup_veth_host_side() so the bridge IP is already assigned.
-             * Skipped when --dns was given (custom servers bypass the proxy).
-             */
-            ds_dns_proxy_start(cfg, netns_pid);
           }
         }
 
@@ -1036,13 +1030,6 @@ int start_rootfs(struct ds_config *cfg) {
       cfg->reboot_cycle = 1;
       if (cfg->foreground)
         ds_log_silent = 1;
-
-      /* Stop the DNS proxy before re-entering the boot loop.  The reboot
-       * path skips full cleanup, so without this the old proxy thread keeps
-       * running and ds_dns_proxy_start() on the next cycle overwrites g_proxy
-       * with memset - losing the thread ID and leaking a zombie thread.
-       * ds_dns_proxy_start() will restart it cleanly after veth setup. */
-      ds_dns_proxy_stop();
 
       goto reboot_loop;
     }

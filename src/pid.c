@@ -537,7 +537,8 @@ int is_container_init(pid_t pid) {
   if (stat("/proc/1/ns/pid", &st_host) < 0)
     return 0;
 
-  /* Different inode == different PID namespace == process is a container init */
+  /* Different inode == different PID namespace == process is a container init
+   */
   return (st_pid.st_ino != st_host.st_ino) ? 1 : 0;
 }
 

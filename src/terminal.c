@@ -44,7 +44,7 @@ int ds_openpty(int *master, int *slave, char *name) {
   }
 
   *master = m;
-  *slave  = s;
+  *slave = s;
   return 0;
 err:
   close(m);
