@@ -19,17 +19,23 @@
  * Precision: 2048 (pids_dir) + 256 (name) + 5 (.lock) = 2309 < PATH_MAX (4096)
  * This prevents format-truncation warnings while ensuring paths never overflow.
  */
-static void get_lock_path(const char *name, char *buf, size_t size) {
+static int get_lock_path(const char *name, char *buf, size_t size) {
+  if (!name || !buf || size == 0 || !validate_container_name(name))
+    return -1;
+
   char safe_name[256];
   sanitize_container_name(name, safe_name, sizeof(safe_name));
-  snprintf(buf, size, "%.2048s/%.256s" DS_EXT_LOCK, get_pids_dir(), safe_name);
+  int r = snprintf(buf, size, "%.2048s/%.256s" DS_EXT_LOCK, get_pids_dir(),
+                   safe_name);
+  return (r > 0 && (size_t)r < size) ? 0 : -1;
 }
 
 /* Create external command lock - ONLY called by CLI parent.
  * Returns: 0 on success, -1 if lock already held by a live process. */
 static int acquire_external_lock(const char *name) {
   char lock_path[PATH_MAX];
-  get_lock_path(name, lock_path, sizeof(lock_path));
+  if (get_lock_path(name, lock_path, sizeof(lock_path)) < 0)
+    return -1;
 
   /* Check if lock already exists */
   if (access(lock_path, F_OK) == 0) {
@@ -61,7 +67,8 @@ static int acquire_external_lock(const char *name) {
  * Verifies ownership before removing. */
 static void release_external_lock(const char *name) {
   char lock_path[PATH_MAX];
-  get_lock_path(name, lock_path, sizeof(lock_path));
+  if (get_lock_path(name, lock_path, sizeof(lock_path)) < 0)
+    return;
 
   /* Verify we own the lock before removing */
   char buf[32];
@@ -112,7 +119,8 @@ void write_plain_env_file(const char *src, const char *dst) {
  * Returns: 1 if lock exists and holder is alive, 0 otherwise. */
 int is_external_lock_active(const char *name) {
   char lock_path[PATH_MAX];
-  get_lock_path(name, lock_path, sizeof(lock_path));
+  if (get_lock_path(name, lock_path, sizeof(lock_path)) < 0)
+    return 0;
 
   if (access(lock_path, F_OK) != 0)
     return 0; /* No lock */
@@ -271,9 +279,8 @@ int start_rootfs(struct ds_config *cfg) {
    *    command to detect a preserved mount for reuse. */
   if (cfg->container_name[0]) {
     char lock_path[PATH_MAX];
-    get_lock_path(cfg->container_name, lock_path, sizeof(lock_path));
-
-    if (access(lock_path, F_OK) == 0) {
+    if (get_lock_path(cfg->container_name, lock_path, sizeof(lock_path)) == 0 &&
+        access(lock_path, F_OK) == 0) {
       /* This looks like a restart handoff - take ownership of the lock */
       if (acquire_external_lock(cfg->container_name) == 0) {
         lock_acquired = 1;

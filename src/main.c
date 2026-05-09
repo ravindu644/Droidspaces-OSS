@@ -105,17 +105,6 @@ void print_usage(void) {
  * Validation Helpers
  * ---------------------------------------------------------------------------*/
 
-static int reject_container_name(const char *name, int *ret) {
-  if (!validate_container_name(name)) {
-    ds_error("Invalid container name '%s'. Use only letters, numbers, "
-             "'.', '_', '-' and spaces.",
-             name);
-    *ret = 1;
-    return -1;
-  }
-  return 0;
-}
-
 static int validate_kernel_version(void) {
   int major = 0, minor = 0;
   if (get_kernel_version(&major, &minor) < 0) {
@@ -160,6 +149,8 @@ static int validate_configuration_cli(struct ds_config *cfg) {
 
   if (!cfg->container_name[0]) {
     ds_error("Container name is mandatory (--name).");
+    errors++;
+  } else if (reject_container_name(cfg->container_name) < 0) {
     errors++;
   }
 
@@ -394,8 +385,10 @@ int main(int argc, char **argv) {
       safe_strncpy(cfg.config_file, optarg, sizeof(cfg.config_file));
       cfg.config_file_specified = 1;
     } else if (opt == 'n') {
-      if (reject_container_name(optarg, &ret) < 0)
+      if (reject_container_name(optarg) < 0) {
+        ret = 1;
         goto cleanup;
+      }
       safe_strncpy(cfg.container_name, optarg, sizeof(cfg.container_name));
     } else if (opt == 'r') {
       safe_strncpy(temp_r, optarg, sizeof(temp_r));
@@ -548,8 +541,10 @@ int main(int argc, char **argv) {
       cfg.is_img_mount = 1;
       break;
     case 'n':
-      if (reject_container_name(optarg, &ret) < 0)
+      if (reject_container_name(optarg) < 0) {
+        ret = 1;
         goto cleanup;
+      }
       safe_strncpy(cfg.container_name, optarg, sizeof(cfg.container_name));
       break;
     case 'h':

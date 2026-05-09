@@ -119,6 +119,9 @@ static int is_pid_file(const char *name) {
 int resolve_pidfile_from_name(const char *name, char *pidfile, size_t size) {
   if (!name || !pidfile || size == 0)
     return -1;
+  pidfile[0] = '\0';
+  if (!validate_container_name(name))
+    return -1;
 
   char safe_name[256];
   sanitize_container_name(name, safe_name, sizeof(safe_name));
@@ -352,7 +355,8 @@ pid_t find_container_by_name(const char *name) {
 
 int sync_pidfile(const char *src_pidfile, const char *name) {
   char dst[PATH_MAX];
-  resolve_pidfile_from_name(name, dst, sizeof(dst));
+  if (resolve_pidfile_from_name(name, dst, sizeof(dst)) < 0)
+    return -1;
 
   char buf[64];
   if (read_file(src_pidfile, buf, sizeof(buf)) < 0)
@@ -552,6 +556,8 @@ int ds_metadata_sync(pid_t pid) {
   if (read_file(path, name, sizeof(name)) < 0)
     return -1;
   name[strcspn(name, "\n")] = '\0';
+  if (reject_container_name(name) < 0)
+    return -1;
 
   char safe_name[256];
   sanitize_container_name(name, safe_name, sizeof(safe_name));
