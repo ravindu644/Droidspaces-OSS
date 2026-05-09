@@ -25,7 +25,7 @@
  */
 int ds_seccomp_apply_minimal(int hw_access, int privileged_mask) {
   (void)hw_access;
-  static struct sock_filter filter[84];
+  static struct sock_filter filter[72];
   int curr = 0;
 
   /* 1. Validate Architecture */
@@ -140,28 +140,6 @@ int ds_seccomp_apply_minimal(int hw_access, int privileged_mask) {
     /* Reload nr for any rules that follow this block. */
     filter[curr++] = (struct sock_filter)BPF_STMT(
         BPF_LD | BPF_W | BPF_ABS, offsetof(struct seccomp_data, nr));
-
-    /*
-     * 10. Mount hardening (standard mode only - gated by hw_access).
-     * Rule: Block MS_REMOUNT without MS_RDONLY (prevent 'remount rw').
-     */
-    if (!hw_access) {
-      filter[curr++] = (struct sock_filter)BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K,
-                                                    __NR_mount, 0, 5);
-      filter[curr++] = (struct sock_filter)BPF_STMT(
-          BPF_LD | BPF_W | BPF_ABS, offsetof(struct seccomp_data, args[3]));
-      /* If MS_REMOUNT not set -> allow (skip next 3) */
-      filter[curr++] = (struct sock_filter)BPF_JUMP(BPF_JMP | BPF_JSET | BPF_K,
-                                                    MS_REMOUNT, 0, 3);
-      /* If MS_RDONLY set -> allow (skip next 1) */
-      filter[curr++] = (struct sock_filter)BPF_JUMP(BPF_JMP | BPF_JSET | BPF_K,
-                                                    MS_RDONLY, 1, 0);
-      filter[curr++] = (struct sock_filter)BPF_STMT(
-          BPF_RET | BPF_K, SECCOMP_RET_ERRNO | (EPERM & SECCOMP_RET_DATA));
-      /* Reload nr */
-      filter[curr++] = (struct sock_filter)BPF_STMT(
-          BPF_LD | BPF_W | BPF_ABS, offsetof(struct seccomp_data, nr));
-    }
   }
 
   /* Allow everything else */

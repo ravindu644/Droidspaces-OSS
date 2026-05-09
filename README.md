@@ -200,7 +200,7 @@ The entire runtime is a **single static binary** under 300KB, compiled against m
 > To provide full systemd support, native hardware acceleration (GPU), and complex mounts/networking on Android, the container root needs real privileges. Even though Droidspaces does not use the heavily restricted "unprivileged" (User Namespace) mode, it applies several security layers:
 > - **Capability Dropping**: By default, Droidspaces drops high-risk capabilities (e.g., `CAP_SYS_MODULE`, `CAP_SYS_RAWIO`).
 > - **Mount Hardening**: Critical host paths are masked or remounted as read-only.
-> - **Seccomp Filters**: Common exploit vectors (like CVE-2026-31431 and malicious kernel module loading, remounting as RW) are blocked by default.
+> - **Seccomp Filters**: Common exploit vectors (like CVE-2026-31431 and malicious kernel module loading) are blocked by default.
 
 > [!WARNING]
 >
