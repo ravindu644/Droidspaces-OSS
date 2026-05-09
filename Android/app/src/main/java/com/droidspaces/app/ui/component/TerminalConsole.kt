@@ -129,36 +129,43 @@ fun TerminalConsole(
     }
 
     // Auto-scroll logic: ensures the terminal stays at the bottom during processing.
-    // We watch both logs.size (data) and maxValue (layout) to catch every update.
-    LaunchedEffect(logs.size, verticalScrollState.maxValue) {
-        if (!userScrolledUp) {
-            val target = verticalScrollState.maxValue
-            if (verticalScrollState.value < target) {
-                isAutoScrolling = true
-                try {
-                    // Use a slightly faster spring for tight stickiness during bursts,
-                    // but keeping it smooth enough for that "glide" feel.
-                    verticalScrollState.animateScrollTo(
-                        value = target,
-                        animationSpec = spring(
-                            dampingRatio = Spring.DampingRatioNoBouncy,
-                            stiffness = Spring.StiffnessLow
-                        )
-                    )
-                } finally {
-                    isAutoScrolling = false
+    // We use snapshotFlow to decouple data arrival from the animation cycle.
+    LaunchedEffect(Unit) {
+        snapshotFlow { Triple(logs.size, verticalScrollState.maxValue, userScrolledUp) }
+            .collect { (_, maxValue, scrolledUp) ->
+                if (!scrolledUp && verticalScrollState.value < maxValue) {
+                    isAutoScrolling = true
+                    try {
+                        if (isProcessing) {
+                            verticalScrollState.animateScrollTo(
+                                value = maxValue,
+                                animationSpec = spring(
+                                    dampingRatio = Spring.DampingRatioNoBouncy,
+                                    stiffness = Spring.StiffnessLow
+                                )
+                            )
+                        } else {
+                            // Use instant scroll after processing to overcome layout flux
+                            // and ensure it never stops at the wrong line.
+                            verticalScrollState.scrollTo(maxValue)
+                        }
+                    } finally {
+                        isAutoScrolling = false
+                    }
                 }
             }
-        }
     }
 
-    // Reset auto-scroll state when a new operation starts
+
+    // Reset scroll state when a new operation starts OR finishes
     LaunchedEffect(isProcessing) {
+        userScrolledUp = false
+        // Only reset isAutoScrolling when starting to avoid fighting an ongoing finish-scroll
         if (isProcessing) {
-            userScrolledUp = false
             isAutoScrolling = false
         }
     }
+
 
     val defaultTextColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.9f)
     val errorColor = MaterialTheme.colorScheme.error.copy(alpha = 0.9f)
