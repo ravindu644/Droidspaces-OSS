@@ -98,14 +98,6 @@ fi
 
 log "Systemd detected (at $GUEST_SYSTEMD_PATH), applying fixes..."
 
-# DNS configuration
-log "Configuring systemd-resolved DNS settings..."
-$MKDIR -p "$ROOTFS_PATH/etc/systemd/resolved.conf.d"
-$CAT > "$ROOTFS_PATH/etc/systemd/resolved.conf.d/dns.conf" << 'EOF'
-[Resolve]
-DNSStubListener=no
-EOF
-
 # Mask problematic services for Android kernels
 log "Masking problematic systemd services..."
 # Mask systemd-networkd-wait-online.service

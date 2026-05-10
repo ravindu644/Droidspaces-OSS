@@ -196,15 +196,6 @@ chcon u:object_r:vold_data_file:s0 /path/to/rootfs.img
 
 2. Add the results as DNS servers by editing the container configuration in the Droidspaces app.
 
-3. Run this command as root inside the container to tell `systemd-resolved` not to use its own DNS proxy server (Droidspaces v5.7.0 already uses this hack. Only applicable to containers created before Droidspaces v5.7.0 was released):
-
-   ```bash
-   cat > "/etc/systemd/resolved.conf.d/dns.conf" << 'EOF'
-   [Resolve]
-   DNSStubListener=no
-   EOF
-   ```
-
 ---
 
 ## WiFi/Mobile Data Disconnects
