@@ -1041,6 +1041,12 @@ int start_rootfs(struct ds_config *cfg) {
       if (cfg->foreground)
         ds_log_silent = 1;
 
+      /* ds_dhcp_server_start() memsets g_dhcp under g_dhcp_lock on the next
+       * cycle, racing the still-running dhcp_server_loop thread that reads from
+       * the same memory.  The DHCP thread is intentionally joinable so stop()
+       * can join before memset. */
+      ds_dhcp_server_stop();
+
       goto reboot_loop;
     }
 
