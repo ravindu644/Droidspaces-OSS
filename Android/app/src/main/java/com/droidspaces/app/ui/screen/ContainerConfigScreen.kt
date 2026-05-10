@@ -134,7 +134,7 @@ fun ContainerConfigScreen(
                     .fillMaxWidth()
                     .padding(horizontal = 24.dp),
                 shape = RoundedCornerShape(24.dp),
-                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.98f),
+                color = MaterialTheme.colorScheme.surfaceVariant,
                 border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)),
                 tonalElevation = 0.dp
             ) {
@@ -150,7 +150,7 @@ fun ContainerConfigScreen(
                         colors = OutlinedTextFieldDefaults.colors(
                             unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
                             focusedBorderColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.8f),
-                            unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+                            unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerLow,
                             focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
                         )
                     )
@@ -237,7 +237,7 @@ fun ContainerConfigScreen(
             val isUpstreamValid = netMode != "nat" || upstreamInterfaces.isNotEmpty()
             Surface(
                 modifier = Modifier.fillMaxWidth(),
-                color = MaterialTheme.colorScheme.surfaceContainer.copy(alpha = 0.98f),
+                color = MaterialTheme.colorScheme.surfaceContainer,
                 tonalElevation = 0.dp
             ) {
                 Column(modifier = Modifier.fillMaxWidth()) {
@@ -396,7 +396,7 @@ fun ContainerConfigScreen(
                 colors = OutlinedTextFieldDefaults.colors(
                     unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
                     focusedBorderColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.8f),
-                    unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+                    unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerLow,
                     focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
                 ),
                 leadingIcon = {

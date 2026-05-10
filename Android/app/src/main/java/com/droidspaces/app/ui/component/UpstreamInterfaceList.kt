@@ -49,7 +49,7 @@ fun UpstreamInterfaceList(
         upstreamInterfaces.forEach { iface ->
             Surface(
                 modifier = Modifier.fillMaxWidth(),
-                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
+                color = MaterialTheme.colorScheme.surfaceContainerHigh,
                 shape = RoundedCornerShape(20.dp),
                 border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
             ) {
@@ -73,7 +73,7 @@ fun UpstreamInterfaceList(
                     onClick = { showUpstreamDialog = true }
                 ),
                 shape = addBtnShape,
-                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+                color = MaterialTheme.colorScheme.surfaceContainerLow,
                 border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
                 tonalElevation = 0.dp
             ) {
@@ -220,7 +220,7 @@ private fun AddUpstreamDialog(
                     colors = OutlinedTextFieldDefaults.colors(
                         unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
                         focusedBorderColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.8f),
-                        unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+                        unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerLow,
                         focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
                     )
                 )

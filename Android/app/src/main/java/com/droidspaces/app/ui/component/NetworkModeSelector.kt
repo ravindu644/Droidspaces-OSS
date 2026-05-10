@@ -35,7 +35,7 @@ fun NetworkModeSelector(
     val modernFieldColors = OutlinedTextFieldDefaults.colors(
         unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
         focusedBorderColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.8f),
-        unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+        unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerLow,
         focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
     )
 

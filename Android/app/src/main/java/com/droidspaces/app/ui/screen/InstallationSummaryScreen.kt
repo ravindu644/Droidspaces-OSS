@@ -1,4 +1,5 @@
 package com.droidspaces.app.ui.screen
+import androidx.compose.ui.graphics.Color
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
@@ -35,6 +36,7 @@ fun InstallationSummaryScreen(
     val btnShape = RoundedCornerShape(20.dp)
 
     Scaffold(
+        containerColor = Color.Transparent,
         topBar = {
             TopAppBar(
                 title = { Text(stringResource(R.string.installation_setup_summary)) },
@@ -47,7 +49,7 @@ fun InstallationSummaryScreen(
         },
         bottomBar = {
             Surface(
-                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.2f),
+                color = MaterialTheme.colorScheme.surfaceContainerLowest,
                 border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
                 tonalElevation = 0.dp
             ) {
@@ -112,7 +114,7 @@ fun InstallationSummaryScreen(
             Surface(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(20.dp),
-                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
+                color = MaterialTheme.colorScheme.surfaceContainerHigh,
                 border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
                 tonalElevation = 0.dp
             ) {

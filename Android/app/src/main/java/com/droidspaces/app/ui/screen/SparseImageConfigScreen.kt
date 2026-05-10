@@ -1,4 +1,5 @@
 package com.droidspaces.app.ui.screen
+import androidx.compose.ui.graphics.Color
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
@@ -40,13 +41,14 @@ fun SparseImageConfigScreen(
     val fieldColors = OutlinedTextFieldDefaults.colors(
         unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
         focusedBorderColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.8f),
-        unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+        unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerLow,
         focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
     )
 
     val isNextEnabled = !useSparseImage || (sizeGB.toIntOrNull()?.let { it in 4..512 } == true)
 
     Scaffold(
+        containerColor = Color.Transparent,
         topBar = {
             TopAppBar(
                 title = { Text(context.getString(R.string.sparse_image_configuration)) },
@@ -61,7 +63,7 @@ fun SparseImageConfigScreen(
             val btnShape = RoundedCornerShape(20.dp)
             Surface(
                 modifier = Modifier.fillMaxWidth(),
-                color = MaterialTheme.colorScheme.surfaceContainer.copy(alpha = 0.98f),
+                color = MaterialTheme.colorScheme.surfaceContainer,
                 tonalElevation = 0.dp
             ) {
                 Column(modifier = Modifier.fillMaxWidth()) {
@@ -175,7 +177,7 @@ fun SparseImageConfigScreen(
                 modifier = Modifier.fillMaxWidth(),
                 onClick = { useSparseImage = !useSparseImage },
                 shape = RoundedCornerShape(20.dp),
-                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
+                color = MaterialTheme.colorScheme.surfaceContainerHigh,
                 border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
                 tonalElevation = 0.dp
             ) {
@@ -232,7 +234,7 @@ fun SparseImageConfigScreen(
                 Surface(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(20.dp),
-                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
+                    color = MaterialTheme.colorScheme.surfaceContainerHigh,
                     border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
                     tonalElevation = 0.dp
                 ) {

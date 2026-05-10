@@ -1,4 +1,5 @@
 package com.droidspaces.app.ui.screen
+import androidx.compose.ui.graphics.Color
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -234,6 +235,7 @@ fun MainTabScreen(
     }
 
     Scaffold(
+        containerColor = Color.Transparent,
         topBar = {
             TopAppBar(
                 title = {
@@ -551,7 +553,7 @@ private fun MainBottomBar(
     Surface(
         modifier = Modifier.fillMaxWidth(),
         shape = androidx.compose.ui.graphics.RectangleShape,
-        color = MaterialTheme.colorScheme.surfaceContainer.copy(alpha = 0.98f),
+        color = MaterialTheme.colorScheme.surfaceContainer,
         shadowElevation = 0.dp 
     ) {
         Column(modifier = Modifier.fillMaxWidth()) {

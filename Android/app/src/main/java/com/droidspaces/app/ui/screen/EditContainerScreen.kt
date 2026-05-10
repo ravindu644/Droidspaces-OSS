@@ -1,4 +1,5 @@
 package com.droidspaces.app.ui.screen
+import androidx.compose.ui.graphics.Color
 
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.BorderStroke
@@ -259,7 +260,7 @@ fun EditContainerScreen(
                     .fillMaxWidth()
                     .padding(horizontal = 24.dp),
                 shape = RoundedCornerShape(24.dp),
-                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.98f),
+                color = MaterialTheme.colorScheme.surfaceVariant,
                 border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)),
                 tonalElevation = 0.dp
             ) {
@@ -275,7 +276,7 @@ fun EditContainerScreen(
                         colors = OutlinedTextFieldDefaults.colors(
                             unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
                             focusedBorderColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.8f),
-                            unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+                            unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerLow,
                             focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
                         )
                     )
@@ -348,6 +349,7 @@ fun EditContainerScreen(
     }
 
     Scaffold(
+        containerColor = Color.Transparent,
         topBar = {
             TopAppBar(
                 title = {
@@ -378,7 +380,7 @@ fun EditContainerScreen(
             )
             Surface(
                 modifier = Modifier.fillMaxWidth(),
-                color = MaterialTheme.colorScheme.surfaceContainer.copy(alpha = 0.98f),
+                color = MaterialTheme.colorScheme.surfaceContainer,
                 tonalElevation = 0.dp
             ) {
                 Column(modifier = Modifier.fillMaxWidth()) {
@@ -512,7 +514,7 @@ fun EditContainerScreen(
             val modernFieldColors = OutlinedTextFieldDefaults.colors(
                 unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
                 focusedBorderColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.8f),
-                unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+                unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerLow,
                 focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
             )
             OutlinedTextField(
@@ -932,7 +934,7 @@ fun EditContainerScreen(
                 Surface(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(20.dp),
-                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
+                    color = MaterialTheme.colorScheme.surfaceContainerHigh,
                     border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
                 ) {
                     Row(
@@ -971,7 +973,7 @@ fun EditContainerScreen(
                     interactionSource = remember { MutableInteractionSource() }
                 ),
                 shape = addBindBtnShape,
-                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+                color = MaterialTheme.colorScheme.surfaceContainerLow,
                 border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
                 tonalElevation = 0.dp
             ) {
@@ -995,7 +997,7 @@ fun EditContainerScreen(
             // Error message
             errorMessage?.let { error ->
                 Surface(
-                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
+                    color = MaterialTheme.colorScheme.surfaceContainerHigh,
                     shape = RoundedCornerShape(20.dp),
                     border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
                     modifier = Modifier

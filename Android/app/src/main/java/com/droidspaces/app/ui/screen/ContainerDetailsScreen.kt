@@ -140,7 +140,7 @@ fun ContainerDetailsScreen(
                 Surface(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(20.dp),
-                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
+                    color = MaterialTheme.colorScheme.surfaceContainerHigh,
                     border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
                 ) {
                     Column(
@@ -350,7 +350,7 @@ private fun TerminalCard(
             .alpha(alpha)
             .graphicsLayer { this.alpha = alpha },
         shape = RoundedCornerShape(20.dp),
-        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
+        color = MaterialTheme.colorScheme.surfaceContainerHigh,
         border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
     ) {
         Row(
@@ -453,7 +453,7 @@ private fun PremiumSystemdCard(
             },
         shape = RoundedCornerShape(20.dp),
         color = when (state) {
-            is SystemdCardState.Available -> MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
+            is SystemdCardState.Available -> MaterialTheme.colorScheme.surfaceContainerHigh
             else -> MaterialTheme.colorScheme.surfaceContainerLow.copy(alpha = 0.5f)
         },
         border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))

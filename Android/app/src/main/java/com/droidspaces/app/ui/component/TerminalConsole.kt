@@ -76,7 +76,7 @@ fun ShimmerAnimation(
         modifier = modifier
             .clip(RoundedCornerShape(16.dp))
             // Base background first - Using surfaceContainerHighest for premium field-depth
-            .background(MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.95f))
+            .background(MaterialTheme.colorScheme.surfaceContainerHighest)
             // Shimmer brush on top
             .background(brush)
             .border(

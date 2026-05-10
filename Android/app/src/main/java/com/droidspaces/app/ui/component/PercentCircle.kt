@@ -33,7 +33,7 @@ fun PercentCircle(
         fontWeight = FontWeight.Medium
     ),
     progressColor: Color = MaterialTheme.colorScheme.primary,
-    backgroundColor: Color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
+    backgroundColor: Color = MaterialTheme.colorScheme.surfaceContainerLow
 ) {
     // Clamp percent between 0.01 and 99.9 for visual consistency
     val clampedPercent = when {

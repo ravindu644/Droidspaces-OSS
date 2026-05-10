@@ -70,10 +70,11 @@ fun RootCheckScreen(
     val btnShape = RoundedCornerShape(20.dp)
 
     Scaffold(
+        containerColor = Color.Transparent,
         bottomBar = {
             Surface(
                 modifier = Modifier.fillMaxWidth(),
-                color = MaterialTheme.colorScheme.surfaceContainer.copy(alpha = 0.98f),
+                color = MaterialTheme.colorScheme.surfaceContainer,
                 tonalElevation = 0.dp
             ) {
                 Column(modifier = Modifier.fillMaxWidth()) {

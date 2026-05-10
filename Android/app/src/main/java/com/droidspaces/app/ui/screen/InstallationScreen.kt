@@ -1,4 +1,5 @@
 package com.droidspaces.app.ui.screen
+import androidx.compose.ui.graphics.Color
 
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.clickable
@@ -154,12 +155,13 @@ fun InstallationScreen(
     }
 
     Scaffold(
+        containerColor = Color.Transparent,
         bottomBar = {
             if (isSuccess) {
                 val btnShape = RoundedCornerShape(20.dp)
                 Surface(
                     modifier = Modifier.fillMaxWidth(),
-                    color = MaterialTheme.colorScheme.surfaceContainer.copy(alpha = 0.98f),
+                    color = MaterialTheme.colorScheme.surfaceContainer,
                     tonalElevation = 0.dp
                 ) {
                     Column(modifier = Modifier.fillMaxWidth()) {
@@ -239,7 +241,7 @@ fun InstallationScreen(
             // Status messages in a card (MMRL style)
             Surface(
                 modifier = Modifier.fillMaxWidth(),
-                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
+                color = MaterialTheme.colorScheme.surfaceContainerHigh,
                 shape = RoundedCornerShape(20.dp),
                 border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
             ) {

@@ -1,4 +1,5 @@
 package com.droidspaces.app.ui.screen
+import androidx.compose.ui.graphics.Color
 
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.BorderStroke
@@ -60,10 +61,11 @@ fun WelcomeScreen(onNavigateToRootCheck: () -> Unit) {
     val btnShape = RoundedCornerShape(20.dp)
 
     Scaffold(
+        containerColor = Color.Transparent,
         bottomBar = {
             Surface(
                 modifier = Modifier.fillMaxWidth(),
-                color = MaterialTheme.colorScheme.surfaceContainer.copy(alpha = 1f),
+                color = MaterialTheme.colorScheme.surfaceContainer,
                 tonalElevation = 0.dp
             ) {
                 Column(modifier = Modifier.fillMaxWidth()) {
