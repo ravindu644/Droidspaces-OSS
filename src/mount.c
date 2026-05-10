@@ -560,52 +560,7 @@ int setup_dev(const char *rootfs, int hw_access, int gpu_mode,
   }
 
   /* Create minimal set of device nodes (creates secure console/ptmx/etc.) */
-  int ret = create_devices(rootfs, hw_access, privileged_mask);
-  if (ret < 0)
-    return ret;
-
-  /*
-   * Slave-bind host /dev/block → container /dev/block  (hw_access only)
-   *
-   * Problem: Android's ueventd/vold intercepts USB storage uevents and
-   * creates block nodes exclusively under /dev/block/ (e.g. /dev/block/sdf,
-   * /dev/block/sdf1).  devtmpfs - a global singleton - never receives these
-   * nodes, so mounting devtmpfs gives us mali0, video*, etc. but NO storage.
-   *
-   * Fix: MS_BIND | MS_REC establishes a live mirror of the host /dev/block
-   * tree inside the container.  The follow-up MS_SLAVE | MS_REC makes the
-   * propagation one-directional:
-   *   HOST  → CONTAINER : new block nodes appear in real-time (ueventd/vold
-   *                        creates /dev/block/sdX → instantly visible here)
-   *   CONTAINER → HOST  : nothing leaks back (container mounts stay private)
-   *
-   * udev running inside the container receives the same NETLINK_KOBJECT_UEVENT
-   * broadcast from the kernel and creates the canonical /dev/sdX symlinks/nodes
-   * using its own rules, sourcing device info from the now-visible /dev/block/.
-   *
-   * Reference: mount_namespaces(7) - "MS_SLAVE" propagation type.
-   */
-  if (hw_access && access("/dev/block", F_OK) == 0) {
-    char block_path[PATH_MAX];
-    snprintf(block_path, sizeof(block_path), "%s/dev/block", rootfs);
-    mkdir(block_path, 0755);
-
-    if (mount("/dev/block", block_path, NULL, MS_BIND | MS_REC, NULL) == 0) {
-      if (mount(NULL, block_path, NULL, MS_SLAVE | MS_REC, NULL) < 0)
-        ds_warn("[DEBUG] /dev/block bind ok but MS_SLAVE failed: %s - "
-                "block nodes visible but propagation is shared",
-                strerror(errno));
-      else
-        ds_log("[DEBUG] /dev/block slave-bound from host "
-               "(real-time block hotplug active)");
-    } else {
-      ds_warn("[DEBUG] /dev/block bind failed: %s - "
-              "storage nodes won't appear automatically",
-              strerror(errno));
-    }
-  }
-
-  return ret;
+  return create_devices(rootfs, hw_access, privileged_mask);
 }
 
 int create_devices(const char *rootfs, int hw_access, int privileged_mask) {
