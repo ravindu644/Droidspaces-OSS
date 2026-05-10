@@ -595,10 +595,11 @@ void ds_net_resolve_static_ip(struct ds_config *cfg);
 
 /* Start a single-lease DHCP server on veth_host (detached monitor thread).
  * Offers offer_ip_be to any DHCP client that broadcasts on the interface.
- * gw_ip_be becomes the router/server-id option (typically DS_NAT_GW_IP). */
+ * gw_ip_be becomes the router/server-id option (typically DS_NAT_GW_IP).
+ * Isolation is enforced by AF_PACKET bind to veth_host's ifindex; no MAC
+ * filter is needed or used (see ds_dhcp.c for rationale). */
 void ds_dhcp_server_start(struct ds_config *cfg, const char *veth_host,
-                          uint32_t offer_ip_be, uint32_t gw_ip_be,
-                          const uint8_t peer_mac[6]);
+                          uint32_t offer_ip_be, uint32_t gw_ip_be);
 
 /* Stop the DHCP server and unblock its recv() loop. Call before veth teardown.
  */

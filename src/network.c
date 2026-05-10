@@ -668,24 +668,6 @@ int setup_veth_host_side(struct ds_config *cfg, pid_t child_pid) {
     return -1;
   }
 
-  /* Read peer MAC now - after ds_nl_move_to_netns the interface is inside the
-   * container netns and invisible to host-side ioctl(SIOCGIFHWADDR). */
-  uint8_t peer_mac[6] = {0};
-  {
-    struct ifreq ifr;
-    int fd = socket(AF_INET, SOCK_DGRAM, 0);
-    if (fd >= 0) {
-      memset(&ifr, 0, sizeof(ifr));
-      strncpy(ifr.ifr_name, veth_peer, IFNAMSIZ - 1);
-      if (ioctl(fd, SIOCGIFHWADDR, &ifr) == 0)
-        memcpy(peer_mac, ifr.ifr_hwaddr.sa_data, 6);
-      else
-        ds_warn("Failed to read peer MAC for %s: %s", veth_peer,
-                strerror(errno));
-      close(fd);
-    }
-  }
-
   ds_log("[DEBUG] Moving %s into netns of PID %d using FD %d...", veth_peer,
          (int)child_pid, netns_fd);
   int r = ds_nl_move_to_netns(ctx, veth_peer, netns_fd);
@@ -742,8 +724,7 @@ int setup_veth_host_side(struct ds_config *cfg, pid_t child_pid) {
      * Even if bridged, AF_PACKET on the slave sees traffic before the bridge.
      */
     const char *dhcp_iface = veth_host;
-    ds_dhcp_server_start(cfg, dhcp_iface, offer_ip, inet_addr(DS_NAT_GW_IP),
-                         peer_mac);
+    ds_dhcp_server_start(cfg, dhcp_iface, offer_ip, inet_addr(DS_NAT_GW_IP));
 
     /* Store the container IP string (plain dotted-decimal) for port-forward
      * cleanup later.  static_nat_ip is already in that exact format. */

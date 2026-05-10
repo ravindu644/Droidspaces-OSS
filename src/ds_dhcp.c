@@ -109,8 +109,7 @@ typedef struct {
   uint32_t netmask_be;   /* 255.255.0.0 for /16               */
   uint32_t dns1_be;      /* DNS 1 */
   uint32_t dns2_be;      /* DNS 2 */
-  uint8_t peer_mac[6];   /* Container's MAC */
-  uint8_t server_mac[6]; /* Bridge's MAC */
+  uint8_t server_mac[6]; /* Bridge's MAC (source MAC for replies) */
   volatile sig_atomic_t stop;
   pthread_t tid; /* Server thread ID */
   /* Startup synchronization: ds_dhcp_server_start() blocks until the thread
@@ -453,10 +452,16 @@ static void *dhcp_server_loop(void *arg) {
 
     int opts_len = (int)(req_len - (int)offsetof(struct dhcp_pkt, options));
 
-    /* MAC filter */
-    if (memcmp(req.chaddr, ctx->peer_mac, 6) != 0)
-      continue;
-
+    /* No MAC filter: this socket is bound exclusively to the per-container
+     * veth host side (AF_PACKET + sll_ifindex).  Only one peer (the container)
+     * can ever send frames through that veth, so any DHCP DISCOVER/REQUEST
+     * arriving here legitimately belongs to our container.  A MAC-based filter
+     * is both unnecessary on a point-to-point link and actively harmful: Ubuntu
+     * 24.04+ / systemd-networkd uses a DUID as ClientIdentifier, causing the
+     * chaddr in the packet to differ from the MAC we read at veth-creation time
+     * (the interface is renamed to eth0 inside the netns after our snapshot).
+     * Filtering by ifindex (already enforced by AF_PACKET bind) is sufficient
+     * and collision-free across any number of parallel containers. */
     uint8_t type_byte = 0;
     if (opt_get(req.options, opts_len, OPT_MSG_TYPE, &type_byte, 1) < 0)
       continue;
@@ -511,8 +516,7 @@ out:
  * ---------------------------------------------------------------------------*/
 
 void ds_dhcp_server_start(struct ds_config *cfg, const char *veth_host,
-                          uint32_t offer_ip_be, uint32_t gw_ip_be,
-                          const uint8_t peer_mac[6]) {
+                          uint32_t offer_ip_be, uint32_t gw_ip_be) {
   pthread_mutex_lock(&g_dhcp_lock);
 
   memset(&g_dhcp, 0, sizeof(g_dhcp));
@@ -528,7 +532,6 @@ void ds_dhcp_server_start(struct ds_config *cfg, const char *veth_host,
   safe_strncpy(g_dhcp.iface, veth_host, sizeof(g_dhcp.iface));
   g_dhcp.offer_ip_be = offer_ip_be;
   g_dhcp.gw_ip_be = gw_ip_be;
-  memcpy(g_dhcp.peer_mac, peer_mac, 6);
 
   /* Fetch Bridge MAC */
   /* We need the bridge MAC to spoof the source in DHCP replies.
