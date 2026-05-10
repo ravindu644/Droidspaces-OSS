@@ -255,20 +255,6 @@ fun ContainerUsersCard(
             }
 
             // User selection dropdown - optimized with single source of truth
-            // Premium border animation - fast 150ms transition for snappy feel (matches search bar)
-            val animatedBorderColor by animateColorAsState(
-                targetValue = if (isDropdownExpanded) {
-                    MaterialTheme.colorScheme.primary
-                } else {
-                    MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)
-                },
-                animationSpec = tween(
-                    durationMillis = 150,
-                    easing = FastOutSlowInEasing
-                ),
-                label = "dropdown_border_animation"
-            )
-
             ExposedDropdownMenuBox(
                 expanded = isDropdownExpanded,
                 onExpandedChange = { newExpanded ->
