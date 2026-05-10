@@ -833,15 +833,30 @@ int setup_unified_tmpfs(void) {
     return 0; /* Non-fatal: Termux not installed */
   }
 
-  /* Ensure tmp directory exists */
+  /* Ensure tmp directory exists.  mkdir on a pre-existing symlink returns
+   * EEXIST without following it, so the subsequent O_NOFOLLOW open is what
+   * actually rejects an attacker-planted symlink. */
   mkdir_p(termux_tmp, 0755);
 
+  /* Resolve termux_tmp via O_PATH|O_NOFOLLOW so the Termux UID cannot redirect
+   * chown/chmod/mount onto a system tmpfs (e.g. /dev, /dev/socket, /sys/fs/
+   * cgroup) by replacing the path with a symlink it controls. */
+  int tmp_fd = open(termux_tmp, O_PATH | O_NOFOLLOW | O_DIRECTORY | O_CLOEXEC);
+  if (tmp_fd < 0) {
+    ds_warn("Refusing unified /tmp setup: %s is not a real directory: %s",
+            termux_tmp, strerror(errno));
+    return -1;
+  }
+  char proc_path[64];
+  snprintf(proc_path, sizeof(proc_path), "/proc/self/fd/%d", tmp_fd);
+
   /* Already mounted? Just ensure ownership is correct. */
-  if (statfs(termux_tmp, &fs) == 0 && fs.f_type == TMPFS_MAGIC) {
-    if (chown(termux_tmp, st.st_uid, st.st_gid) < 0) {
+  if (statfs(proc_path, &fs) == 0 && fs.f_type == TMPFS_MAGIC) {
+    if (fchownat(tmp_fd, "", st.st_uid, st.st_gid, AT_EMPTY_PATH) < 0) {
       ds_warn("Failed to chown %s: %s", termux_tmp, strerror(errno));
     }
-    chmod(termux_tmp, 01777);
+    fchmodat(AT_FDCWD, proc_path, 01777, 0);
+    close(tmp_fd);
     return 0;
   }
 
@@ -857,9 +872,10 @@ int setup_unified_tmpfs(void) {
   snprintf(mount_opts, sizeof(mount_opts), "mode=1777,uid=%d,gid=%d",
            (int)st.st_uid, (int)st.st_gid);
 
-  if (mount("tmpfs", termux_tmp, "tmpfs", MS_NOSUID | MS_NODEV, mount_opts) !=
+  if (mount("tmpfs", proc_path, "tmpfs", MS_NOSUID | MS_NODEV, mount_opts) !=
       0) {
     ds_warn("Failed to create unified /tmp: %s", strerror(errno));
+    close(tmp_fd);
     return -1;
   }
 
@@ -869,6 +885,7 @@ int setup_unified_tmpfs(void) {
             strerror(errno));
   }
 
+  close(tmp_fd);
   return 0;
 }
 
