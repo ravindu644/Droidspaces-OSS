@@ -2,9 +2,6 @@
 
 This guide provides step-by-step instructions for enabling GPU acceleration in your Droidspaces containers. Whether you are running on an Android device or a Linux desktop, Droidspaces offers multiple ways to leverage hardware acceleration for a smooth graphical experience.
 
-> [!NOTE]
-> For the best experience on **Android,** it is highly recommended to use our [official rootfs tarballs](https://github.com/ravindu644/Droidspaces-rootfs-builder/releases/latest), which come pre-configured with the necessary drivers and environment settings.
-
 ### Quick Navigation
 
 - [**Android Devices**](#android)
@@ -109,12 +106,12 @@ For Qualcomm Adreno GPUs, Droidspaces supports **native hardware acceleration** 
 
 #### Requirements
 
-- **Recommended Rootfs**: Use the [Base/XFCE tarball](https://github.com/ravindu644/Droidspaces-rootfs-builder/releases/latest) from the official builder repository.
+- **Custom Mesa driver**: Installed following the instructions from the [Mesa for Android Container repository](https://github.com/lfdevs/mesa-for-android-container).
 - **Termux**: `pkg install x11-repo && pkg install termux-x11`
 
 #### Implementation Steps
 
-1. **Install Tarball**: Download and install a compatible rootfs via the Droidspaces app.
+1. **Install the custom Mesa driver** from the [Mesa for Android Container repository](https://github.com/lfdevs/mesa-for-android-container).
 
 2. **Enable GPU Access**: In the container settings, enable **GPU Access** and **Termux X11**.
 
