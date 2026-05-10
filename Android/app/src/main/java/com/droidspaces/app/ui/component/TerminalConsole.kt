@@ -23,6 +23,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.Dp
 import com.droidspaces.app.ui.theme.JetBrainsMono
 import com.droidspaces.app.util.AnsiColorParser
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.launch
 
 private val ShimmerColorShades
     @Composable get() = listOf(
@@ -94,12 +96,16 @@ fun ShimmerAnimation(
 /**
  * Terminal console with ANSI color support, smooth rendering, and real-time log streaming.
  *
- * Scroll design notes:
- * - isProcessing is intentionally NOT a LaunchedEffect key. When it flipped false,
- *   the in-flight spring scroll was cancelled mid-animation, freezing the terminal.
- * - logs.size + maxValue are sufficient: the final status lines appended by
- *   ContainerOperationExecutor naturally trigger both keys, so no extra trigger needed.
- * - userScrolledUp is detected via snapshotFlow which is read-only - no scroll mutation
+ * Scroll design invariants:
+ * - isProcessing IS part of the snapshotFlow tuple. Reading it from closure instead causes
+ *   a stale-capture race: the branch (spring vs instant) is decided on an old value, two
+ *   scroll coroutines run concurrently, and the spring gets cancelled mid-animation (~500ms
+ *   stall before the final log lines appear, reproducible ~1/50 on start/stop sequences).
+ * - scrollJob?.cancel() before each launch guarantees at most one scroll coroutine is live.
+ *   Rapid log bursts or an isProcessing flip cannot queue up concurrent animateScrollTo calls.
+ * - LaunchedEffect(isProcessing) resets state only on start (isProcessing=true). Resetting
+ *   on finish produced a spurious snapshotFlow re-emission that was the entry point of the race.
+ * - userScrolledUp is detected via a separate read-only snapshotFlow - no scroll mutation
  *   conflicts with the write path in the scroll LaunchedEffect.
  */
 @Composable
@@ -129,14 +135,37 @@ fun TerminalConsole(
     }
 
     // Auto-scroll logic: ensures the terminal stays at the bottom during processing.
-    // We use snapshotFlow to decouple data arrival from the animation cycle.
+    //
+    // Why isProcessing is inside the snapshotFlow tuple and not read from closure:
+    //   snapshotFlow only re-emits when its observed state changes. If isProcessing
+    //   were read from closure (as it was post-4a3f6a5), the collector would branch on
+    //   a stale value - e.g. starting a spring animation when isProcessing was true,
+    //   then having isProcessing flip false mid-spring, causing a second emission (via
+    //   the LaunchedEffect(isProcessing) reset below) that fires scrollTo() concurrently
+    //   with the still-running animateScrollTo(). The two coroutines fight over scroll
+    //   state, the spring gets cancelled mid-animation, and the terminal stalls ~500ms
+    //   before printing the final 2 lines. 1-in-50 because it's a narrow timing window.
+    //
+    // Why scrollJob?.cancel() before each launch:
+    //   Guarantees at most one scroll coroutine is live at any moment. Without this,
+    //   rapid log bursts or an isProcessing flip can queue up multiple animateScrollTo
+    //   calls that run concurrently, producing the same stutter even with the correct
+    //   isProcessing value.
     LaunchedEffect(Unit) {
-        snapshotFlow { Triple(logs.size, verticalScrollState.maxValue, userScrolledUp) }
-            .collect { (_, maxValue, scrolledUp) ->
-                if (!scrolledUp && verticalScrollState.value < maxValue) {
+        var scrollJob: Job? = null
+        snapshotFlow {
+            Pair(
+                Triple(logs.size, verticalScrollState.maxValue, userScrolledUp),
+                isProcessing
+            )
+        }.collect { (triple, processing) ->
+            val (_, maxValue, scrolledUp) = triple
+            if (!scrolledUp && verticalScrollState.value < maxValue) {
+                scrollJob?.cancel()
+                scrollJob = launch {
                     isAutoScrolling = true
                     try {
-                        if (isProcessing) {
+                        if (processing) {
                             verticalScrollState.animateScrollTo(
                                 value = maxValue,
                                 animationSpec = spring(
@@ -145,8 +174,8 @@ fun TerminalConsole(
                                 )
                             )
                         } else {
-                            // Use instant scroll after processing to overcome layout flux
-                            // and ensure it never stops at the wrong line.
+                            // Instant snap after processing ends: layout is stable by now
+                            // and no spring is in flight (scrollJob?.cancel() above killed it).
                             verticalScrollState.scrollTo(maxValue)
                         }
                     } finally {
@@ -154,14 +183,15 @@ fun TerminalConsole(
                     }
                 }
             }
+        }
     }
 
-
-    // Reset scroll state when a new operation starts OR finishes
+    // Reset scroll state only when a NEW operation starts, never on finish.
+    // Resetting on finish (isProcessing = false) was the trigger that produced
+    // the spurious snapshotFlow re-emission that started the race in 4a3f6a5.
     LaunchedEffect(isProcessing) {
-        userScrolledUp = false
-        // Only reset isAutoScrolling when starting to avoid fighting an ongoing finish-scroll
         if (isProcessing) {
+            userScrolledUp = false
             isAutoScrolling = false
         }
     }
