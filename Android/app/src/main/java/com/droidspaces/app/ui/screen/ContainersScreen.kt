@@ -663,40 +663,30 @@ fun ContainersScreen(
 
         // FAB LAYER (Above everything, below dialogs)
         if (isBackendAvailable && isRootAvailable) {
-            val fabShape = RoundedCornerShape(20.dp)
-            Surface(
+            ExtendedFloatingActionButton(
+                onClick = { filePickerLauncher.launch("*/*") },
                 modifier = Modifier
                     .align(Alignment.BottomEnd)
-                    .padding(horizontal = 24.dp, vertical = 110.dp)
-                    .clip(fabShape)
-                    .clickable(
-                        onClick = { filePickerLauncher.launch("*/*") },
-                        indication = androidx.compose.material.ripple.rememberRipple(bounded = true),
-                        interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
-                    ),
-                shape = fabShape,
-                color = MaterialTheme.colorScheme.primary,
-                tonalElevation = 0.dp
-            ) {
-                Row(
-                    modifier = Modifier.padding(horizontal = 20.dp, vertical = 16.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(10.dp)
-                ) {
+                    .navigationBarsPadding()
+                    .padding(end = 24.dp, bottom = 88.dp), // 88dp clears the floating tab bar
+                shape = RoundedCornerShape(20.dp),
+                containerColor = MaterialTheme.colorScheme.primary,
+                contentColor = MaterialTheme.colorScheme.onPrimary,
+                icon = {
                     Icon(
                         imageVector = Icons.Default.Add,
                         contentDescription = null,
-                        modifier = Modifier.size(20.dp),
-                        tint = MaterialTheme.colorScheme.onPrimary
+                        modifier = Modifier.size(20.dp)
                     )
+                },
+                text = {
                     Text(
                         text = context.getString(R.string.install),
                         style = MaterialTheme.typography.labelLarge,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onPrimary
+                        fontWeight = FontWeight.Bold
                     )
                 }
-            }
+            )
         }
 
         // SNACKBAR LAYER (Highest Z-index in the root Box)
