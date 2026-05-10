@@ -140,6 +140,44 @@ int ds_seccomp_apply_minimal(int hw_access, int privileged_mask) {
     /* Reload nr for any rules that follow this block. */
     filter[curr++] = (struct sock_filter)BPF_STMT(
         BPF_LD | BPF_W | BPF_ABS, offsetof(struct seccomp_data, nr));
+
+    /*
+     * 10. Block mknod/mknodat for block/char devices.  The container's
+     * /dev tmpfs is mounted without MS_NODEV (so pre-populated device
+     * nodes work), which means CAP_MKNOD-equipped processes inside can
+     * create arbitrary block devices (e.g. /dev/sda, major 8 minor 0)
+     * and read raw host storage.  Pipes, sockets, and regular files
+     * created via mknod stay allowed (systemd, dbus need them).
+     *
+     * S_IFCHR is 0x2000 and S_IFBLK is 0x6000; both have bit 0x2000 set,
+     * while S_IFREG/S_IFIFO/S_IFSOCK/S_IFDIR/S_IFLNK do not.  A single
+     * BPF_JSET on S_IFCHR catches both device types.
+     */
+#ifdef __NR_mknod
+    /* mknod(path, mode, dev) - mode is args[1] */
+    filter[curr++] = (struct sock_filter)BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K,
+                                                  __NR_mknod, 0, 4);
+    filter[curr++] = (struct sock_filter)BPF_STMT(
+        BPF_LD | BPF_W | BPF_ABS, offsetof(struct seccomp_data, args[1]));
+    filter[curr++] = (struct sock_filter)BPF_JUMP(BPF_JMP | BPF_JSET | BPF_K,
+                                                  S_IFCHR, 0, 1);
+    filter[curr++] = (struct sock_filter)BPF_STMT(
+        BPF_RET | BPF_K, SECCOMP_RET_ERRNO | (EPERM & SECCOMP_RET_DATA));
+    /* Reload nr for any rules that follow this block. */
+    filter[curr++] = (struct sock_filter)BPF_STMT(
+        BPF_LD | BPF_W | BPF_ABS, offsetof(struct seccomp_data, nr));
+#endif
+    /* mknodat(dirfd, path, mode, dev) - mode is args[2] */
+    filter[curr++] = (struct sock_filter)BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K,
+                                                  __NR_mknodat, 0, 4);
+    filter[curr++] = (struct sock_filter)BPF_STMT(
+        BPF_LD | BPF_W | BPF_ABS, offsetof(struct seccomp_data, args[2]));
+    filter[curr++] = (struct sock_filter)BPF_JUMP(BPF_JMP | BPF_JSET | BPF_K,
+                                                  S_IFCHR, 0, 1);
+    filter[curr++] = (struct sock_filter)BPF_STMT(
+        BPF_RET | BPF_K, SECCOMP_RET_ERRNO | (EPERM & SECCOMP_RET_DATA));
+    filter[curr++] = (struct sock_filter)BPF_STMT(
+        BPF_LD | BPF_W | BPF_ABS, offsetof(struct seccomp_data, nr));
   }
 
   /* Allow everything else */
