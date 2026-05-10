@@ -565,6 +565,7 @@ int setup_dev(const char *rootfs, int hw_access, int gpu_mode,
 
 int create_devices(const char *rootfs, int hw_access, int privileged_mask) {
   (void)hw_access;
+  (void)privileged_mask;
   const struct {
     const char *name;
     mode_t mode;
@@ -585,13 +586,11 @@ int create_devices(const char *rootfs, int hw_access, int privileged_mask) {
   for (int i = 0; devices[i].name; i++) {
     snprintf(path, sizeof(path), "%s/dev/%s", rootfs, devices[i].name);
 
-    /* If unfiltered mode is on and the node already exists (e.g. on devtmpfs),
-     * we skip unlinking to avoid breaking the kernel-provided node. */
-    if (!(privileged_mask & DS_PRIV_UNFILTERED)) {
-      force_unlink(path);
-    } else if (access(path, F_OK) == 0) {
-      continue;
-    }
+    /* We always force recreation of these critical standard nodes to ensure
+     * correct permissions (0666) and isolation, even in unfiltered mode.
+     * Host nodes in devtmpfs often have restrictive permissions that break
+     * non-root users in the container. */
+    force_unlink(path);
 
     if (mknod(path, devices[i].mode, devices[i].dev) < 0) {
       /* Fallback for environments where mknod is restricted */
