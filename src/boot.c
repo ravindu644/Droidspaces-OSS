@@ -284,7 +284,7 @@ int internal_boot(struct ds_config *cfg) {
    * This allows us to mount cgroups onto it later even after /sys is RO. */
   mkdir_p("sys/fs/cgroup", 0755);
 
-  if (cfg->hw_access) {
+  if (cfg->hw_access && cfg->foreground && is_systemd) {
     /* DYNAMIC HARDWARE HOLES: Instead of hardcoding, we iterate through
      * everything in /sys and 'pin' subdirectories as independent RW mounts.
      * This ensures 100% hardware visibility (devices, bus, class, block, etc)
@@ -308,7 +308,7 @@ int internal_boot(struct ds_config *cfg) {
       }
       closedir(d);
     }
-  } else {
+  } else if (!cfg->hw_access) {
     /* Hardware isolation: network only mixed mode */
     if (mkdir("sys/devices", 0755) < 0 && errno != EEXIST) {
       ds_warn("Failed to create sys/devices directory: %s", strerror(errno));
@@ -334,8 +334,14 @@ int internal_boot(struct ds_config *cfg) {
     }
   }
 
-  if (mount(NULL, "sys", NULL, MS_REMOUNT | MS_BIND | MS_RDONLY, NULL) < 0) {
-    ds_warn("Failed to remount /sys as read-only: %s", strerror(errno));
+  /* Remount /sys as RO for systemd's benefit, but ONLY if we are in
+   * foreground mode + systemd (where we used pinned sub-mounts) or if
+   * hw_access is disabled entirely. In background mode or non-systemd
+   * hw_access mode, we leave /sys RW. */
+  if (!cfg->hw_access || (cfg->foreground && is_systemd)) {
+    if (mount(NULL, "sys", NULL, MS_REMOUNT | MS_BIND | MS_RDONLY, NULL) < 0) {
+      ds_warn("Failed to remount /sys as read-only: %s", strerror(errno));
+    }
   }
 
   /* 11. Setup Cgroups AFTER locking down /sys.
@@ -357,7 +363,7 @@ int internal_boot(struct ds_config *cfg) {
     return -1;
   }
 
-  /* 12b. Setup /tmp */
+  /* 13. Setup /tmp */
   if (!is_android() || !cfg->termux_x11) {
     /* Desktop Linux (or Android without Termux-X11): mount fresh tmpfs for
      * isolation */
@@ -371,7 +377,7 @@ int internal_boot(struct ds_config *cfg) {
     mkdir_p("tmp", 01777);
   }
 
-  /* 13. Bind-mount console BEFORE pivot_root (host pts still visible). */
+  /* 14. Bind-mount console BEFORE pivot_root (host pts still visible). */
   if (mount(cfg->console.name, "dev/console", NULL, MS_BIND, NULL) < 0)
     ds_warn("Failed to bind mount console '%s': %s", cfg->console.name,
             strerror(errno));
