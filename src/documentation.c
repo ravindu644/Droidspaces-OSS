@@ -221,9 +221,6 @@ static void print_page(int page, const char *bin) {
     printf("%sFetch info about a container:%s\n", bold, reset);
     printf("  %s --name=mycontainer info\n\n", bin);
 
-    printf("%sChecking container status:%s\n", bold, reset);
-    printf("  %s --name=mycontainer status\n\n", bin);
-
     printf("%sChecking system requirements:%s\n", bold, reset);
     printf("  %s check\n\n", bin);
     break;
@@ -319,7 +316,6 @@ static void print_page(int page, const char *bin) {
 
     printf("%sContainer management workflow:%s\n", bold, reset);
     printf("  %s --name=mycontainer --rootfs=/path/to/rootfs start\n", bin);
-    printf("  %s --name=mycontainer status\n", bin);
     printf("  %s --name=mycontainer enter\n", bin);
     printf("  %s --name=mycontainer run uname -a\n", bin);
     printf("  %s --name=mycontainer info\n", bin);
@@ -404,7 +400,6 @@ static void print_page(int page, const char *bin) {
 
     printf("%sRootfs image management with mount tracking:%s\n", bold, reset);
     printf("  %s --name=imgtest --rootfs-img=/path/to/rootfs.img start\n", bin);
-    printf("  %s --name=imgtest status\n", bin);
     printf("  %s --name=imgtest stop\n", bin);
     printf("  (Mount automatically cleaned up)\n\n");
 
@@ -434,7 +429,6 @@ static void print_page(int page, const char *bin) {
     printf("   Works on kernel 3.10+ with both cgroup v1 and v2)\n\n");
 
     printf("%sError recovery and troubleshooting:%s\n", bold, reset);
-    printf("  %s --name=broken status\n", bin);
     printf("  %s scan\n", bin);
     printf("  %s --name=broken info\n", bin);
     printf("  %s --name=broken stop\n", bin);

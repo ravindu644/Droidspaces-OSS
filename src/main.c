@@ -30,7 +30,6 @@ void print_usage(void) {
       "  restart                   Restart a container\n"
       "  enter [user]              Enter a running container\n"
       "  run <cmd> [args]          Run a command in a running container\n"
-      "  status                    Show container status\n"
       "  usage                     Show container uptime, CPU and RAM usage\n"
       "  info                      Show detailed container info\n"
       "  pid                       Show the live PID of the container init\n"
@@ -454,7 +453,6 @@ int main(int argc, char **argv) {
   int is_stateful =
       (discovered_cmd && (strcmp(discovered_cmd, "stop") == 0 ||
                           strcmp(discovered_cmd, "restart") == 0 ||
-                          strcmp(discovered_cmd, "status") == 0 ||
                           strcmp(discovered_cmd, "pid") == 0 ||
                           strcmp(discovered_cmd, "info") == 0 ||
                           strcmp(discovered_cmd, "usage") == 0 ||
@@ -1035,19 +1033,6 @@ int main(int argc, char **argv) {
     check_kernel_recommendation();
     ds_cgroup_host_bootstrap(cfg.force_cgroupv1);
     ret = restart_rootfs(&cfg);
-    goto cleanup;
-  }
-
-  if (strcmp(cmd, "status") == 0) {
-    if (is_container_running(&cfg, NULL)) {
-      printf("Container '%s' is " C_GREEN "Running" C_RESET "\n",
-             cfg.container_name);
-      ret = 0;
-    } else {
-      printf("Container '%s' is " C_RED "Stopped" C_RESET "\n",
-             cfg.container_name);
-      ret = 1;
-    }
     goto cleanup;
   }
 

@@ -59,13 +59,6 @@ object ContainerCommandBuilder {
     }
 
     /**
-     * Build status command for a container.
-     */
-    fun buildStatusCommand(container: ContainerInfo): String {
-        return "$DROIDSPACES_BINARY_PATH --name=${quote(container.name)} status"
-    }
-
-    /**
      * Build uptime command for a container.
      */
     @Deprecated("Use buildUsageCommand instead for synchronized metrics", ReplaceWith("buildUsageCommand(containerName)"))
