@@ -854,7 +854,7 @@ int setup_unified_tmpfs(void) {
 
   /* Mount tmpfs with proper permissions and ownership */
   char mount_opts[256];
-  snprintf(mount_opts, sizeof(mount_opts), "size=256M,mode=1777,uid=%d,gid=%d",
+  snprintf(mount_opts, sizeof(mount_opts), "mode=1777,uid=%d,gid=%d",
            (int)st.st_uid, (int)st.st_gid);
 
   if (mount("tmpfs", termux_tmp, "tmpfs", MS_NOSUID | MS_NODEV, mount_opts) !=
