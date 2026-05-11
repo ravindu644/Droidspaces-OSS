@@ -1782,17 +1782,15 @@ static void get_os_pretty(const char *osrelease_path, char *buf, size_t size) {
 }
 
 int show_info(struct ds_config *cfg, int trust_cfg_pid) {
-  /* Host info */
-  const char *host = is_android() ? "Android" : "Linux";
-  const char *arch = get_architecture();
-  printf(C_GREEN "Host:" C_RESET " %s %s\n", host, arch);
-
-  /* Case 1: No container name specified */
+  /* Case 1: No container name specified - try auto-resolution or listing */
   if (cfg->container_name[0] == '\0') {
     char first_name[256];
     int count = count_running_containers(first_name, sizeof(first_name));
 
     if (count == 0) {
+      const char *host = is_android() ? "Android" : "Linux";
+      const char *arch = get_architecture();
+      printf(C_GREEN "Host:" C_RESET " %s %s\n", host, arch);
       printf("\n" C_YELLOW "Container:" C_RESET " No containers running.\n\n");
       return 0;
     }
@@ -1803,7 +1801,10 @@ int show_info(struct ds_config *cfg, int trust_cfg_pid) {
                    sizeof(cfg->container_name));
       resolve_pidfile_from_name(first_name, cfg->pidfile, sizeof(cfg->pidfile));
     } else {
-      /* Multiple containers running, show list */
+      /* Multiple containers running, show Host info and list */
+      const char *host = is_android() ? "Android" : "Linux";
+      const char *arch = get_architecture();
+      printf(C_GREEN "Host:" C_RESET " %s %s\n", host, arch);
       printf("\n" C_YELLOW "Multiple containers running:" C_RESET "\n");
       show_containers();
       printf("\nUse '" C_GREEN "--name <NAME> info" C_RESET
@@ -1812,12 +1813,13 @@ int show_info(struct ds_config *cfg, int trust_cfg_pid) {
     }
   }
 
-  /* Case 2: Specific name specified or auto-resolved */
+  /* Case 2: Specific name specified or auto-resolved. Ensure pidfile resolved. */
   if (cfg->pidfile[0] == '\0' && cfg->container_name[0] != '\0') {
     resolve_pidfile_from_name(cfg->container_name, cfg->pidfile,
                               sizeof(cfg->pidfile));
   }
 
+  /* Case 3: Validate running status */
   pid_t pid = 0;
   if (trust_cfg_pid && cfg->container_pid > 0) {
     /* Trust the PID we just got from the sync pipe.
@@ -1828,71 +1830,66 @@ int show_info(struct ds_config *cfg, int trust_cfg_pid) {
     is_container_running(cfg, &pid);
   }
 
-  printf("\n" C_GREEN "Container:" C_RESET " %s (%s)\n", cfg->container_name,
-         pid > 0 ? "RUNNING" : "STOPPED");
-
-  if (pid > 0) {
-    printf("  PID: %d\n", pid);
-
-    char pretty[256];
-    char osr_path[PATH_MAX];
-    if (build_proc_root_path(pid, "/etc/os-release", osr_path,
-                             sizeof(osr_path)) == 0) {
-      get_os_pretty(osr_path, pretty, sizeof(pretty));
-      if (pretty[0])
-        printf("  OS: %s\n", pretty);
-    }
-
-    printf("\n" C_GREEN "Features:" C_RESET "\n");
-
-    /* SELinux */
-    if (access("/sys/fs/selinux/enforce", R_OK) == 0) {
-      const char *sel =
-          ds_get_selinux_status() == 0 ? "Permissive" : "Enforcing";
-      printf("  SELinux: %s\n", sel);
-    }
-
-    /* Networking */
-    const char *net;
-    switch (cfg->net_mode) {
-    case DS_NET_NAT:
-      net = "NAT";
-      break;
-    case DS_NET_NONE:
-      net = "none";
-      break;
-    default:
-      net = "host";
-      break;
-    }
-    printf("  Networking: %s\n", net);
-
-    /* Android storage */
-    printf("  Android storage: %s\n",
-           detect_android_storage_in_container(pid) ? "enabled" : "disabled");
-
-    /* HW access */
-    int hw = detect_hw_access_in_container(pid);
-    if (hw)
-      printf("  " C_RED "HW access: full" C_RESET "\n");
-    else if (cfg->gpu_mode)
-      printf("  HW access: GPU\n");
-    else
-      printf("  HW access: " C_DIM "none" C_RESET "\n");
-  } else {
-    /* Best effort: read os-release from rootfs path */
-    if (cfg->rootfs_path[0]) {
-      char osr_path[PATH_MAX];
-      snprintf(osr_path, sizeof(osr_path), "%.4070s/etc/os-release",
-               cfg->rootfs_path);
-      char pretty[256];
-      get_os_pretty(osr_path, pretty, sizeof(pretty));
-      if (pretty[0])
-        printf("  Rootfs OS: %s\n", pretty);
-    }
+  if (pid <= 0) {
+    ds_error("Container '%s' is not running or invalid.", cfg->container_name);
+    return -1;
   }
-  printf("\n");
 
+  /* Success - print Host and detailed Container info */
+  const char *host = is_android() ? "Android" : "Linux";
+  const char *arch = get_architecture();
+  printf(C_GREEN "Host:" C_RESET " %s %s\n", host, arch);
+
+  printf("\n" C_GREEN "Container:" C_RESET " %s (RUNNING)\n",
+         cfg->container_name);
+  printf("  PID: %d\n", pid);
+
+  char pretty[256];
+  char osr_path[PATH_MAX];
+  if (build_proc_root_path(pid, "/etc/os-release", osr_path, sizeof(osr_path)) ==
+      0) {
+    get_os_pretty(osr_path, pretty, sizeof(pretty));
+    if (pretty[0])
+      printf("  OS: %s\n", pretty);
+  }
+
+  printf("\n" C_GREEN "Features:" C_RESET "\n");
+
+  /* SELinux */
+  if (access("/sys/fs/selinux/enforce", R_OK) == 0) {
+    const char *sel = ds_get_selinux_status() == 0 ? "Permissive" : "Enforcing";
+    printf("  SELinux: %s\n", sel);
+  }
+
+  /* Networking */
+  const char *net;
+  switch (cfg->net_mode) {
+  case DS_NET_NAT:
+    net = "NAT";
+    break;
+  case DS_NET_NONE:
+    net = "none";
+    break;
+  default:
+    net = "host";
+    break;
+  }
+  printf("  Networking: %s\n", net);
+
+  /* Android storage */
+  printf("  Android storage: %s\n",
+         detect_android_storage_in_container(pid) ? "enabled" : "disabled");
+
+  /* HW access */
+  int hw = detect_hw_access_in_container(pid);
+  if (hw)
+    printf("  " C_RED "HW access: full" C_RESET "\n");
+  else if (cfg->gpu_mode)
+    printf("  HW access: GPU\n");
+  else
+    printf("  HW access: " C_DIM "none" C_RESET "\n");
+
+  printf("\n");
   return 0;
 }
 
