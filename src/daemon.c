@@ -23,7 +23,9 @@
 
 #include "droidspace.h"
 #include <arpa/inet.h>
+#include <grp.h>
 #include <poll.h>
+#include <pwd.h>
 #include <stddef.h>
 #include <sys/socket.h>
 #include <sys/un.h>
@@ -872,17 +874,42 @@ int ds_daemon_run(int foreground, char **argv) {
     }
 
     /*
-     * authenticate the peer.
-     * on android, only uid 0 can connect (libsu or magisk). selinux also
-     * enforces this, but let's be safe.
-     * on linux, we allow any uid. the daemon runs as root and acts as a proxy
-     * for local users.
+     * authenticate the peer: only root or members of the 'droidspaces' group
+     * may connect. abstract socket has no filesystem permissions, so we
+     * enforce this via SO_PEERCRED + getgrouplist() -- same model as Docker's
+     * unix group.
      */
     {
+#define DS_GROUP "droidspaces"
       struct ucred cred;
       socklen_t clen = sizeof(cred);
-      if (getsockopt(conn, SOL_SOCKET, SO_PEERCRED, &cred, &clen) < 0 ||
-          (is_android() && cred.uid != 0)) {
+      if (getsockopt(conn, SOL_SOCKET, SO_PEERCRED, &cred, &clen) < 0) {
+        close(conn);
+        continue;
+      }
+
+      int allowed = (cred.uid == 0);
+      if (!allowed) {
+        struct group *gr = getgrnam(DS_GROUP);
+        struct passwd *pw = getpwuid(cred.uid);
+        if (gr && pw) {
+          int ngroups = 64;
+          gid_t groups[64];
+          getgrouplist(pw->pw_name, pw->pw_gid, groups, &ngroups);
+          for (int i = 0; i < ngroups; i++) {
+            if (groups[i] == gr->gr_gid) {
+              allowed = 1;
+              break;
+            }
+          }
+        }
+      }
+
+      if (!allowed) {
+        const char *msg = "permission denied: only root or '" DS_GROUP
+                          "' group members may connect.";
+        send_frame(conn, MSG_ERR, msg, (uint32_t)strlen(msg));
+        send_exit(conn, 1);
         close(conn);
         continue;
       }
