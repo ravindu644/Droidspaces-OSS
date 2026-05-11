@@ -10,6 +10,12 @@ set -e
 ROOTFS_PATH="$1"
 BUSYBOX_PATH="${BUSYBOX_PATH:-/data/local/Droidspaces/bin/busybox}"
 
+# Check if BusyBox exists
+if [ ! -x "$BUSYBOX_PATH" ]; then
+    echo "[POST-FIX-ERROR] BusyBox not found or not executable at $BUSYBOX_PATH" >&2
+    exit 1
+fi
+
 # Use BusyBox applets for maximum compatibility
 BB="$BUSYBOX_PATH"
 ECHO="$BB echo"
