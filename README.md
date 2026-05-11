@@ -20,6 +20,9 @@ What makes Droidspaces unique is its **zero-dependency, native execution** on bo
 
 **Android** + **Linux Namespaces** = **Droidspaces**. Since Android is built on the Linux kernel, Droidspaces works seamlessly on Linux Desktop too. Both platforms are equally supported and maintained.
 
+> [!TIP]
+> Check out [Community-supported Android devices](./Documentation/community-supported-devices.md) for a growing list of phones known to run Droidspaces.
+
 <details>
 <summary><b>View Project's Screenshots (Linux & Android)</b></summary>
 
@@ -136,6 +139,7 @@ What makes Droidspaces unique is its **zero-dependency, native execution** on bo
             - [GKI (Modern Kernels)](#GKI)
     - [Linux Desktop](#b-linux-desktop)
 - [Installation](#installation)
+- [Community-supported Android devices](./Documentation/community-supported-devices.md)
 - [Usage](#usage)
 - [Troubleshooting](./Documentation/Troubleshooting.md)
 - [Additional Documentation](#additional-documentation)
