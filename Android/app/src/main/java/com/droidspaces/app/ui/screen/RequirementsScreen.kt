@@ -19,6 +19,9 @@ import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material.icons.filled.OpenInNew
+import android.content.Intent
+import android.net.Uri
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -92,8 +95,116 @@ fun RequirementsScreen(
                     .padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                // Expandable Kernel Requirements Section
+                // non-GKI Kernel Requirements Section
                 ExpandableKernelRequirementsSection(
+                    title = context.getString(R.string.kernel_requirements_nongki),
+                    code = """# Kernel configurations for full DroidSpaces support for non-GKI
+# Copyright (C) 2026 ravindu644 <droidcasts@protonmail.com>
+
+# IPC mechanisms
+CONFIG_SYSCTL=y
+CONFIG_SYSVIPC=y
+CONFIG_POSIX_MQUEUE=y
+
+# Core namespace support
+CONFIG_NAMESPACES=y
+CONFIG_PID_NS=y
+CONFIG_UTS_NS=y
+CONFIG_IPC_NS=y
+
+# Seccomp support
+CONFIG_SECCOMP=y
+CONFIG_SECCOMP_FILTER=y
+
+# Control groups support
+CONFIG_CGROUPS=y
+CONFIG_CGROUP_DEVICE=y
+CONFIG_CGROUP_PIDS=y
+CONFIG_MEMCG=y
+CONFIG_CGROUP_SCHED=y
+CONFIG_FAIR_GROUP_SCHED=y
+CONFIG_CGROUP_FREEZER=y
+CONFIG_CGROUP_NET_PRIO=y
+
+# Device filesystem support
+CONFIG_DEVTMPFS=y
+
+# Overlay filesystem support (required for volatile mode)
+CONFIG_OVERLAY_FS=y
+
+# Firmware loading support
+CONFIG_FW_LOADER=y
+CONFIG_FW_LOADER_USER_HELPER=y
+CONFIG_FW_LOADER_COMPRESS=y
+
+# Droidspaces Network Isolation Support - NAT/none modes
+CONFIG_NET_NS=y
+CONFIG_VETH=y
+CONFIG_BRIDGE=y
+CONFIG_NETFILTER=y
+CONFIG_BRIDGE_NETFILTER=y
+CONFIG_NETFILTER_ADVANCED=y
+CONFIG_NF_CONNTRACK=y
+CONFIG_IP_NF_IPTABLES=y
+CONFIG_IP_NF_FILTER=y
+CONFIG_NF_NAT=y
+CONFIG_NF_TABLES=y
+CONFIG_IP_NF_TARGET_MASQUERADE=y
+CONFIG_NETFILTER_XT_TARGET_MASQUERADE=y
+CONFIG_NETFILTER_XT_TARGET_TCPMSS=y
+CONFIG_NETFILTER_XT_MATCH_ADDRTYPE=y
+CONFIG_NF_CONNTRACK_NETLINK=y
+CONFIG_NF_NAT_REDIRECT=y
+CONFIG_IP_ADVANCED_ROUTER=y
+CONFIG_IP_MULTIPLE_TABLES=y
+
+# legacy compat
+CONFIG_NF_CONNTRACK_IPV4=y
+CONFIG_NF_NAT_IPV4=y
+CONFIG_IP_NF_NAT=y
+
+# Disable this on older kernels to make internet work
+CONFIG_ANDROID_PARANOID_NETWORK=n""",
+                    guideUrl = "https://github.com/ravindu644/Droidspaces-OSS/blob/main/Documentation/Kernel-Configuration.md#non-gki",
+                    snackbarHostState = snackbarHostState
+                )
+
+                // GKI Kernel Requirements Section
+                ExpandableKernelRequirementsSection(
+                    title = context.getString(R.string.kernel_requirements_gki),
+                    code = """# Kernel configurations for full DroidSpaces support for GKI
+# Copyright (C) 2026 ravindu644 <droidcasts@protonmail.com>
+
+# NOTE: enabling these configs are not enough, additional kernel patches needed for GKI.
+# Guide: https://github.com/ravindu644/Droidspaces-OSS/blob/main/Documentation/Kernel-Configuration.md#configuring-gki-kernels
+
+# IPC
+CONFIG_SYSVIPC=y
+CONFIG_POSIX_MQUEUE=y
+
+# Namespaces
+CONFIG_IPC_NS=y
+CONFIG_PID_NS=y
+
+# HW Access Support
+CONFIG_DEVTMPFS=y
+
+# --- Below configs are optional but recommended ---
+
+# Networking (Docker/NAT support)
+CONFIG_NETFILTER_XT_MATCH_ADDRTYPE=y
+
+# UFW support
+CONFIG_NETFILTER_XT_TARGET_REJECT=y
+CONFIG_NETFILTER_XT_TARGET_LOG=y
+CONFIG_NETFILTER_XT_MATCH_RECENT=y
+
+# Fail2ban support
+CONFIG_IP_SET=y
+CONFIG_IP_SET_HASH_IP=y
+CONFIG_IP_SET_HASH_NET=y
+CONFIG_NETFILTER_XT_SET=y""",
+                    guideUrl = "https://github.com/ravindu644/Droidspaces-OSS/blob/main/Documentation/Kernel-Configuration.md#configuring-gki-kernels",
                     snackbarHostState = snackbarHostState
                 )
 
@@ -174,9 +285,11 @@ fun RequirementsScreen(
  */
 @Composable
 private fun ExpandableKernelRequirementsSection(
+    title: String,
+    code: String,
+    guideUrl: String? = null,
     snackbarHostState: SnackbarHostState
 ) {
-    val context = LocalContext.current
     var isExpanded by remember { mutableStateOf(false) }
 
     val rotationAngle by animateFloatAsState(
@@ -214,7 +327,7 @@ private fun ExpandableKernelRequirementsSection(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = context.getString(R.string.kernel_requirements),
+                    text = title,
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold
                 )
@@ -229,104 +342,9 @@ private fun ExpandableKernelRequirementsSection(
             // Expandable content
             if (isExpanded) {
                 CodeBox(
-                    code = """# Kernel configurations for full DroidSpaces support
-# optional kernel configurations for UFW/Fail2ban:
-# https://github.com/ravindu644/Droidspaces-OSS/blob/main/Documentation/Kernel-Configuration.md#additional-kernel-configuration-for-ufwfail2ban
-# Copyright (C) 2026 ravindu644 <droidcasts@protonmail.com>
-
-# IPC mechanisms (required for tools that rely on shared memory and IPC namespaces)
-CONFIG_SYSCTL=y
-CONFIG_SYSVIPC=y
-CONFIG_POSIX_MQUEUE=y
-
-# Core namespace support (essential for isolation and running init systems)
-CONFIG_NAMESPACES=y
-CONFIG_PID_NS=y
-CONFIG_UTS_NS=y
-CONFIG_IPC_NS=y
-
-# Seccomp support (enables syscall filtering and security hardening)
-CONFIG_SECCOMP=y
-CONFIG_SECCOMP_FILTER=y
-
-# Control groups support (required for systemd and resource accounting)
-CONFIG_CGROUPS=y
-CONFIG_CGROUP_DEVICE=y
-CONFIG_CGROUP_PIDS=y
-CONFIG_MEMCG=y
-CONFIG_CGROUP_SCHED=y
-CONFIG_FAIR_GROUP_SCHED=y
-CONFIG_CGROUP_FREEZER=y
-CONFIG_CGROUP_NET_PRIO=y
-
-# Device filesystem support (enables hardware access when --hw-access is enabled)
-CONFIG_DEVTMPFS=y
-
-# Overlay filesystem support (required for volatile mode)
-CONFIG_OVERLAY_FS=y
-
-# Firmware loading support (optional, used when --hw-access is enabled)
-CONFIG_FW_LOADER=y
-CONFIG_FW_LOADER_USER_HELPER=y
-CONFIG_FW_LOADER_COMPRESS=y
-
-# Droidspaces Network Isolation Support - NAT/none modes
-# Network namespace isolation
-CONFIG_NET_NS=y
-
-# Virtual ethernet pairs
-CONFIG_VETH=y
-
-# Bridge device
-CONFIG_BRIDGE=y
-
-# Netfilter core
-CONFIG_NETFILTER=y
-CONFIG_BRIDGE_NETFILTER=y
-CONFIG_NETFILTER_ADVANCED=y
-
-# Connection tracking
-CONFIG_NF_CONNTRACK=y
-# kernels ≤ 4.18 (Android 4.4 / 4.9)
-CONFIG_NF_CONNTRACK_IPV4=y
-
-# iptables infrastructure
-CONFIG_IP_NF_IPTABLES=y
-
-# filter table
-CONFIG_IP_NF_FILTER=y
-
-# NAT table
-CONFIG_NF_NAT=y
-
-# NF Tables
-CONFIG_NF_TABLES=y
-
-# kernels ≤ 5.0 (Kernel 4.4 / 4.9)
-CONFIG_NF_NAT_IPV4=y
-CONFIG_IP_NF_NAT=y
-
-# MASQUERADE target (renamed in 5.2)
-CONFIG_IP_NF_TARGET_MASQUERADE=y
-CONFIG_NETFILTER_XT_TARGET_MASQUERADE=y
-
-# MSS clamping
-CONFIG_NETFILTER_XT_TARGET_TCPMSS=y
-
-# addrtype match (required for --dst-type LOCAL DNAT port forwarding)
-CONFIG_NETFILTER_XT_MATCH_ADDRTYPE=y
-
-# Conntrack netlink + NAT redirect (required for stateful NAT)
-CONFIG_NF_CONNTRACK_NETLINK=y
-CONFIG_NF_NAT_REDIRECT=y
-
-# Policy routing
-CONFIG_IP_ADVANCED_ROUTER=y
-CONFIG_IP_MULTIPLE_TABLES=y
-
-# Disable this on older kernels to make internet work
-CONFIG_ANDROID_PARANOID_NETWORK=n""",
+                    code = code,
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                    guideUrl = guideUrl,
                     snackbarHostState = snackbarHostState
                 )
             }
@@ -341,6 +359,7 @@ CONFIG_ANDROID_PARANOID_NETWORK=n""",
 private fun CodeBox(
     code: String,
     modifier: Modifier = Modifier,
+    guideUrl: String? = null,
     snackbarHostState: SnackbarHostState
 ) {
     val context = LocalContext.current
@@ -379,8 +398,34 @@ private fun CodeBox(
             // Copy button - matching "Copy login" button style
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.End
+                horizontalArrangement = Arrangement.End,
+                verticalAlignment = Alignment.CenterVertically
             ) {
+                if (guideUrl != null) {
+                    TextButton(
+                        onClick = {
+                            try {
+                                val intent = Intent(Intent.ACTION_VIEW, Uri.parse(guideUrl))
+                                context.startActivity(intent)
+                            } catch (e: Exception) {
+                                Toast.makeText(context, "Failed to open link", Toast.LENGTH_SHORT).show()
+                            }
+                        },
+                        modifier = Modifier.padding(end = 8.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.OpenInNew,
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Spacer(Modifier.width(6.dp))
+                        Text(
+                            text = context.getString(R.string.guide),
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    }
+                }
+
                 Button(
                     onClick = {
                         val clipboard = context.getSystemService(ClipboardManager::class.java)

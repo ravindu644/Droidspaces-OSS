@@ -74,7 +74,10 @@
     <string name="reinstall_backend_description">Reinstall binaries and boot module</string>
     <string name="requirements">Requirements</string>
     <string name="kernel_requirements">Kernel Requirements</string>
+    <string name="kernel_requirements_nongki">non-GKI Kernel Requirements (&lt;=4.19)</string>
+    <string name="kernel_requirements_gki">GKI Kernel Requirements (&gt;=5.4)</string>
     <string name="copy">Copy</string>
+    <string name="guide">Guide</string>
     <string name="appearance_section">Appearance</string>
     <string name="language">Language</string>
     <string name="system_default">System Default</string>
