@@ -38,7 +38,8 @@ void print_usage(void) {
       "  check                     Check system requirements\n"
       "  docs                      Show interactive documentation\n"
       "  help                      Show this help message\n"
-      "  version                   Show version information\n\n"
+      "  version                   Show version information\n"
+      "  daemon                    Run daemon mode (use --foreground for foreground execution)\n\n"
 
       C_BOLD "Options (Container Setup):" C_RESET "\n"
       "  -r, --rootfs=PATH         Path to rootfs directory\n"
