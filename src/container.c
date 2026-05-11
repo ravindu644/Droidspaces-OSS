@@ -1408,13 +1408,11 @@ int enter_rootfs(struct ds_config *cfg, const char *user) {
 
   ds_log("Entering container '%s' as %s...", cfg->container_name, user);
 
-  /* Allocate PTY in host mnt namespace - /dev/ptmx is a real char device here.
-   * On kernel 3.x the container's /dev/ptmx may be a dangling symlink. */
+  /* PTY allocation is deferred until after entering the container namespaces.
+   * This ensures the slave PTY is part of the container's private devpts instance. */
   struct ds_tty_info tty;
-  if (ds_terminal_create(&tty) < 0) {
-    free_config_env_vars(cfg);
-    return -1;
-  }
+  memset(&tty, 0, sizeof(tty));
+  tty.master = tty.slave = -1;
 
   int sv[2];
   if (socketpair(AF_UNIX, SOCK_STREAM, 0, sv) < 0) {
@@ -1424,17 +1422,11 @@ int enter_rootfs(struct ds_config *cfg, const char *user) {
     return -1;
   }
 
-  /* Send slave fd to child before fork so it can use it after setns */
-  if (ds_send_fd(sv[0], tty.slave) < 0) {
-    close(sv[0]);
-    close(sv[1]);
-    close(tty.master);
-    close(tty.slave);
-    free_config_env_vars(cfg);
-    return -1;
-  }
+  /* Parent will receive master FD from child after namespace entry */
   close(tty.slave);
   tty.slave = -1;
+  close(tty.master);
+  tty.master = -1;
 
   pid_t child = fork();
   if (child < 0) {
@@ -1448,10 +1440,8 @@ int enter_rootfs(struct ds_config *cfg, const char *user) {
   if (child == 0) {
     close(sv[0]);
 
-    /* Receive slave fd that was pre-allocated in host mnt namespace */
-    tty.slave = ds_recv_fd(sv[1]);
-    if (tty.slave < 0)
-      _exit(EXIT_FAILURE);
+    /* In this refactored flow, the child allocates the PTY itself after setns. */
+    tty.slave = -1;
 
     /* cgroup attach before entering namespaces */
     ds_log_silent = 1;
@@ -1460,6 +1450,17 @@ int enter_rootfs(struct ds_config *cfg, const char *user) {
 
     if (enter_namespace(pid, cfg) < 0)
       _exit(EXIT_FAILURE);
+
+    /* Now that we are in the container's mount namespace, allocate a PTY.
+     * This ensures its path (e.g. /dev/pts/0) exists and is resolvable. */
+    if (ds_terminal_create(&tty) < 0)
+       _exit(EXIT_FAILURE);
+
+    /* Send master FD back to parent (host monitor) */
+    if (ds_send_fd(sv[1], tty.master) < 0)
+       _exit(EXIT_FAILURE);
+    close(tty.master);
+    tty.master = -1;
 
     /* Apply identical security hardening as internal_boot().
      * Seccomp filters and capability bounding set drops are per-process and
@@ -1506,11 +1507,6 @@ int enter_rootfs(struct ds_config *cfg, const char *user) {
       _exit(EXIT_FAILURE);
     signal(SIGHUP, SIG_IGN);
 
-    /* Send master FD back to parent */
-    if (ds_send_fd(sv[1], tty.master) < 0)
-      _exit(EXIT_FAILURE);
-
-    close(tty.master);
     close(sv[1]);
 
     /* Must fork again to actually be in the new PID namespace */
