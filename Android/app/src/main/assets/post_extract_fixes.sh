@@ -152,7 +152,7 @@ $MKDIR -p "$OVERRIDE_DIR"
 $CAT > "$OVERRIDE_DIR/override.conf" << 'EOF'
 [Service]
 ExecStart=
-ExecStart=-/usr/bin/udevadm trigger --subsystem-match=usb --subsystem-match=block --subsystem-match=input --subsystem-match=tty
+ExecStart=-/usr/bin/udevadm trigger --subsystem-match=usb --subsystem-match=block --subsystem-match=input --subsystem-match=tty --subsystem-match=net
 EOF
 
 # 2. Read-only path overrides to prevent failures
