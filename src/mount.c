@@ -1248,64 +1248,6 @@ int unmount_rootfs_img(const char *mount_point, int silent) {
  * Container introspection helpers (used by info/show)
  * ---------------------------------------------------------------------------*/
 
-/* Get filesystem type of a mountpoint inside container namespace.
- * Reads /proc/<pid>/mounts which is already namespace-aware. */
-int get_container_mount_fstype(pid_t pid, const char *path, char *fstype,
-                               size_t size) {
-  char mounts_path[PATH_MAX];
-  snprintf(mounts_path, sizeof(mounts_path), "/proc/%d/mounts", pid);
-
-  FILE *fp = fopen(mounts_path, "r");
-  if (!fp)
-    return -1;
-
-  char line[512];
-  while (fgets(line, sizeof(line), fp)) {
-    char mount_path[PATH_MAX];
-    char type[64];
-    if (sscanf(line, "%*s %s %s", mount_path, type) == 2) {
-      if (strcmp(mount_path, path) == 0) {
-        safe_strncpy(fstype, type, size);
-        fclose(fp);
-        return 0;
-      }
-    }
-  }
-  fclose(fp);
-  return -1;
-}
-
-/* Detect if Android storage is mounted inside the container */
-int detect_android_storage_in_container(pid_t pid) {
-  if (pid <= 0)
-    return 0;
-
-  char fstype[64];
-  if (get_container_mount_fstype(pid, "/storage/emulated/0", fstype,
-                                 sizeof(fstype)) != 0)
-    return 0;
-
-  /* Verify /storage/emulated/0/Android exists inside container */
-  char path[PATH_MAX];
-  struct stat st;
-  if (build_proc_root_path(pid, "/storage/emulated/0/Android", path,
-                           sizeof(path)) != 0)
-    return 0;
-
-  if (stat(path, &st) < 0 || !S_ISDIR(st.st_mode))
-    return 0;
-
-  return 1;
-}
-
-/* Detect if HW access is enabled (devtmpfs mounted at /dev) */
-int detect_hw_access_in_container(pid_t pid) {
-  char fstype[64];
-  if (get_container_mount_fstype(pid, "/dev", fstype, sizeof(fstype)) == 0)
-    return strcmp(fstype, "devtmpfs") == 0;
-  return 0;
-}
-
 /* Ensure host devpts is mounted - specifically for Android Recovery
  * environments where /dev/pts is often missing or unmounted, causing openpty()
  * to fail. */

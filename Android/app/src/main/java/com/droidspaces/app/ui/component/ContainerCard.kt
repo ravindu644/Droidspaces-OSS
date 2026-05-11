@@ -169,7 +169,13 @@ fun ContainerCard(
             if (container.disableIPv6) options.add(context.getString(R.string.ipv6_option))
             if (container.enableAndroidStorage) options.add(context.getString(R.string.storage_option))
             if (container.enableHwAccess) options.add(context.getString(R.string.hw_option))
+            if (container.enableGpuMode || container.enableHwAccess) options.add(context.getString(R.string.gpu_option))
             if (container.enableTermuxX11) options.add(context.getString(R.string.x11_option))
+            if (container.selinuxPermissive) options.add(context.getString(R.string.selinux_permissive_option))
+            if (container.volatileMode) options.add(context.getString(R.string.volatile_option))
+            if (container.forceCgroupv1) options.add(context.getString(R.string.cgroup_v1_option))
+            if (container.blockNestedNs) options.add(context.getString(R.string.deadlock_shield_option))
+            if (container.privileged.isNotEmpty()) options.add(context.getString(R.string.privileged_option))
             if (container.runAtBoot) options.add(context.getString(R.string.run_at_boot))
             if (options.isNotEmpty()) {
                 Text(context.getString(R.string.options_label, options.joinToString(", ")), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f))

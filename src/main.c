@@ -93,6 +93,7 @@ void print_usage(void) {
       "                            e.g. -B /data:/data,/tmp:/tmp\n"
       "      --reset               Reset config to defaults (keeps "
       "name/rootfs)\n"
+      "      --format              Machine-parseable output (KEY=VALUE)\n"
       "      --help                Show this help message\n\n"
 
       C_BOLD "Examples:" C_RESET "\n"
@@ -341,6 +342,7 @@ int main(int argc, char **argv) {
       {"nat-ip", required_argument, 0, 262},
       {"gpu", no_argument, 0, 263},
       {"reset", no_argument, 0, 256},
+      {"format", no_argument, 0, 265},
       {"help", no_argument, 0, 'v'},
       {0, 0, 0, 0}};
 
@@ -890,6 +892,10 @@ int main(int argc, char **argv) {
        * container's isolated /dev.  Safe to combine with --hw-access (which
        * already does full GPU wiring). */
       cfg.gpu_mode = 1;
+      break;
+    case 265:
+      /* --format: machine-parseable output */
+      cfg.format_output = 1;
       break;
 
     case '?':

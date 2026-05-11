@@ -1409,7 +1409,8 @@ int enter_rootfs(struct ds_config *cfg, const char *user) {
   ds_log("Entering container '%s' as %s...", cfg->container_name, user);
 
   /* PTY allocation is deferred until after entering the container namespaces.
-   * This ensures the slave PTY is part of the container's private devpts instance. */
+   * This ensures the slave PTY is part of the container's private devpts
+   * instance. */
   struct ds_tty_info tty;
   memset(&tty, 0, sizeof(tty));
   tty.master = tty.slave = -1;
@@ -1440,7 +1441,8 @@ int enter_rootfs(struct ds_config *cfg, const char *user) {
   if (child == 0) {
     close(sv[0]);
 
-    /* In this refactored flow, the child allocates the PTY itself after setns. */
+    /* In this refactored flow, the child allocates the PTY itself after setns.
+     */
     tty.slave = -1;
 
     /* cgroup attach before entering namespaces */
@@ -1454,11 +1456,11 @@ int enter_rootfs(struct ds_config *cfg, const char *user) {
     /* Now that we are in the container's mount namespace, allocate a PTY.
      * This ensures its path (e.g. /dev/pts/0) exists and is resolvable. */
     if (ds_terminal_create(&tty) < 0)
-       _exit(EXIT_FAILURE);
+      _exit(EXIT_FAILURE);
 
     /* Send master FD back to parent (host monitor) */
     if (ds_send_fd(sv[1], tty.master) < 0)
-       _exit(EXIT_FAILURE);
+      _exit(EXIT_FAILURE);
     close(tty.master);
     tty.master = -1;
 
@@ -1813,7 +1815,14 @@ int show_info(struct ds_config *cfg, int trust_cfg_pid) {
     }
   }
 
-  /* Case 2: Specific name specified or auto-resolved. Ensure pidfile resolved. */
+  /* Now we have a container name. Ensure its config is loaded from the source
+   * of truth (container.config) so we show accurate feature info without
+   * expensive live probing. */
+  if (!trust_cfg_pid) {
+    ds_config_load_by_name(cfg->container_name, cfg);
+  }
+
+  /* Case 2: Ensure pidfile resolved. */
   if (cfg->pidfile[0] == '\0' && cfg->container_name[0] != '\0') {
     resolve_pidfile_from_name(cfg->container_name, cfg->pidfile,
                               sizeof(cfg->pidfile));
@@ -1836,58 +1845,337 @@ int show_info(struct ds_config *cfg, int trust_cfg_pid) {
   }
 
   /* Success - print Host and detailed Container info */
-  const char *host = is_android() ? "Android" : "Linux";
-  const char *arch = get_architecture();
-  printf(C_GREEN "Host:" C_RESET " %s %s\n", host, arch);
+  if (cfg->format_output) {
+    const char *host = is_android() ? "Android" : "Linux";
+    const char *arch = get_architecture();
+    printf("HOST_PLATFORM=%s\n", host);
+    printf("HOST_ARCH=%s\n", arch);
+    printf("CONTAINER_NAME=%s\n", cfg->container_name);
+    printf("CONTAINER_PID=%d\n", pid);
 
-  printf("\n" C_GREEN "Container:" C_RESET " %s (RUNNING)\n",
-         cfg->container_name);
-  printf("  PID: %d\n", pid);
+    char pretty[256];
+    char osr_path[PATH_MAX];
+    if (build_proc_root_path(pid, "/etc/os-release", osr_path,
+                             sizeof(osr_path)) == 0) {
+      get_os_pretty(osr_path, pretty, sizeof(pretty));
+      if (pretty[0])
+        printf("CONTAINER_OS=%s\n", pretty);
+    }
 
-  char pretty[256];
-  char osr_path[PATH_MAX];
-  if (build_proc_root_path(pid, "/etc/os-release", osr_path, sizeof(osr_path)) ==
-      0) {
-    get_os_pretty(osr_path, pretty, sizeof(pretty));
-    if (pretty[0])
-      printf("  OS: %s\n", pretty);
+    if (cfg->hostname[0])
+      printf("CONTAINER_HOSTNAME=%s\n", cfg->hostname);
+
+    if (!trust_cfg_pid) {
+      long uptime_sec = ds_get_container_uptime(pid);
+      if (uptime_sec >= 0) {
+        char uptime_str[128];
+        ds_format_uptime(uptime_sec, uptime_str, sizeof(uptime_str));
+        printf("CONTAINER_UPTIME=%s\n", uptime_str);
+        printf("CONTAINER_UPTIME_SEC=%ld\n", uptime_sec);
+      }
+    }
+
+    const char *net;
+    switch (cfg->net_mode) {
+    case DS_NET_NAT:
+      net = "NAT";
+      break;
+    case DS_NET_NONE:
+      net = "none";
+      break;
+    default:
+      net = "host";
+      break;
+    }
+    printf("NETWORKING_MODE=%s\n", net);
+
+    if (cfg->net_mode == DS_NET_NAT) {
+      const char *ip =
+          cfg->static_nat_ip[0] ? cfg->static_nat_ip : cfg->nat_container_ip;
+      if (ip[0])
+        printf("NAT_IP=%s\n", ip);
+
+      if (cfg->upstream_iface_count > 0) {
+        printf("UPSTREAM_INTERFACES=");
+        for (int i = 0; i < cfg->upstream_iface_count; i++) {
+          printf("%s%s", cfg->upstream_ifaces[i],
+                 (i < cfg->upstream_iface_count - 1) ? "," : "");
+        }
+        printf("\n");
+      }
+    }
+
+    printf("DISABLE_IPV6=%d\n", cfg->disable_ipv6);
+    if (is_android())
+      printf("ANDROID_STORAGE=%d\n", cfg->android_storage);
+
+    if (cfg->hw_access)
+      printf("HW_ACCESS=full\n");
+    else if (cfg->gpu_mode)
+      printf("HW_ACCESS=GPU\n");
+    else
+      printf("HW_ACCESS=none\n");
+
+    if (is_android())
+      printf("TERMUX_X11=%d\n", cfg->termux_x11);
+
+    if (access("/sys/fs/selinux/enforce", R_OK) == 0) {
+      printf("SELINUX=%s\n",
+             ds_get_selinux_status() == 0 ? "Permissive" : "Enforcing");
+    }
+
+    printf("VOLATILE_MODE=%d\n", cfg->volatile_mode);
+    printf("FORCE_CGROUP_V1=%d\n", cfg->force_cgroupv1);
+    printf("DEADLOCK_SHIELD=%d\n", cfg->block_nested_ns);
+    printf("FOREGROUND_MODE=%d\n", cfg->foreground);
+
+    printf("DNS_SERVERS=%s\n", cfg->dns_servers[0] ? cfg->dns_servers : "");
+
+    printf("PORT_FORWARDS=");
+    for (int i = 0; i < cfg->port_forward_count; i++) {
+      struct ds_port_forward *pf = &cfg->port_forwards[i];
+      if (pf->host_port_end == 0) {
+        printf("%d:%d/%s", pf->host_port, pf->container_port, pf->proto);
+      } else {
+        printf("%d-%d:%d-%d/%s", pf->host_port, pf->host_port_end,
+               pf->container_port, pf->container_port_end, pf->proto);
+      }
+      if (i < cfg->port_forward_count - 1)
+        printf(",");
+    }
+    printf("\n");
+
+    if (cfg->privileged_mask > 0) {
+      printf("PRIVILEGED_MODE=");
+      if (cfg->privileged_mask == DS_PRIV_FULL) {
+        printf("full");
+      } else {
+        int first = 1;
+        if (cfg->privileged_mask & DS_PRIV_NOMASK) {
+          printf("%snomask", first ? "" : ",");
+          first = 0;
+        }
+        if (cfg->privileged_mask & DS_PRIV_NOCAPS) {
+          printf("%snocaps", first ? "" : ",");
+          first = 0;
+        }
+        if (cfg->privileged_mask & DS_PRIV_NOSEC) {
+          printf("%snoseccomp", first ? "" : ",");
+          first = 0;
+        }
+        if (cfg->privileged_mask & DS_PRIV_SHARED) {
+          printf("%sshared", first ? "" : ",");
+          first = 0;
+        }
+        if (cfg->privileged_mask & DS_PRIV_UNFILTERED) {
+          printf("%sunfiltered-dev", first ? "" : ",");
+          first = 0;
+        }
+      }
+      printf("\n");
+    }
+
+    printf("BIND_MOUNT_COUNT=%d\n", cfg->bind_count);
+    printf("ENV_VAR_COUNT=%d\n", cfg->env_var_count);
+
+  } else {
+    /* Human-readable output */
+    const char *host = is_android() ? "Android" : "Linux";
+    const char *arch = get_architecture();
+    printf(C_GREEN "Host:" C_RESET " %s %s\n", host, arch);
+
+    printf("\n" C_GREEN "Container:" C_RESET " %s (RUNNING)\n",
+           cfg->container_name);
+    printf("  PID: %d\n", pid);
+
+    char pretty[256];
+    char osr_path[PATH_MAX];
+    if (build_proc_root_path(pid, "/etc/os-release", osr_path,
+                             sizeof(osr_path)) == 0) {
+      get_os_pretty(osr_path, pretty, sizeof(pretty));
+      if (pretty[0])
+        printf("  OS: %s\n", pretty);
+    }
+
+    if (cfg->hostname[0])
+      printf("  Hostname: %s\n", cfg->hostname);
+
+    /* Uptime (only if called from info command) */
+    if (!trust_cfg_pid) {
+      long uptime_sec = ds_get_container_uptime(pid);
+      if (uptime_sec >= 0) {
+        char uptime_str[128];
+        ds_format_uptime(uptime_sec, uptime_str, sizeof(uptime_str));
+        printf("  Uptime: %s\n", uptime_str);
+      }
+    }
+
+    printf("\n" C_GREEN "Features:" C_RESET "\n");
+    int feat_count = 0;
+
+    /* 1. Networking Mode */
+    const char *net;
+    switch (cfg->net_mode) {
+    case DS_NET_NAT:
+      net = "NAT";
+      break;
+    case DS_NET_NONE:
+      net = "none";
+      break;
+    default:
+      net = "host";
+      break;
+    }
+    printf("  Networking: %s\n", net);
+    feat_count++;
+
+    /* 2. NAT Configuration (IP, Upstream, Ports) */
+    if (cfg->net_mode == DS_NET_NAT) {
+      const char *ip =
+          cfg->static_nat_ip[0] ? cfg->static_nat_ip : cfg->nat_container_ip;
+      if (ip[0]) {
+        printf("  NAT IP: %s\n", ip);
+        feat_count++;
+      }
+
+      if (cfg->upstream_iface_count > 0) {
+        printf("  Upstream ifaces: ");
+        for (int i = 0; i < cfg->upstream_iface_count; i++) {
+          printf("%s%s", cfg->upstream_ifaces[i],
+                 (i < cfg->upstream_iface_count - 1) ? ", " : "");
+        }
+        printf("\n");
+        feat_count++;
+      }
+
+      if (cfg->port_forward_count > 0) {
+        printf("  Port forwards: ");
+        for (int i = 0; i < cfg->port_forward_count; i++) {
+          struct ds_port_forward *pf = &cfg->port_forwards[i];
+          if (pf->host_port_end == 0) {
+            printf("%d:%d", pf->host_port, pf->container_port);
+          } else {
+            printf("%d-%d:%d-%d", pf->host_port, pf->host_port_end,
+                   pf->container_port, pf->container_port_end);
+          }
+          printf("/%s%s", pf->proto,
+                 (i < cfg->port_forward_count - 1) ? ", " : "");
+        }
+        printf("\n");
+        feat_count++;
+      }
+    }
+
+    /* 3. DNS */
+    if (cfg->dns_servers[0]) {
+      printf("  DNS Servers: %s\n", cfg->dns_servers);
+      feat_count++;
+    }
+
+    /* 4. IPv6 */
+    if (cfg->disable_ipv6) {
+      printf("  Disable IPv6: yes\n");
+      feat_count++;
+    }
+
+    /* 5. Android Storage */
+    if (is_android() && cfg->android_storage) {
+      printf("  Android storage: enabled\n");
+      feat_count++;
+    }
+
+    /* 6. HW/GPU Access */
+    if (cfg->hw_access) {
+      printf("  " C_RED "HW access:" C_RESET " full\n");
+      feat_count++;
+    } else if (cfg->gpu_mode) {
+      printf("  HW access: GPU\n");
+      feat_count++;
+    }
+
+    /* 7. Termux-X11 */
+    if (is_android() && cfg->termux_x11) {
+      printf("  Termux-X11: enabled\n");
+      feat_count++;
+    }
+
+    /* 8. SELinux Status */
+    if (access("/sys/fs/selinux/enforce", R_OK) == 0) {
+      int status = ds_get_selinux_status();
+      if (status == 0) {
+        printf("  " C_RED "SELinux:" C_RESET " Permissive\n");
+      } else {
+        printf("  SELinux: Enforcing\n");
+      }
+      feat_count++;
+    }
+
+    /* 9. Volatile Mode */
+    if (cfg->volatile_mode) {
+      printf("  Volatile mode: enabled\n");
+      feat_count++;
+    }
+
+    /* 10. Cgroup v1 */
+    if (cfg->force_cgroupv1) {
+      printf("  " C_RED "Force Cgroup V1:" C_RESET " yes\n");
+      feat_count++;
+    }
+
+    /* 11. Deadlock Shield (block_nested_ns) */
+    if (cfg->block_nested_ns) {
+      printf("  " C_RED "Deadlock Shield:" C_RESET " enabled\n");
+      feat_count++;
+    }
+
+    /* 12. Privileged Mode */
+    if (cfg->privileged_mask > 0) {
+      printf("  " C_RED "Privileged mode:" C_RESET " ");
+      if (cfg->privileged_mask == DS_PRIV_FULL) {
+        printf("full");
+      } else {
+        int first = 1;
+        if (cfg->privileged_mask & DS_PRIV_NOMASK) {
+          printf("%snomask", first ? "" : ", ");
+          first = 0;
+        }
+        if (cfg->privileged_mask & DS_PRIV_NOCAPS) {
+          printf("%snocaps", first ? "" : ", ");
+          first = 0;
+        }
+        if (cfg->privileged_mask & DS_PRIV_NOSEC) {
+          printf("%snoseccomp", first ? "" : ", ");
+          first = 0;
+        }
+        if (cfg->privileged_mask & DS_PRIV_SHARED) {
+          printf("%sshared", first ? "" : ", ");
+          first = 0;
+        }
+        if (cfg->privileged_mask & DS_PRIV_UNFILTERED) {
+          printf("%sunfiltered-dev", first ? "" : ", ");
+          first = 0;
+        }
+      }
+      printf("\n");
+      feat_count++;
+    }
+
+    /* 13. Bind Mounts */
+    if (cfg->bind_count > 0) {
+      printf("  Bind mounts: %d active\n", cfg->bind_count);
+      feat_count++;
+    }
+
+    /* 14. Environment Variables */
+    if (cfg->env_var_count > 0) {
+      printf("  Env variables: %d loaded\n", cfg->env_var_count);
+      feat_count++;
+    }
+
+    if (feat_count == 0) {
+      printf("  None\n");
+    }
   }
-
-  printf("\n" C_GREEN "Features:" C_RESET "\n");
-
-  /* SELinux */
-  if (access("/sys/fs/selinux/enforce", R_OK) == 0) {
-    const char *sel = ds_get_selinux_status() == 0 ? "Permissive" : "Enforcing";
-    printf("  SELinux: %s\n", sel);
-  }
-
-  /* Networking */
-  const char *net;
-  switch (cfg->net_mode) {
-  case DS_NET_NAT:
-    net = "NAT";
-    break;
-  case DS_NET_NONE:
-    net = "none";
-    break;
-  default:
-    net = "host";
-    break;
-  }
-  printf("  Networking: %s\n", net);
-
-  /* Android storage */
-  printf("  Android storage: %s\n",
-         detect_android_storage_in_container(pid) ? "enabled" : "disabled");
-
-  /* HW access */
-  int hw = detect_hw_access_in_container(pid);
-  if (hw)
-    printf("  " C_RED "HW access: full" C_RESET "\n");
-  else if (cfg->gpu_mode)
-    printf("  HW access: GPU\n");
-  else
-    printf("  HW access: " C_DIM "none" C_RESET "\n");
 
   printf("\n");
   return 0;

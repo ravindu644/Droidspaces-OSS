@@ -1323,6 +1323,73 @@ int copy_file(const char *src, const char *dst) {
  *   RAM_TOTAL_KB=<kb>
  *   CPU_PERMILL=<0-1000>
  * ---------------------------------------------------------------------------*/
+long ds_get_container_uptime(pid_t pid) {
+  if (pid <= 0)
+    return -1;
+
+  long clk_tck = sysconf(_SC_CLK_TCK);
+  if (clk_tck <= 0)
+    clk_tck = 100;
+
+  char stat_path[PATH_MAX];
+  snprintf(stat_path, sizeof(stat_path), "/proc/%d/stat", (int)pid);
+
+  FILE *f = fopen(stat_path, "r");
+  if (!f)
+    return -1;
+
+  unsigned long long start_ticks = 0;
+  /* starttime is the 22nd field */
+  for (int i = 1; i <= 21; i++) {
+    if (fscanf(f, "%*s") == EOF)
+      break;
+  }
+  if (fscanf(f, "%llu", &start_ticks) != 1)
+    start_ticks = 0;
+  fclose(f);
+
+  if (start_ticks == 0)
+    return -1;
+
+  f = fopen("/proc/uptime", "r");
+  if (!f)
+    return -1;
+
+  double host_uptime_sec = 0.0;
+  if (fscanf(f, "%lf", &host_uptime_sec) != 1)
+    host_uptime_sec = 0.0;
+  fclose(f);
+
+  long uptime_sec =
+      (long)(host_uptime_sec - (double)start_ticks / (double)clk_tck);
+  return (uptime_sec < 0) ? 0 : uptime_sec;
+}
+
+void ds_format_uptime(long uptime_sec, char *buf, size_t size) {
+  if (uptime_sec < 0) {
+    safe_strncpy(buf, "unknown", size);
+    return;
+  }
+
+  int days = uptime_sec / 86400;
+  int hours = (uptime_sec % 86400) / 3600;
+  int mins = (uptime_sec % 3600) / 60;
+  int secs = uptime_sec % 60;
+
+  char tmp[128] = {0};
+  int pos = 0;
+
+  if (days > 0)
+    pos += snprintf(tmp + pos, sizeof(tmp) - pos, "%dd ", days);
+  if (hours > 0 || days > 0)
+    pos += snprintf(tmp + pos, sizeof(tmp) - pos, "%dh ", hours);
+  if (mins > 0 || hours > 0 || days > 0)
+    pos += snprintf(tmp + pos, sizeof(tmp) - pos, "%dm ", mins);
+  snprintf(tmp + pos, sizeof(tmp) - pos, "%ds", secs);
+
+  safe_strncpy(buf, tmp, size);
+}
+
 int show_container_usage(struct ds_config *cfg) {
   pid_t pid = 0;
 
@@ -1331,55 +1398,12 @@ int show_container_usage(struct ds_config *cfg) {
     return -1;
   }
 
-  long clk_tck = sysconf(_SC_CLK_TCK);
-  if (clk_tck <= 0)
-    clk_tck = 100;
-
   /* -----------------------------------------------------------------------
-   * UPTIME: starttime field 22 of container init's /proc/pid/stat
+   * UPTIME
    * -----------------------------------------------------------------------*/
-  char stat_path[PATH_MAX];
-  if (build_proc_root_path(pid, "/proc/1/stat", stat_path, sizeof(stat_path)) <
-      0) {
-    ds_error("Failed to build stat path for container PID %d", (int)pid);
-    return -1;
-  }
-  FILE *f = fopen(stat_path, "r");
-  if (!f) {
-    ds_error("Failed to open %s: %s", stat_path, strerror(errno));
-    return -1;
-  }
-  unsigned long long start_ticks = 0;
-  for (int i = 1; i <= 21; i++) {
-    if (fscanf(f, "%*s") == EOF)
-      break;
-  }
-  if (fscanf(f, "%llu", &start_ticks) != 1)
-    start_ticks = 0;
-  fclose(f);
-  if (start_ticks == 0) {
-    ds_error("Failed to read starttime from %s", stat_path);
-    return -1;
-  }
-
-  f = fopen("/proc/uptime", "r");
-  if (!f) {
-    ds_error("Failed to open /proc/uptime: %s", strerror(errno));
-    return -1;
-  }
-  double host_uptime_sec = 0.0;
-  if (fscanf(f, "%lf", &host_uptime_sec) != 1)
-    host_uptime_sec = 0.0;
-  fclose(f);
-
-  long uptime_sec =
-      (long)(host_uptime_sec - (double)start_ticks / (double)clk_tck);
-  if (uptime_sec < 0)
-    uptime_sec = 0;
-  int ud = uptime_sec / 86400;
-  int uh = (uptime_sec % 86400) / 3600;
-  int um = (uptime_sec % 3600) / 60;
-  int us = uptime_sec % 60;
+  long uptime_sec = ds_get_container_uptime(pid);
+  char uptime_str[128];
+  ds_format_uptime(uptime_sec, uptime_str, sizeof(uptime_str));
 
   /* -----------------------------------------------------------------------
    * PID namespace of container init
@@ -1402,6 +1426,7 @@ int show_container_usage(struct ds_config *cfg) {
   long ram_used_kb = 0;
   long long cpu_t1 = 0;
   long long cpu_host_t1 = 0;
+  FILE *f = NULL;
 
   DIR *proc_dir = opendir("/proc");
   if (!proc_dir) {
@@ -1546,10 +1571,7 @@ int show_container_usage(struct ds_config *cfg) {
    * Output - machine-parseable key=value, one per line
    * -----------------------------------------------------------------------*/
   printf("UPTIME_SEC=%ld\n", uptime_sec);
-  if (ud > 0)
-    printf("UPTIME=%dd %dh %dm %ds\n", ud, uh, um, us);
-  else
-    printf("UPTIME=%dh %dm %ds\n", uh, um, us);
+  printf("UPTIME=%s\n", uptime_str);
   printf("RAM_USED_KB=%ld\n", ram_used_kb);
   printf("RAM_TOTAL_KB=%ld\n", ram_total_kb);
   printf("CPU_PERMILL=%ld\n", cpu_permill);

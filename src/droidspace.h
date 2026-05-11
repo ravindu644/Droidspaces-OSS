@@ -300,6 +300,7 @@ struct ds_config {
   int block_nested_ns;    /* --block-nested-namespaces: fix VFS deadlock by
                                blocking nested namespace creation */
   int privileged_mask;    /* --privileged bitmask */
+  int format_output;      /* --format: machine-parseable output (KEY=VALUE) */
   char prog_name[64];     /* argv[0] for logging */
 
   /* Runtime state */
@@ -363,6 +364,8 @@ struct ds_config {
 void safe_strncpy(char *dst, const char *src, size_t size);
 char *ds_resolve_path_arg(const char *path);
 void ds_resolve_argv_paths(int argc, char **argv);
+long ds_get_container_uptime(pid_t pid);
+void ds_format_uptime(long uptime_sec, char *buf, size_t size);
 int is_ramfs(const char *path);
 int is_subpath(const char *parent, const char *child);
 int is_running_in_termux(void);
@@ -461,10 +464,6 @@ int setup_custom_binds(struct ds_config *cfg, const char *rootfs);
 int mount_rootfs_img(const char *img_path, char *mount_point, size_t mp_size,
                      const char *name);
 int unmount_rootfs_img(const char *mount_point, int silent);
-int get_container_mount_fstype(pid_t pid, const char *path, char *fstype,
-                               size_t size);
-int detect_android_storage_in_container(pid_t pid);
-int detect_hw_access_in_container(pid_t pid);
 int is_mountpoint(const char *path);
 
 /* ---------------------------------------------------------------------------

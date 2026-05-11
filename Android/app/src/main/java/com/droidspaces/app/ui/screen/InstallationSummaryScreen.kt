@@ -157,6 +157,7 @@ fun InstallationSummaryScreen(
                     if (config.runAtBoot) SummaryItem(stringResource(R.string.run_at_boot), stringResource(R.string.enabled_legend), Icons.Default.PowerSettingsNew)
                     if (config.forceCgroupv1) SummaryItem(stringResource(R.string.force_cgroupv1), stringResource(R.string.enabled_legend), Icons.Default.Layers)
                     if (config.blockNestedNs) SummaryItem(stringResource(R.string.manual_deadlock_shield), stringResource(R.string.enabled_legend), Icons.Default.GppBad)
+                    if (config.privileged.isNotEmpty()) SummaryItem(stringResource(R.string.privileged_mode), config.privileged, Icons.Default.GppMaybe)
 
                     fun countEnvVars(content: String?): Int {
                         if (content.isNullOrBlank()) return 0
