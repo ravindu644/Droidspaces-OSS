@@ -314,7 +314,7 @@
     <string name="starting_migration">Memulai proses migrasi...</string>
     <string name="starting_resizing">Memulai proses pengubahan ukuran...</string>
     <string name="help_card_title">Baru di Droidspaces?</string>
-    <string name="help_card_message">Ketuk di sini untuk mempelajari cara menyiapkan kontainer Android pertama Anda!</string>
+    <string name="help_card_message">Ketuk di sini untuk mempelajari cara menyiapkan kontainer Linux pertama Anda!</string>
     <string name="privileged_mode">Mode Istimewa</string>
     <string name="privileged_mode_description">Konfigurasikan pelonggaran keamanan terperinci untuk virtualisasi bersarang atau akses perangkat keras tingkat lanjut.</string>
     <string name="privileged_nomask_desc">Nonaktifkan pembatasan akses untuk mengizinkan akses tulis ke /proc dan /sys. Catatan: /sys tetap hanya dapat dibaca kecuali jika Akses Perangkat Keras juga diaktifkan.</string>

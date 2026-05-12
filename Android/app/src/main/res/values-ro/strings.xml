@@ -297,7 +297,7 @@
     <string name="starting_migration">Se pornește procesul de migrare...</string>
     <string name="starting_resizing">Se pornește procesul de redimensionare...</string>
     <string name="help_card_title">Ești nou în Droidspaces?</string>
-    <string name="help_card_message">Apasă aici pentru a învăța cum să configurezi primul tău container Android !</string>
+    <string name="help_card_message">Apasă aici pentru a învăța cum să configurezi primul tău container Linux!</string>
     <string name="reboot_recommended">Un restart este recomandat pentru a aplica regulile SELinux și a porni daemonul la boot.</string>
     <string name="get_started">Începe</string>
     <string name="about_description">Manager de containere în stil LXC pentru Android</string>

@@ -329,7 +329,7 @@
     <string name="starting_migration">Taşıma işlemi başlatılıyor...</string>
     <string name="starting_resizing">Boyut değiştirme işlemi başlatılıyor...</string>
     <string name="help_card_title">Droidspaces\'e yeni misiniz?</string>
-    <string name="help_card_message">İlk Android konteynerinizi nasıl kuracağınızı öğrenmek için buraya dokunun!</string>
+    <string name="help_card_message">İlk Linux konteynerinizi nasıl kuracağınızı öğrenmek için buraya dokunun!</string>
     <string name="help_card_url">https://github.com/ravindu644/Droidspaces-OSS/blob/main/Documentation/Installation-Android.md</string>
     <string name="reboot_recommended">SELinux kurallarının devreye girmesi ve daemon\'ın önyüklemede başlaması için sistemi yeniden başlatmanız önerilir.</string>
     <string name="failure_in_operation">Failure in %1$sing container %2$s</string>

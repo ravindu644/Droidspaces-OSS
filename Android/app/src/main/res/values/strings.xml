@@ -463,7 +463,7 @@
     <string name="starting_migration">Starting migration operation...</string>
     <string name="starting_resizing">Starting resizing operation...</string>
     <string name="help_card_title">New to Droidspaces?</string>
-    <string name="help_card_message">Tap here to learn how to setup your first Android container !</string>
+    <string name="help_card_message">Tap here to learn how to setup your first Linux container!</string>
     <string name="help_card_url">https://github.com/ravindu644/Droidspaces-OSS/blob/main/Documentation/Installation-Android.md</string>
     <string name="privileged_mode">Privileged Mode</string>
     <string name="privileged_mode_description">Configure granular security relaxation for nested virtualization or advanced hardware access.</string>

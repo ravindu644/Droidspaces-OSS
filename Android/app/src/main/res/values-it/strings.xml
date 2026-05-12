@@ -362,7 +362,7 @@
     <string name="starting_migration">Avvio operazione di migrazione...</string>
     <string name="starting_resizing">Avvio operazione di ridimensionamento...</string>
     <string name="help_card_title">Nuovo su Droidspaces?</string>
-    <string name="help_card_message">Tocca qui per imparare come configurare il tuo primo contenitore Android !</string>
+    <string name="help_card_message">Tocca qui per imparare come configurare il tuo primo contenitore Linux!</string>
     <string name="help_card_url">https://github.com/ravindu644/Droidspaces-OSS/blob/main/Documentation/Installation-Android.md</string>
     <string name="privileged_mode">Modalità Privilegiata</string>
     <string name="privileged_mode_description">Configura il rilassamento granulare della sicurezza per la virtualizzazione annidata o l\'accesso hardware avanzato.</string>

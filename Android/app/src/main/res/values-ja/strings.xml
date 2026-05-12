@@ -311,7 +311,7 @@
     <string name="starting_migration">移行作業を開始しています…</string>
     <string name="starting_resizing">容量変更作業を開始しています…</string>
     <string name="help_card_title">ドロイドスペースは初めてですか？</string>
-    <string name="help_card_message">初めてのAndroidコンテナをセットアップする方法を学ぶには、こちらをタップしてくだされ！</string>
+    <string name="help_card_message">初めてのLinuxコンテナをセットアップする方法を学ぶには、こちらをタップしてくだされ！</string>
     <string name="help_card_url">https://github.com/ravindu644/Droidspaces-OSS/blob/main/Documentation/Installation-Android.md</string>
     <string name="volatile_mode">⚠️危ないモード</string>
     <string name="masked_legend">隠匿中</string>

@@ -214,7 +214,7 @@
     <string name="comma">,</string>
     <string name="size_required">必须指定大小</string>
     <string name="terminal_card_desc">打开容器的交互式 Shell</string>
-    <string name="help_card_message">点击此处，了解如何配置 Android 容器吧！</string>
+    <string name="help_card_message">点击此处，了解如何配置 Linux 容器吧！</string>
     <string name="environment_variables_configured">已配置 %1$d 个变量</string>
     <string name="dismiss">关闭</string>
     <string name="extracting_module_files">正在解压模块文件...</string>

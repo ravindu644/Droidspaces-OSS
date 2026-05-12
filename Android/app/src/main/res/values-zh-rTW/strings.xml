@@ -358,7 +358,7 @@
     <string name="starting_migration">開始執行遷移操作...</string>
     <string name="starting_resizing">開始執行容量調整...</string>
     <string name="help_card_title">首次使用Droidspaces？</string>
-    <string name="help_card_message">點擊此處，了解如何設定Android 容器吧！</string>
+    <string name="help_card_message">點擊此處，了解如何設定Linux 容器吧！</string>
     <string name="help_card_url">https://github.com/ravindu644/Droidspaces-OSS/blob/main/Documentation/Installation-Android.md</string>
     <string name="privileged_mode">特權模式</string>
     <string name="privileged_mode_description">配置細粒度的安全限制放寬，以支援巢狀虛擬化或進階硬體存取。</string>

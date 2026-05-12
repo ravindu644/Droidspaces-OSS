@@ -318,7 +318,7 @@
     <string name="starting_migration">Migrate ක්‍රියාවලිය ආරම්භ කරමින්...</string>
     <string name="starting_resizing">ප්‍රමාණය වෙනස් කිරීමේ ක්‍රියාවලිය ආරම්භ කරමින්...</string>
     <string name="help_card_title">Droidspaces වලට අලුත් ද?</string>
-    <string name="help_card_message">ඔබේ පළමු Android කන්ටේනරය සකසන්නේ කෙසේදැයි ඉගෙන ගැනීමට මෙතන ක්ලික් කරන්න !</string>
+    <string name="help_card_message">ඔබේ පළමු Linux කන්ටේනරය සකසන්නේ කෙසේදැයි ඉගෙන ගැනීමට මෙතන ක්ලික් කරන්න!</string>
     <string name="help_card_url">https://github.com/ravindu644/Droidspaces-OSS/blob/main/Documentation/Installation-Android.md</string>
     <string name="reboot_recommended">SELinux නීති ක්රියාත්මක කිරීම සහ boot වීමේදී daemon ආරම්භ කිරීම සඳහා ඔබගේ උපාංගය restart කිරීම නිර්දේශ කෙරේ.</string>
     <string name="app_name" translatable="false">Droidspaces</string>
