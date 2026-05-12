@@ -44,7 +44,7 @@ void print_usage(void) {
       C_BOLD "Options (Container Setup):" C_RESET "\n"
       "  -r, --rootfs=PATH         Path to rootfs directory\n"
       "  -i, --rootfs-img=PATH     Path to rootfs image (.img)\n"
-      "  -n, --name=NAME           Container name (auto-generated if omitted)\n"
+      "  -n, --name=NAME           Container name (mandatory)\n"
       "  -h, --hostname=NAME       Set container hostname\n"
       "  -C, --conf=PATH           Load configuration from file\n\n"
 
@@ -97,7 +97,7 @@ void print_usage(void) {
       "      --help                Show this help message\n\n"
 
       C_BOLD "Examples:" C_RESET "\n"
-      "  droidspaces --rootfs=/path/to/rootfs start\n"
+      "  droidspaces --name=mycontainer --rootfs=/path/to/rootfs start\n"
       "  droidspaces --name=mycontainer enter\n"
       "  droidspaces --name=mycontainer stop\n\n");
 }

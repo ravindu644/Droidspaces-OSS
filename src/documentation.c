@@ -29,11 +29,15 @@ static const char *get_binary_name(const char *argv0) {
 #define SHOW_CURSOR "\033[?25h"
 
 /* Page titles */
-static const char *page_titles[] = {"Basic Usage", "Medium Usage",
-                                    "Advanced Usage", "Expert Usage", "Notes"};
+static const char *page_titles[] = {"CLI Basics",
+                                    "Quick Start",
+                                    "Management",
+                                    "Networking",
+                                    "Hardware & Integration",
+                                    "Advanced Features"};
 
 /* Total number of pages */
-#define TOTAL_PAGES 5
+#define TOTAL_PAGES 6
 
 /* Pager state */
 static int g_current_line = 0;
@@ -183,307 +187,189 @@ static void print_page(int page, const char *bin) {
 #define printf p_printf
 
   switch (page) {
-  case 0: /* Basic Usage */
+  case 0: /* CLI Basics */
     printf("\n");
-    printf("BASIC USAGE\n");
+    printf("CLI BASICS & ARGUMENT FLEXIBILITY\n");
+    printf("---------------------------------\n\n");
+    printf("Droidspaces features a robust multi-pass argument parser.\n");
+    printf("You can combine arguments like a \"salad\":\n\n");
+
+    printf("%sInterchangeable Flags:%s\n", bold, reset);
+    printf("  Short and long flags are identical:\n");
+    printf("  %s -r /path/to/rootfs -n mycontainer start\n", bin);
+    printf("  %s --rootfs /path/to/rootfs --name mycontainer start\n", bin);
+    printf("  %s --rootfs=/path/to/rootfs --name=mycontainer start\n\n", bin);
+    printf("  (Run %s help to study all available short flags)\n\n", bin);
+
+    printf("%sFlexible Order:%s\n", bold, reset);
+    printf("  Command and flags can be mixed in any order:\n");
+    printf("  %s start --name mycontainer --rootfs /path\n", bin);
+    printf("  %s --rootfs /path/to/rootfs -n mycontainer start\n\n", bin);
+
+    printf("%sMixing Styles:%s\n", bold, reset);
+    printf("  Feel free to mix short and long flags with or without '=':\n");
+    printf("  %s -r /path/to/rootfs --name=mycontainer --hostname myserver "
+           "start\n",
+           bin);
+    break;
+
+  case 1: /* Quick Start */
+    printf("\n");
+    printf("QUICK START\n");
     printf("-----------\n\n");
-    printf("%sStarting a container:%s\n", bold, reset);
-    printf("  %s --rootfs=/path/to/rootfs start\n", bin);
+    printf("%sStarting for the first time:%s\n", bold, reset);
+    printf("  (Define name and rootfs/img path. Flags are persisted to "
+           "config)\n");
+    printf("  # From a rootfs directory\n");
     printf("  %s --name=mycontainer --rootfs=/path/to/rootfs start\n\n", bin);
-    printf("  %s --rootfs-img=/path/to/rootfs.img start\n", bin);
+    printf("  # From an ext4 image\n");
     printf("  %s --name=mycontainer --rootfs-img=/path/to/rootfs.img start\n\n",
            bin);
-    printf("  (If --name isn't defined, it will be auto-generated)\n\n");
-    printf("%sUsing Configuration Files:%s\n", bold, reset);
-    printf("  %s --conf=./container.config start\n", bin);
-    printf(
-        "  (Settings are auto-saved to container.config on every start)\n\n");
 
-    printf("%sListing running containers:%s\n", bold, reset);
-    printf("  %s show\n\n", bin);
+    printf("%sSubsequent starts:%s\n", bold, reset);
+    printf("  (Settings like rootfs path are loaded from the container's "
+           "config file)\n");
+    printf("  %s --name=mycontainer start\n\n", bin);
 
-    printf("%sEntering a container:%s\n", bold, reset);
+    printf("%sEntering the container:%s\n", bold, reset);
     printf("  %s --name=mycontainer enter\n", bin);
     printf("  %s --name=mycontainer enter username\n\n", bin);
 
-    printf("%sStopping a container:%s\n", bold, reset);
-    printf("  %s --name=mycontainer stop\n\n", bin);
+    printf("%sRunning Commands:%s\n", bold, reset);
+    printf("  %s --name=mycontainer run 'uname -a'\n", bin);
+    printf("  %s --name=mycontainer --user=myuser run whoami\n\n", bin);
 
-    printf("%sRestarting a container:%s\n", bold, reset);
-    printf("  %s --name=mycontainer restart\n\n", bin);
+    printf("%sStopping:%s\n", bold, reset);
+    printf("  %s --name=mycontainer stop\n", bin);
+    printf("  %s stop --name=c1,c2,c3 (Multi-stop)\n\n", bin);
 
-    printf("%sRunning a command:%s\n", bold, reset);
-    printf("  %s --name=mycontainer run echo hello\n", bin);
-    printf("  %s --name=mycontainer run ls -la /tmp\n", bin);
-    printf("  %s --name=mycontainer -u myuser run whoami\n", bin);
-    printf("  (Use -u/--user to run as a specific container user)\n\n");
-
-    printf("%sFetch info about a container:%s\n", bold, reset);
-    printf("  %s --name=mycontainer info\n\n", bin);
-
-    printf("%sChecking system requirements:%s\n", bold, reset);
-    printf("  %s check\n\n", bin);
+    printf("%sUsing Configuration Files:%s\n", bold, reset);
+    printf("  %s --config=./container.config start\n", bin);
     break;
 
-  case 1: /* Medium Usage */
+  case 2: /* Management */
     printf("\n");
-    printf("MEDIUM USAGE\n");
-    printf("------------\n\n");
+    printf("MANAGEMENT & LIFECYCLE\n");
+    printf("----------------------\n\n");
 
-    printf("%sContainer with custom hostname:%s\n", bold, reset);
-    printf("  %s --name=mycontainer --rootfs=/path/to/rootfs "
-           "--hostname=myserver start\n\n",
-           bin);
+    printf("%sRestarting:%s\n", bold, reset);
+    printf("  %s --name=mycontainer restart\n", bin);
+    printf("  Note: You can also reboot by running `reboot` inside the\n");
+    printf("  container shell or remotely (e.g. via SSH).\n\n");
 
-    printf("%sContainer with hardware access:%s\n", bold, reset);
-    printf("  %s --name=mycontainer --rootfs=/path/to/rootfs --hw-access "
-           "start\n\n",
-           bin);
+    printf("%sListing Containers:%s\n", bold, reset);
+    printf("  %s show\n", bin);
+    printf("  (Displays name and PID inside a table)\n\n");
 
-    printf("%sContainer with Android storage:%s\n", bold, reset);
-    printf("  %s --name=mycontainer --rootfs=/path/to/rootfs "
-           "--enable-android-storage start\n\n",
-           bin);
+    printf("%sTechnical Information:%s\n", bold, reset);
+    printf("  %s --name=mycontainer info\n", bin);
+    printf("  (Shows current features, metadata, and container state)\n\n");
 
-    printf("%sContainer with IPv6 disabled:%s\n", bold, reset);
-    printf("  %s --name=mycontainer --rootfs=/path/to/rootfs --disable-ipv6 "
-           "start\n\n",
-           bin);
+    printf("%sTechnical Information (machine-parseable):%s\n", bold, reset);
+    printf("  %s --name=mycontainer --format info\n\n", bin);
 
-    printf("%sContainer with SELinux permissive:%s\n", bold, reset);
-    printf("  %s --name=mycontainer --rootfs=/path/to/rootfs "
-           "--selinux-permissive start\n\n",
-           bin);
-
-    printf("%sForeground mode (attach to console):%s\n", bold, reset);
-    printf("  %s --name=mycontainer --rootfs=/path/to/rootfs --foreground "
-           "start\n\n",
-           bin);
-
-    printf("%sRestarting a container:%s\n", bold, reset);
-    printf("  %s --name=mycontainer --rootfs=/path/to/rootfs restart\n\n", bin);
-
-    printf("%sGetting container information:%s\n", bold, reset);
-    printf("  %s --name=mycontainer info\n\n", bin);
-
-    printf("%sScanning for untracked containers:%s\n", bold, reset);
-    printf("  %s scan\n\n", bin);
-
-    printf("%sStopping multiple containers:%s\n", bold, reset);
-    printf("  %s stop --name=container1,container2,container3\n\n", bin);
-    break;
-
-  case 2: /* Advanced Usage */
-    printf("\n");
-    printf("ADVANCED USAGE\n");
-    printf("--------------\n\n");
-
-    printf("%sMultiple flags combined:%s\n", bold, reset);
-    printf("  %s --name=mycontainer --rootfs=/path/to/rootfs --hw-access "
-           "--hostname=myserver start\n\n",
-           bin);
-
-    printf("%sContainer with all Android features:%s\n", bold, reset);
-    printf("  %s --name=mycontainer --rootfs=/path/to/rootfs --hw-access "
-           "--enable-android-storage --selinux-permissive start\n\n",
-           bin);
-
-    printf("%sRootfs image with auto-generated name:%s\n", bold, reset);
-    printf("  %s --rootfs-img=/path/to/rootfs.img start\n", bin);
-    printf("  (Name auto-generated from /etc/os-release)\n\n");
-
-    printf("%sRootfs image with custom name:%s\n", bold, reset);
-    printf("  %s --name=myimage --rootfs-img=/path/to/rootfs.img start\n\n",
-           bin);
+    printf("%sResource Usage:%s\n", bold, reset);
+    printf("  %s --name=mycontainer usage\n", bin);
+    printf("  (Shows uptime, CPU%%, and RAM usage)\n\n");
 
     printf("%sMetadata Recovery:%s\n", bold, reset);
-    printf("  %s --name=mycontainer info\n", bin);
-    printf(
-        "  (Even if host-side config/PIDs are lost, discovery finds it!)\n\n");
-
-    printf("%sEntering as different user:%s\n", bold, reset);
-    printf("  %s --name=mycontainer enter myuser\n\n", bin);
-
-    printf("%sRunning a command as a specific user:%s\n", bold, reset);
-    printf("  %s --name=mycontainer -u myuser run whoami\n", bin);
-    printf("  %s --name=mycontainer -u myuser run env\n", bin);
-    printf("  %s --name=mycontainer --user=myuser run id\n", bin);
-    printf(
-        "  (Equivalent to: su - myuser -c \"<cmd>\", but without a shell)\n\n");
-
-    printf("%sStopping containers with spaces in names:%s\n", bold, reset);
-    printf("  %s stop --name=\"container 1,container 2,container 3\"\n\n", bin);
-
-    printf("%sContainer management workflow:%s\n", bold, reset);
-    printf("  %s --name=mycontainer --rootfs=/path/to/rootfs start\n", bin);
-    printf("  %s --name=mycontainer enter\n", bin);
-    printf("  %s --name=mycontainer run uname -a\n", bin);
-    printf("  %s --name=mycontainer info\n", bin);
-    printf("  %s --name=mycontainer stop\n\n", bin);
+    printf("  %s scan\n", bin);
+    printf("  (Detects containers even if host-side config/PIDs are lost)\n\n");
     break;
 
-  case 3: /* Gigachad Usage */
+  case 3: /* Networking */
     printf("\n");
-    printf("EXPERT USAGE\n");
-    printf("--------------\n\n");
+    printf("NETWORKING\n");
+    printf("----------\n\n");
 
-    printf("%sNetwork Isolation Modes (--net):%s\n", bold, reset);
-    printf("  %s -r rootfs/ --net=host start   (Default: shared with host)\n",
-           bin);
-    printf("  %s -r rootfs/ --net=none start   (No network access)\n", bin);
-    printf("  %s -r rootfs/ --net=nat --upstream=wlan0,rmnet0 start\n", bin);
-    printf("  %s -r rootfs/ --net=nat --upstream=v4-rmnet_data* start\n", bin);
-    printf("  %s -r rootfs/ --net=nat --upstream=wlan0 --port=22:22 start\n",
-           bin);
-    printf("  %s -r rootfs/ --net=nat --upstream=wlan0 --nat-ip=172.28.5.10 "
+    printf("%sIsolation Modes (--net):%s\n", bold, reset);
+    printf("  --net=host   Shared with host (default)\n");
+    printf("  --net=none   No network access (air-gapped)\n");
+    printf("  --net=nat    Isolated namespace with internet access\n\n");
+
+    printf("%sNAT Mode Configuration:%s\n", bold, reset);
+    printf("  %s --name=mycontainer --rootfs=/path/to/rootfs --net=nat "
+           "--upstream=wlan0 "
            "start\n",
            bin);
-    printf(
-        "  # --nat-ip assigns a fixed container IP (persisted to config).\n");
-    printf("  # Omit it and Droidspaces auto-assigns a stable IP from the\n");
-    printf("  # container name - same IP on every reboot, no manual config "
-           "needed.\n");
-    printf("  (NAT creates an isolated namespace with internet access)\n\n");
-
-    printf("%sForce Legacy Cgroup V1 Hierarchy:%s\n", bold, reset);
-    printf("  %s -r rootfs/ --force-cgroupv1 start\n", bin);
-    printf("  (Escape hatch: uses V1 even if V2 is available on host)\n\n");
-
-    printf("%sManual Deadlock Shield (Namespace Blocker):%s\n", bold, reset);
-    printf("  %s -r rootfs/ --block-nested-namespaces start\n", bin);
-    printf("  (Blocks unshare/clone to fix VFS deadlocks on 4.14 kernels.\n");
-    printf(
-        "   WARNING: This disables Docker/Podman inside the container.)\n\n");
-
-    printf("%sEphemeral container (Volatile Mode):%s\n", bold, reset);
-    printf("  %s -r /path/to/rootfs --volatile start\n", bin);
-    printf("  (All changes are stored in RAM and lost on exit)\n\n");
-
-    printf("%sMultiple bind mounts (Comma-separated or Chained):%s\n", bold,
-           reset);
-    printf("  %s -r rootfs/ start -B /src1:/dst1,/src2:/dst2\n", bin);
-    printf("  %s -r rootfs/ start -B /src1:/dst1 -B /src2:/dst2\n", bin);
-    printf("  (Mix and match supported, up to 16 mounts)\n\n");
-
-    printf("%sMulti-DNS Configuration (Comma-separated):%s\n", bold, reset);
-    printf("  %s -r rootfs/ start -d 1.1.1.1,8.8.4.4,9.9.9.9\n", bin);
-
-    printf("%sContainer with maximum features (not secure):%s\n", bold, reset);
-    printf("  %s --name=featureful --rootfs-img=/path/to/rootfs.img \\\n", bin);
-    printf("      --hw-access --enable-android-storage \\\n");
-    printf("      --selinux-permissive --hostname=feature-box \\\n");
-    printf("      --env=/path/to/env.txt --volatile --foreground start\n\n");
-
-    printf("%sComplex command execution with pipes and redirection:%s\n", bold,
-           reset);
-    printf("  %s --name=mycontainer run sh -c \"ps aux | grep init > "
-           "/tmp/init.log\"\n",
-           bin);
-    printf("  %s --name=mycontainer run sh -c \"cat /etc/os-release | grep "
-           "ID\"\n",
-           bin);
-    printf("  %s --name=mycontainer -u myuser run sh -c \"id && env\"\n\n",
+    printf("  %s --name=mycontainer --rootfs=/path/to/rootfs --net=nat "
+           "--upstream=rmnet*,wlan0 "
+           "start\n\n",
            bin);
 
-    printf("%sContainer lifecycle with all operations:%s\n", bold, reset);
-    printf("  %s --name=test --rootfs=/path/to/rootfs --hw-access "
-           "--hw-access start\n",
-           bin);
-    printf("  %s --name=test status\n", bin);
-    printf("  %s --name=test usage\n", bin);
-    printf("  %s --name=test enter developer\n", bin);
-    printf("  %s --name=test run systemctl status\n", bin);
-    printf("  %s --name=test run journalctl -n 50\n", bin);
-    printf("  %s --name=test info\n", bin);
-    printf("  %s --name=test restart\n", bin);
-    printf("  %s --name=test stop\n\n", bin);
+    printf("%sPort Forwarding (NAT only):%s\n", bold, reset);
+    printf("  --port=8080:80          Single port\n");
+    printf("  --port=1000-2000:1000-2000  Symmetric range\n");
+    printf("  --port=8080:80/udp      Specific protocol\n\n");
 
-    printf("%sRootfs image management with mount tracking:%s\n", bold, reset);
-    printf("  %s --name=imgtest --rootfs-img=/path/to/rootfs.img start\n", bin);
-    printf("  %s --name=imgtest stop\n", bin);
-    printf("  (Mount automatically cleaned up)\n\n");
+    printf("%sStatic IP assignment:%s\n", bold, reset);
+    printf("  --nat-ip=172.28.5.10\n\n");
 
-    printf("%sMulti-container orchestration:%s\n", bold, reset);
-    printf("  for name in web db cache; do\n");
-    printf("    %s --name=$name --rootfs=/path/to/$name-rootfs start\n", bin);
-    printf("  done\n");
-    printf("  %s show\n", bin);
-    printf("  %s stop --name=web,db,cache\n\n", bin);
-
-    printf("%sMultiple containers with different configurations:%s\n", bold,
-           reset);
-    printf(
-        "  %s --name=web --rootfs=/path/to/web-rootfs --hostname=web start\n",
-        bin);
-    printf("  %s --name=db --rootfs=/path/to/db-rootfs --hostname=db "
-           "--hw-access start\n",
-           bin);
-    printf("  %s --name=app --rootfs-img=/path/to/app.img start\n", bin);
-    printf("  %s show\n", bin);
-    printf("  %s stop --name=web,db,app\n\n", bin);
-
-    printf("%sChecking container resource usage:%s\n", bold, reset);
-    printf("  %s --name=mycontainer usage\n", bin);
-    printf("  (Shows uptime, CPU%, and RAM usage for the container\n");
-    printf("   Uses PID namespace walk + /proc/uptime - no ns entry needed\n");
-    printf("   Works on kernel 3.10+ with both cgroup v1 and v2)\n\n");
-
-    printf("%sError recovery and troubleshooting:%s\n", bold, reset);
-    printf("  %s scan\n", bin);
-    printf("  %s --name=broken info\n", bin);
-    printf("  %s --name=broken stop\n", bin);
-    printf("  %s --name=broken --rootfs=/path/to/rootfs restart\n\n", bin);
-
-    printf("%sGPU Passthrough with X11 (Android + Termux X11):%s\n", bold,
-           reset);
-    printf("  %s --name=gpu --rootfs=/path/to/rootfs --hw-access start\n", bin);
-    printf("  %s --name=gpu enter\n", bin);
-    printf("  export DISPLAY=:0\n");
-    printf("  glxgears  # Hardware-accelerated rendering\n");
-    printf("  (GPU groups and X11 socket are auto-configured)\n\n");
-
-    printf("%sGPU-only mode (no full hardware passthrough):%s\n", bold, reset);
-    printf("  %s --name=gpu --rootfs=/path/to/rootfs --gpu start\n", bin);
-    printf("  (Scans host /dev for GPU nodes and maps them into an\n");
-    printf("   isolated tmpfs /dev. Safe alternative to --hw-access when\n");
-    printf("   only GPU acceleration is needed.)\n\n");
-
-    printf("%sPrivileged Mode (Security Relaxation):%s\n", bold, reset);
-    printf("  %s -r rootfs/ --privileged=full start\n", bin);
-    printf("  %s -r rootfs/ --privileged=nomask,noseccomp start\n", bin);
-    printf("  (Permits dangerous/expert features like user namespaces.)\n\n");
+    printf("%sCustom DNS & IPv6:%s\n", bold, reset);
+    printf("  %s --name=mycontainer --dns=1.1.1.1,8.8.4.4 start\n", bin);
+    printf("  %s --name=mycontainer --disable-ipv6 start\n", bin);
     break;
 
-  case 4: /* Notes */
+  case 4: /* Hardware & Integration */
     printf("\n");
-    printf("NOTES\n");
-    printf("-----\n\n");
-    printf("1. Container names are auto-generated if --name is omitted\n");
-    printf("2. --rootfs and --rootfs-img are mutually exclusive\n");
-    printf("3. Only one command can be specified at a time\n");
+    printf("HARDWARE & INTEGRATION\n");
+    printf("----------------------\n\n");
+
+    printf("%sFull Hardware Access (--hw-access):%s\n", bold, reset);
     printf(
-        "4. Multi-stop (comma-separated names) only works with stop command\n");
-    printf("5. Container names are auto-generated from /etc/os-release if "
-           "--name is not provided\n");
-    printf("6. Persistent UUIDs ensure containers are always trackable\n");
-    printf("7. Rootfs images are automatically mounted and unmounted\n");
+        "  %s --name=mycontainer --rootfs=/path/to/rootfs --hw-access start\n",
+        bin);
+    printf("  (Exposes host /dev nodes, maps GPU groups, setups X11 in "
+           "Linux)\n\n");
+
+    printf("%sSecure GPU-only Mode (--gpu):%s\n", bold, reset);
+    printf("  %s --name=mycontainer --rootfs=/path/to/rootfs --gpu start\n",
+           bin);
+    printf("  (Maps ONLY GPU nodes into an isolated tmpfs /dev)\n\n");
+
+    printf("%sAndroid-specific Features:%s\n", bold, reset);
+    printf("  --enable-android-storage  Mounts /storage/emulated/0\n");
+    printf("  --termux-x11              Setups Termux:X11 socket\n\n");
+
+    printf("%sSystem Integration:%s\n", bold, reset);
+    printf("  --selinux-permissive      Set host SELinux to permissive\n");
+    printf("  --force-cgroupv1          Force legacy cgroup hierarchy\n");
+    printf("  --block-nested-namespaces  Shield against VFS deadlocks\n");
+    break;
+
+  case 5: /* Advanced Features */
+    printf("\n");
+    printf("ADVANCED FEATURES\n");
+    printf("-----------------\n\n");
+
+    printf("%sPrivileged Mode (--privileged):%s\n", bold, reset);
+    printf("  Relax security with comma-separated tags:\n");
+    printf("  nomask        Allow write access to /proc and /sys\n");
+    printf("  nocaps        Keep all Linux Capabilities (full root)\n");
+    printf("  noseccomp     Disable syscall filtering (useful for "
+           "flatpak,bwrap and other unprivileged sandboxes)\n");
+    printf("  shared        Enable MS_SHARED mount propagation\n");
+    printf("  unfiltered-dev Bypass device filtering (all host /dev)\n");
+    printf("  full          Enable all above tags\n\n");
+
+    printf("  %s --name=mycontainer --rootfs=/path/to/rootfs --privileged=full "
+           "start\n\n",
+           bin);
+
+    printf("%sEphemeral Mode (--volatile):%s\n", bold, reset);
     printf(
-        "8. The scan command can detect containers started outside the tool\n");
-    printf("9. All commands require root privileges except: check, show, docs, "
-           "version\n");
-    printf("10. Foreground mode attaches terminal to container console\n");
-    printf("11. With --hw-access, GPU device groups are auto-created in the\n");
-    printf("    container's /etc/group and root is added to each group.\n");
-    printf("    X11 socket is auto-mounted (Termux X11 on Android,\n");
-    printf("    /tmp/.X11-unix on desktop Linux).\n");
-    printf("12. --gpu enables GPU acceleration without full hardware "
-           "passthrough.\n");
-    printf("    Known GPU nodes are scanned from the host /dev and mknoded "
-           "into\n");
-    printf(
-        "    the container's isolated tmpfs. The droidspaces-gpu group is\n");
-    printf("    auto-created. Safe to combine with --hw-access (no-op "
-           "overlap).\n\n");
+        "  %s --name=mycontainer --rootfs=/path/to/rootfs --volatile start\n",
+        bin);
+    printf("  (All changes are stored in RAM and lost on exit)\n\n");
+
+    printf("%sBind Mounts & Environment:%s\n", bold, reset);
+    printf("  --bind /host:/cont    Bind mount host path\n");
+    printf("  --env /path/to/env.list  Load environment variables\n\n");
+
+    printf("%sConfig Management:%s\n", bold, reset);
+    printf("  --config=PATH         Load specific config file\n");
+    printf("  --reset               Reset config to defaults\n");
+    printf("  --help                Show summary of all flags\n");
     break;
   }
 #undef printf

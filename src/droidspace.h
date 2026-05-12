@@ -276,7 +276,7 @@ struct ds_config {
   char rootfs_path[PATH_MAX];     /* --rootfs=  */
   char rootfs_img_path[PATH_MAX]; /* --rootfs-img= */
   char pidfile[PATH_MAX];         /* --pidfile= or auto-resolved */
-  char container_name[256];       /* --name= or auto-generated */
+  char container_name[256];       /* --name= (mandatory) */
   char hostname[256];             /* --hostname= or container_name */
   char dns_servers[1024];         /* --dns= (comma/space separated) */
   enum ds_net_mode net_mode;      /* --net=host|nat|none */
