@@ -895,7 +895,7 @@ private fun LanguagePickerDialog(
 
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     val btnShape = RoundedCornerShape(14.dp)
-                    // Cancel - mirrors "Clear logs" style
+                    // Cancel - follow standard dialog cancel style
                     Surface(
                         modifier = Modifier.weight(1f).height(48.dp).clip(btnShape).clickable(onClick = onDismiss),
                         shape = btnShape,
@@ -904,10 +904,15 @@ private fun LanguagePickerDialog(
                         tonalElevation = 0.dp
                     ) {
                         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                            Text(context.getString(R.string.cancel), style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text(
+                                context.getString(R.string.cancel),
+                                style = MaterialTheme.typography.labelLarge,
+                                fontWeight = FontWeight.SemiBold,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
                         }
                     }
-                    // OK - mirrors "Copy logs" style (primary tinted)
+                    // OK - follow solid primary style from SparseSizeDialog
                     Surface(
                         modifier = Modifier.weight(1f).height(48.dp).clip(btnShape).clickable {
                             if (selectedIndex >= 0 && selectedIndex < allOptions.size) {
@@ -916,12 +921,16 @@ private fun LanguagePickerDialog(
                             onDismiss()
                         },
                         shape = btnShape,
-                        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.08f),
-                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.4f)),
+                        color = MaterialTheme.colorScheme.primary,
                         tonalElevation = 0.dp
                     ) {
                         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                            Text(context.getString(R.string.ok), style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.primary)
+                            Text(
+                                context.getString(R.string.ok),
+                                style = MaterialTheme.typography.labelLarge,
+                                fontWeight = FontWeight.SemiBold,
+                                color = MaterialTheme.colorScheme.onPrimary
+                            )
                         }
                     }
                 }
