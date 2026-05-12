@@ -1,4 +1,6 @@
-# sudo cp init/droidspaces.service /etc/systemd/system/
+# sudo cp /path/to/compiled/droidspaces /usr/bin/droidspaces
+# sudo chmod +x /usr/bin/droidspaces
+# sudo cp init/systemd-service/droidspaces.service /etc/systemd/system/
 # sudo systemctl daemon-reload
 # sudo systemctl enable --now droidspaces
 
