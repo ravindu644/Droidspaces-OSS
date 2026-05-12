@@ -343,67 +343,74 @@ int ds_cgroup_attach(pid_t target_pid) {
 /* ---------------------------------------------------------------------------
  * ds_cgroup_detach
  *
- * Removes the ds-enter-<pid> leaf cgroup directories that ds_cgroup_attach()
- * created for a single enter/run session.  Must be called by the parent after
- * waitpid() so the leaf is guaranteed to be empty.
+ * Removes ds-enter-<pid> leaf cgroup dirs created by ds_cgroup_attach().
+ * Must be called after waitpid() so the leaf is guaranteed empty.
+ *
+ * The old implementation reconstructed the path manually and got the depth
+ * wrong (missed intermediate scopes like init.scope), causing stale dirs.
+ * This version does a recursive scan of /sys/fs/cgroup and removes every
+ * dir named "ds-enter-<pid>" regardless of depth - works for both v1 and v2.
  * ---------------------------------------------------------------------------*/
-void ds_cgroup_detach(pid_t child_pid, const char *container_name) {
-  /* After child exits, we clean up the leaf cgroups we created in attach.
-   * Since we create them in every mounted hierarchy under /sys/fs/cgroup,
-   * we just iterate that dir again. */
-  (void)container_name; /* reserved for future per-layout targeting */
 
-  DIR *d = opendir("/sys/fs/cgroup");
+/* Wait up to 500ms for cgroup.events populated=0 (cgroupv2),
+ * or tasks file empty (cgroupv1), before rmdir. */
+static void wait_cgroup_empty(const char *leaf_path) {
+  /* cgroupv2: poll cgroup.events */
+  char events[PATH_MAX];
+  snprintf(events, sizeof(events), "%s/cgroup.events", leaf_path);
+  if (access(events, R_OK) == 0) {
+    for (int i = 0; i < 50; i++) {
+      char buf[256] = {0};
+      if (read_file(events, buf, sizeof(buf)) > 0 && strstr(buf, "populated 0"))
+        return;
+      usleep(10000);
+    }
+    return;
+  }
+
+  /* cgroupv1: poll tasks file */
+  char tasks[PATH_MAX];
+  snprintf(tasks, sizeof(tasks), "%s/tasks", leaf_path);
+  for (int i = 0; i < 50; i++) {
+    char buf[64] = {0};
+    if (read_file(tasks, buf, sizeof(buf)) > 0 && buf[0] == '\0')
+      return;
+    usleep(10000);
+  }
+}
+
+/* Recursively walk 'dir_path'; rmdir any entry named 'target'. */
+static void find_and_rmdir(const char *dir_path, const char *target) {
+  DIR *d = opendir(dir_path);
   if (!d)
     return;
-
-  char enter_suffix[64];
-  snprintf(enter_suffix, sizeof(enter_suffix), "/ds-enter-%d", (int)child_pid);
 
   struct dirent *de;
   while ((de = readdir(d)) != NULL) {
     if (de->d_name[0] == '.')
       continue;
-
-    char cg_root[PATH_MAX];
-    snprintf(cg_root, sizeof(cg_root), "/sys/fs/cgroup/%s", de->d_name);
-    struct stat st;
-    if (stat(cg_root, &st) != 0 || !S_ISDIR(st.st_mode)) {
-      if (strcmp(de->d_name, "cgroup.procs") == 0)
-        safe_strncpy(cg_root, "/sys/fs/cgroup", sizeof(cg_root));
-      else
-        continue;
-    }
-
-    /* We need to recursively find and rmdir the ds-enter leaf.
-     * For simplicity, since we know it's a descendant of /droidspaces/,
-     * we can just walk the container's subtree. */
-    char ds_dir[PATH_MAX];
-    snprintf(ds_dir, sizeof(ds_dir), "%s/droidspaces", cg_root);
-
-    DIR *top = opendir(ds_dir);
-    if (!top) {
-      /* Try directly in root (no container name nesting) */
-      char direct[PATH_MAX];
-      snprintf(direct, sizeof(direct), "%s%s", cg_root, enter_suffix);
-      rmdir(direct);
+    if (de->d_type != DT_DIR)
       continue;
-    }
 
-    struct dirent *inner;
-    while ((inner = readdir(top)) != NULL) {
-      if (inner->d_name[0] == '.')
-        continue;
-      char leaf[PATH_MAX];
-      snprintf(leaf, sizeof(leaf), "%s/%s%s", ds_dir, inner->d_name,
-               enter_suffix);
-      rmdir(leaf);
+    char child[PATH_MAX];
+    snprintf(child, sizeof(child), "%s/%s", dir_path, de->d_name);
+
+    if (strcmp(de->d_name, target) == 0) {
+      wait_cgroup_empty(child);
+      rmdir(child);
+    } else {
+      find_and_rmdir(child, target);
     }
-    closedir(top);
-    if (strcmp(de->d_name, "cgroup.procs") == 0)
-      break;
   }
   closedir(d);
+}
+
+void ds_cgroup_detach(pid_t child_pid, const char *container_name) {
+  (void)container_name;
+
+  char target[64];
+  snprintf(target, sizeof(target), "ds-enter-%d", (int)child_pid);
+  find_and_rmdir("/sys/fs/cgroup", target);
 }
 
 /* ---------------------------------------------------------------------------
