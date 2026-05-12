@@ -174,7 +174,7 @@
     <string name="systemd_services">Maga Servicio del Systemd</string>
     <string name="fetching_services">Ta saca el maga servicio...</string>
     <string name="systemd_not_available">Hende Disponible el Systemd</string>
-    <string name="systemd_not_available_message">Este container no hay systemd instalao o no hay ta anda</string>
+    <string name="systemd_not_available_desc">Este container no hay systemd instalao o no hay ta anda</string>
     <string name="search_services">Busca maga servicio...</string>
     <string name="enabled_legend">Habilitao</string>
     <string name="disabled_legend">Deshabilitao</string>

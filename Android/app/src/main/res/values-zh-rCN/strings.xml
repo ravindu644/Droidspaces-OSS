@@ -284,7 +284,6 @@
     <string name="enable_service">启用</string>
     <string name="removing_old_module">正在移除旧模块...</string>
     <string name="android_version">Android 版本</string>
-    <string name="systemd_not_available_message">\@string/systemd_not_available_desc</string>
     <string name="operation_failed_title">操作失败</string>
     <string name="unmask">取消屏蔽</string>
     <string name="next_storage">下一步：存储</string>

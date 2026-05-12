@@ -174,7 +174,7 @@
     <string name="systemd_services">Mga Serbisyo ng Systemd</string>
     <string name="fetching_services">Kinukuha ang mga serbisyo...</string>
     <string name="systemd_not_available">Hindi Available ang Systemd</string>
-    <string name="systemd_not_available_message">Ang container na ito ay walang naka-install o gumaganang systemd</string>
+    <string name="systemd_not_available_desc">Ang container na ito ay walang naka-install o gumaganang systemd</string>
     <string name="search_services">Maghanap ng mga serbisyo...</string>
     <string name="enabled_legend">Naka-enable</string>
     <string name="disabled_legend">Naka-disable</string>

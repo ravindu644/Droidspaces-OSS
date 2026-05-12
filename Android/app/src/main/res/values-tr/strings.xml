@@ -236,7 +236,7 @@
     <string name="systemd_services">Systemd Servisleri</string>
     <string name="fetching_services">Hizmetler yükleniyor...</string>
     <string name="systemd_not_available">Systemd Kullanılamıyor</string>
-    <string name="systemd_not_available_message">Bu konteynerde systemd yüklü değil veya çalışmıyor</string>
+    <string name="systemd_not_available_desc">Bu konteynerde systemd yüklü değil veya çalışmıyor</string>
     <string name="search_services">Servisleri Ara...</string>
     <string name="enabled_legend">Etkin</string>
     <string name="disabled_legend">Devre Dışı</string>

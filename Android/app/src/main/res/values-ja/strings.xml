@@ -179,7 +179,7 @@
     <string name="start_container_first">コンテナを先に始動すると、ここに表示されます</string>
     <string name="systemd_services">Systemdサービス</string>
     <string name="fetching_services">サービスを取得中...</string>
-    <string name="systemd_not_available_message">このコンテナには、systemdがインストールされていないか、実行されていません</string>
+    <string name="systemd_not_available_desc">このコンテナには、systemdがインストールされていないか、実行されていません</string>
     <string name="enabled_legend">有効</string>
     <string name="disabled_legend">無効</string>
     <string name="static_legend">静的</string>

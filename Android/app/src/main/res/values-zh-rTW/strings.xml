@@ -193,7 +193,6 @@
     <string name="error_invalid_range_format">範圍格式無效（起始-結束）</string>
     <string name="container_port_hint">容器連接埠（1-65535 或範圍）</string>
     <string name="symlink_integration">將 Droidspaces 整合到系統路徑中</string>
-    <string name="systemd_not_available_message">\@string/systemd_not_available_desc</string>
     <string name="operation_failed_title">操作失敗</string>
     <string name="dark_theme">深色模式</string>
     <string name="cancel">取消</string>

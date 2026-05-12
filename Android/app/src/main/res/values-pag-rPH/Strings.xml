@@ -174,7 +174,7 @@
     <string name="systemd_services">Saray Serbisyo na Systemd</string>
     <string name="fetching_services">Aalaen iray serbisyo...</string>
     <string name="systemd_not_available">Ag Available so Systemd</string>
-    <string name="systemd_not_available_message">Sayan container et anggapoy aka-install o aandar ya systemd</string>
+    <string name="systemd_not_available_desc">Sayan container et anggapoy aka-install o aandar ya systemd</string>
     <string name="search_services">Anapen iray serbisyo...</string>
     <string name="enabled_legend">Naka-enable</string>
     <string name="disabled_legend">Naka-disable</string>

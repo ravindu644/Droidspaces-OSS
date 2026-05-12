@@ -175,7 +175,7 @@
     <string name="systemd_services">Службы Systemd</string>
     <string name="fetching_services">Получение служб...</string>
     <string name="systemd_not_available">Systemd недоступен</string>
-    <string name="systemd_not_available_message">В этом контейнере не установлен или не запущен systemd</string>
+    <string name="systemd_not_available_desc">В этом контейнере не установлен или не запущен systemd</string>
     <string name="search_services">Поиск служб...</string>
     <string name="enabled_legend">Включено</string>
     <string name="disabled_legend">Отключено</string>

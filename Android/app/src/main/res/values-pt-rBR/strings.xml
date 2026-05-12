@@ -175,7 +175,7 @@
     <string name="systemd_services">Serviços Systemd</string>
     <string name="fetching_services">Buscando serviços...</string>
     <string name="systemd_not_available">Systemd Não Disponível</string>
-    <string name="systemd_not_available_message">Este container não tem systemd instalado ou em execução</string>
+    <string name="systemd_not_available_desc">Este container não tem systemd instalado ou em execução</string>
     <string name="search_services">Pesquisar serviços...</string>
     <string name="enabled_legend">Habilitado</string>
     <string name="disabled_legend">Desabilitado</string>

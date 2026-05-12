@@ -209,7 +209,7 @@
     <string name="systemd_services">Serviciile systemd</string>
     <string name="fetching_services">Se preiau serviciile...</string>
     <string name="systemd_not_available">Systemd nu este disponibil</string>
-    <string name="systemd_not_available_message">Acest container nu are systemd instalat sau în execuție</string>
+    <string name="systemd_not_available_desc">Acest container nu are systemd instalat sau în execuție</string>
     <string name="search_services">Caută servicii...</string>
     <string name="enabled_legend">Activat</string>
     <string name="disabled_legend">Dezactivat</string>

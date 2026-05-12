@@ -225,7 +225,7 @@
     <string name="systemd_services">Systemd සේවා</string>
     <string name="fetching_services">සේවා විස්තර ලබා ගනිමින්...</string>
     <string name="systemd_not_available">Systemd සොයාගත නොහැක</string>
-    <string name="systemd_not_available_message">මෙම කන්ටේනරයේ systemd ස්ථාපනය කර හෝ ක්‍රියාත්මක වී නොමැත</string>
+    <string name="systemd_not_available_desc">මෙම කන්ටේනරයේ systemd ස්ථාපනය කර හෝ ක්‍රියාත්මක වී නොමැත</string>
     <string name="search_services">සේවා සොයන්න...</string>
     <string name="enabled_legend">සක්‍රීය කළ</string>
     <string name="disabled_legend">අක්‍රීය කළ</string>

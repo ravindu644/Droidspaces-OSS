@@ -229,7 +229,7 @@
     <string name="systemd_services">Layanan Systemd</string>
     <string name="fetching_services">Sedang memuat layanan...</string>
     <string name="systemd_not_available">Systemd Tidak Tersedia</string>
-    <string name="systemd_not_available_message">Kontainer ini tidak memiliki systemd yang terpasang atau sedang berjalan</string>
+    <string name="systemd_not_available_desc">Kontainer ini tidak memiliki systemd yang terpasang atau sedang berjalan</string>
     <string name="search_services">Mencari layanan...</string>
     <string name="enabled_legend">Aktif</string>
     <string name="disabled_legend">Tidak aktif</string>

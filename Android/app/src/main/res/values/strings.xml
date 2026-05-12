@@ -336,7 +336,6 @@
     <string name="fetching_services">Fetching services...</string>
     <string name="systemd_not_available">Systemd Not Available</string>
     <string name="systemd_not_available_desc">This container does not have systemd installed or running</string>
-    <string name="systemd_not_available_message">@string/systemd_not_available_desc</string>
     <string name="search_services">Search services...</string>
     <string name="enabled_legend">Enabled</string>
     <string name="disabled_legend">Disabled</string>

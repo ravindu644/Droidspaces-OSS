@@ -160,7 +160,7 @@
     <string name="systemd_services">Servicios Systemd</string>
     <string name="fetching_services">Obteniendo servicios…</string>
     <string name="systemd_not_available">Systemd no disponible</string>
-    <string name="systemd_not_available_message">Este contenedor no tiene Systemd instalado o en ejecución</string>
+    <string name="systemd_not_available_desc">Este contenedor no tiene Systemd instalado o en ejecución</string>
     <string name="search_services">Buscar servicios…</string>
     <string name="enabled_legend">Habilitado</string>
     <string name="disabled_legend">Deshabilitado</string>

@@ -254,7 +254,6 @@
     <string name="systemd_services">Servizi Systemd</string>
     <string name="fetching_services">Recupero servizi...</string>
     <string name="systemd_not_available">Systemd non disponibile</string>
-    <string name="systemd_not_available_message">\@string/systemd_not_available_desc</string>
     <string name="search_services">Cerca servizi...</string>
     <string name="enabled_legend">Abilitato</string>
     <string name="disabled_legend">Disabilitato</string>
