@@ -1239,20 +1239,31 @@ int ds_get_selinux_status(void) {
   return atoi(buf);
 }
 
-void ds_set_selinux_permissive(void) {
+void ds_set_selinux_permissive(int enable) {
   int status = ds_get_selinux_status();
   if (status == -1) {
-    ds_warn("SELinux not supported or interface missing. Skipping permissive "
-            "mode.");
+    if (enable)
+      ds_warn("SELinux not supported or interface missing. Skipping permissive "
+              "mode.");
     return;
   }
 
-  if (status == 1) {
-    ds_log("Setting SELinux to permissive...");
-    if (write_file("/sys/fs/selinux/enforce", "0") < 0) {
-      /* Try setenforce command as fallback */
-      char *args[] = {"setenforce", "0", NULL};
-      run_command_quiet(args);
+  if (enable) {
+    if (status == 1) {
+      ds_log("Setting SELinux to permissive...");
+      if (write_file("/sys/fs/selinux/enforce", "0") < 0) {
+        /* Try setenforce command as fallback */
+        char *args[] = {"setenforce", "0", NULL};
+        run_command_quiet(args);
+      }
+    }
+  } else {
+    /* Set back to Enforcing if it's currently Permissive */
+    if (status == 0) {
+      if (write_file("/sys/fs/selinux/enforce", "1") < 0) {
+        char *args[] = {"setenforce", "1", NULL};
+        run_command_quiet(args);
+      }
     }
   }
 }

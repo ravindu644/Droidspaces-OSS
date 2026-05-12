@@ -391,8 +391,6 @@ void firmware_path_remove(const char *fw_path);
 int run_command(char *const argv[]);
 int run_command_quiet(char *const argv[]);
 int run_command_log(char *const argv[]);
-int ds_get_selinux_status(void);
-void ds_set_selinux_permissive(void);
 int get_selinux_context(const char *path, char *buf, size_t size);
 int set_selinux_context(const char *path, const char *context);
 int ds_send_fd(int sock, int fd);
@@ -435,7 +433,7 @@ void parse_privileged(const char *value, struct ds_config *cfg);
 
 int is_android(void);
 void android_optimizations(int enable);
-void ds_set_selinux_permissive(void);
+void ds_set_selinux_permissive(int enable);
 int ds_get_selinux_status(void);
 void android_remount_data_suid(void);
 int android_setup_storage(const char *rootfs_path);
@@ -646,6 +644,7 @@ pid_t find_container_by_name(const char *name);
 int sync_pidfile(const char *src_pidfile, const char *name);
 int show_containers(void);
 int scan_containers(void);
+int check_selinux_permissive_needs(void);
 void write_plain_env_file(const char *src, const char *dst);
 
 /* ---------------------------------------------------------------------------

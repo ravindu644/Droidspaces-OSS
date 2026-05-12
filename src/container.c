@@ -153,9 +153,17 @@ static void cleanup_container_resources(struct ds_config *cfg, pid_t pid,
   if (!force_cleanup)
     sync();
 
-  if (is_android() && !skip_unmount && count_running_containers(NULL, 0) == 0) {
-    android_optimizations(0);
-    cleanup_unified_tmpfs();
+  if (is_android() && !skip_unmount) {
+    if (count_running_containers(NULL, 0) == 0) {
+      android_optimizations(0);
+      cleanup_unified_tmpfs();
+    }
+    /* SELinux: Restore enforcing mode if no other permissive containers are
+     * running, but only if at least one permissive container is installed. */
+    int selinux_needs = check_selinux_permissive_needs();
+    if (selinux_needs == 0) {
+      ds_set_selinux_permissive(0);
+    }
   }
 
   /* 1. Cleanup firmware path (hw_access mode only; skip on force-cleanup
@@ -367,7 +375,7 @@ int start_rootfs(struct ds_config *cfg) {
   /* If the user requested permissive mode, ensure it's applied.
    * ds_set_selinux_permissive() is a no-op if host is already permissive. */
   if (cfg->selinux_permissive) {
-    ds_set_selinux_permissive();
+    ds_set_selinux_permissive(1);
   }
 
   if (cfg->android_storage && !is_android())

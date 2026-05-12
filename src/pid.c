@@ -727,3 +727,79 @@ int scan_containers(void) {
 
   return 0;
 }
+
+/**
+ * Scans all installed containers and their running status to determine
+ * if the host SELinux permissive mode is still needed.
+ *
+ * Returns:
+ *  -1: No containers with 'selinux-permissive=yes' are installed.
+ *   0: At least one permissive container is installed, but none are running.
+ *   1: At least one permissive container is currently running.
+ */
+int check_selinux_permissive_needs(void) {
+  char pids_path[PATH_MAX];
+  snprintf(pids_path, sizeof(pids_path), "%s", get_pids_dir());
+  DIR *pd = opendir(pids_path);
+  if (!pd)
+    return -1;
+
+  /* Phase 1: Fast check - are any permissive containers currently running? */
+  struct dirent *ent;
+  while ((ent = readdir(pd)) != NULL) {
+    if (!is_pid_file(ent->d_name))
+      continue;
+
+    char name[256];
+    get_container_name_from_pidfile(ent->d_name, name, sizeof(name));
+
+    struct ds_config tmp_cfg = {0};
+    if (ds_config_load_by_name(name, &tmp_cfg) == 0) {
+      pid_t pid;
+      /* Check if THIS running container needs permissive mode */
+      if (tmp_cfg.selinux_permissive && is_container_running(&tmp_cfg, &pid)) {
+        free_config_binds(&tmp_cfg);
+        free_config_env_vars(&tmp_cfg);
+        free_config_unknown_lines(&tmp_cfg);
+        closedir(pd);
+        return 1; /* Found a running permissive container - stay permissive */
+      }
+      free_config_binds(&tmp_cfg);
+      free_config_env_vars(&tmp_cfg);
+      free_config_unknown_lines(&tmp_cfg);
+    }
+  }
+  closedir(pd);
+
+  /* Phase 2: None are running. But is at least one permissive container
+   * installed? (Requirement: do nothing if none installed). */
+  char containers_path[PATH_MAX];
+  snprintf(containers_path, sizeof(containers_path), "%s/Containers",
+           get_workspace_dir());
+  DIR *cd = opendir(containers_path);
+  if (!cd)
+    return -1;
+
+  int permissive_installed = 0;
+  while ((ent = readdir(cd)) != NULL) {
+    if (ent->d_name[0] == '.')
+      continue;
+
+    struct ds_config tmp_cfg = {0};
+    if (ds_config_load_by_name(ent->d_name, &tmp_cfg) == 0) {
+      if (tmp_cfg.selinux_permissive) {
+        permissive_installed = 1;
+        free_config_binds(&tmp_cfg);
+        free_config_env_vars(&tmp_cfg);
+        free_config_unknown_lines(&tmp_cfg);
+        break;
+      }
+      free_config_binds(&tmp_cfg);
+      free_config_env_vars(&tmp_cfg);
+      free_config_unknown_lines(&tmp_cfg);
+    }
+  }
+  closedir(cd);
+
+  return permissive_installed ? 0 : -1;
+}
