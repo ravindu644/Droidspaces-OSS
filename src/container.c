@@ -1414,7 +1414,6 @@ int enter_rootfs(struct ds_config *cfg, const char *user) {
     ds_log_silent = prev_silent;
   }
 
-  ds_log("Entering container '%s' as %s...", cfg->container_name, user);
 
   /* PTY allocation is deferred until after entering the container namespaces.
    * This ensures the slave PTY is part of the container's private devpts
