@@ -319,6 +319,7 @@ int start_rootfs(struct ds_config *cfg) {
 
   /* 1. Logo & Uniqueness Check */
   print_ds_banner();
+  check_kernel_recommendation();
 
   /* 1b. Name Uniqueness Check
    * We no longer auto-generate or increment names. The name must be provided
