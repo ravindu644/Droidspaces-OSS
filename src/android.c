@@ -16,11 +16,19 @@ int is_android(void) {
   if (cached_result != -1)
     return cached_result;
 
-  if (getenv("ANDROID_ROOT") || access("/system/bin/app_process", F_OK) == 0 ||
-      access("/system/build.prop", F_OK) == 0)
-    cached_result = 1;
-  else
+  /* Priority 1: Check for recovery environment (e.g., TWRP) */
+  if (access("/system/bin/recovery", F_OK) == 0) {
     cached_result = 0;
+  }
+  /* Priority 2: Check for core Android system markers */
+  else if (access("/system/build.prop", F_OK) == 0 ||
+           access("/system/bin/app_process", F_OK) == 0) {
+    cached_result = 1;
+  }
+  /* Fallback: Not a standard Android environment */
+  else {
+    cached_result = 0;
+  }
 
   return cached_result;
 }
