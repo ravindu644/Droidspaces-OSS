@@ -201,3 +201,6 @@ allow su system_data_file file entrypoint
 allow system_server droidspacesd binder { call transfer }
 allow system_server droidspacesd fd use
 allow system_server droidspacesd fifo_file write
+
+# Termux related
+allow untrusted_app_27 droidspacesd fd use
