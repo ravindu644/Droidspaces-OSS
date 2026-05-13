@@ -12,7 +12,7 @@
     <string name="about_description">適用於Android的LXC風格容器管理器</string>
     <string name="amoled_mode_description">為OLED螢幕提供純黑背景</string>
     <string name="review_configuration">查看配置</string>
-    <string name="developer_ravindu644_role">後端、使用者介面</string>
+    <string name="developer_ravindu644_role">維護者</string>
     <string name="save_changes">儲存變更</string>
     <string name="manual_deadlock_shield_description">透過阻止嵌套命名空間的創建，防止舊版核心（如4.14.x）上出現核心級VFS 死鎖。. \n\n警告：啟用此項目將屏蔽容器內對Docker、Podman、LXC 及Systemd 沙盒功能的支援。</string>
     <string name="view_logs">查看日誌</string>
@@ -25,7 +25,7 @@
     <string name="use_sparse_image">使用稀疏映像檔</string>
     <string name="force_cgroupv1">強制Cgroup V1</string>
     <string name="dynamic_color_description">使用Android 12+ Monet動態色彩（Material You）</string>
-    <string name="termux_x11_description">為 Termux-X11 啟用 X11 插槽掛載</string>
+    <string name="termux_x11_description">為 Termux:X11 啟用 X11 插槽掛載</string>
     <string name="backend_installed">後端：已安裝</string>
     <string name="storage_option">儲存空間</string>
     <string name="grant_root_message">請授予Root 權限以繼續使用Droidspaces！</string>
@@ -56,7 +56,7 @@
     <string name="disable_ipv6_description">在此容器中停用 IPv6。停用 IPv6 可能會導致主機上執行的 VPN 應用程式發生故障。</string>
     <string name="follow_system_theme_description">自動匹配系統主題</string>
     <string name="about_section">關於</string>
-    <string name="ipv6_option">無IPv6</string>
+    <string name="ipv6_option">停用 IPv6</string>
     <string name="symmetric_label">（對稱）</string>
     <string name="static_ip_description">為此容器設定一個172.28.xx 子網路內的靜態IPv4 位址。</string>
     <string name="gpu_access_description">將 GPU 節點鏡像到隔離的 /dev 目錄（不進行完整的硬體直通）</string>
@@ -218,7 +218,7 @@
     <string name="search">搜尋</string>
     <string name="host_port_hint">主機連接埠（1-65535 或範圍100-200）</string>
     <string name="backend_corrupted">後端：已損壞</string>
-    <string name="termux_x11">配置 Termux X11</string>
+    <string name="termux_x11">配置 Termux:X11</string>
     <string name="backend_update_available">後端：可升級</string>
     <string name="architecture">架構</string>
     <string name="granting_permissions">正在授予權限...</string>
@@ -391,4 +391,13 @@
     <string name="install">安裝</string>
     <string name="systemd_not_available_desc">此容器未安裝或執行 systemd</string>
     <string name="please_wait_hint">請稍候，我們正在處理您的請求…</string>
+    <string name="kernel_requirements_nongki">非 GKI 核心需求（≤4.19）</string>
+    <string name="kernel_requirements_gki">GKI 核心需求（≥5.4）</string>
+    <string name="guide">指南</string>
+    <string name="gpu_option">GPU</string>
+    <string name="selinux_permissive_option">SELinux 寬容模式</string>
+    <string name="volatile_option">揮發模式</string>
+    <string name="cgroup_v1_option">Cgroup V1</string>
+    <string name="deadlock_shield_option">死鎖防護</string>
+    <string name="privileged_option">特權模式</string>
 </resources>
