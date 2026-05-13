@@ -190,14 +190,6 @@ int internal_boot(struct ds_config *cfg) {
   /* Detect init system once - used for seccomp and cgroup setup */
   int is_systemd = is_systemd_rootfs(cfg->rootfs_path);
 
-  /* Apply Seccomp filters early for host protection.
-   * Minimal blocks kexec/module loading for all kernels/modes.
-   * Android setup handles keyring compat and manual deadlock shield. */
-  ds_seccomp_apply_minimal(cfg->hw_access, cfg->privileged_mask);
-  android_seccomp_setup(is_systemd,
-                        cfg->block_nested_ns &&
-                            !(cfg->privileged_mask & DS_PRIV_NOSEC));
-
   /* 3. Setup volatile overlay INSIDE the container's mount namespace.
    * This MUST happen here (not in parent) so the overlay's connection to
    * its lowerdir (e.g. a loop-mounted image) survives mount privatization. */
@@ -506,8 +498,14 @@ int internal_boot(struct ds_config *cfg) {
   }
 
   /* 23c. Apply security hardening (capabilities)
+   * Apply security hardening (capabilities and seccomp)
    * This is done at the very end to ensure all setup tasks that might need
-   * privileges (like chown/chmod) are finished. */
+   * privileges (like chown/chmod or mknod) are finished. */
+  ds_seccomp_apply_minimal(cfg->hw_access, cfg->privileged_mask);
+  android_seccomp_setup(is_systemd,
+                        cfg->block_nested_ns &&
+                            !(cfg->privileged_mask & DS_PRIV_NOSEC));
+
   ds_apply_capability_hardening(cfg->hw_access, cfg->privileged_mask);
 
   /* 24. Redirect standard I/O to /dev/console */
