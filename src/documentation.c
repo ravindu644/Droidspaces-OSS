@@ -408,8 +408,18 @@ static volatile int g_terminal_resized = 0;
 
 /* Signal handler for terminal resize */
 static void handle_sigwinch(int sig) {
-  (void)sig; /* Unused */
+  (void)sig;
   g_terminal_resized = 1;
+}
+
+static struct termios *g_old_tios_ptr = NULL;
+static void handle_sigint(int sig) {
+  (void)sig;
+  if (g_old_tios_ptr)
+    tcsetattr(STDIN_FILENO, TCSAFLUSH, g_old_tios_ptr);
+  printf("\033[?25h"); /* SHOW_CURSOR */
+  write(STDOUT_FILENO, "\033[2J\033[H", 7); /* clear screen */
+  _exit(0);
 }
 
 /* Print documentation with interactive navigation */
@@ -431,7 +441,8 @@ void print_documentation(const char *argv0) {
   }
 
   /* Save original terminal settings */
-  struct termios old_tios, new_tios;
+  static struct termios old_tios;
+  struct termios new_tios;
   if (tcgetattr(STDIN_FILENO, &old_tios) < 0) {
     ds_error("Failed to get terminal attributes: %s", strerror(errno));
     return;
@@ -452,6 +463,11 @@ void print_documentation(const char *argv0) {
   sigemptyset(&sa.sa_mask);
   sa.sa_flags = 0;
   sigaction(SIGWINCH, &sa, NULL);
+
+  sa.sa_handler = handle_sigint;
+  sigaction(SIGINT, &sa, NULL);
+  sigaction(SIGTERM, &sa, NULL);
+  g_old_tios_ptr = &old_tios;
 
   setvbuf(stdout, NULL, _IONBF, 0);
 
