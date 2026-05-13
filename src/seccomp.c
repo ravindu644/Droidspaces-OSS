@@ -13,6 +13,13 @@
 #include <stddef.h>
 #include <sys/prctl.h>
 
+/* AUDIT_ARCH_RISCV64 was added to linux/audit.h in 4.15.  Older kernel
+ * headers don't have it; fall back to the canonical value
+ * (EM_RISCV | __AUDIT_ARCH_64BIT | __AUDIT_ARCH_LE). */
+#ifndef AUDIT_ARCH_RISCV64
+#define AUDIT_ARCH_RISCV64 0xC00000F3u
+#endif
+
 /* ---------------------------------------------------------------------------
  * Android System Call Filtering (Seccomp)
  * ---------------------------------------------------------------------------*/
@@ -42,6 +49,9 @@ int ds_seccomp_apply_minimal(int hw_access, int privileged_mask) {
 #elif defined(__i386__)
   filter[curr++] = (struct sock_filter)BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K,
                                                 AUDIT_ARCH_I386, 1, 0);
+#elif defined(__riscv) && __riscv_xlen == 64
+  filter[curr++] = (struct sock_filter)BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K,
+                                                AUDIT_ARCH_RISCV64, 1, 0);
 #endif
   filter[curr++] =
       (struct sock_filter)BPF_STMT(BPF_RET | BPF_K, SECCOMP_RET_KILL_PROCESS);
@@ -233,6 +243,8 @@ int android_seccomp_setup(int is_systemd, int block_nested_ns) {
       BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, AUDIT_ARCH_ARM, 1, 0),
 #elif defined(__i386__)
       BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, AUDIT_ARCH_I386, 1, 0),
+#elif defined(__riscv) && __riscv_xlen == 64
+      BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, AUDIT_ARCH_RISCV64, 1, 0),
 #endif
       BPF_STMT(BPF_RET | BPF_K, SECCOMP_RET_KILL_PROCESS), /* wrong arch */
       BPF_STMT(BPF_LD | BPF_W | BPF_ABS, offsetof(struct seccomp_data, nr)),

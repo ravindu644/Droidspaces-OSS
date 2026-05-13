@@ -10,6 +10,7 @@ TARGETS["x86"]="i686-linux-musl"
 TARGETS["x86_64"]="x86_64-linux-musl"
 TARGETS["aarch64"]="aarch64-linux-musl"
 TARGETS["armhf"]="arm-linux-musleabihf"
+TARGETS["riscv64"]="riscv64-linux-musl"
 
 usage() {
     echo "Usage: $0 <arch>"
@@ -19,6 +20,7 @@ usage() {
     echo "  x86_64    (x86_64-linux-musl)"
     echo "  aarch64   (aarch64-linux-musl)"
     echo "  armhf     (arm-linux-musleabihf)"
+    echo "  riscv64   (riscv64-linux-musl)"
     echo ""
     echo "Example: $0 aarch64"
     exit 1
