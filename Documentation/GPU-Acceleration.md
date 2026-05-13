@@ -133,6 +133,13 @@ For Qualcomm Adreno GPUs, Droidspaces supports **native hardware acceleration** 
    ```bash
    dbus-launch --exit-with-session startxfce4
    ```
+
+> [!TIP]
+>
+> **If you encountered any problems related to dri3,** try edit `/data/adb/modules/droidspaces/etc/droidspaces.te` and uncomet line:
+>
+> `allow untrusted_app_27 droidspacesd fd use`
+
 ---
 
 <a id="linux"></a>
