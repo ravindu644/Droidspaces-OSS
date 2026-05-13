@@ -78,6 +78,14 @@ jobs:
     - name: Grant execute permission for gradlew
       run: chmod +x Android/gradlew
 
+    - name: Generate Contributors
+      continue-on-error: true
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        pip install -q requests
+        python3 scripts/generate_contributors.py
+
     - name: Build Android App with Gradle
       env:
         KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}

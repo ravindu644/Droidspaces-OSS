@@ -124,8 +124,6 @@
     <string name="copy">复制</string>
     <string name="unknown">未知</string>
     <string name="developer_ravindu644_role">后端、UI</string>
-    <string name="developer_thesithumsandaruwan" translatable="false">thesithumsandaruwan</string>
-    <string name="developer_thesithumsandaruwan_role">UI</string>
     <string name="hostname_label">主机名：%1$s</string>
     <string name="start">启动</string>
     <string name="stop">停止</string>

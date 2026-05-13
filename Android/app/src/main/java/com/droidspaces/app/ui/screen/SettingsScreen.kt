@@ -49,6 +49,10 @@ import com.droidspaces.app.util.PreferencesManager
 import com.droidspaces.app.util.LocaleHelper
 import com.droidspaces.app.util.ContributorManager
 import com.droidspaces.app.util.Contributor
+import android.graphics.BitmapFactory
+import android.util.Base64
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.foundation.Image
 import com.droidspaces.app.util.SymlinkInstaller
 import androidx.core.content.edit
 import java.util.Locale
@@ -568,42 +572,6 @@ private fun AboutDialog(onDismiss: () -> Unit) {
                         tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
                     )
                 }
-                // Developer 2
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable {
-                            val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/thesithumsandaruwan"))
-                            context.startActivity(intent)
-                        },
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Person,
-                        contentDescription = null,
-                        modifier = Modifier.size(20.dp),
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = context.getString(R.string.developer_thesithumsandaruwan),
-                            style = MaterialTheme.typography.bodyMedium,
-                            fontWeight = FontWeight.Medium
-                        )
-                        Text(
-                            text = context.getString(R.string.developer_thesithumsandaruwan_role),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                    }
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.OpenInNew,
-                        contentDescription = context.getString(R.string.github),
-                        modifier = Modifier.size(18.dp),
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
-                    )
-                }
                 Spacer(modifier = Modifier.height(4.dp))
                 HorizontalDivider()
                 Spacer(modifier = Modifier.height(4.dp))
@@ -681,8 +649,7 @@ private fun AboutDialog(onDismiss: () -> Unit) {
                     fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.primary
                 )
-                // Load contributors from XML and display them
-                val contributors = remember { ContributorManager.loadContributors(context) }
+                val contributors = remember { ContributorManager.load(context) }
                 contributors.forEach { contributor ->
                     ContributorItem(
                         contributor = contributor,
@@ -708,43 +675,38 @@ private fun AboutDialog(onDismiss: () -> Unit) {
 }
 
 @Composable
-private fun ContributorItem(
-    contributor: Contributor,
-    onClick: () -> Unit
-) {
+private fun ContributorItem(contributor: Contributor, onClick: () -> Unit) {
     val context = LocalContext.current
-
+    val bitmap = remember(contributor.avatarB64) {
+        if (contributor.avatarB64.isNotEmpty()) runCatching {
+            val bytes = Base64.decode(contributor.avatarB64, Base64.DEFAULT)
+            BitmapFactory.decodeByteArray(bytes, 0, bytes.size)?.asImageBitmap()
+        }.getOrNull() else null
+    }
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick),
+        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        Icon(
-            imageVector = Icons.Default.Person,
-            contentDescription = null,
-            modifier = Modifier.size(20.dp),
-            tint = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = contributor.name,
-                style = MaterialTheme.typography.bodyMedium,
-                fontWeight = FontWeight.Medium
+        if (bitmap != null) {
+            Image(
+                bitmap = bitmap,
+                contentDescription = null,
+                modifier = Modifier.size(28.dp).clip(RoundedCornerShape(14.dp))
             )
-            Text(
-                text = contributor.role,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
+        } else {
+            Icon(Icons.Default.Person, contentDescription = null,
+                modifier = Modifier.size(28.dp),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant)
         }
-        Icon(
-            imageVector = Icons.AutoMirrored.Filled.OpenInNew,
+        Column(modifier = Modifier.weight(1f)) {
+            Text(contributor.login, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
+            Text("${contributor.commits} commits", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+        Icon(Icons.AutoMirrored.Filled.OpenInNew,
             contentDescription = context.getString(R.string.github),
             modifier = Modifier.size(18.dp),
-            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
-        )
+            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f))
     }
 }
 

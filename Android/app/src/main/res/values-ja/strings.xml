@@ -238,8 +238,6 @@
     <string name="terminal_card_desc">このコンテナ内で対話可能なシェルを開く</string>
     <string name="select_user_to_enter">コンテナにどのユーザとして入るか選択する:</string>
     <string name="developer_ravindu644_role">バックエンドとユーザーインタフェース</string>
-    <string name="developer_thesithumsandaruwan" translatable="false">thesithumsandaruwan</string>
-    <string name="developer_thesithumsandaruwan_role">ユーザーインタフェース</string>
     <string name="failure_in_operation">%2$sコンテナを%1$sできませんでした</string>
     <string name="uninstall_container_message">これより「%1$s」コンテナとそのデータの恒久的削除を実施します。この操作は取り消せませんぞ。\n\nもしコンテナが実行中だった場合には、先に停止されます。</string>
     <string name="termux_x11">Termux X11を構成する</string>

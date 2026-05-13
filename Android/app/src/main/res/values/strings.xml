@@ -98,9 +98,7 @@
     <string name="about_description">LXC-Style container manager for Android</string>
     <string name="developers">Developer(s)</string>
     <string name="developer_ravindu644">ravindu644</string>
-    <string name="developer_ravindu644_role">Backend, UI</string>
-    <string name="developer_thesithumsandaruwan">thesithumsandaruwan</string>
-    <string name="developer_thesithumsandaruwan_role">UI</string>
+    <string name="developer_ravindu644_role">Maintainer</string>
     <string name="telegram_channel">Telegram Channel</string>
     <string name="contributors">Contributors</string>
     <string name="github">GitHub</string>

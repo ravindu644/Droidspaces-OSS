@@ -292,7 +292,6 @@
     <string name="system_default">系統預設</string>
     <string name="restart_service">重啟服務</string>
     <string name="container_info">容器資訊</string>
-    <string name="developer_thesithumsandaruwan_role">使用者介面</string>
     <string name="ram">RAM:</string>
     <string name="uptime_label">%1$s: %2$s</string>
     <string name="cpu">CPU:</string>

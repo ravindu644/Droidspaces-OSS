@@ -80,12 +80,10 @@
     <string name="generate_bug_report_description">ប្រមូលព័ត៌មានប្រព័ន្ធ និង Log សម្រាប់ដោះស្រាយបញ្ហា</string>
     <string name="telegram_channel">ឆានែលតេលេក្រាម</string>
     <string name="generate_bug_report">បង្កើតរបាយការណ៍កំហុស</string>
-    <string name="developer_thesithumsandaruwan" translatable="false">thesithumsandaruwan</string>
     <string name="stopping_container">កំពុងបញ្ឈប់ Container...</string>
     <string name="about_droidspaces">អំពីកម្មវិធី DroidSpaces</string>
     <string name="developers">អ្នកអភិវឌ្ឍន៍កម្មវិធី</string>
     <string name="developer_ravindu644" translatable="false">ravindu644</string>
-    <string name="developer_thesithumsandaruwan_role">UI</string>
     <string name="backend_attention_required">ផ្នែកខាងក្រោយ៖ ត្រូវការចំណាត់ការ</string>
     <string name="view_logs">មើលកំណត់ហេតុ</string>
     <string name="feat_hardware_title">ទទួលបានសិទ្ធិប្រើប្រាស់ Hardware និង GPU ទាំងស្រុង</string>
