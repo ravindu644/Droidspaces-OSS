@@ -503,7 +503,7 @@ void print_documentation(const char *argv0) {
              " [←/→] Prev/Next   [↑/↓] Scroll (%d/%d)   [q] Quit",
              g_scroll_offset + 1, g_total_lines);
     printf("%s", hint);
-    for (int i = strlen(hint); i < width; i++)
+    for (int i = strlen(hint) - 8; i < width; i++)
       printf(" ");
     printf("%s", RESET_TERMINAL);
 
