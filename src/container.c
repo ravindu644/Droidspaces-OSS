@@ -403,6 +403,41 @@ int start_rootfs(struct ds_config *cfg) {
                  sizeof(cfg->img_mount_point));
   }
 
+  /* 2a. Verify /sbin/init exists before any side effects (NAT, config save).
+   * For rootfs.img mode the image is now mounted; for directory mode the
+   * rootfs_path is already set.  Either way we have a valid host path. */
+  {
+    char init_path[PATH_MAX];
+    char rootfs_norm[PATH_MAX];
+    if (cfg->is_img_mount && cfg->img_mount_point[0])
+      safe_strncpy(rootfs_norm, cfg->img_mount_point, sizeof(rootfs_norm));
+    else
+      safe_strncpy(rootfs_norm, cfg->rootfs_path, sizeof(rootfs_norm));
+    size_t rlen = strlen(rootfs_norm);
+    if (rlen > 0 && rootfs_norm[rlen - 1] == '/')
+      rootfs_norm[rlen - 1] = '\0';
+
+    snprintf(init_path, sizeof(init_path), "%.4080s/sbin/init", rootfs_norm);
+    struct stat st;
+    if (lstat(init_path, &st) != 0) {
+      ds_error("Init binary not found: %s", init_path);
+      ds_error(
+          "Please ensure the rootfs path is correct and contains /sbin/init.");
+      if (cfg->is_img_mount)
+        unmount_rootfs_img(cfg->img_mount_point, cfg->foreground);
+      return -1;
+    }
+    /* Absolute symlinks resolve correctly inside the container after
+     * pivot_root, so skip the X_OK check for symlinks. */
+    if (!S_ISLNK(st.st_mode) && access(init_path, X_OK) != 0) {
+      ds_error("Init binary is not executable: %s", init_path);
+      ds_error("Ensure it has executable permissions.");
+      if (cfg->is_img_mount)
+        unmount_rootfs_img(cfg->img_mount_point, cfg->foreground);
+      return -1;
+    }
+  }
+
   /* 2b. Android Termux Bridge Preparation - only if flag is set */
   if (is_android() && cfg->termux_x11) {
     stop_termux_if_running();
@@ -479,40 +514,6 @@ int start_rootfs(struct ds_config *cfg) {
   }
 
   /* 4. Parent-side PTY allocation (LXC Model) */
-  /* CRITICAL: Before forking, verify /sbin/init exists in the rootfs */
-  char init_path[PATH_MAX];
-  char rootfs_norm[PATH_MAX];
-  if (cfg->is_img_mount && cfg->img_mount_point[0]) {
-    safe_strncpy(rootfs_norm, cfg->img_mount_point, sizeof(rootfs_norm));
-  } else {
-    safe_strncpy(rootfs_norm, cfg->rootfs_path, sizeof(rootfs_norm));
-  }
-  size_t rlen = strlen(rootfs_norm);
-  if (rlen > 0 && rootfs_norm[rlen - 1] == '/')
-    rootfs_norm[rlen - 1] = '\0';
-
-  snprintf(init_path, sizeof(init_path), "%.4080s/sbin/init", rootfs_norm);
-  struct stat st;
-  if (lstat(init_path, &st) != 0) {
-    ds_error("Init binary not found: %s", init_path);
-    ds_error(
-        "Please ensure the rootfs path is correct and contains /sbin/init.");
-    goto cleanup;
-  }
-
-  /*
-   * Robust Check: If it's a symlink, we MUST assume it's valid.
-   * Absolute symlinks (e.g. /sbin/init -> /lib/systemd/systemd) will appear
-   * "broken" from the host's perspective, but will resolve correctly inside
-   * the container after pivot_root.
-   */
-  if (!S_ISLNK(st.st_mode) && access(init_path, X_OK) != 0) {
-    ds_error("Init binary is not executable: %s", init_path);
-    ds_error("Ensure it has executable permissions.");
-    if (cfg->is_img_mount)
-      unmount_rootfs_img(cfg->img_mount_point, cfg->foreground);
-    return -1;
-  }
 
   /* Firmware path - hw_access mode only.
    * By this point cfg->rootfs_path is fully resolved and the
@@ -1414,7 +1415,6 @@ int enter_rootfs(struct ds_config *cfg, const char *user) {
     parse_env_file_to_config(cfg->env_file, cfg);
     ds_log_silent = prev_silent;
   }
-
 
   /* PTY allocation is deferred until after entering the container namespaces.
    * This ensures the slave PTY is part of the container's private devpts
