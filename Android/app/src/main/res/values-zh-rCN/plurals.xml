@@ -3,4 +3,7 @@
     <plurals name="container_count">
         <item quantity="other">%d 个容器</item>
     </plurals>
+    <plurals name="commit_count">
+        <item quantity="other">%d 次提交</item>
+    </plurals>
 </resources>

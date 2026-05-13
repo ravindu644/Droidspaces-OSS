@@ -68,14 +68,14 @@
     <string name="requirements">要求</string>
     <string name="kernel_requirements">内核要求</string>
     <string name="system_default">系统默认</string>
-    <string name="follow_system_theme">跟随系统</string>
+    <string name="follow_system_theme">跟随系统主题</string>
     <string name="follow_system_theme_description">自动跟随系统主题</string>
     <string name="dark_theme">深色模式</string>
     <string name="dark_theme_description">开启深色模式</string>
     <string name="amoled_mode">AMOLED 模式</string>
     <string name="amoled_mode_description">为 OLED 屏幕提供纯黑背景</string>
     <string name="dynamic_color">使用系统默认配色方案</string>
-    <string name="dynamic_color_description">使用 Android 12+ Monet 动态色彩 (Material You)</string>
+    <string name="dynamic_color_description">使用 Android 12+ Monet 主题 (Material You)</string>
     <string name="daemon_mode">守护进程模式</string>
     <string name="daemon_mode_description">将 Droidspaces 作为持久的系统级守护进程运行，以绕过来自 Magisk/APatch、GrapheneOS 等的 seccomp 限制。这允许通过从用户空间获取并运行命令来实现高权限操作。（重启后生效）</string>
     <string name="about_description">适用于 Android 的 LXC 风格容器管理器</string>
@@ -123,7 +123,7 @@
     <string name="reinstall_backend_description">重新安装二进制文件和模块</string>
     <string name="copy">复制</string>
     <string name="unknown">未知</string>
-    <string name="developer_ravindu644_role">后端、UI</string>
+    <string name="developer_ravindu644_role">維護者</string>
     <string name="hostname_label">主机名：%1$s</string>
     <string name="start">启动</string>
     <string name="stop">停止</string>

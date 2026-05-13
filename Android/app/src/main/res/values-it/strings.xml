@@ -410,4 +410,30 @@
     <string name="export_container">Esporta il contenitore come tarball</string>
     <string name="export_container_failed">Esportazione del contenitore %1$s non riuscita</string>
     <string name="starting_export">Avvio dell\'esportazione in corso...</string>
+    <string name="welcome_tagline">Contenitori Linux. Nativi. Nessun overhead.</string>
+    <string name="feat_containers_title">Contenitori Linux reali</string>
+    <string name="feat_containers_desc">Stessa tecnologia di namespace del kernel di LXC, Podman e Docker. Nessuna emulazione, nessun chroot.</string>
+    <string name="feat_overhead_title">Zero overhead</string>
+    <string name="feat_overhead_desc">Comunica direttamente con il kernel Linux host. Nessun hypervisor, nessun livello di macchina virtuale.</string>
+    <string name="feat_unkillable_title">Indistruttibile per progettazione</string>
+    <string name="feat_unkillable_desc">Supporta l\'integrazione nativa init.rc e daemon userspace a 2 livelli. Completamente indistruttibile.</string>
+    <string name="feat_init_title">systemd / OpenRC come PID 1</string>
+    <string name="feat_init_desc">Supporto completo del sistema init. Gestione dei servizi reale, non un ambiente simulato.</string>
+    <string name="feat_isolation_title">Isolamento completo</string>
+    <string name="feat_isolation_desc">Albero PID privato, tabella di montaggio, nome host, IPC e gerarchia cgroup per contenitore.</string>
+    <string name="feat_hardware_title">Accesso completo hardware/GPU</string>
+    <string name="feat_hardware_desc">Esporre l\'hardware host (GPU, sensori, USB, dispositivi a blocchi) direttamente ai contenitori.</string>
+    <string name="feat_privileged_title">Contenitori con privilegi completi</string>
+    <string name="feat_privileged_desc">Abbassa le barriere di sicurezza con la modalità privilegiata per utenti avanzati.</string>
+    <string name="feat_autoboot_title">Avvio automatico all\'accensione</string>
+    <string name="feat_autoboot_desc">Avvia automaticamente i contenitori all\'avvio, anche se lo schermo è bloccato e i dati sono crittografati.</string>
+    <string name="kernel_requirements_nongki">Requisiti Kernel non-GKI (&lt;=4.19)</string>
+    <string name="kernel_requirements_gki">Requisiti Kernel GKI (&gt;=5.4)</string>
+    <string name="guide">Guida</string>
+    <string name="gpu_option">GPU</string>
+    <string name="selinux_permissive_option">SELinux Permissive</string>
+    <string name="volatile_option">Volatile</string>
+    <string name="cgroup_v1_option">Cgroup V1</string>
+    <string name="deadlock_shield_option">Scudo di blocco</string>
+    <string name="privileged_option">Privilegiato</string>
 </resources>

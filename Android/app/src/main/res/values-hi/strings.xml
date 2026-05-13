@@ -259,4 +259,14 @@
     <string name="requirements_check_completed_successfully">आवश्यकता जांच सफलतापूर्वक पूर्ण हुई</string>
     <string name="requirements_check_completed_with_errors">आवश्यकता जांच त्रुटियों के साथ पूर्ण हुई</string>
     <string name="kernel_requirements_copied">कर्नेल आवश्यकताएँ क्लिपबोर्ड में कॉपी की गईं</string>
+    <string name="welcome_tagline">Linux कंटेनर। नेटिव। बिना किसी ओवरहेड के।</string>
+    <string name="feat_containers_title">असली Linux कंटेनर</string>
+    <string name="feat_containers_desc">LXC, Podman और Docker के समान kernel namespace तकनीक। कोई emulation नहीं, कोई chroot नहीं।</string>
+    <string name="feat_overhead_title">शून्य ओवरहेड</string>
+    <string name="feat_overhead_desc">सीधे होस्ट Linux kernel से संपर्क करता है। कोई hypervisor नहीं, कोई virtual machine लेयर नहीं।</string>
+    <string name="feat_unkillable_title">डिज़ाइन से अवध्य</string>
+    <string name="feat_unkillable_desc">नेटिव init.rc एकीकरण और दो स्तरीय userspace daemons को सपोर्ट करता है। पूरी तरह से अमर।</string>
+    <string name="feat_init_title">systemd / Open RC को PID 1 के तौर पर</string>
+    <string name="feat_init_desc">पूर्ण init system समर्थन । वास्तविक service management, नकली वातावरण नहीं।</string>
+    <string name="feat_isolation_title">पूर्ण आइसोलेशन</string>
 </resources>

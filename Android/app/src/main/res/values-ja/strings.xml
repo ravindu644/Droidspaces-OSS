@@ -98,7 +98,7 @@
     <string name="start">開始</string>
     <string name="stop">停止</string>
     <string name="restart">再始動</string>
-    <string name="ipv6_option">IPv6無効</string>
+    <string name="ipv6_option">IPv6無効化</string>
     <string name="storage_option">保存領域</string>
     <string name="hw_option">ハードウェア</string>
     <string name="x11_option">X11</string>
@@ -331,4 +331,21 @@
     <string name="copy_login">ログインをコピー</string>
     <string name="manual_deadlock_shield_description">名前空間が入れ子で生成される事を阻止する事で旧式な(例えば4.14系)カーネルにおいてカーネルレベルの仮想ファイルシステムのデッドロックを予防します。\n\n警告: これを有効化するとコンテナ内でDocker、Podman、LXCや Systemd のサンドボックス化が使えなくなります。</string>
     <string name="notification_permission_rationale">ドロイドスペースはターミナルのセッションをバックグラウンドで維持するため、永続通知の表示が必要です。これが無いと(特にサムスン電子製の機器では)Androidが予期せずターミナル・サービスを強制終了するかもしれません。</string>
+    <string name="welcome_tagline">Linuxコンテナ。ネイティブ。付加処理無し。</string>
+    <string name="feat_containers_title">本物のLinuxコンテナ</string>
+    <string name="feat_containers_desc">LXC、Podman、Docker同様のカーネル名前空間技術を採用しています。エミュレーションでもchrootでもありません。</string>
+    <string name="feat_overhead_title">付加処理無し</string>
+    <string name="feat_unkillable_title">勝手に強制終了されない設計</string>
+    <string name="feat_init_title">systemd / OpenRC は PID 1 として作動します</string>
+    <string name="feat_isolation_title">完璧な隔離環境</string>
+    <string name="install">インストール</string>
+    <string name="gpu_option">画像処理装置</string>
+    <string name="uptime_label">%1$s: %2$s</string>
+    <string name="ip_address_label">%1$s: %2$s</string>
+    <string name="env_hint_row">KEY=VALUE は各行に一対です</string>
+    <string name="key_label">キー</string>
+    <string name="value_label">値</string>
+    <string name="add_variable">変数を追加</string>
+    <string name="installing_container">コンテナをインストールしています</string>
+    <string name="done">完了</string>
 </resources>
