@@ -701,7 +701,7 @@ private fun ContributorItem(contributor: Contributor, onClick: () -> Unit) {
         }
         Column(modifier = Modifier.weight(1f)) {
             Text(contributor.login, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
-            Text("${contributor.commits} commits", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(context.resources.getQuantityString(R.plurals.commit_count, contributor.commits, contributor.commits), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
         Icon(Icons.AutoMirrored.Filled.OpenInNew,
             contentDescription = context.getString(R.string.github),

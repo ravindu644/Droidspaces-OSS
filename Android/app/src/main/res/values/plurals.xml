@@ -4,4 +4,8 @@
         <item quantity="one">%d container</item>
         <item quantity="other">%d containers</item>
     </plurals>
+    <plurals name="commit_count">
+        <item quantity="one">%d commit</item>
+        <item quantity="other">%d commits</item>
+    </plurals>
 </resources>
