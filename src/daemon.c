@@ -22,6 +22,10 @@
  */
 
 #include "droidspace.h"
+#ifdef DS_ENABLE_SOCKETD_BACKEND
+#include "socketd_bridge.h"
+#endif
+
 #include <arpa/inet.h>
 #include <grp.h>
 #include <poll.h>
@@ -814,6 +818,11 @@ int ds_daemon_run(int foreground, char **argv) {
 
   /* SIGUSR2: app sends this after a live binary swap as an acknowledgment */
   signal(SIGUSR2, sigusr2_handler);
+
+#ifdef DS_ENABLE_SOCKETD_BACKEND
+  if (ds_socketd_bridge_start() < 0)
+    ds_warn("Failed to start droidspaces-socketd backend bridge: %s", strerror(errno));
+#endif
 
   /* Write PID file so the Android app can signal us */
   {

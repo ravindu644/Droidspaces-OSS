@@ -14,6 +14,11 @@ NPROC := $(shell nproc 2>/dev/null || sysctl -n hw.logicalcpu 2>/dev/null || ech
 
 # Verbose control - V=1 shows full commands, V=0 (default) shows kernel-style short logs
 V ?= 0
+
+# Optional private control bridge for the external C++ droidspaces-socketd.
+# Keep this off by default so the stock static Droidspaces binary stays unchanged.
+ENABLE_SOCKETD_BACKEND ?= 0
+
 ifeq ($(V),1)
   Q       =
   msg_cc  =
@@ -57,6 +62,11 @@ CFLAGS += -Wduplicated-cond -Wduplicated-branches -Wimplicit-fallthrough=3
 CFLAGS += -fstack-protector-strong
 LDFLAGS = -static -no-pie -flto=auto -pthread
 LIBS    = -lutil
+
+ifeq ($(ENABLE_SOCKETD_BACKEND),1)
+  CFLAGS += -DDS_ENABLE_SOCKETD_BACKEND=1
+  SRCS += $(SRC_DIR)/socketd_bridge.c
+endif
 
 # Auto-detect architecture from compiler
 ARCH := $(shell $(CC) -dumpmachine 2>/dev/null | cut -d'-' -f1 | \
@@ -103,6 +113,8 @@ help:
 	@echo ""
 	@echo "Options:"
 	@echo "  V=1            - Show full compiler commands"
+	@echo "  ENABLE_SOCKETD_BACKEND=1"
+	@echo "                 - Compile the private droidspaces-socketd backend bridge"
 	@echo ""
 	@echo "Other:"
 	@echo "  make clean     - Remove build artifacts"
