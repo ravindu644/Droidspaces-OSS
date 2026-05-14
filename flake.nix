@@ -127,6 +127,8 @@
       # Sets ram and cpu dynamically
       mkDynamicVM = nixos:
         pkgs.writeShellScriptBin "run-${nixos.config.networking.hostName}" ''
+          PATH="$PATH:${lib.makeBinPath (with pkgs; [coreutils gnugrep gawk])}"
+
           CORES=$(nproc)
           VM_CORES=$((CORES / 2))
           ((VM_CORES < 1)) && VM_CORES=1
@@ -137,7 +139,7 @@
 
           export QEMU_OPTS="-m ''${VM_RAM_MB}M -smp $VM_CORES $QEMU_OPTS"
           echo "Starting VM with $VM_CORES cores and ''${VM_RAM_MB}MB RAM..."
-          exec ${nixos.config.system.build.vm}/bin/run-test-vm "$@"
+          exec ${nixos.config.system.build.vm}/bin/run-*-vm "$@"
         '';
     in {
       packages.default = mkDroidspacesPackage pkgs pkgs.pkgsMusl;
@@ -178,7 +180,7 @@
 
             nixos-rootfs = mkDynamicVM (nixpkgs.lib.nixosSystem {
               inherit system;
-              modules = [self.nixosModules.test-system-nixos-roots];
+              modules = [self.nixosModules.test-system-nixos-rootfs];
             });
           });
         in {
@@ -215,7 +217,7 @@
     })
     // {
       nixosModules = {
-        test-system-nixos-roots = {pkgs, ...}: {
+        test-system-nixos-rootfs = {pkgs, ...}: {
           imports = [self.nixosModules.test-system-base];
 
           environment.variables.NIXOS_ROOTFS = let
