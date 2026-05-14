@@ -1691,6 +1691,20 @@ int run_in_rootfs(struct ds_config *cfg, int argc, char **argv,
       ds_env_boot_setup(cfg);
       load_etc_environment();
 
+      /* Append NixOS binary path so Nix-managed tools (e.g. ip, hostname)
+       * are available without requiring the caller to prefix PATH manually. */
+      {
+        const char *cur_path = getenv("PATH");
+        if (cur_path) {
+          char nix_path[4096];
+          snprintf(nix_path, sizeof(nix_path), "%s:/run/current-system/sw/bin",
+                   cur_path);
+          setenv("PATH", nix_path, 1);
+        } else {
+          setenv("PATH", "/run/current-system/sw/bin", 1);
+        }
+      }
+
       /* Run the command directly as an alien process (instant results) */
       if (as_user != NULL) {
         /* Build the command string for su -c.
