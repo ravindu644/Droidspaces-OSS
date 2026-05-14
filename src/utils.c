@@ -1138,7 +1138,7 @@ int is_systemd_rootfs(const char *path) {
   struct stat st;
   size_t path_len = strlen(path);
 
-  /* Precise check for systemd binary locations */
+  /* Standard systemd binary locations (not present on NixOS -- nix store). */
   const char *check_paths[] = {"/lib/systemd/systemd",
                                "/usr/lib/systemd/systemd", "/bin/systemd",
                                "/usr/bin/systemd"};
@@ -1155,17 +1155,20 @@ int is_systemd_rootfs(const char *path) {
     }
   }
 
-  /* Fallback: Check if /sbin/init is a symlink to systemd */
-  if (path_len + 11 < sizeof(buf)) {
+  /* Fallback: /sbin/init symlink target -- covers systemd and NixOS. */
+  if (path_len + 12 <= sizeof(buf)) { /* 10 chars + '/' prefix + '\0' = 12 */
     memcpy(buf, path, path_len);
     memcpy(buf + path_len, "/sbin/init", 11);
     char link_target[PATH_MAX];
     ssize_t len = readlink(buf, link_target, sizeof(link_target) - 1);
     if (len != -1) {
       link_target[len] = '\0';
-      if (strstr(link_target, "systemd")) {
+      if (strstr(link_target, "systemd"))
         return 1;
-      }
+      /* NixOS: /sbin/init -> /nix/store/<hash>-nixos-system-.../init
+       * That wrapper execs systemd. The nix store path is unique enough. */
+      if (strstr(link_target, "/nix/store"))
+        return 1;
     }
   }
 
