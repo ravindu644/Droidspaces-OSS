@@ -54,8 +54,21 @@ if $TEST -f "$ROOTFS_PATH/etc/droidspaces"; then
     exit 0
 fi
 
+# Detect NixOS
+IS_NIXOS=0
+if $GREP -qi "ID=nixos" "$ROOTFS_PATH/etc/os-release" 2>/dev/null; then
+    IS_NIXOS=1
+    log "NixOS detected, chroot-based fixes will be skipped"
+fi
+
 # Helper to execute a command inside the chroot environment
 run_in_chroot() {
+    # Skip for NixOS: Non-FHS structure means /bin/sh is often missing or broken
+    # until the Nix store is properly mounted and configured.
+    if [ "$IS_NIXOS" -eq 1 ]; then
+        return 0
+    fi
+
     local command="$*"
     local common_exports="export PATH='/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/libexec:/opt/bin'; export TMPDIR='/tmp';"
     
