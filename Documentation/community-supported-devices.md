@@ -13,6 +13,7 @@ This document is a community-maintained compatibility list for Android devices k
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | **Galaxy S10 (Japanese variant)** | SCV41 / SM-G973J | One UI 4.1 - Android 12 | `SCV41KDU1DWC1` | `4.14.190` | KernelSU-Next v3.1.0 | [Source](https://github.com/ravindu644/samsung_kernel_SCV41_droidspaces) | [Download](https://github.com/ravindu644/samsung_kernel_SCV41_droidspaces/releases/download/v2/Droidspaces-KSUN-Samsung-SCV41.tar) | Both | Turnip & Virgl | Working | [@ravindu644](https://github.com/ravindu644) | - |
 | **Poco X2** | M1912G7Bx | BlissROM-v16.5 - Android 13 | - | `4.14.274` | KernelSU-Next v1.1.1 | [Source](https://github.com/ravindu644/phoenix-blissROM-A13-droidspaces) | [Download](https://github.com/ravindu644/phoenix-blissROM-A13-droidspaces/releases/download/v1/Droidspaces-KSUNv1.1.1-phoenix.zip) | Both | Turnip & Virgl | Working | [@ravindu644](https://github.com/ravindu644) | - |
+| **Realme 6, 6i, 6s** | RMX2001L1 | RUI 2.0 - Android 11 | - | `4.14.336` | KSU-Next v3.2.0 / ReSukiSU v4.1.0 | [Source](https://github.com/Prime-TITAN-CameraMan/android_kernel_realme_nemo) | [Download](https://github.com/Prime-TITAN-CameraMan/android_kernel_realme_nemo/releases/tag/v1.1) | Both | Virgl | Working | [@Prime-TITAN-CameraMan](https://github.com/Prime-TITAN-CameraMan) | RUI 2.0 only & No Firewall Support (UFW/Fail2ban) |
 
 ## GKI Devices (Kernel 5.4 and up)
 
