@@ -59,7 +59,7 @@ class ContainerInstallationViewModel : ViewModel() {
     var envFileContent: String? by mutableStateOf(null)
         private set
 
-    var useSparseImage: Boolean by mutableStateOf(false)
+    var useSparseImage: Boolean by mutableStateOf(true)
         private set
 
     var sparseImageSizeGB: Int by mutableStateOf(8)
@@ -183,7 +183,7 @@ class ContainerInstallationViewModel : ViewModel() {
         dnsServers = ""
         runAtBoot = false
         envFileContent = null
-        useSparseImage = false
+        useSparseImage = true
         sparseImageSizeGB = 8
         upstreamInterfaces = emptyList()
         portForwards = emptyList()
