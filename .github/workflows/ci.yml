@@ -37,30 +37,33 @@ jobs:
     - name: Install dependencies
       run: |
         sudo apt update
-        sudo apt install -y build-essential wget tree
+        sudo apt install -y build-essential wget tree zstd
 
     - name: Download Toolchains
       run: |
         mkdir -p $HOME/toolchains
         cd $HOME/toolchains
-        BASE_URL="https://github.com/ravindu644/Droidspaces-OSS/releases/download/compilers"
+        BASE_URL="https://github.com/ravindu644/Droidspaces-OSS/releases/download/compilers-25843896720"
 
         echo "[*] Downloading aarch64 toolchain..."
-        wget -q $BASE_URL/aarch64-linux-musl-cross.tar.gz
+        wget -q $BASE_URL/aarch64-linux-musl-cross.tar.zst
 
         echo "[*] Downloading armhf toolchain..."
-        wget -q $BASE_URL/arm-linux-musleabihf-cross.tar.gz
+        wget -q $BASE_URL/arm-linux-musleabihf-cross.tar.zst
 
         echo "[*] Downloading x86 toolchain..."
-        wget -q $BASE_URL/i686-linux-musl-cross.tar.gz
+        wget -q $BASE_URL/i686-linux-musl-cross.tar.zst
 
         echo "[*] Downloading x86_64 toolchain..."
-        wget -q $BASE_URL/x86_64-linux-musl-cross.tar.gz
+        wget -q $BASE_URL/x86_64-linux-musl-cross.tar.zst
+
+        echo "[*] Downloading riscv64 toolchain..."
+        wget -q $BASE_URL/riscv64-linux-musl-cross.tar.zst
 
         echo "[*] Extracting toolchains..."
-        for f in *.tar.gz; do
+        for f in *.tar.zst; do
           echo "Extracting $f..."
-          tar -xzf "$f"
+          tar -xf "$f"
         done
 
         echo "[+] Toolchains ready."
