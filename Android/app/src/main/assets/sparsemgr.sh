@@ -213,7 +213,7 @@ _migrate_cleanup() {
         _umount -l "$ROOTFS_SPARSE" 2>/dev/null
     }
     _rm -rf "$ROOTFS_SPARSE"
-    _rm -f  "$ROOTFS_IMG"
+    _rm -f  "${ROOTFS_IMG}"
     log "Cleanup done - original rootfs is preserved"
 }
 
@@ -654,8 +654,14 @@ if [ "$COMMAND" = "migrate" ]; then
     ROOTFS_DIR="$BASE_DIR/rootfs"
     ROOTFS_IMG="$BASE_DIR/rootfs.img"
     ROOTFS_SPARSE="$BASE_DIR/rootfs.sparse"   # temp mount point during migration
+    # Validate path length for losetup (kernel limit: 64 bytes)
+    if [ "${#ROOTFS_IMG}" -gt 64 ]; then
+        error "Container path is too long for losetup (${#ROOTFS_IMG}/64 bytes): $ROOTFS_IMG"
+        error "Uninstall the container and re-install it with a shorter name."
+        warn  "To prevent container's data loss, it's recommended to backup the container using \"Export container as tarball\" feature before uninstalling!"
+        exit 1
+    fi
 fi
-
 
 # Dispatch
 
