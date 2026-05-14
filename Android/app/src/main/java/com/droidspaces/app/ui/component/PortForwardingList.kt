@@ -110,7 +110,7 @@ private fun AddPortForwardDialog(
     val context = LocalContext.current
     var hostPort by remember { mutableStateOf("") }
     var containerPort by remember { mutableStateOf("") }
-    var protoExpanded by remember { mutableStateOf(false) }
+
     var proto by remember { mutableStateOf("tcp") }
 
     fun validatePortSpec(spec: String): String? {
@@ -240,35 +240,13 @@ private fun AddPortForwardDialog(
                         )
                     )
 
-                    ExposedDropdownMenuBox(
-                        expanded = protoExpanded,
-                        onExpandedChange = { protoExpanded = !protoExpanded }
-                    ) {
-                        OutlinedTextField(
-                            value = proto.uppercase(),
-                            onValueChange = {},
-                            readOnly = true,
-                            label = { Text(context.getString(R.string.protocol)) },
-                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = protoExpanded) },
-                            modifier = Modifier.menuAnchor().fillMaxWidth(),
-                            shape = RoundedCornerShape(16.dp)
-                        )
-                        ExposedDropdownMenu(
-                            expanded = protoExpanded,
-                            onDismissRequest = { protoExpanded = false }
-                        ) {
-                            DropdownMenuItem(
-                                text = { Text(context.getString(R.string.tcp)) }, 
-                                onClick = { proto = "tcp"; protoExpanded = false },
-                                leadingIcon = if (proto == "tcp") {{ Icon(Icons.Default.Check, null, modifier = Modifier.size(18.dp)) }} else null
-                            )
-                            DropdownMenuItem(
-                                text = { Text(context.getString(R.string.udp)) }, 
-                                onClick = { proto = "udp"; protoExpanded = false },
-                                leadingIcon = if (proto == "udp") {{ Icon(Icons.Default.Check, null, modifier = Modifier.size(18.dp)) }} else null
-                            )
-                        }
-                    }
+                    DsDropdown(
+                        label = context.getString(R.string.protocol),
+                        selected = proto,
+                        options = listOf("tcp", "udp"),
+                        displayName = { it.uppercase() },
+                        onSelect = { proto = it }
+                    )
                 }
 
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {

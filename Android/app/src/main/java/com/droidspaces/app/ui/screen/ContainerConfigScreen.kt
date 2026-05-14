@@ -17,11 +17,13 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.droidspaces.app.ui.component.ToggleCard
-import com.droidspaces.app.ui.component.NetworkModeSelector
+import com.droidspaces.app.ui.component.DsDropdown
+import androidx.compose.material.icons.filled.Public
 import com.droidspaces.app.ui.component.UpstreamInterfaceList
 import com.droidspaces.app.ui.component.PortForwardingList
 import androidx.compose.ui.platform.LocalContext
 import com.droidspaces.app.R
+import com.droidspaces.app.ui.util.ClearFocusOnClickOutside
 
 import androidx.compose.ui.text.style.TextOverflow
 import com.droidspaces.app.util.BindMount
@@ -284,15 +286,17 @@ fun ContainerConfigScreen(
             }
         }
     ) { innerPadding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
-                .padding(horizontal = 24.dp)
-                .padding(top = 24.dp)
-                .verticalScroll(rememberScrollState()),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ClearFocusOnClickOutside(
+            modifier = Modifier.padding(innerPadding)
         ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = 24.dp)
+                    .padding(top = 24.dp)
+                    .verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
             Text(
                 text = context.getString(R.string.container_options),
                 style = MaterialTheme.typography.headlineSmall,
@@ -308,12 +312,13 @@ fun ContainerConfigScreen(
                 modifier = Modifier.padding(top = 8.dp)
             )
 
-            NetworkModeSelector(
-                netMode = netMode,
-                onModeChange = { mode ->
-                    netMode = mode
-                    if (mode != "host") disableIPv6 = false
-                }
+            DsDropdown(
+                label = context.getString(R.string.network_mode),
+                selected = netMode,
+                options = listOf("host", "nat", "none"),
+                displayName = { context.getString(when (it) { "nat" -> R.string.network_mode_nat; "none" -> R.string.network_mode_none; else -> R.string.network_mode_host }) },
+                onSelect = { mode -> netMode = mode; if (mode != "host") disableIPv6 = false },
+                leadingIcon = Icons.Default.Public
             )
 
             androidx.compose.animation.AnimatedVisibility(
@@ -611,7 +616,7 @@ fun ContainerConfigScreen(
             )
 
             Spacer(modifier = Modifier.height(16.dp))
-
         }
     }
+}
 }

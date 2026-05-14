@@ -47,7 +47,8 @@ import com.droidspaces.app.ui.component.SettingsRowCard
 import com.droidspaces.app.ui.component.EnvironmentVariablesDialog
 import com.droidspaces.app.util.PortForward
 import com.droidspaces.app.ui.component.PrivilegedModeDialog
-import com.droidspaces.app.ui.component.NetworkModeSelector
+import com.droidspaces.app.ui.component.DsDropdown
+import androidx.compose.material.icons.filled.Public
 import com.droidspaces.app.ui.component.UpstreamInterfaceList
 import com.droidspaces.app.ui.component.PortForwardingList
 import androidx.compose.ui.window.Dialog
@@ -537,13 +538,13 @@ fun EditContainerScreen(
                 modifier = Modifier.padding(top = 8.dp)
             )
 
-            NetworkModeSelector(
-                netMode = netMode,
-                onModeChange = { mode ->
-                    clearFocus()
-                    netMode = mode
-                    if (mode != "host") disableIPv6 = false
-                }
+            DsDropdown(
+                label = context.getString(R.string.network_mode),
+                selected = netMode,
+                options = listOf("host", "nat", "none"),
+                displayName = { context.getString(when (it) { "nat" -> R.string.network_mode_nat; "none" -> R.string.network_mode_none; else -> R.string.network_mode_host }) },
+                onSelect = { mode -> clearFocus(); netMode = mode; if (mode != "host") disableIPv6 = false },
+                leadingIcon = Icons.Default.Public
             )
 
             androidx.compose.animation.AnimatedVisibility(
