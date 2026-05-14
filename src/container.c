@@ -1276,7 +1276,41 @@ int stop_rootfs(struct ds_config *cfg, int skip_unmount) {
   case DS_INIT_SYSTEMD:
     kill(pid, DS_SIG_STOP); /* SIGRTMIN+3 */
     break;
-  default: /* openrc, sysvinit, unknown */
+  case DS_INIT_SYSVINIT: {
+    /* sysvinit ignores all signals for shutdown -- it only listens on the
+     * initctl FIFO. Write a telinit-compatible init_request struct directly
+     * into the container's /run/initctl via /proc/<pid>/root. */
+    char initctl[PATH_MAX];
+    snprintf(initctl, sizeof(initctl), "/proc/%d/root/run/initctl", pid);
+
+    /* struct layout from initreq.h: magic(4) cmd(4) runlevel(4) sleeptime(4)
+     * data(368) = 384 bytes total. */
+    struct {
+      int magic;
+      int cmd;
+      int runlevel;
+      int sleeptime;
+      char data[368];
+    } req = {
+        .magic = 0x03091969, /* INIT_MAGIC */
+        .cmd = 1,            /* INIT_CMD_RUNLVL */
+        .runlevel = '0',     /* poweroff */
+        .sleeptime = 3,
+    };
+
+    int fd = open(initctl, O_WRONLY | O_NONBLOCK | O_CLOEXEC);
+    if (fd >= 0) {
+      if (write(fd, &req, sizeof(req)) != (ssize_t)sizeof(req))
+        ds_warn("sysvinit: short write to initctl, falling back to SIGTERM");
+      close(fd);
+    } else {
+      ds_warn("sysvinit: cannot open %s (%s), falling back to SIGTERM", initctl,
+              strerror(errno));
+      kill(pid, SIGTERM);
+    }
+    break;
+  }
+  default: /* openrc, unknown */
     kill(pid, SIGTERM);
     break;
   }
