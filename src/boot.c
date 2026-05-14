@@ -534,9 +534,7 @@ int internal_boot(struct ds_config *cfg) {
       /* Sticky permissions again just in case systemd's TTYReset stripped them
        */
       fchmod(console_fd, 0620);
-      if (fchown(console_fd, 0, DS_DEFAULT_TTY_GID) < 0) {
-        ds_warn("Failed to chown console: %s", strerror(errno));
-      }
+      fchown(console_fd, 0, DS_DEFAULT_TTY_GID); /* best-effort, ignore EPERM */
       if (console_fd > 2)
         close(console_fd);
     }
