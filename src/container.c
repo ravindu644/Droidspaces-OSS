@@ -1257,19 +1257,29 @@ int stop_rootfs(struct ds_config *cfg, int skip_unmount) {
                     sizeof(cfg->img_mount_point));
   }
 
-  /* 1. Try graceful shutdown with a "signal bucket" to support multiple init
-   * systems:
-   * - SIGRTMIN+3: Standard systemd poweroff signal in containers.
-   * - SIGTERM: Universal signal for graceful termination (Alpine/OpenRC reacts
-   * to this).
-   * - SIGPWR: Universal power failure signal (often used by LXC/SysVinit for
-   * shutdown).
-   * - SIGCONT: Shutdown signal for Void/runit.
-   */
-  kill(pid, DS_SIG_STOP);
-  kill(pid, SIGPWR);
-  kill(pid, SIGCONT);
-  kill(pid, SIGTERM);
+  /* 1. Detect init system and send the correct shutdown signal. */
+  ds_init_type_t init_type = DS_INIT_UNKNOWN;
+  const char *probe_root =
+      cfg->img_mount_point[0] ? cfg->img_mount_point : cfg->rootfs_path;
+  if (probe_root[0])
+    init_type = detect_container_init(probe_root);
+
+  switch (init_type) {
+  case DS_INIT_PROCD:
+  case DS_INIT_S6:
+  case DS_INIT_BUSYBOX:
+    kill(pid, SIGUSR2);
+    break;
+  case DS_INIT_RUNIT:
+    kill(pid, SIGCONT);
+    break;
+  case DS_INIT_SYSTEMD:
+    kill(pid, DS_SIG_STOP); /* SIGRTMIN+3 */
+    break;
+  default: /* openrc, sysvinit, unknown */
+    kill(pid, SIGTERM);
+    break;
+  }
   ds_log("Waiting for graceful shutdown (this may take up to %d seconds)...",
          DS_STOP_TIMEOUT);
 

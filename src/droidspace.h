@@ -398,6 +398,19 @@ int ds_recv_fd(int sock);
 void print_ds_banner(void);
 void print_privileged_warning(int privileged_mask);
 int is_systemd_rootfs(const char *path);
+
+typedef enum {
+  DS_INIT_UNKNOWN = 0,
+  DS_INIT_SYSTEMD,  /* SIGRTMIN+3 */
+  DS_INIT_PROCD,    /* SIGUSR2    -- OpenWrt; SIGTERM = reboot there! */
+  DS_INIT_OPENRC,   /* SIGTERM    */
+  DS_INIT_RUNIT,    /* SIGCONT    */
+  DS_INIT_S6,       /* SIGUSR2    */
+  DS_INIT_BUSYBOX,  /* SIGUSR2    */
+  DS_INIT_SYSVINIT, /* SIGTERM    */
+} ds_init_type_t;
+
+ds_init_type_t detect_container_init(const char *path);
 int get_user_shell(const char *user, char *shell_buf, size_t size);
 void check_kernel_recommendation(void);
 void write_monitor_debug_log(const char *name, const char *fmt, ...);

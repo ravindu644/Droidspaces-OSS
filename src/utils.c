@@ -1172,6 +1172,73 @@ int is_systemd_rootfs(const char *path) {
   return 0;
 }
 
+/* Probe the rootfs at `path` to identify its init system.
+ * Uses the same stat+readlink pattern as is_systemd_rootfs. */
+ds_init_type_t detect_container_init(const char *path) {
+  if (!path || path[0] == '\0')
+    return DS_INIT_UNKNOWN;
+
+  char buf[PATH_MAX];
+  struct stat st;
+  size_t plen = strlen(path);
+
+  /* Helper: build "path + suffix" into buf, return 1 on success */
+#define PROBE_PATH(suffix)                                                     \
+  (plen + sizeof(suffix) - 1 < sizeof(buf) &&                                  \
+   (memcpy(buf, path, plen), memcpy(buf + plen, suffix, sizeof(suffix)), 1))
+
+  /* systemd -- reuse existing logic via is_systemd_rootfs */
+  if (is_systemd_rootfs(path))
+    return DS_INIT_SYSTEMD;
+
+  /* procd (OpenWrt) */
+  if ((PROBE_PATH("/sbin/procd") && stat(buf, &st) == 0 &&
+       S_ISREG(st.st_mode)) ||
+      (PROBE_PATH("/usr/sbin/procd") && stat(buf, &st) == 0 &&
+       S_ISREG(st.st_mode)))
+    return DS_INIT_PROCD;
+
+  /* openrc-init */
+  if (PROBE_PATH("/sbin/openrc-init") && stat(buf, &st) == 0 &&
+      S_ISREG(st.st_mode))
+    return DS_INIT_OPENRC;
+
+  /* runit */
+  if ((PROBE_PATH("/sbin/runit") && stat(buf, &st) == 0 &&
+       S_ISREG(st.st_mode)) ||
+      (PROBE_PATH("/usr/bin/runit") && stat(buf, &st) == 0 &&
+       S_ISREG(st.st_mode)))
+    return DS_INIT_RUNIT;
+
+  /* s6 */
+  if ((PROBE_PATH("/bin/s6-svscan") && stat(buf, &st) == 0 &&
+       S_ISREG(st.st_mode)) ||
+      (PROBE_PATH("/usr/bin/s6-svscan") && stat(buf, &st) == 0 &&
+       S_ISREG(st.st_mode)))
+    return DS_INIT_S6;
+
+  /* sysvinit: /sbin/init is NOT a symlink, or symlink points to sysvinit */
+  if (PROBE_PATH("/sbin/init")) {
+    char target[PATH_MAX];
+    ssize_t len = readlink(buf, target, sizeof(target) - 1);
+    if (len == -1) {
+      /* not a symlink -> classic sysvinit binary */
+      if (stat(buf, &st) == 0 && S_ISREG(st.st_mode))
+        return DS_INIT_SYSVINIT;
+    } else {
+      target[len] = '\0';
+      if (strstr(target, "busybox"))
+        return DS_INIT_BUSYBOX;
+      if (strstr(target, "sysvinit") || strstr(target, "init.sysv"))
+        return DS_INIT_SYSVINIT;
+    }
+  }
+
+#undef PROBE_PATH
+
+  return DS_INIT_UNKNOWN;
+}
+
 int get_user_shell(const char *user, char *shell_buf, size_t size) {
   if (!user || user[0] == '\0' || !shell_buf || size == 0)
     return -1;
