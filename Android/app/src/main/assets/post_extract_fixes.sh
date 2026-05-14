@@ -55,10 +55,11 @@ if $TEST -f "$ROOTFS_PATH/etc/droidspaces"; then
 fi
 
 # Detect NixOS
-IS_NIXOS=0
-if $GREP -qi "ID=nixos" "$ROOTFS_PATH/etc/os-release" 2>/dev/null; then
-    IS_NIXOS=1
-    log "NixOS detected, chroot-based fixes will be skipped"
+if $TEST -d "$ROOTFS_PATH/nix"; then
+    log "NixOS detected, skipping all post-extraction fixes (Nix manages its own state)"
+    # Mark as applied anyway to prevent re-running
+    $TOUCH "$ROOTFS_PATH/etc/droidspaces" 2>/dev/null || true
+    exit 0
 fi
 
 # Helper to execute a command inside the chroot environment
