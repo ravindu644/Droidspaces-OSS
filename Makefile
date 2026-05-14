@@ -199,7 +199,13 @@ ANDROID_ASSETS_DIR = Android/app/src/main/assets/binaries
 
 sync-android:
 	@if [ -d "$(ANDROID_ASSETS_DIR)" ]; then \
-		cp -r $(OUT_DIR)/* $(ANDROID_ASSETS_DIR)/ && echo "[+] Synced binaries to Android assets"; \
+		mkdir -p $(ANDROID_ASSETS_DIR); \
+		rm -f $(ANDROID_ASSETS_DIR)/$(BINARY_NAME)-*; \
+		cp $(OUT_DIR)/$(BINARY_NAME)-x86_64 $(ANDROID_ASSETS_DIR)/ 2>/dev/null || true; \
+		cp $(OUT_DIR)/$(BINARY_NAME)-aarch64 $(ANDROID_ASSETS_DIR)/ 2>/dev/null || true; \
+		cp $(OUT_DIR)/$(BINARY_NAME)-armhf $(ANDROID_ASSETS_DIR)/ 2>/dev/null || true; \
+		cp $(OUT_DIR)/$(BINARY_NAME)-x86 $(ANDROID_ASSETS_DIR)/ 2>/dev/null || true; \
+		echo "[+] Synced binaries to Android assets"; \
 	fi
 
 # all-build: fail immediately if any architecture fails - no || fallback
