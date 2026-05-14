@@ -1310,7 +1310,10 @@ int stop_rootfs(struct ds_config *cfg, int skip_unmount) {
     }
     break;
   }
-  default: /* openrc, unknown */
+  case DS_INIT_OPENRC:
+    kill(pid, SIGPWR);
+    break;
+  default: /* unknown */
     kill(pid, SIGTERM);
     break;
   }

@@ -1201,9 +1201,13 @@ ds_init_type_t detect_container_init(const char *path) {
        S_ISREG(st.st_mode)))
     return DS_INIT_PROCD;
 
-  /* openrc-init */
-  if (PROBE_PATH("/sbin/openrc-init") && stat(buf, &st) == 0 &&
-      S_ISREG(st.st_mode))
+  /* openrc */
+  if ((PROBE_PATH("/sbin/openrc-init") && stat(buf, &st) == 0 &&
+       S_ISREG(st.st_mode)) ||
+      (PROBE_PATH("/usr/bin/openrc-init") && stat(buf, &st) == 0 &&
+       S_ISREG(st.st_mode)) ||
+      (PROBE_PATH("/sbin/openrc") && stat(buf, &st) == 0 &&
+       S_ISREG(st.st_mode)))
     return DS_INIT_OPENRC;
 
   /* runit */
