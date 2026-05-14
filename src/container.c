@@ -1299,14 +1299,20 @@ int stop_rootfs(struct ds_config *cfg, int skip_unmount) {
     };
 
     int fd = open(initctl, O_WRONLY | O_NONBLOCK | O_CLOEXEC);
+    if (fd < 0) {
+      /* Fallback: try /dev/initctl (historical path, used by Slackware) */
+      snprintf(initctl, sizeof(initctl), "/proc/%d/root/dev/initctl", pid);
+      fd = open(initctl, O_WRONLY | O_NONBLOCK | O_CLOEXEC);
+    }
+
     if (fd >= 0) {
       if (write(fd, &req, sizeof(req)) != (ssize_t)sizeof(req))
-        ds_warn("sysvinit: short write to initctl, falling back to SIGTERM");
+        ds_warn("sysvinit: short write to initctl, falling back to SIGPWR");
       close(fd);
     } else {
-      ds_warn("sysvinit: cannot open %s (%s), falling back to SIGTERM", initctl,
-              strerror(errno));
-      kill(pid, SIGTERM);
+      ds_warn("sysvinit: cannot open initctl (tried /run and /dev), falling "
+              "back to SIGPWR");
+      kill(pid, SIGPWR);
     }
     break;
   }
