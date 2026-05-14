@@ -419,6 +419,7 @@
     <!-- Validation Error Messages -->
     <string name="error_container_name_empty">Container name cannot be empty</string>
     <string name="error_container_name_invalid">Container name can only contain letters, numbers, hyphens (-), underscores (_), dots (.), and spaces</string>
+    <string name="error_container_name_too_long">Name too long - max 17 characters (kernel loop device path limit)</string>
     <string name="error_hostname_invalid">Hostname can only contain letters, numbers, and dashes (-)</string>
 
     <!-- Process List -->

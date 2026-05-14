@@ -213,7 +213,7 @@ _migrate_cleanup() {
         _umount -l "$ROOTFS_SPARSE" 2>/dev/null
     }
     _rm -rf "$ROOTFS_SPARSE"
-    _rm -f  "${ROOTFS_IMG}.tmp"
+    _rm -f  "$ROOTFS_IMG"
     log "Cleanup done - original rootfs is preserved"
 }
 
@@ -270,21 +270,19 @@ cmd_migrate() {
 
     trap _migrate_cleanup EXIT
 
-    local tmp_img="${ROOTFS_IMG}.tmp"
-
     # Step 1: Create sparse file
     log "[1/5] Creating ${size_gb}GB sparse file..."
-    if ! _truncate "${size_gb}G" "$tmp_img"; then
+    if ! _truncate "${size_gb}G" "$ROOTFS_IMG"; then
         exit 1
     fi
     _sync; _sleep 2
 
-    if [ ! -f "$tmp_img" ]; then
+    if [ ! -f "$ROOTFS_IMG" ]; then
         error "Sparse file was not created"
         exit 1
     fi
     local fsz
-    fsz=$(_stat_size "$tmp_img")
+    fsz=$(_stat_size "$ROOTFS_IMG")
     if [ "$fsz" = "0" ] || [ -z "$fsz" ]; then
         error "Created file has zero size - disk full?"
         exit 1
@@ -294,7 +292,7 @@ cmd_migrate() {
     # Step 2: Format as ext4
     log "[2/5] Formatting as ext4..."
     _sync; _sleep 1
-    if ! _mkfs_ext4 "$tmp_img"; then
+    if ! _mkfs_ext4 "$ROOTFS_IMG"; then
         exit 1
     fi
     log "    ext4 format complete ✓"
@@ -302,9 +300,9 @@ cmd_migrate() {
     # Step 3: Mount sparse image to temp dir
     log "[3/5] Mounting sparse image..."
     _mkdir "$ROOTFS_SPARSE"
-    chcon u:object_r:vold_data_file:s0 "$tmp_img" 2>/dev/null || true
+    chcon u:object_r:vold_data_file:s0 "$ROOTFS_IMG" 2>/dev/null || true
     if ! _mount -t ext4 -o loop,rw,noatime,nodiratime,data=ordered,commit=30 \
-            "$tmp_img" "$ROOTFS_SPARSE"; then
+            "$ROOTFS_IMG" "$ROOTFS_SPARSE"; then
         exit 1
     fi
     log "    Mounted at $ROOTFS_SPARSE ✓"
@@ -331,12 +329,6 @@ cmd_migrate() {
     _mv "$ROOTFS_DIR" "$backup_dir"   || { error "Failed to rename original rootfs"; exit 1; }
     _mv "$ROOTFS_SPARSE" "$ROOTFS_DIR" || {
         error "Failed to rename sparse mount dir"
-        _mv "$backup_dir" "$ROOTFS_DIR" 2>/dev/null
-        exit 1
-    }
-    _mv "$tmp_img" "$ROOTFS_IMG" || {
-        error "Failed to move sparse image to final location"
-        _rm -rf "$ROOTFS_DIR" 2>/dev/null
         _mv "$backup_dir" "$ROOTFS_DIR" 2>/dev/null
         exit 1
     }

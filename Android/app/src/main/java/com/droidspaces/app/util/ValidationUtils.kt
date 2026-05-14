@@ -8,6 +8,8 @@ import com.droidspaces.app.R
  * All validation logic in one place for consistency and maintainability.
  */
 object ValidationUtils {
+    const val MAX_CONTAINER_NAME_LENGTH = 17  // 63 - len("/data/local/Droidspaces/Containers/") - len("/rootfs.img")
+
     /**
      * Validates container name: letters, numbers, hyphens, underscores, spaces, and dots allowed.
      */
@@ -16,6 +18,11 @@ object ValidationUtils {
             name.isEmpty() -> {
                 val message = context?.getString(R.string.error_container_name_empty)
                     ?: "Container name cannot be empty"
+                ValidationResult.Error(message)
+            }
+            name.length > MAX_CONTAINER_NAME_LENGTH -> {
+                val message = context?.getString(R.string.error_container_name_too_long)
+                    ?: "Name too long — max $MAX_CONTAINER_NAME_LENGTH characters"
                 ValidationResult.Error(message)
             }
             !name.matches(Regex("^[a-zA-Z0-9_\\s.-]+$")) -> {
