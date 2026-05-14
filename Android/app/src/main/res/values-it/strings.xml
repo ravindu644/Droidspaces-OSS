@@ -69,7 +69,7 @@
     <string name="about_description">Gestore di contenitori LXC-Style per Android</string>
     <string name="developers">Sviluppatore/i</string>
     <string name="developer_ravindu644" translatable="false">ravindu644</string>
-    <string name="developer_ravindu644_role">Backend, UI</string>
+    <string name="developer_ravindu644_role">Maintainer</string>
     <string name="telegram_channel">Canale Telegram</string>
     <string name="contributors">Contributori</string>
     <string name="github">GitHub</string>
@@ -109,7 +109,7 @@
     <string name="start">Avvia</string>
     <string name="stop">Arresta</string>
     <string name="restart">Riavvia</string>
-    <string name="ipv6_option">No IPv6</string>
+    <string name="ipv6_option">Disable IPv6</string>
     <string name="storage_option">Archiviazione</string>
     <string name="hw_option">HW</string>
     <string name="x11_option">X11</string>
@@ -145,8 +145,8 @@
     <string name="hardware_access_description">Accesso hardware completo</string>
     <string name="gpu_access">Accesso GPU</string>
     <string name="gpu_access_description">Specchia i nodi GPU in /dev isolato (senza passthrough hardware completo)</string>
-    <string name="termux_x11">Configura Termux X11</string>
-    <string name="termux_x11_description">Abilita il montaggio del socket X11 per Termux-X11</string>
+    <string name="termux_x11">Configura Termux:X11</string>
+    <string name="termux_x11_description">Abilita il montaggio del socket X11 per Termux:X11</string>
     <string name="selinux_permissive">SELinux Permissivo</string>
     <string name="selinux_permissive_description">Imposta SELinux in modalità permissiva</string>
     <string name="run_at_boot">Avvia all\'avvio</string>
@@ -436,4 +436,5 @@
     <string name="cgroup_v1_option">Cgroup V1</string>
     <string name="deadlock_shield_option">Scudo di blocco</string>
     <string name="privileged_option">Privilegiato</string>
+    <string name="error_container_name_too_long">Nome troppo lungo - massimo 17 caratteri (limite del percorso del dispositivo loop del kernel)</string>
 </resources>
