@@ -400,4 +400,5 @@
     <string name="cgroup_v1_option">Cgroup V1</string>
     <string name="deadlock_shield_option">死鎖防護</string>
     <string name="privileged_option">特權模式</string>
+    <string name="error_container_name_too_long">名稱過長 - 最多17個字符（核心loop裝置路徑限制）</string>
 </resources>
