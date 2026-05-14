@@ -64,15 +64,9 @@ fi
 
 # Helper to execute a command inside the chroot environment
 run_in_chroot() {
-    # Skip for NixOS: Non-FHS structure means /bin/sh is often missing or broken
-    # until the Nix store is properly mounted and configured.
-    if [ "$IS_NIXOS" -eq 1 ]; then
-        return 0
-    fi
-
     local command="$*"
     local common_exports="export PATH='/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/libexec:/opt/bin'; export TMPDIR='/tmp';"
-    
+
     # We use busybox chroot to run commands inside the rootfs
     # Note: This assumes /bin/sh exists in the rootfs
     $CHROOT "$ROOTFS_PATH" /bin/sh -c "$common_exports $command"
