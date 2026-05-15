@@ -187,8 +187,9 @@ int internal_boot(struct ds_config *cfg) {
     return -1;
   }
 
-  /* Detect init system once - used for seccomp and cgroup setup */
-  int is_systemd = is_systemd_rootfs(cfg->rootfs_path);
+  /* Init family was classified before fork in start_rootfs().
+   * Boot-time setup only needs to know whether that family is systemd. */
+  int is_systemd = (cfg->init_type == DS_INIT_SYSTEMD);
 
   /* 3. Setup volatile overlay INSIDE the container's mount namespace.
    * This MUST happen here (not in parent) so the overlay's connection to
