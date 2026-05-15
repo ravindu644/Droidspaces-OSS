@@ -17,11 +17,13 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.droidspaces.app.ui.component.ToggleCard
-import com.droidspaces.app.ui.component.NetworkModeSelector
+import com.droidspaces.app.ui.component.DsDropdown
+import androidx.compose.material.icons.filled.Public
 import com.droidspaces.app.ui.component.UpstreamInterfaceList
 import com.droidspaces.app.ui.component.PortForwardingList
 import androidx.compose.ui.platform.LocalContext
 import com.droidspaces.app.R
+import com.droidspaces.app.ui.util.ClearFocusOnClickOutside
 
 import androidx.compose.ui.text.style.TextOverflow
 import com.droidspaces.app.util.BindMount
@@ -32,6 +34,7 @@ import com.droidspaces.app.ui.component.FilePickerDialog
 import com.droidspaces.app.ui.component.SettingsRowCard
 import com.droidspaces.app.ui.component.EnvironmentVariablesDialog
 import com.droidspaces.app.ui.component.PrivilegedModeDialog
+import com.droidspaces.app.ui.component.HardwareAccessDialog
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.compose.foundation.lazy.LazyColumn
@@ -132,7 +135,8 @@ fun ContainerConfigScreen(
             Surface(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 24.dp),
+                    .padding(horizontal = 24.dp)
+                    .imePadding(),
                 shape = RoundedCornerShape(24.dp),
                 color = MaterialTheme.colorScheme.surfaceVariant,
                 border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)),
@@ -198,6 +202,7 @@ fun ContainerConfigScreen(
 
     var showEnvDialog by remember { mutableStateOf(false) }
     var showPrivilegedDialog by remember { mutableStateOf(false) }
+    var showHwAccessDialog by remember { mutableStateOf(false) }
 
     if (showPrivilegedDialog) {
         PrivilegedModeDialog(
@@ -207,6 +212,16 @@ fun ContainerConfigScreen(
                 showPrivilegedDialog = false
             },
             onDismiss = { showPrivilegedDialog = false }
+        )
+    }
+
+    if (showHwAccessDialog) {
+        HardwareAccessDialog(
+            onConfirm = {
+                enableHwAccess = true
+                showHwAccessDialog = false
+            },
+            onDismiss = { showHwAccessDialog = false }
         )
     }
 
@@ -284,15 +299,20 @@ fun ContainerConfigScreen(
             }
         }
     ) { innerPadding ->
-        Column(
+        ClearFocusOnClickOutside(
             modifier = Modifier
-                .fillMaxSize()
                 .padding(innerPadding)
-                .padding(horizontal = 24.dp)
-                .padding(top = 24.dp)
-                .verticalScroll(rememberScrollState()),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+                .consumeWindowInsets(innerPadding)
+                .imePadding()
         ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = 24.dp)
+                    .padding(top = 24.dp)
+                    .verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
             Text(
                 text = context.getString(R.string.container_options),
                 style = MaterialTheme.typography.headlineSmall,
@@ -308,12 +328,13 @@ fun ContainerConfigScreen(
                 modifier = Modifier.padding(top = 8.dp)
             )
 
-            NetworkModeSelector(
-                netMode = netMode,
-                onModeChange = { mode ->
-                    netMode = mode
-                    if (mode != "host") disableIPv6 = false
-                }
+            DsDropdown(
+                label = context.getString(R.string.network_mode),
+                selected = netMode,
+                options = listOf("host", "nat", "none"),
+                displayName = { context.getString(when (it) { "nat" -> R.string.network_mode_nat; "none" -> R.string.network_mode_none; else -> R.string.network_mode_host }) },
+                onSelect = { mode -> netMode = mode; if (mode != "host") disableIPv6 = false },
+                leadingIcon = Icons.Default.Public
             )
 
             androidx.compose.animation.AnimatedVisibility(
@@ -438,7 +459,13 @@ fun ContainerConfigScreen(
                 title = context.getString(R.string.hardware_access),
                 description = context.getString(R.string.hardware_access_description),
                 checked = enableHwAccess,
-                onCheckedChange = { enableHwAccess = it }
+                onCheckedChange = { newValue ->
+                    if (newValue) {
+                        showHwAccessDialog = true
+                    } else {
+                        enableHwAccess = false
+                    }
+                }
             )
 
             ToggleCard(
@@ -611,7 +638,7 @@ fun ContainerConfigScreen(
             )
 
             Spacer(modifier = Modifier.height(16.dp))
-
         }
     }
+}
 }

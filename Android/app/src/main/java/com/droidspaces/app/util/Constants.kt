@@ -50,6 +50,8 @@ object Constants {
     const val KEY_CONTAINER_LOG_PREFIX = "container_log_"
     const val KEY_CONTAINER_OS_INFO_PREFIX = "container_os_info_"
     const val KEY_CONTAINER_USERS_PREFIX = "container_users_"
+    const val KEY_CACHED_CONTAINER_NAMES = "cached_container_names"
+    const val KEY_CACHED_CONTAINER_CONFIG_PREFIX = "cached_container_config_"
 
     // Minimum storage requirements
     const val MIN_STORAGE_GB = 4

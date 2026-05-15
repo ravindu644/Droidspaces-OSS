@@ -424,7 +424,7 @@ fun DroidspacesNavigation(
                         navController.popBackStack(Screen.Home.route, false)
                     },
                     onError = {
-                        navController.popBackStack(Screen.InstallationSummary.route, false)
+                        navController.popBackStack(Screen.Home.route, false)
                     }
                 )
             } else {

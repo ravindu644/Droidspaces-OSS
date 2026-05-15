@@ -47,7 +47,9 @@ import com.droidspaces.app.ui.component.SettingsRowCard
 import com.droidspaces.app.ui.component.EnvironmentVariablesDialog
 import com.droidspaces.app.util.PortForward
 import com.droidspaces.app.ui.component.PrivilegedModeDialog
-import com.droidspaces.app.ui.component.NetworkModeSelector
+import com.droidspaces.app.ui.component.HardwareAccessDialog
+import com.droidspaces.app.ui.component.DsDropdown
+import androidx.compose.material.icons.filled.Public
 import com.droidspaces.app.ui.component.UpstreamInterfaceList
 import com.droidspaces.app.ui.component.PortForwardingList
 import androidx.compose.ui.window.Dialog
@@ -258,7 +260,8 @@ fun EditContainerScreen(
             Surface(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 24.dp),
+                    .padding(horizontal = 24.dp)
+                    .imePadding(),
                 shape = RoundedCornerShape(24.dp),
                 color = MaterialTheme.colorScheme.surfaceVariant,
                 border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)),
@@ -324,6 +327,7 @@ fun EditContainerScreen(
 
     var showEnvDialog by remember { mutableStateOf(false) }
     var showPrivilegedDialog by remember { mutableStateOf(false) }
+    var showHwAccessDialog by remember { mutableStateOf(false) }
 
     if (showPrivilegedDialog) {
         PrivilegedModeDialog(
@@ -333,6 +337,16 @@ fun EditContainerScreen(
                 showPrivilegedDialog = false
             },
             onDismiss = { showPrivilegedDialog = false }
+        )
+    }
+
+    if (showHwAccessDialog) {
+        HardwareAccessDialog(
+            onConfirm = {
+                enableHwAccess = true
+                showHwAccessDialog = false
+            },
+            onDismiss = { showHwAccessDialog = false }
         )
     }
 
@@ -463,7 +477,10 @@ fun EditContainerScreen(
         }
     ) { innerPadding ->
         ClearFocusOnClickOutside(
-            modifier = Modifier.padding(innerPadding)
+            modifier = Modifier
+                .padding(innerPadding)
+                .consumeWindowInsets(innerPadding)
+                .imePadding()
         ) {
             Column(
                 modifier = Modifier
@@ -537,13 +554,13 @@ fun EditContainerScreen(
                 modifier = Modifier.padding(top = 8.dp)
             )
 
-            NetworkModeSelector(
-                netMode = netMode,
-                onModeChange = { mode ->
-                    clearFocus()
-                    netMode = mode
-                    if (mode != "host") disableIPv6 = false
-                }
+            DsDropdown(
+                label = context.getString(R.string.network_mode),
+                selected = netMode,
+                options = listOf("host", "nat", "none"),
+                displayName = { context.getString(when (it) { "nat" -> R.string.network_mode_nat; "none" -> R.string.network_mode_none; else -> R.string.network_mode_host }) },
+                onSelect = { mode -> clearFocus(); netMode = mode; if (mode != "host") disableIPv6 = false },
+                leadingIcon = Icons.Default.Public
             )
 
             androidx.compose.animation.AnimatedVisibility(
@@ -776,9 +793,13 @@ fun EditContainerScreen(
                 title = context.getString(R.string.hardware_access),
                 description = context.getString(R.string.hardware_access_description),
                 checked = enableHwAccess,
-                onCheckedChange = {
+                onCheckedChange = { newValue ->
                     clearFocus()
-                    enableHwAccess = it
+                    if (newValue) {
+                        showHwAccessDialog = true
+                    } else {
+                        enableHwAccess = false
+                    }
                 }
             )
 

@@ -210,6 +210,9 @@
     <string name="network_mode_host">Host (Default)</string>
     <string name="network_mode_nat">NAT (Isolated)</string>
     <string name="network_mode_none">None (Air-gapped)</string>
+    <string name="network_mode_host_short">Host</string>
+    <string name="network_mode_nat_short">NAT</string>
+    <string name="network_mode_none_short">None</string>
     <string name="nat_settings">NAT Settings</string>
     <string name="upstream_interfaces_mandatory">Upstream Interfaces (Mandatory)</string>
     <string name="upstream_interfaces_required_error">You must specify at least one upstream interface for NAT mode.</string>
@@ -419,6 +422,7 @@
     <!-- Validation Error Messages -->
     <string name="error_container_name_empty">Container name cannot be empty</string>
     <string name="error_container_name_invalid">Container name can only contain letters, numbers, hyphens (-), underscores (_), dots (.), and spaces</string>
+    <string name="error_container_name_too_long">Name too long - max 17 characters (kernel loop device path limit)</string>
     <string name="error_hostname_invalid">Hostname can only contain letters, numbers, and dashes (-)</string>
 
     <!-- Process List -->
@@ -474,6 +478,6 @@
     <string name="privileged_disclaimer">By enabling these options, you are compromising your device security. We are NOT responsible for any data loss, bricked devices, or weird bugs. Do NOT report issues occurred while using these modes.</string>
     <string name="privileged_confirm_instruction">Type \"I WON\'T REPORT ANY BUGS\" exactly in capitals to confirm:</string>
     <string name="i_understand_caps">I WON\'T REPORT ANY BUGS</string>
-
     <string name="reboot_recommended">Reboot recommended to apply SELinux rules and start the daemon on boot.</string>
+    <string name="hw_access_disclaimer">Starting from Droidspaces v6.1.0, udevd has real access to USB, block, input, TTY, and network subsystems. Your container can own hardware that Android is currently using.\n\nIf your keyboard, SD card, or USB device stops working in Android after launching a container - that is NOT a bug. The container took it. You asked for full hardware access.\n\nDo NOT report issues caused by hardware conflicts or Kernel panics while using this mode.</string>
 </resources>

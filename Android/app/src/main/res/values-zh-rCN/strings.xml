@@ -404,4 +404,5 @@
     <string name="starting_export">开始导出...</string>
     <string name="welcome_tagline">Linux 容器。原生运行。零性能损耗。</string>
     <string name="feat_containers_title">真正的 Linux 容器</string>
+    <string name="error_container_name_too_long">名称过长 - 最多17个字符（内核loop设备路径限制）</string>
 </resources>

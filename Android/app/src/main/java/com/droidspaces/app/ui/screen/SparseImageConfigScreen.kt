@@ -1,5 +1,7 @@
 package com.droidspaces.app.ui.screen
 import androidx.compose.ui.graphics.Color
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.consumeWindowInsets
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
@@ -24,10 +26,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.platform.LocalContext
 import com.droidspaces.app.R
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun SparseImageConfigScreen(
-    initialUseSparseImage: Boolean = false,
+    initialUseSparseImage: Boolean = true,
     initialSizeGB: Int = 8,
     onNext: (useSparseImage: Boolean, sizeGB: Int) -> Unit,
     onBack: () -> Unit
@@ -119,6 +121,8 @@ fun SparseImageConfigScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
+                .consumeWindowInsets(innerPadding)
+                .imePadding()
                 .padding(horizontal = 24.dp)
                 .padding(top = 24.dp)
                 .verticalScroll(rememberScrollState()),

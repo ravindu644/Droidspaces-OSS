@@ -1138,7 +1138,7 @@ int is_systemd_rootfs(const char *path) {
   struct stat st;
   size_t path_len = strlen(path);
 
-  /* Precise check for systemd binary locations */
+  /* Standard systemd binary locations (not present on NixOS -- nix store). */
   const char *check_paths[] = {"/lib/systemd/systemd",
                                "/usr/lib/systemd/systemd", "/bin/systemd",
                                "/usr/bin/systemd"};
@@ -1155,21 +1155,95 @@ int is_systemd_rootfs(const char *path) {
     }
   }
 
-  /* Fallback: Check if /sbin/init is a symlink to systemd */
-  if (path_len + 11 < sizeof(buf)) {
+  /* Fallback: /sbin/init symlink target -- covers systemd and NixOS. */
+  if (path_len + 12 <= sizeof(buf)) { /* 10 chars + '/' prefix + '\0' = 12 */
     memcpy(buf, path, path_len);
     memcpy(buf + path_len, "/sbin/init", 11);
     char link_target[PATH_MAX];
     ssize_t len = readlink(buf, link_target, sizeof(link_target) - 1);
     if (len != -1) {
       link_target[len] = '\0';
-      if (strstr(link_target, "systemd")) {
+      if (strstr(link_target, "systemd"))
         return 1;
-      }
+      /* NixOS: /sbin/init -> /nix/store/<hash>-nixos-system-.../init
+       * That wrapper execs systemd. The nix store path is unique enough. */
+      if (strstr(link_target, "/nix/store"))
+        return 1;
     }
   }
 
   return 0;
+}
+
+/* Probe the rootfs at `path` to identify its init system.
+ * Uses the same stat+readlink pattern as is_systemd_rootfs. */
+ds_init_type_t detect_container_init(const char *path) {
+  if (!path || path[0] == '\0')
+    return DS_INIT_UNKNOWN;
+
+  char buf[PATH_MAX];
+  struct stat st;
+  size_t plen = strlen(path);
+
+  /* Helper: build "path + suffix" into buf, return 1 on success */
+#define PROBE_PATH(suffix)                                                     \
+  (plen + sizeof(suffix) - 1 < sizeof(buf) &&                                  \
+   (memcpy(buf, path, plen), memcpy(buf + plen, suffix, sizeof(suffix)), 1))
+
+  /* systemd -- reuse existing logic via is_systemd_rootfs */
+  if (is_systemd_rootfs(path))
+    return DS_INIT_SYSTEMD;
+
+  /* procd (OpenWrt) */
+  if ((PROBE_PATH("/sbin/procd") && stat(buf, &st) == 0 &&
+       S_ISREG(st.st_mode)) ||
+      (PROBE_PATH("/usr/sbin/procd") && stat(buf, &st) == 0 &&
+       S_ISREG(st.st_mode)))
+    return DS_INIT_PROCD;
+
+  /* openrc */
+  if ((PROBE_PATH("/sbin/openrc-init") && stat(buf, &st) == 0 &&
+       S_ISREG(st.st_mode)) ||
+      (PROBE_PATH("/usr/bin/openrc-init") && stat(buf, &st) == 0 &&
+       S_ISREG(st.st_mode)) ||
+      (PROBE_PATH("/sbin/openrc") && stat(buf, &st) == 0 &&
+       S_ISREG(st.st_mode)))
+    return DS_INIT_OPENRC;
+
+  /* runit */
+  if ((PROBE_PATH("/sbin/runit") && stat(buf, &st) == 0 &&
+       S_ISREG(st.st_mode)) ||
+      (PROBE_PATH("/usr/bin/runit") && stat(buf, &st) == 0 &&
+       S_ISREG(st.st_mode)))
+    return DS_INIT_RUNIT;
+
+  /* s6 */
+  if ((PROBE_PATH("/bin/s6-svscan") && stat(buf, &st) == 0 &&
+       S_ISREG(st.st_mode)) ||
+      (PROBE_PATH("/usr/bin/s6-svscan") && stat(buf, &st) == 0 &&
+       S_ISREG(st.st_mode)))
+    return DS_INIT_S6;
+
+  /* sysvinit: /sbin/init is NOT a symlink, or symlink points to sysvinit */
+  if (PROBE_PATH("/sbin/init")) {
+    char target[PATH_MAX];
+    ssize_t len = readlink(buf, target, sizeof(target) - 1);
+    if (len == -1) {
+      /* not a symlink -> classic sysvinit binary */
+      if (stat(buf, &st) == 0 && S_ISREG(st.st_mode))
+        return DS_INIT_SYSVINIT;
+    } else {
+      target[len] = '\0';
+      if (strstr(target, "busybox"))
+        return DS_INIT_BUSYBOX;
+      if (strstr(target, "sysvinit") || strstr(target, "init.sysv"))
+        return DS_INIT_SYSVINIT;
+    }
+  }
+
+#undef PROBE_PATH
+
+  return DS_INIT_UNKNOWN;
 }
 
 int get_user_shell(const char *user, char *shell_buf, size_t size) {

@@ -209,6 +209,17 @@ object ContainerManager {
             }
 
             val configContent = readResult.out.joinToString("\n")
+            return parseConfig(configContent, defaultName)
+        } catch (e: Exception) {
+            return null
+        }
+    }
+
+    /**
+     * Parse container configuration from string content.
+     */
+    fun parseConfig(configContent: String, defaultName: String): ContainerInfo? {
+        try {
             val configMap = mutableMapOf<String, String>()
 
             // Parse config file (key=value format)

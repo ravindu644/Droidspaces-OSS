@@ -5,34 +5,30 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.Public
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.droidspaces.app.R
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun NetworkModeSelector(
-    netMode: String,
-    onModeChange: (String) -> Unit,
-    modifier: Modifier = Modifier
+fun <T> DsDropdown(
+    label: String,
+    selected: T,
+    options: List<T>,
+    displayName: (T) -> String,
+    onSelect: (T) -> Unit,
+    modifier: Modifier = Modifier,
+    leadingIcon: ImageVector? = null
 ) {
-    val context = LocalContext.current
     var expanded by remember { mutableStateOf(false) }
-    
-    val modes = listOf("host", "nat", "none")
-    val modeNames = mapOf(
-        "host" to context.getString(R.string.network_mode_host),
-        "nat" to context.getString(R.string.network_mode_nat),
-        "none" to context.getString(R.string.network_mode_none)
-    )
+    val focusManager = LocalFocusManager.current
 
-    val modernFieldShape = RoundedCornerShape(16.dp)
-    val modernFieldColors = OutlinedTextFieldDefaults.colors(
+    val fieldShape = RoundedCornerShape(16.dp)
+    val fieldColors = OutlinedTextFieldDefaults.colors(
         unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
         focusedBorderColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.8f),
         unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerLow,
@@ -41,39 +37,48 @@ fun NetworkModeSelector(
 
     ExposedDropdownMenuBox(
         expanded = expanded,
-        onExpandedChange = { expanded = !expanded },
+        onExpandedChange = { 
+            expanded = it
+            if (!it) focusManager.clearFocus()
+        },
         modifier = modifier.fillMaxWidth()
     ) {
         OutlinedTextField(
-            value = modeNames[netMode] ?: netMode,
+            value = displayName(selected),
             onValueChange = {},
             readOnly = true,
-            label = { Text(context.getString(R.string.network_mode)) },
+            label = { Text(label) },
             trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
-            leadingIcon = { Icon(Icons.Default.Public, contentDescription = null) },
-            shape = modernFieldShape,
-            colors = modernFieldColors,
-            modifier = Modifier.menuAnchor().fillMaxWidth()
+            leadingIcon = leadingIcon?.let { icon -> { Icon(icon, contentDescription = null) } },
+            shape = fieldShape,
+            colors = fieldColors,
+            modifier = Modifier
+                .menuAnchor()
+                .fillMaxWidth()
         )
         ExposedDropdownMenu(
             expanded = expanded,
-            onDismissRequest = { expanded = false }
+            onDismissRequest = { 
+                expanded = false
+                focusManager.clearFocus()
+            }
         ) {
-            modes.forEach { mode ->
+            options.forEach { option ->
                 DropdownMenuItem(
-                    text = { Text(modeNames[mode] ?: mode, fontWeight = FontWeight.Medium) },
+                    text = { Text(displayName(option), fontWeight = FontWeight.Medium) },
                     onClick = {
-                        onModeChange(mode)
+                        onSelect(option)
                         expanded = false
+                        focusManager.clearFocus()
                     },
-                    leadingIcon = if (mode == netMode) {
-                        { 
+                    leadingIcon = if (option == selected) {
+                        {
                             Icon(
-                                imageVector = Icons.Default.Check, 
-                                contentDescription = null, 
+                                Icons.Default.Check,
+                                contentDescription = null,
                                 modifier = Modifier.size(18.dp),
                                 tint = MaterialTheme.colorScheme.primary
-                            ) 
+                            )
                         }
                     } else null
                 )

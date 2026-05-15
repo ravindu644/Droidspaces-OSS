@@ -92,7 +92,7 @@ find-cc = $(shell \
 		echo ""; \
 	fi)
 
-.PHONY: all help clean native x86_64 aarch64 armhf x86 all-build tarball all-tarball debug-hardened
+.PHONY: all help clean native x86_64 aarch64 armhf x86 riscv64 all-build tarball all-tarball debug-hardened
 
 all: help
 
@@ -105,6 +105,7 @@ help:
 	@echo "  make aarch64   - Build for 64-bit ARM"
 	@echo "  make armhf     - Build for 32-bit ARM (hard-float)"
 	@echo "  make x86       - Build for 32-bit x86"
+	@echo "  make riscv64   - Build for 64-bit RISC-V"
 	@echo ""
 	@echo "Advanced targets:"
 	@echo "  make all-build   - Build for all supported architectures"
@@ -152,6 +153,8 @@ else ifeq ($(NATIVE_ARCH_RAW),aarch64)
   NATIVE_TARGET := aarch64-linux-musl
 else ifeq ($(NATIVE_ARCH_RAW),i686)
   NATIVE_TARGET := i686-linux-musl
+else ifeq ($(NATIVE_ARCH_RAW),riscv64)
+  NATIVE_TARGET := riscv64-linux-musl
 else
   NATIVE_TARGET := x86_64-linux-musl
 endif
@@ -188,6 +191,11 @@ x86:
 	if [ -n "$$CROSS_CC" ]; then $(MAKE) -j$(NPROC) $(BINARY_NAME) CC=$$CROSS_CC; \
 	else echo "Error: i686-linux-musl-gcc not found. Run ./install-musl.sh x86"; exit 1; fi
 
+riscv64:
+	@CROSS_CC="$(call find-cc,riscv64-linux-musl)"; \
+	if [ -n "$$CROSS_CC" ]; then $(MAKE) -j$(NPROC) $(BINARY_NAME) CC=$$CROSS_CC; \
+	else echo "Error: riscv64-linux-musl-gcc not found. Run ./install-musl.sh riscv64"; exit 1; fi
+
 debug-hardened: $(OUT_DIR)
 	@echo "[*] Building hardened debug binary..."
 	@mkdir -p $(OUT_DIR)/.obj/debug
@@ -203,7 +211,13 @@ ANDROID_ASSETS_DIR = Android/app/src/main/assets/binaries
 
 sync-android:
 	@if [ -d "$(ANDROID_ASSETS_DIR)" ]; then \
-		cp -r $(OUT_DIR)/* $(ANDROID_ASSETS_DIR)/ && echo "[+] Synced binaries to Android assets"; \
+		mkdir -p $(ANDROID_ASSETS_DIR); \
+		rm -f $(ANDROID_ASSETS_DIR)/$(BINARY_NAME)-*; \
+		cp $(OUT_DIR)/$(BINARY_NAME)-x86_64 $(ANDROID_ASSETS_DIR)/ 2>/dev/null || true; \
+		cp $(OUT_DIR)/$(BINARY_NAME)-aarch64 $(ANDROID_ASSETS_DIR)/ 2>/dev/null || true; \
+		cp $(OUT_DIR)/$(BINARY_NAME)-armhf $(ANDROID_ASSETS_DIR)/ 2>/dev/null || true; \
+		cp $(OUT_DIR)/$(BINARY_NAME)-x86 $(ANDROID_ASSETS_DIR)/ 2>/dev/null || true; \
+		echo "[+] Synced binaries to Android assets"; \
 	fi
 
 # all-build: fail immediately if any architecture fails - no || fallback
@@ -214,6 +228,7 @@ all-build:
 	@$(MAKE) --no-print-directory aarch64 && mv $(OUT_DIR)/$(BINARY_NAME) $(OUT_DIR)/$(BINARY_NAME)-aarch64
 	@$(MAKE) --no-print-directory armhf   && mv $(OUT_DIR)/$(BINARY_NAME) $(OUT_DIR)/$(BINARY_NAME)-armhf
 	@$(MAKE) --no-print-directory x86     && mv $(OUT_DIR)/$(BINARY_NAME) $(OUT_DIR)/$(BINARY_NAME)-x86
+	@$(MAKE) --no-print-directory riscv64 && mv $(OUT_DIR)/$(BINARY_NAME) $(OUT_DIR)/$(BINARY_NAME)-riscv64
 	@$(MAKE) --no-print-directory sync-android
 	@echo "[+] All architectures built successfully in $(OUT_DIR)/"
 
@@ -222,7 +237,7 @@ tarball:
 		echo "Error: $(OUT_DIR)/$(BINARY_NAME) not found. Build it first."; \
 		exit 1; \
 	fi
-	@DETECTED_ARCH=$$(file $(OUT_DIR)/$(BINARY_NAME) | grep -oP '(x86-64|ARM aarch64|i386|ARM)' | sed 's/x86-64/amd64/; s/ARM aarch64/arm64/; s/i386/x86/; s/ARM/armhf/'); \
+	@DETECTED_ARCH=$$(file $(OUT_DIR)/$(BINARY_NAME) | grep -oP '(x86-64|ARM aarch64|UCB RISC-V|i386|ARM)' | sed 's/x86-64/amd64/; s/ARM aarch64/arm64/; s/UCB RISC-V/riscv64/; s/i386/x86/; s/ARM/armhf/'); \
 	TARBALL="$(BINARY_NAME)-$$DETECTED_ARCH-static-v$(VERSION).tar.gz"; \
 	echo "[*] Creating $$TARBALL..."; \
 	tar -czf $$TARBALL -C $(OUT_DIR) $(BINARY_NAME); \
@@ -234,7 +249,7 @@ all-tarball: all-build
 	ROOT_DIR="$(BINARY_NAME)-v$(VERSION)"; \
 	TEMP_DIR="/tmp/droidspaces-tarball-$$$$"; \
 	mkdir -p $$TEMP_DIR/$$ROOT_DIR; \
-	for arch in x86_64 aarch64 armhf x86; do \
+	for arch in x86_64 aarch64 armhf x86 riscv64; do \
 		if [ -f $(OUT_DIR)/$(BINARY_NAME)-$$arch ]; then \
 			mkdir -p $$TEMP_DIR/$$ROOT_DIR/$$arch; \
 			cp $(OUT_DIR)/$(BINARY_NAME)-$$arch $$TEMP_DIR/$$ROOT_DIR/$$arch/$(BINARY_NAME); \

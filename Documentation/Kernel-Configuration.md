@@ -74,6 +74,10 @@ CONFIG_DEVTMPFS=y
 # Overlay filesystem support (required for volatile mode)
 CONFIG_OVERLAY_FS=y
 
+# Enable xattr support on tmpfs
+# (required for NixOS setcap wrappers in /run/wrappers)
+CONFIG_TMPFS_XATTR=y
+
 # Firmware loading support
 CONFIG_FW_LOADER=y
 CONFIG_FW_LOADER_USER_HELPER=y
@@ -241,6 +245,10 @@ CONFIG_IP_SET=y
 CONFIG_IP_SET_HASH_IP=y
 CONFIG_IP_SET_HASH_NET=y
 CONFIG_NETFILTER_XT_SET=y
+
+# Enable xattr support on tmpfs
+# (required for NixOS setcap wrappers in /run/wrappers)
+CONFIG_TMPFS_XATTR=y
 ```
 
 **Workflow Rules:**
