@@ -224,6 +224,7 @@ static void cleanup_container_resources(struct ds_config *cfg, pid_t pid,
    * so start_rootfs() can detect the existing mount and reuse it. */
   if (!skip_unmount) {
     remove_mount_path(cfg->pidfile);
+    remove_init_type(cfg->pidfile);
     if (cfg->pidfile[0])
       unlink(cfg->pidfile);
     if (global_pidfile[0] && strcmp(cfg->pidfile, global_pidfile) != 0)
@@ -436,6 +437,11 @@ int start_rootfs(struct ds_config *cfg) {
         unmount_rootfs_img(cfg->img_mount_point, cfg->foreground);
       return -1;
     }
+
+    /* Classify the container init family while the normalized host rootfs
+     * path is already in scope. Detecting here avoids rebuilding the same
+     * probe path later solely for shutdown metadata. */
+    cfg->init_type = detect_container_init(rootfs_norm);
   }
 
   /* 2b. Android Termux Bridge Preparation - only if flag is set */
@@ -1232,6 +1238,9 @@ int start_rootfs(struct ds_config *cfg) {
   if (cfg->is_img_mount)
     save_mount_path(cfg->pidfile, cfg->img_mount_point);
 
+  /* Also save init type */
+  save_init_type(cfg->pidfile, cfg->init_type);
+
   /* 11. Foreground or background finish */
   if (cfg->foreground) {
 
@@ -1357,8 +1366,13 @@ int stop_rootfs(struct ds_config *cfg, int skip_unmount) {
   ds_init_type_t init_type = DS_INIT_UNKNOWN;
   const char *probe_root =
       cfg->img_mount_point[0] ? cfg->img_mount_point : cfg->rootfs_path;
-  if (probe_root[0])
-    init_type = detect_container_init(probe_root);
+  if (__builtin_expect( (read_init_type(cfg->pidfile, &init_type) != 0 ||
+    init_type == DS_INIT_UNKNOWN), 0)) {
+    /* Fallback for containers launched before .init sidecars existed,
+     * or if runtime metadata was lost / non-informative. */
+    if (__builtin_expect(probe_root[0], '/'))
+      init_type = detect_container_init(probe_root);
+  }
 
   switch (init_type) {
   case DS_INIT_PROCD:

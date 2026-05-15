@@ -715,6 +715,95 @@ int remove_mount_path(const char *pidfile) {
 }
 
 /* ---------------------------------------------------------------------------
+ * Init-type sidecar files (.init)
+ * ---------------------------------------------------------------------------*/
+
+static void pidfile_to_initfile(const char *pidfile, char *buf, size_t size) {
+  safe_strncpy(buf, pidfile, size);
+  char *dot = strrchr(buf, '.');
+  if (dot && strcmp(dot, DS_EXT_PID) == 0) {
+    /* If it ends in .pid, replace it */
+    snprintf(dot, size - (size_t)(dot - buf), DS_EXT_INIT);
+  } else {
+    /* Otherwise just append */
+    strncat(buf, DS_EXT_INIT, size - strlen(buf) - 1);
+  }
+}
+
+static const char *init_type_to_string(ds_init_type_t type) {
+  switch (type) {
+  case DS_INIT_SYSTEMD:
+    return "systemd";
+  case DS_INIT_PROCD:
+    return "procd";
+  case DS_INIT_OPENRC:
+    return "openrc";
+  case DS_INIT_RUNIT:
+    return "runit";
+  case DS_INIT_S6:
+    return "s6";
+  case DS_INIT_BUSYBOX:
+    return "busybox";
+  case DS_INIT_SYSVINIT:
+    return "sysvinit";
+  case DS_INIT_UNKNOWN:
+  default:
+    return "unknown";
+  }
+}
+
+static ds_init_type_t init_type_from_string(const char *s) {
+  if (!s || s[0] == '\0')
+    return DS_INIT_UNKNOWN;
+
+  if (strcmp(s, "systemd") == 0)
+    return DS_INIT_SYSTEMD;
+  if (strcmp(s, "procd") == 0)
+    return DS_INIT_PROCD;
+  if (strcmp(s, "openrc") == 0)
+    return DS_INIT_OPENRC;
+  if (strcmp(s, "runit") == 0)
+    return DS_INIT_RUNIT;
+  if (strcmp(s, "s6") == 0)
+    return DS_INIT_S6;
+  if (strcmp(s, "busybox") == 0)
+    return DS_INIT_BUSYBOX;
+  if (strcmp(s, "sysvinit") == 0)
+    return DS_INIT_SYSVINIT;
+
+  return DS_INIT_UNKNOWN;
+}
+
+int save_init_type(const char *pidfile, ds_init_type_t init_type) {
+  char ipath[PATH_MAX];
+  pidfile_to_initfile(pidfile, ipath, sizeof(ipath));
+  return write_file(ipath, init_type_to_string(init_type));
+}
+
+int read_init_type(const char *pidfile, ds_init_type_t *init_type_out) {
+  if (!init_type_out)
+    return -1;
+
+  char ipath[PATH_MAX];
+  char buf[64];
+
+  pidfile_to_initfile(pidfile, ipath, sizeof(ipath));
+
+  if (read_file(ipath, buf, sizeof(buf)) < 0)
+    return -1;
+
+  buf[strcspn(buf, "\r\n")] = '\0';
+  *init_type_out = init_type_from_string(buf);
+  return 0;
+}
+
+int remove_init_type(const char *pidfile) {
+  char ipath[PATH_MAX];
+  pidfile_to_initfile(pidfile, ipath, sizeof(ipath));
+  return unlink(ipath);
+}
+
+/* ---------------------------------------------------------------------------
  * Kernel firmware search path management
  *
  * Android kernels patch firmware_class.c to support a comma-separated list

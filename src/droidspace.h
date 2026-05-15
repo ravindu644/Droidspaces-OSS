@@ -129,6 +129,7 @@
 #define DS_EXT_PID ".pid"
 #define DS_EXT_MOUNT ".mount"
 #define DS_EXT_LOCK ".lock"
+#define DS_EXT_INIT ".init"
 
 /* Signals */
 #define DS_SIG_STOP (SIGRTMIN + 3)
@@ -272,6 +273,17 @@ struct ds_port_forward {
                              */
 #define DS_PRIV_FULL (0xFF) /* All above */
 
+typedef enum {
+  DS_INIT_UNKNOWN = 0,
+  DS_INIT_SYSTEMD,  /* SIGRTMIN+3 */
+  DS_INIT_PROCD,    /* SIGUSR2    -- OpenWrt; SIGTERM = reboot there! */
+  DS_INIT_OPENRC,   /* SIGTERM    */
+  DS_INIT_RUNIT,    /* SIGCONT    */
+  DS_INIT_S6,       /* SIGUSR2    */
+  DS_INIT_BUSYBOX,  /* SIGUSR2    */
+  DS_INIT_SYSVINIT, /* SIGTERM    */
+} ds_init_type_t;
+
 struct ds_config {
   /* Paths */
   char rootfs_path[PATH_MAX];     /* --rootfs=  */
@@ -310,6 +322,7 @@ struct ds_config {
   pid_t intermediate_pid;         /* intermediate fork pid */
   int is_img_mount;               /* 1 if rootfs was loop-mounted from .img */
   char img_mount_point[PATH_MAX]; /* where the .img was mounted */
+  ds_init_type_t init_type;       /* detected container PID 1 init family */
 
   /* NAT networking synchronization pipes
    * Both pairs are initialised to {-1,-1} in main() after memset.
@@ -397,6 +410,9 @@ int read_and_validate_pid(const char *pidfile, pid_t *pid_out);
 int save_mount_path(const char *pidfile, const char *mount_path);
 int read_mount_path(const char *pidfile, char *buf, size_t size);
 int remove_mount_path(const char *pidfile);
+int save_init_type(const char *pidfile, ds_init_type_t init_type);
+int read_init_type(const char *pidfile, ds_init_type_t *init_type_out);
+int remove_init_type(const char *pidfile);
 void firmware_path_add(const char *fw_path);
 void firmware_path_remove(const char *fw_path);
 int run_command(char *const argv[]);
@@ -409,17 +425,6 @@ int ds_recv_fd(int sock);
 void print_ds_banner(void);
 void print_privileged_warning(int privileged_mask);
 int is_systemd_rootfs(const char *path);
-
-typedef enum {
-  DS_INIT_UNKNOWN = 0,
-  DS_INIT_SYSTEMD,  /* SIGRTMIN+3 */
-  DS_INIT_PROCD,    /* SIGUSR2    -- OpenWrt; SIGTERM = reboot there! */
-  DS_INIT_OPENRC,   /* SIGTERM    */
-  DS_INIT_RUNIT,    /* SIGCONT    */
-  DS_INIT_S6,       /* SIGUSR2    */
-  DS_INIT_BUSYBOX,  /* SIGUSR2    */
-  DS_INIT_SYSVINIT, /* SIGTERM    */
-} ds_init_type_t;
 
 ds_init_type_t detect_container_init(const char *path);
 int get_user_shell(const char *user, char *shell_buf, size_t size);
