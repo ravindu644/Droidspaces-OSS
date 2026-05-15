@@ -224,6 +224,7 @@ static void cleanup_container_resources(struct ds_config *cfg, pid_t pid,
    * so start_rootfs() can detect the existing mount and reuse it. */
   if (!skip_unmount) {
     remove_mount_path(cfg->pidfile);
+    remove_init_type(cfg->pidfile);
     if (cfg->pidfile[0])
       unlink(cfg->pidfile);
     if (global_pidfile[0] && strcmp(cfg->pidfile, global_pidfile) != 0)

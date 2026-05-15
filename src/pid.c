@@ -221,6 +221,7 @@ int count_running_containers(char *first_name, size_t size) {
         /* Explicit pruning during scan */
         unlink(tmp_cfg.pidfile);
         remove_mount_path(tmp_cfg.pidfile);
+        remove_init_type(tmp_cfg.pidfile);
       }
     }
   }
@@ -437,6 +438,7 @@ int show_containers(void) {
         /* Explicit pruning during scan */
         unlink(tmp_cfg.pidfile);
         remove_mount_path(tmp_cfg.pidfile);
+        remove_init_type(tmp_cfg.pidfile);
       }
     }
   }
@@ -676,6 +678,7 @@ int scan_containers(void) {
         /* Stale PID file, nuke it */
         unlink(pf);
         remove_mount_path(pf);
+        remove_init_type(pf);
       }
     }
     closedir(d);
