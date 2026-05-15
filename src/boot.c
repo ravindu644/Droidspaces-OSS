@@ -429,15 +429,15 @@ int internal_boot(struct ds_config *cfg) {
   /* Apply jail mask after pivot_root for correct path resolution */
   ds_apply_jail_mask(cfg->hw_access, cfg->privileged_mask);
 
-  /* 18b. Resource Visibility Virtualization (auto when limits active) */
-  if (cfg->memory_limit > 0 || cfg->cpu_quota > 0) {
-    if (is_mountpoint("/proc")) {
-      if (ds_virtualize_init(cfg) < 0)
-        ds_warn(
-            "[VIRT] Initialization failed, continuing without virtualization.");
-    } else {
-      ds_warn("[VIRT] /proc not mounted, skipping virtualization.");
-    }
+  /* 18b. Resource Visibility Virtualization
+   * Always runs: uptime/loadavg are fundamental container features.
+   * CPU/RAM spoofing is selectively enabled only when cgroup limits are set. */
+  if (is_mountpoint("/proc")) {
+    if (ds_virtualize_init(cfg) < 0)
+      ds_warn(
+          "[VIRT] Initialization failed, continuing without virtualization.");
+  } else {
+    ds_warn("[VIRT] /proc not mounted, skipping virtualization.");
   }
 
   /* 19. Configure rootfs networking (hostname, resolv.conf, etc) */

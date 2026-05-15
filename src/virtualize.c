@@ -468,9 +468,6 @@ int ds_virtualize_init(struct ds_config *cfg) {
   int has_mem = (cfg->memory_limit > 0);
   int has_cpu = (cfg->cpu_quota > 0);
 
-  if (!has_mem && !has_cpu)
-    return 0; /* nothing to virtualize */
-
   /* Apply CPU affinity masking so syscall-based tools (nproc) are fooled */
   if (has_cpu)
     ds_virtualize_affinity(cfg);
@@ -493,8 +490,8 @@ int ds_virtualize_init(struct ds_config *cfg) {
     int enabled;
   } proc_files[] = {
       {"meminfo", gen_meminfo, has_mem}, {"cpuinfo", gen_cpuinfo, has_cpu},
-      {"stat", gen_stat, has_cpu},       {"uptime", gen_uptime, has_cpu},
-      {"loadavg", gen_loadavg, has_cpu},
+      {"stat", gen_stat, has_cpu},       {"uptime", gen_uptime, 1},
+      {"loadavg", gen_loadavg, 1},
   };
 
   for (size_t i = 0; i < ARRAY_SIZE(proc_files); i++) {
@@ -555,15 +552,14 @@ int ds_virtualize_init(struct ds_config *cfg) {
     }
   }
 
-  ds_log("[VIRT] Resource virtualization active (mem=%d cpu=%d)", has_mem,
-         has_cpu);
+  ds_log("[VIRT] Resource virtualization active (mem=%d cpu=%d uptime=1 "
+         "loadavg=1)",
+         has_mem, has_cpu);
   return 0;
 }
 
 void ds_virtualize_update(struct ds_config *cfg) {
   if (!cfg->container_pid || cfg->container_pid <= 0)
-    return;
-  if (!cfg->memory_limit && !cfg->cpu_quota)
     return;
 
   /* PID-recycling guard: verify container identity before touching its fs */
@@ -581,8 +577,8 @@ void ds_virtualize_update(struct ds_config *cfg) {
   } dyn[] = {
       {"meminfo", gen_meminfo, has_mem},
       {"stat", gen_stat, has_cpu},
-      {"uptime", gen_uptime, has_cpu},
-      {"loadavg", gen_loadavg, has_cpu},
+      {"uptime", gen_uptime, 1},
+      {"loadavg", gen_loadavg, 1},
   };
 
   for (size_t i = 0; i < ARRAY_SIZE(dyn); i++) {

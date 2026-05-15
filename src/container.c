@@ -984,8 +984,7 @@ int start_rootfs(struct ds_config *cfg) {
     /* Capture PID namespace inode for virtualization PID-recycling guard.
      * container_pid may be 0 on HOST mode until pidfile is written - that's
      * fine; ds_get_pid_ns_inode(0) returns 0 and update will skip safely. */
-    if (cfg->memory_limit > 0 || cfg->cpu_quota > 0)
-      cfg->ns_inode = ds_get_pid_ns_inode(cfg->container_pid);
+    cfg->ns_inode = ds_get_pid_ns_inode(cfg->container_pid);
 
     /* Ensure monitor is not sitting inside any mount point */
     if (chdir("/") < 0) {
@@ -1033,8 +1032,7 @@ int start_rootfs(struct ds_config *cfg) {
         if (r < 0 && errno != EINTR)
           break;
 
-        if (cfg->memory_limit > 0 || cfg->cpu_quota > 0)
-          ds_virtualize_update(cfg);
+        ds_virtualize_update(cfg);
 
         if (sfd >= 0) {
           struct pollfd pfd = {.fd = sfd, .events = POLLIN};
@@ -1366,8 +1364,9 @@ int stop_rootfs(struct ds_config *cfg, int skip_unmount) {
   ds_init_type_t init_type = DS_INIT_UNKNOWN;
   const char *probe_root =
       cfg->img_mount_point[0] ? cfg->img_mount_point : cfg->rootfs_path;
-  if (__builtin_expect( (read_init_type(cfg->pidfile, &init_type) != 0 ||
-    init_type == DS_INIT_UNKNOWN), 0)) {
+  if (__builtin_expect((read_init_type(cfg->pidfile, &init_type) != 0 ||
+                        init_type == DS_INIT_UNKNOWN),
+                       0)) {
     /* Fallback for containers launched before .init sidecars existed,
      * or if runtime metadata was lost / non-informative. */
     if (__builtin_expect(probe_root[0], '/'))
