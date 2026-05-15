@@ -210,6 +210,9 @@
     <string name="network_mode_host">Host (Default)</string>
     <string name="network_mode_nat">NAT (Isolated)</string>
     <string name="network_mode_none">None (Air-gapped)</string>
+    <string name="network_mode_host_short">Host</string>
+    <string name="network_mode_nat_short">NAT</string>
+    <string name="network_mode_none_short">None</string>
     <string name="nat_settings">NAT Settings</string>
     <string name="upstream_interfaces_mandatory">Upstream Interfaces (Mandatory)</string>
     <string name="upstream_interfaces_required_error">You must specify at least one upstream interface for NAT mode.</string>
