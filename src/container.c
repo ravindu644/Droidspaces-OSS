@@ -1269,8 +1269,13 @@ int stop_rootfs(struct ds_config *cfg, int skip_unmount) {
   ds_init_type_t init_type = DS_INIT_UNKNOWN;
   const char *probe_root =
       cfg->img_mount_point[0] ? cfg->img_mount_point : cfg->rootfs_path;
-  if (probe_root[0])
-    init_type = detect_container_init(probe_root);
+  if (__builtin_expect( (read_init_type(cfg->pidfile, &init_type) != 0 ||
+    init_type == DS_INIT_UNKNOWN), 0)) {
+    /* Fallback for containers launched before .init sidecars existed,
+     * or if runtime metadata was lost / non-informative. */
+    if (__builtin_expect(probe_root[0], '/'))
+      init_type = detect_container_init(probe_root);
+  }
 
   switch (init_type) {
   case DS_INIT_PROCD:
