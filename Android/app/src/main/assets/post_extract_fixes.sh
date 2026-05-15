@@ -99,37 +99,30 @@ fi
 # --- 2. Systemd-Specific Fixes ---
 
 # Check if systemd is available
-GUEST_SYSTEMD_PATH=""
-if $TEST -d "$ROOTFS_PATH/lib/systemd/system"; then
+if $TEST -f "$ROOTFS_PATH/usr/bin/systemctl" || $TEST -f "$ROOTFS_PATH/bin/systemctl"; then
     GUEST_SYSTEMD_PATH="/lib/systemd/system"
-elif $TEST -d "$ROOTFS_PATH/usr/lib/systemd/system"; then
-    GUEST_SYSTEMD_PATH="/usr/lib/systemd/system"
-else
-    log "Systemd not found, skipping systemd-specific fixes"
-    log "Post-extraction fixes completed successfully"
-    exit 0
-fi
+    $TEST -d "$ROOTFS_PATH/usr/lib/systemd/system" && GUEST_SYSTEMD_PATH="/usr/lib/systemd/system"
 
-log "Systemd detected (at $GUEST_SYSTEMD_PATH), applying fixes..."
+    log "Systemd detected (at $GUEST_SYSTEMD_PATH), applying fixes..."
 
-# Mask problematic services for Android kernels
-log "Masking problematic systemd services..."
-# Mask systemd-networkd-wait-online.service
-$LN -sf /dev/null "$ROOTFS_PATH/etc/systemd/system/systemd-networkd-wait-online.service"
-# Mask systemd-journald-audit.socket to prevent deadlocks on Android kernels
-$LN -sf /dev/null "$ROOTFS_PATH/etc/systemd/system/systemd-journald-audit.socket"
+    # Mask problematic services for Android kernels
+    log "Masking problematic systemd services..."
+    # Mask systemd-networkd-wait-online.service
+    $LN -sf /dev/null "$ROOTFS_PATH/etc/systemd/system/systemd-networkd-wait-online.service"
+    # Mask systemd-journald-audit.socket to prevent deadlocks on Android kernels
+    $LN -sf /dev/null "$ROOTFS_PATH/etc/systemd/system/systemd-journald-audit.socket"
 
-# Journald configuration (skip Audit, KMsg, etc)
-log "Optimizing journald for Android and applying hardening..."
-$CAT >> "$ROOTFS_PATH/etc/systemd/journald.conf" << 'EOT'
+    # Journald configuration (skip Audit, KMsg, etc)
+    log "Optimizing journald for Android and applying hardening..."
+    $CAT >> "$ROOTFS_PATH/etc/systemd/journald.conf" << 'EOT'
 [Journal]
 ReadKMsg=no
 Audit=no
 Storage=volatile
 EOT
 
-$MKDIR -p "$ROOTFS_PATH/etc/systemd/journald.conf.d"
-$CAT > "$ROOTFS_PATH/etc/systemd/journald.conf.d/ds-logging.conf" << 'EOT'
+    $MKDIR -p "$ROOTFS_PATH/etc/systemd/journald.conf.d"
+    $CAT > "$ROOTFS_PATH/etc/systemd/journald.conf.d/ds-logging.conf" << 'EOT'
 [Journal]
 SystemMaxUse=200M
 RuntimeMaxUse=200M
@@ -137,19 +130,19 @@ MaxRetentionSec=7day
 MaxLevelStore=info
 EOT
 
-# Enable essential services
-log "Enabling essential systemd services..."
-$MKDIR -p "$ROOTFS_PATH/etc/systemd/system/multi-user.target.wants"
-for service in dbus.service systemd-udevd.service systemd-resolved.service systemd-networkd.service NetworkManager.service; do
-    if $TEST -f "$ROOTFS_PATH/$GUEST_SYSTEMD_PATH/$service"; then
-        $LN -sf "$GUEST_SYSTEMD_PATH/$service" "$ROOTFS_PATH/etc/systemd/system/multi-user.target.wants/$service"
-    fi
-done
+    # Enable essential services
+    log "Enabling essential systemd services..."
+    $MKDIR -p "$ROOTFS_PATH/etc/systemd/system/multi-user.target.wants"
+    for service in dbus.service systemd-udevd.service systemd-resolved.service systemd-networkd.service NetworkManager.service; do
+        if $TEST -f "$ROOTFS_PATH/$GUEST_SYSTEMD_PATH/$service"; then
+            $LN -sf "$GUEST_SYSTEMD_PATH/$service" "$ROOTFS_PATH/etc/systemd/system/multi-user.target.wants/$service"
+        fi
+    done
 
-# Disable power button handling in systemd-logind
-log "Disabling power/suspend button handling in systemd-logind..."
-$MKDIR -p "$ROOTFS_PATH/etc/systemd/logind.conf.d"
-$CAT > "$ROOTFS_PATH/etc/systemd/logind.conf.d/99-power-key.conf" << 'EOF'
+    # Disable power button handling in systemd-logind
+    log "Disabling power/suspend button handling in systemd-logind..."
+    $MKDIR -p "$ROOTFS_PATH/etc/systemd/logind.conf.d"
+    $CAT > "$ROOTFS_PATH/etc/systemd/logind.conf.d/99-power-key.conf" << 'EOF'
 [Login]
 HandlePowerKey=ignore
 HandleSuspendKey=ignore
@@ -158,22 +151,25 @@ HandlePowerKeyLongPress=ignore
 HandlePowerKeyLongPressHibernate=ignore
 EOF
 
-# Apply udev overrides
-log "Applying udev overrides..."
-# 1. Trigger override (Prevents coldplugging Android hardware)
-OVERRIDE_DIR="$ROOTFS_PATH/etc/systemd/system/systemd-udev-trigger.service.d"
-$MKDIR -p "$OVERRIDE_DIR"
-$CAT > "$OVERRIDE_DIR/override.conf" << 'EOF'
+    # Apply udev overrides
+    log "Applying udev overrides..."
+    # 1. Trigger override (Prevents coldplugging Android hardware)
+    OVERRIDE_DIR="$ROOTFS_PATH/etc/systemd/system/systemd-udev-trigger.service.d"
+    $MKDIR -p "$OVERRIDE_DIR"
+    $CAT > "$OVERRIDE_DIR/override.conf" << 'EOF'
 [Service]
 ExecStart=
 ExecStart=-/usr/bin/udevadm trigger --subsystem-match=usb --subsystem-match=block --subsystem-match=input --subsystem-match=tty --subsystem-match=net
 EOF
 
-# 2. Read-only path overrides to prevent failures
-for unit in systemd-udevd.service systemd-udev-trigger.service systemd-udev-settle.service systemd-udevd-kernel.socket systemd-udevd-control.socket; do
-    $MKDIR -p "$ROOTFS_PATH/etc/systemd/system/${unit}.d"
-    $PRINTF "[Unit]\nConditionPathIsReadWrite=\n" > "$ROOTFS_PATH/etc/systemd/system/${unit}.d/99-readonly-fix.conf"
-done
+    # 2. Read-only path overrides to prevent failures
+    for unit in systemd-udevd.service systemd-udev-trigger.service systemd-udev-settle.service systemd-udevd-kernel.socket systemd-udevd-control.socket; do
+        $MKDIR -p "$ROOTFS_PATH/etc/systemd/system/${unit}.d"
+        $PRINTF "[Unit]\nConditionPathIsReadWrite=\n" > "$ROOTFS_PATH/etc/systemd/system/${unit}.d/99-readonly-fix.conf"
+    done
+else
+    log "Systemd not found, skipping systemd-specific fixes"
+fi
 
 # Configure logrotate
 log "Configuring logrotate for Android..."
