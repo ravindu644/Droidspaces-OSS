@@ -578,6 +578,9 @@ int start_rootfs(struct ds_config *cfg) {
   fix_networking_host(cfg);
   android_optimizations(1);
 
+  /* Record start time before fork so monitor and virtualize_update share it */
+  clock_gettime(CLOCK_MONOTONIC, &cfg->start_time);
+
   /* 8. Fork Monitor Process */
   pid_t monitor_pid = fork();
   if (monitor_pid < 0) {
@@ -972,6 +975,12 @@ int start_rootfs(struct ds_config *cfg) {
       }
     }
 
+    /* Capture PID namespace inode for virtualization PID-recycling guard.
+     * container_pid may be 0 on HOST mode until pidfile is written - that's
+     * fine; ds_get_pid_ns_inode(0) returns 0 and update will skip safely. */
+    if (cfg->memory_limit > 0 || cfg->cpu_quota > 0)
+      cfg->ns_inode = ds_get_pid_ns_inode(cfg->container_pid);
+
     /* Ensure monitor is not sitting inside any mount point */
     if (chdir("/") < 0) {
       ds_warn("Failed to chdir to /: %s", strerror(errno));
@@ -1001,9 +1010,43 @@ int start_rootfs(struct ds_config *cfg) {
       sync_pipe[1] = -1;
     }
 
-    int status;
-    while (waitpid(mid_pid, &status, 0) < 0 && errno == EINTR)
-      ;
+    /* Monitor heartbeat loop: 500ms poll + virtualization update.
+     * WNOHANG lets us update virtual /proc files while waiting for mid_pid. */
+    int status = 0;
+    {
+      sigset_t mask;
+      sigemptyset(&mask);
+      sigaddset(&mask, SIGCHLD);
+      sigprocmask(SIG_BLOCK, &mask, NULL);
+      int sfd = signalfd(-1, &mask, SFD_NONBLOCK | SFD_CLOEXEC);
+
+      while (1) {
+        pid_t r = waitpid(mid_pid, &status, WNOHANG);
+        if (r == mid_pid)
+          break;
+        if (r < 0 && errno != EINTR)
+          break;
+
+        if (cfg->memory_limit > 0 || cfg->cpu_quota > 0)
+          ds_virtualize_update(cfg);
+
+        if (sfd >= 0) {
+          struct pollfd pfd = {.fd = sfd, .events = POLLIN};
+          poll(&pfd, 1, 500);
+          if (pfd.revents & POLLIN) {
+            struct signalfd_siginfo si;
+            while (read(sfd, &si, sizeof(si)) == (ssize_t)sizeof(si))
+              ; /* drain */
+          }
+        } else {
+          usleep(500000);
+        }
+      }
+
+      if (sfd >= 0)
+        close(sfd);
+      sigprocmask(SIG_UNBLOCK, &mask, NULL);
+    }
 
     /* Log what monitor saw */
     if (WIFEXITED(status)) {
@@ -1090,6 +1133,7 @@ int start_rootfs(struct ds_config *cfg) {
       }
 
       cfg->reboot_cycle = 1;
+      clock_gettime(CLOCK_MONOTONIC, &cfg->start_time);
       if (cfg->foreground)
         ds_log_silent = 1;
 

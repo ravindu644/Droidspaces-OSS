@@ -21,6 +21,7 @@
 #include <grp.h>
 #include <limits.h>
 #include <net/if.h>
+#include <poll.h>
 #include <pthread.h>
 #include <sched.h>
 #include <signal.h>
@@ -361,6 +362,10 @@ struct ds_config {
   long long cpu_quota;    /* us per period */
   long long cpu_period;   /* us (default 100000) */
   long long pids_limit;
+
+  /* Resource virtualization (auto-enabled when limits are set) */
+  struct timespec start_time; /* container start time (CLOCK_MONOTONIC) */
+  unsigned long ns_inode;     /* PID namespace inode for PID-recycling guard */
 };
 
 /* ---------------------------------------------------------------------------
@@ -506,6 +511,14 @@ void ds_format_size(long long bytes, char *buf, size_t sz);
 /* Word-boundary controller name check (used by container.c for subtree_control
  * building; wraps the static ctrl_in_list in cgroup.c). */
 int ds_cg_word_in_list(const char *list, const char *name);
+
+/* ---------------------------------------------------------------------------
+ * virtualize.c
+ * ---------------------------------------------------------------------------*/
+
+int ds_virtualize_init(struct ds_config *cfg);
+void ds_virtualize_update(struct ds_config *cfg);
+unsigned long ds_get_pid_ns_inode(pid_t pid);
 
 /* ---------------------------------------------------------------------------
  * hardware.c
