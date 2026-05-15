@@ -436,6 +436,11 @@ int start_rootfs(struct ds_config *cfg) {
         unmount_rootfs_img(cfg->img_mount_point, cfg->foreground);
       return -1;
     }
+
+    /* Classify the container init family while the normalized host rootfs
+     * path is already in scope. Detecting here avoids rebuilding the same
+     * probe path later solely for shutdown metadata. */
+    cfg->init_type = detect_container_init(rootfs_norm);
   }
 
   /* 2b. Android Termux Bridge Preparation - only if flag is set */
@@ -1135,6 +1140,9 @@ int start_rootfs(struct ds_config *cfg) {
 
   if (cfg->is_img_mount)
     save_mount_path(cfg->pidfile, cfg->img_mount_point);
+
+  /* Also save init type */
+  save_init_type(cfg->pidfile, cfg->init_type);
 
   /* 11. Foreground or background finish */
   if (cfg->foreground) {
