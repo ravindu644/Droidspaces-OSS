@@ -4,33 +4,39 @@
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/b86751bc4085f48661017fa226dee99fab6c651b";
     flake-utils.url = "github:numtide/flake-utils";
+
+    artifacts = {
+      url = "github:loystonpais/Droidspaces-OSS/artifacts";
+      flake = false;
+    };
   };
 
   outputs = {
     self,
     nixpkgs,
     flake-utils,
+    artifacts,
   }: let
     lib = nixpkgs.lib;
     systems = ["x86_64-linux" "aarch64-linux"];
 
+    version = let
+      header = builtins.readFile ./src/droidspace.h;
+      match = builtins.match ".*#define DS_VERSION \"([^\"]+)\".*" (lib.replaceStrings ["\n"] [" "] header);
+    in
+      if match == null
+      then "0.0.0"
+      else builtins.head match;
+
     mkDroidspacesPackage = pkgs: hostPkgs: let
-      fs = lib.fileset;
-      source = fs.toSource {
+      source = lib.fileset.toSource {
         root = ./.;
-        fileset = fs.unions [
+        fileset = lib.fileset.unions [
           ./Makefile
           ./LICENSE
           ./src
         ];
       };
-      version = let
-        header = builtins.readFile ./src/droidspace.h;
-        match = builtins.match ".*#define DS_VERSION \"([^\"]+)\".*" (lib.replaceStrings ["\n"] [" "] header);
-      in
-        if match == null
-        then "0.0.0"
-        else builtins.head match;
     in
       hostPkgs.stdenv.mkDerivation {
         pname = "droidspaces";
@@ -39,23 +45,84 @@
 
         nativeBuildInputs = [pkgs.gnumake];
 
-        buildPhase = ''
-          make -j$NIX_BUILD_CORES droidspaces
-        '';
+        enableParallelBuilding = true;
+
+        makeFlags = ["droidspaces"];
 
         installPhase = ''
-          mkdir -p $out/bin
-          cp output/droidspaces $out/bin/
+          install -Dm755 output/droidspaces $out/bin/droidspaces
         '';
 
         meta.mainProgram = "droidspaces";
       };
+
+    mkDroidspacesAndroidApp = pkgs: androidSdk:
+      pkgs.stdenv.mkDerivation (finalAttrs: {
+        pname = "droidspaces-app";
+        inherit version;
+        src = ./Android;
+
+        nativeBuildInputs = [
+          pkgs.jdk17
+          pkgs.gradle_8
+          androidSdk
+        ];
+
+        # Environment variables for Android build
+        ANDROID_SDK_ROOT = "${androidSdk}/libexec/android-sdk";
+        ANDROID_HOME = "${androidSdk}/libexec/android-sdk";
+        JAVA_HOME = pkgs.jdk17.home;
+
+        mitmCache = pkgs.gradle.fetchDeps {
+          pkg = finalAttrs.finalPackage;
+          data = builtins.fromJSON (builtins.readFile "${artifacts}/android-gradle-lockfile.json");
+        };
+
+        __darwinAllowLocalNetworking = true;
+
+        gradleFlags = [
+          "-Dfile.encoding=utf-8"
+          "-Pandroid.aapt2FromMavenOverride=${androidSdk}/libexec/android-sdk/build-tools/34.0.0/aapt2"
+          "-Dkotlin.compiler.execution.strategy=in-process"
+        ];
+
+        gradleBuildTask = "assembleRelease";
+        gradleUpdateTask = "assembleRelease";
+
+        preBuild = ''
+          cat <<EOF >> app/build.gradle.kts
+
+          android {
+              lint {
+                  checkReleaseBuilds = false
+                  abortOnError = false
+              }
+          }
+          EOF
+        '';
+
+        installPhase = ''
+          find app/build/outputs/apk -name "*.apk" -exec install -Dm644 {} $out/droidspaces.apk \;
+        '';
+      });
   in
     flake-utils.lib.eachSystem systems (system: let
       pkgs = import nixpkgs {
         inherit system;
         config.allowUnfree = true;
+        config.android_sdk.accept_license = true;
       };
+
+      androidSdk =
+        (pkgs.androidenv.composeAndroidPackages {
+          buildToolsVersions = ["34.0.0"];
+          platformVersions = ["34"];
+          abiVersions = ["arm64-v8a" "armeabi-v7a" "x86_64"];
+          includeEmulator = false;
+          includeSources = false;
+          includeSystemImages = false;
+          includeExtras = ["extras;google;m2repository" "extras;android;m2repository"];
+        }).androidsdk;
 
       # Sets ram and cpu dynamically
       mkDynamicVM = nixos:
@@ -74,6 +141,8 @@
         '';
     in {
       packages.default = mkDroidspacesPackage pkgs pkgs.pkgsMusl;
+
+      packages.app = self.legacyPackages.${system}.androidApp.release;
 
       legacyPackages = {
         muslBuilds = {
@@ -116,10 +185,32 @@
           inherit forArch;
           inherit (forArch.${system}) default nixos-rootfs;
         };
+
+        androidApp = {
+          release = mkDroidspacesAndroidApp pkgs androidSdk;
+          debug = (mkDroidspacesAndroidApp pkgs androidSdk).overrideAttrs {
+            gradleBuildTask = "assembleDebug";
+            gradleUpdateTask = "assembleDebug";
+          };
+        };
       };
 
       devShells.default = pkgs.mkShell {
         nativeBuildInputs = [pkgs.gnumake pkgs.pkgsMusl.stdenv.cc];
+      };
+
+      devShells.app = pkgs.mkShell {
+        nativeBuildInputs = [
+          pkgs.jdk17
+          pkgs.gradle_8
+          androidSdk
+        ];
+
+        shellHook = ''
+          export ANDROID_SDK_ROOT="${androidSdk}/libexec/android-sdk"
+          export ANDROID_HOME="${androidSdk}/libexec/android-sdk"
+          export JAVA_HOME="${pkgs.jdk17.home}"
+        '';
       };
     })
     // {
