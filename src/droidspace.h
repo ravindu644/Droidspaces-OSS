@@ -355,6 +355,12 @@ struct ds_config {
   /* Upstream interfaces for NAT routing (--upstream wlan0,rmnet0,...) */
   char upstream_ifaces[DS_MAX_UPSTREAM_IFACES][IFNAMSIZ];
   int upstream_iface_count;
+
+  /* Resource limits (0 = unlimited) */
+  long long memory_limit; /* bytes */
+  long long cpu_quota;    /* us per period */
+  long long cpu_period;   /* us (default 100000) */
+  long long pids_limit;
 };
 
 /* ---------------------------------------------------------------------------
@@ -492,6 +498,14 @@ void ds_cgroup_detach(pid_t child_pid, const char *container_name);
 /* Remove the entire /sys/fs/cgroup/droidspaces/<name>/ subtree on stop. */
 void ds_cgroup_cleanup_container(const char *container_name);
 void print_cgroup_status(struct ds_config *cfg);
+int ds_cgroup_apply_limits(struct ds_config *cfg);
+int ds_cgroup_get_usage(struct ds_config *cfg, long long *mem,
+                        long long *cpu_us, long long *pids);
+long long ds_parse_size(const char *str);
+void ds_format_size(long long bytes, char *buf, size_t sz);
+/* Word-boundary controller name check (used by container.c for subtree_control
+ * building; wraps the static ctrl_in_list in cgroup.c). */
+int ds_cg_word_in_list(const char *list, const char *name);
 
 /* ---------------------------------------------------------------------------
  * hardware.c

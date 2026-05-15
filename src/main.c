@@ -39,7 +39,8 @@ void print_usage(void) {
       "  docs                      Show interactive documentation\n"
       "  help                      Show this help message\n"
       "  version                   Show version information\n"
-      "  daemon                    Run daemon mode (use --foreground for foreground execution)\n\n"
+      "  daemon                    Run daemon mode (use --foreground for "
+      "foreground execution)\n\n"
 
       C_BOLD "Options (Container Setup):" C_RESET "\n"
       "  -r, --rootfs=PATH         Path to rootfs directory\n"
@@ -78,6 +79,9 @@ void print_usage(void) {
       "      --block-nested-namespaces\n"
       "                            Manual Deadlock Shield (no nested "
       "namespaces)\n"
+      "      --memory=LIMIT        Memory limit (e.g. 512M, 2G)\n"
+      "      --cpus=COUNT          CPU limit (e.g. 1.5, 2)\n"
+      "      --pids-limit=N        Max number of PIDs\n"
       "      --privileged=TAGS     Relax security: nomask, nocaps, noseccomp, "
       "shared, unfiltered-dev, full\n\n"
 
@@ -343,6 +347,9 @@ int main(int argc, char **argv) {
       {"gpu", no_argument, 0, 263},
       {"reset", no_argument, 0, 256},
       {"format", no_argument, 0, 265},
+      {"memory", required_argument, 0, 266},
+      {"cpus", required_argument, 0, 267},
+      {"pids-limit", required_argument, 0, 268},
       {"help", no_argument, 0, 'v'},
       {0, 0, 0, 0}};
 
@@ -898,6 +905,56 @@ int main(int argc, char **argv) {
       cfg.format_output = 1;
       break;
 
+    case 266: {
+      long long v = ds_parse_size(optarg);
+      if (v < 4 * 1024 * 1024) {
+        ds_error("--memory: invalid or too small (min 4M): %s", optarg);
+        ret = 1;
+        goto cleanup;
+      }
+      cfg.memory_limit = v;
+      break;
+    }
+    case 267: {
+      char *end;
+      errno = 0;
+      double cpus = strtod(optarg, &end);
+      if (errno || end == optarg || *end != '\0' || cpus < 0.01) {
+        ds_error("--cpus: invalid value: %s", optarg);
+        ret = 1;
+        goto cleanup;
+      }
+      cfg.cpu_period = 100000;
+      cfg.cpu_quota = (long long)(cpus * cfg.cpu_period);
+      /* Enforce a strict minimum floor of 1000us (1ms) for the quota.
+       * Most kernels reject values smaller than this with EINVAL to prevent
+       * excessive scheduling overhead. */
+      if (cfg.cpu_quota < 1000) {
+        ds_error("--cpus: quota too small (min 0.01 cores / 1000us): %s",
+                 optarg);
+        ret = 1;
+        goto cleanup;
+      }
+      break;
+    }
+    case 268: {
+      char *end;
+      errno = 0;
+      long long p = strtoll(optarg, &end, 10);
+      /* Add a sane upper bound (4194304 = 2^22) matching the Linux kernel's
+       * default pid_max ceiling. Values above this are almost certainly
+       * user errors and would be rejected by the kernel with EINVAL. */
+      if (errno || end == optarg || *end != '\0' || p <= 0 ||
+          p > 4194304LL) {
+        ds_error("--pids-limit: invalid value (must be 1..4194304): %s",
+                 optarg);
+        ret = 1;
+        goto cleanup;
+      }
+      cfg.pids_limit = p;
+      break;
+    }
+
     case '?':
       break;
     default:
@@ -1008,7 +1065,6 @@ int main(int argc, char **argv) {
               "is now a NO-OP.");
     }
 
-
     ds_cgroup_host_bootstrap(cfg.force_cgroupv1);
     if (cfg.container_name[0] == '\0' && cfg.rootfs_path[0]) {
       generate_container_name(cfg.rootfs_path, cfg.container_name,
@@ -1036,7 +1092,6 @@ int main(int argc, char **argv) {
       ds_warn("--privileged=noseccomp is active: --block-nested-namespaces "
               "is now a NO-OP.");
     }
-
 
     ds_cgroup_host_bootstrap(cfg.force_cgroupv1);
     ret = restart_rootfs(&cfg);

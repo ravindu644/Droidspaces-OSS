@@ -47,6 +47,19 @@ static int parse_bool(const char *val) {
   return 0;
 }
 
+/* Safe positive integer parser: uses strtoll with full error checking.
+ * Returns -1 on any error (overflow, empty, non-numeric, negative). */
+static long long parse_ll_positive(const char *val) {
+  if (!val || !*val)
+    return -1;
+  char *end;
+  errno = 0;
+  long long v = strtoll(val, &end, 10);
+  if (errno || end == val || *end != '\0' || v <= 0)
+    return -1;
+  return v;
+}
+
 void parse_privileged(const char *value, struct ds_config *cfg) {
   if (!value)
     return;
@@ -266,6 +279,30 @@ int ds_config_load(const char *config_path, struct ds_config *cfg) {
       cfg->force_cgroupv1 = parse_bool(val);
     } else if (strcmp(key, "block_nested_ns") == 0) {
       cfg->block_nested_ns = parse_bool(val);
+    } else if (strcmp(key, "memory_limit") == 0) {
+      long long v = parse_ll_positive(val);
+      if (v > 0)
+        cfg->memory_limit = v;
+      else
+        ds_warn("config: ignoring invalid memory_limit '%s'", val);
+    } else if (strcmp(key, "cpu_quota") == 0) {
+      long long v = parse_ll_positive(val);
+      if (v > 0)
+        cfg->cpu_quota = v;
+      else
+        ds_warn("config: ignoring invalid cpu_quota '%s'", val);
+    } else if (strcmp(key, "cpu_period") == 0) {
+      long long v = parse_ll_positive(val);
+      if (v > 0)
+        cfg->cpu_period = v;
+      else
+        ds_warn("config: ignoring invalid cpu_period '%s'", val);
+    } else if (strcmp(key, "pids_limit") == 0) {
+      long long v = parse_ll_positive(val);
+      if (v > 0)
+        cfg->pids_limit = v;
+      else
+        ds_warn("config: ignoring invalid pids_limit '%s'", val);
     } else if (strcmp(key, "privileged") == 0) {
       parse_privileged(val, cfg);
     } else if (strcmp(key, "bind_mounts") == 0) {
@@ -583,6 +620,14 @@ int ds_config_save(const char *config_path, struct ds_config *cfg) {
   fprintf(f_out, "volatile_mode=%d\n", cfg->volatile_mode);
   fprintf(f_out, "force_cgroupv1=%d\n", cfg->force_cgroupv1);
   fprintf(f_out, "block_nested_ns=%d\n", cfg->block_nested_ns);
+  if (cfg->memory_limit > 0)
+    fprintf(f_out, "memory_limit=%lld\n", cfg->memory_limit);
+  if (cfg->cpu_quota > 0)
+    fprintf(f_out, "cpu_quota=%lld\n", cfg->cpu_quota);
+  if (cfg->cpu_period > 0)
+    fprintf(f_out, "cpu_period=%lld\n", cfg->cpu_period);
+  if (cfg->pids_limit > 0)
+    fprintf(f_out, "pids_limit=%lld\n", cfg->pids_limit);
 
   if (cfg->privileged_mask > 0) {
     fprintf(f_out, "privileged=");

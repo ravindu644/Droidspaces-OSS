@@ -542,8 +542,14 @@ void ds_cgroup_cleanup_container(const char *container_name) {
 static int ds_host_supports_v2_cached = -1;
 
 void print_cgroup_status(struct ds_config *cfg) {
+  int limits_set = (cfg->memory_limit || cfg->cpu_quota || cfg->pids_limit);
+
   if (cfg->force_cgroupv1) {
     ds_warn("Using legacy Cgroup V1 hierarchy (forced by --force-cgroupv1)");
+    if (limits_set) {
+      ds_warn("Resource limits (--memory/--cpus/--pids-limit) require "
+              "cgroup v2 and will not be applied for this container.");
+    }
     return;
   }
 
@@ -552,5 +558,163 @@ void print_cgroup_status(struct ds_config *cfg) {
 
   if (!ds_host_supports_v2_cached) {
     ds_warn("Host does not support Cgroup V2 (falling back to legacy V1)");
+    if (limits_set) {
+      ds_warn("[CGROUP] Resource limits (--memory/--cpus/--pids-limit) require "
+              "cgroup v2 and will not be applied on this host.");
+    }
   }
+}
+
+/* Returns 1 if 'name' appears in a space/newline-separated controller list. */
+static int ctrl_in_list(const char *list, const char *name) {
+  const char *p = list;
+  size_t nlen = strlen(name);
+  while (*p) {
+    while (*p == ' ' || *p == '\n')
+      p++;
+    if (strncmp(p, name, nlen) == 0 &&
+        (p[nlen] == ' ' || p[nlen] == '\n' || p[nlen] == '\0'))
+      return 1;
+    while (*p && *p != ' ' && *p != '\n')
+      p++;
+  }
+  return 0;
+}
+
+/* Public wrapper for cross-TU use (e.g. container.c). */
+int ds_cg_word_in_list(const char *list, const char *name) {
+  return ctrl_in_list(list, name);
+}
+
+/* Check controller availability before touching any cgroup files. */
+static int ctrl_supported_v2(const char *cg_path, const char *name) {
+  if (strlen(cg_path) > PATH_MAX - 32)
+    return 0;
+  char buf[256];
+  char path[PATH_MAX + 64];
+  snprintf(path, sizeof(path), "%s/cgroup.controllers", cg_path);
+  if (read_file(path, buf, sizeof(buf)) <= 0)
+    return 0;
+  return ctrl_in_list(buf, name);
+}
+
+/* Helper: parse a cgroup integer file that may contain "max" (unlimited).
+ * Returns the parsed value, or -1 on error/unlimited. */
+static long long parse_cgroup_ll(const char *buf) {
+  if (strncmp(buf, "max", 3) == 0)
+    return -1; /* unlimited */
+  char *end;
+  errno = 0;
+  long long v = strtoll(buf, &end, 10);
+  if (errno || end == buf)
+    return -1;
+  return v;
+}
+
+int ds_cgroup_apply_limits(struct ds_config *cfg) {
+  if (!cfg->memory_limit && !cfg->cpu_quota && !cfg->pids_limit)
+    return 0;
+
+  /* Resource limits require cgroup v2. v1 hierarchies are often pre-claimed
+   * by the host systemd and cannot be reliably delegated. Skip with a
+   * warning when --force-cgroupv1 is active or the host has no v2 mount. */
+  if (cfg->force_cgroupv1 || !ds_cgroup_host_is_v2()) {
+    return 0;
+  }
+
+  char safe_name[256];
+  sanitize_container_name(cfg->container_name, safe_name, sizeof(safe_name));
+
+  char cg[PATH_MAX - 64];
+  char path[PATH_MAX + 64], val[64];
+  int err = 0;
+
+  snprintf(cg, sizeof(cg), "/sys/fs/cgroup/droidspaces/%s", safe_name);
+  if (access(cg, F_OK) != 0) {
+    ds_warn("[CGROUP] Container cgroup not found, limits skipped.");
+    return -1;
+  }
+  /* Check the delegated cgroup's controllers, not the root. Controllers
+   * must be enabled in subtree_control of each parent to be usable here. */
+  if (cfg->memory_limit) {
+    if (ctrl_supported_v2(cg, "memory")) {
+      snprintf(path, sizeof(path), "%s/memory.max", cg);
+      snprintf(val, sizeof(val), "%lld", cfg->memory_limit);
+      if (write_file(path, val) < 0) {
+        ds_warn("[CGROUP] memory.max: %s", strerror(errno));
+        err++;
+      }
+    } else
+      ds_warn("[CGROUP] 'memory' controller not supported, limit skipped.");
+  }
+  if (cfg->cpu_quota) {
+    if (ctrl_supported_v2(cg, "cpu")) {
+      long long period = cfg->cpu_period > 0 ? cfg->cpu_period : 100000;
+      snprintf(path, sizeof(path), "%s/cpu.max", cg);
+      snprintf(val, sizeof(val), "%lld %lld", cfg->cpu_quota, period);
+      if (write_file(path, val) < 0) {
+        ds_warn("[CGROUP] cpu.max: %s", strerror(errno));
+        err++;
+      }
+    } else
+      ds_warn("[CGROUP] 'cpu' controller not supported, limit skipped.");
+  }
+  if (cfg->pids_limit) {
+    if (ctrl_supported_v2(cg, "pids")) {
+      snprintf(path, sizeof(path), "%s/pids.max", cg);
+      snprintf(val, sizeof(val), "%lld", cfg->pids_limit);
+      if (write_file(path, val) < 0) {
+        ds_warn("[CGROUP] pids.max: %s", strerror(errno));
+        err++;
+      }
+    } else
+      ds_warn("[CGROUP] 'pids' controller not supported, limit skipped.");
+  }
+  return err ? -1 : 0;
+}
+
+int ds_cgroup_get_usage(struct ds_config *cfg, long long *mem,
+                        long long *cpu_us, long long *pids) {
+  if (mem)
+    *mem = -1;
+  if (cpu_us)
+    *cpu_us = -1;
+  if (pids)
+    *pids = -1;
+
+  char safe_name[256];
+  sanitize_container_name(cfg->container_name, safe_name, sizeof(safe_name));
+
+  int v2 = ds_cgroup_host_is_v2();
+  /* Keep cg strictly within PATH_MAX-64 so the suffix appended
+   * into path never overflows the PATH_MAX+64 path buffer. */
+  char cg[PATH_MAX - 64];
+  char path[PATH_MAX + 64], buf[256];
+
+  if (v2) {
+    snprintf(cg, sizeof(cg), "/sys/fs/cgroup/droidspaces/%s", safe_name);
+    if (access(cg, F_OK) != 0)
+      return -1;
+    /* Use parse_cgroup_ll() so that "max" (= unlimited/not set)
+     * is reported as -1 rather than silently becoming 0. */
+    if (mem) {
+      snprintf(path, sizeof(path), "%s/memory.current", cg);
+      if (read_file(path, buf, sizeof(buf)) > 0)
+        *mem = parse_cgroup_ll(buf);
+    }
+    if (cpu_us) {
+      snprintf(path, sizeof(path), "%s/cpu.stat", cg);
+      if (read_file(path, buf, sizeof(buf)) > 0) {
+        char *p = strstr(buf, "usage_usec ");
+        if (p)
+          *cpu_us = parse_cgroup_ll(p + 11);
+      }
+    }
+    if (pids) {
+      snprintf(path, sizeof(path), "%s/pids.current", cg);
+      if (read_file(path, buf, sizeof(buf)) > 0)
+        *pids = parse_cgroup_ll(buf);
+    }
+  }
+  return 0;
 }

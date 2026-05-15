@@ -1740,3 +1740,77 @@ int validate_bind_destination(const char *dest) {
 
   return 1;
 }
+
+/* Parse human-readable size: "512M", "1G", "2048" (bytes). Returns -1 on error.
+ *
+ * Use integer and fractional parts separately to avoid precision loss
+ * for large values (e.g. 8192G overflows double's 53-bit mantissa):
+ *   - Integer part: strtoll → exact long long arithmetic.
+ *   - Fractional part (e.g. "1.5G"): limited double multiplication only for
+ *     the sub-unit portion, keeping precision loss < 1 byte.
+ */
+long long ds_parse_size(const char *str) {
+  if (!str || !*str)
+    return -1;
+
+  errno = 0;
+  char *end;
+  /* Parse integer part exactly. */
+  long long int_part = strtoll(str, &end, 10);
+  if (errno || end == str || int_part < 0)
+    return -1;
+
+  /* Optional fractional part (e.g. ".5" in "1.5G"). */
+  double frac = 0.0;
+  if (*end == '.') {
+    char *frac_end;
+    frac = strtod(end, &frac_end);
+    if (frac_end == end || frac < 0)
+      return -1;
+    end = frac_end;
+  }
+
+  long long factor = 1;
+  switch (*end | 0x20) { /* tolower */
+  case 'k':
+    factor = 1024LL;
+    break;
+  case 'm':
+    factor = 1024LL * 1024;
+    break;
+  case 'g':
+    factor = 1024LL * 1024 * 1024;
+    break;
+  case 't':
+    factor = 1024LL * 1024 * 1024 * 1024;
+    break;
+  case '\0':
+    break;
+  default:
+    return -1;
+  }
+
+  /* Overflow check before multiplication. */
+  if (factor > 1 && int_part > (long long)(9223372036854775807LL / factor))
+    return -1;
+
+  long long result = int_part * factor;
+  if (frac != 0.0)
+    result += (long long)(frac * (double)factor);
+  return result;
+}
+
+void ds_format_size(long long bytes, char *buf, size_t sz) {
+  if (bytes <= 0) {
+    snprintf(buf, sz, "N/A");
+    return;
+  }
+  static const char *units[] = {"B", "KB", "MB", "GB", "TB"};
+  int u = 0;
+  double d = (double)bytes;
+  while (d >= 1024 && u < 4) {
+    d /= 1024;
+    u++;
+  }
+  snprintf(buf, sz, "%.2f %s", d, units[u]);
+}

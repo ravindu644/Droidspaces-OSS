@@ -634,6 +634,51 @@ int start_rootfs(struct ds_config *cfg) {
         char safe_name[256];
         sanitize_container_name(cfg->container_name, safe_name,
                                 sizeof(safe_name));
+
+        /* v2: enable requested controllers top-down BEFORE mkdir.
+         * Controllers only appear in a child cgroup if the parent's
+         * subtree_control has them enabled first. Walk two levels:
+         * /sys/fs/cgroup -> /sys/fs/cgroup/droidspaces */
+        if (cfg->memory_limit || cfg->cpu_quota || cfg->pids_limit) {
+          /* Build enable string with snprintf offsets instead of strncat to
+           * avoid truncation. Use ds_cg_word_in_list() for exact word-boundary
+           * matching to prevent false positives (e.g. matching "cpuset"
+           * when looking for "cpu"). */
+          char enable[64] = {0};
+          char buf[256];
+          int eoff = 0;
+          if (read_file("/sys/fs/cgroup/cgroup.controllers", buf, sizeof(buf)) >
+              0) {
+            if (cfg->memory_limit && ds_cg_word_in_list(buf, "memory")) {
+              int n = snprintf(enable + eoff, sizeof(enable) - (size_t)eoff,
+                               "%s+memory", eoff ? " " : "");
+              if (n > 0)
+                eoff += n;
+            }
+            if (cfg->cpu_quota && ds_cg_word_in_list(buf, "cpu")) {
+              int n = snprintf(enable + eoff, sizeof(enable) - (size_t)eoff,
+                               "%s+cpu", eoff ? " " : "");
+              if (n > 0)
+                eoff += n;
+            }
+            if (cfg->pids_limit && ds_cg_word_in_list(buf, "pids")) {
+              int n = snprintf(enable + eoff, sizeof(enable) - (size_t)eoff,
+                               "%s+pids", eoff ? " " : "");
+              if (n > 0)
+                eoff += n;
+            }
+          }
+          if (eoff > 0) {
+            if (write_file("/sys/fs/cgroup/cgroup.subtree_control", enable) < 0)
+              ds_warn("[CGROUP] subtree_control (root): %s", strerror(errno));
+            mkdir_p("/sys/fs/cgroup/droidspaces", 0755);
+            if (write_file("/sys/fs/cgroup/droidspaces/cgroup.subtree_control",
+                           enable) < 0)
+              ds_warn("[CGROUP] subtree_control (droidspaces): %s",
+                      strerror(errno));
+          }
+        }
+
         char cg_path[PATH_MAX];
         snprintf(cg_path, sizeof(cg_path), "/sys/fs/cgroup/droidspaces/%s",
                  safe_name);
@@ -655,6 +700,13 @@ int start_rootfs(struct ds_config *cfg) {
        * cgroupns with full rights so setup_cgroups() can create named
        * v1 hierarchies. */
     }
+
+    /* Apply resource limits. On v2 hosts this writes memory.max / cpu.max /
+     * pids.max into the delegated cgroup. On v1 or --force-cgroupv1 the
+     * function skips with a warning since v1 delegation is unreliable. */
+    if (ds_cgroup_apply_limits(cfg) < 0 &&
+        (cfg->memory_limit || cfg->cpu_quota || cfg->pids_limit))
+      ds_warn("[CGROUP] Some resource limits could not be enforced.");
 
     if (unshare(ns_flags) < 0)
       ds_die("unshare failed: %s", strerror(errno));
@@ -2255,6 +2307,49 @@ int show_info(struct ds_config *cfg, int trust_cfg_pid) {
 
     if (feat_count == 0) {
       printf("  None\n");
+    }
+  }
+
+  /* Resource limits & live usage. Only show if Cgroup V2 is active,
+   * since we skip resource management entirely on V1. We also skip this
+   * when called during the boot sequence (!trust_cfg_pid). */
+  if (!trust_cfg_pid &&
+      (cfg->memory_limit || cfg->cpu_quota || cfg->pids_limit) &&
+      !cfg->force_cgroupv1 && ds_cgroup_host_is_v2()) {
+    long long mu = -1, cu = -1, pu = -1;
+    ds_cgroup_get_usage(cfg, &mu, &cu, &pu);
+    printf("\n" C_GREEN "Resources:" C_RESET "\n");
+
+    if (cfg->memory_limit) {
+      char used[32] = "?", lim[32];
+      if (mu >= 0)
+        ds_format_size(mu, used, sizeof(used));
+      ds_format_size(cfg->memory_limit, lim, sizeof(lim));
+      printf("  Memory : %s / %s\n", used, lim);
+    }
+    if (cfg->cpu_quota) {
+      long long period = cfg->cpu_period > 0 ? cfg->cpu_period : 100000;
+      double cores = (double)cfg->cpu_quota / period;
+      printf("  CPU    : %.2f cores", cores);
+      if (cu >= 0) {
+        long uptime = ds_get_container_uptime(pid);
+        if (uptime > 0) {
+          /* Average usage as percentage of total capacity (all allocated
+           * cores). cu is in usec, uptime in sec. */
+          double usage_sec = (double)cu / 1e6;
+          double avg_util = (usage_sec / (double)uptime) / cores * 100.0;
+          printf(" (Avg usage: %.1f%%)", avg_util);
+        } else {
+          printf(" (used: %.3fs)", (double)cu / 1e6);
+        }
+      }
+      printf("\n");
+    }
+    if (cfg->pids_limit) {
+      printf("  PIDs   : limit %lld", cfg->pids_limit);
+      if (pu >= 0)
+        printf(" (current: %lld)", pu);
+      printf("\n");
     }
   }
 
