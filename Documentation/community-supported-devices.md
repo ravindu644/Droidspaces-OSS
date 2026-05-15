@@ -62,6 +62,7 @@ This document is a community-maintained compatibility list for Android devices k
 | **Redmi K50 Ultra (Chinese variant)** | 22081212C | HyperOS 3.0 - Android 15 | `5.10.252` | none | Locally compiled | [Download](https://raw.githubusercontent.com/Goldzxcbug/Droidspaces-kernel/refs/heads/main/GKI%E5%86%85%E6%A0%B8/AnyKernel3_gki_5.10.252_NTsync_Kswapd%E8%A7%A3%E8%80%A6_github%40Star-ZER0.zip) | Both | Turnip & Virgl | Working | [@Star-ZER0](https://github.com/Star-ZER0) | Supports NTsync |
 | **Xiaomi 11T Pro (vili)** | 2107113 | DerpFest A16 | `5.4` | KernelSU-Next | [Source](https://github.com/loystonpais/android_kernel_qcom_sm8350) | [Download](https://github.com/loystonpais/android_kernel_qcom_sm8350/releases/latest) | Both | Turnip & Virgl | Working | [@loystonpais](https://github.com/loystonpais) | - |
 | **Redmi Note 13 4G / NFC** | 23124RA7EO | HyperOS 2.0 - Android 15 | `5.15.202` | Wild-KSU v3.1.2 | [Source](https://github.com/superuseryu/kernel_sapphire_SM6225) | [Download](https://github.com/superuseryu/kernel_sapphire_SM6225/releases/tag/v1.5.2%2B_R27) | Both | Turnip | Working | [@superuseryu](https://github.com/superuseryu) | Other KSU variants may fail due to SELinux context reset. |
+| **Nothing Phone (1)** | A063 | crDroid - Android 16 | `5.4.302` | KernelSU-Next | [Source](https://https://github.com/crdroidandroid/android_kernel_nothing_sm7325) | [Download](https://crdroid.net/Spacewar/12)  | Both | Turnip & Virgl | Working | [@MySelly](https://github.com/MySelly) | - |
 
 ## Contribution guidelines
 
