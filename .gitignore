@@ -20,3 +20,6 @@ local.properties
 # Nix stuff
 /result
 *.qcow2
+
+# Android stuff
+.gradle
