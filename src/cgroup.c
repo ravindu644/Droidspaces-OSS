@@ -619,6 +619,9 @@ int ds_cgroup_apply_limits(struct ds_config *cfg) {
    * by the host systemd and cannot be reliably delegated. Skip with a
    * warning when --force-cgroupv1 is active or the host has no v2 mount. */
   if (cfg->force_cgroupv1 || !ds_cgroup_host_is_v2()) {
+    cfg->memory_limit = 0;
+    cfg->cpu_quota = 0;
+    cfg->pids_limit = 0;
     return 0;
   }
 
@@ -642,10 +645,13 @@ int ds_cgroup_apply_limits(struct ds_config *cfg) {
       snprintf(val, sizeof(val), "%lld", cfg->memory_limit);
       if (write_file(path, val) < 0) {
         ds_warn("[CGROUP] memory.max: %s", strerror(errno));
+        cfg->memory_limit = 0;
         err++;
       }
-    } else
+    } else {
       ds_warn("[CGROUP] 'memory' controller not supported, limit skipped.");
+      cfg->memory_limit = 0;
+    }
   }
   if (cfg->cpu_quota) {
     if (ctrl_supported_v2(cg, "cpu")) {
@@ -654,10 +660,13 @@ int ds_cgroup_apply_limits(struct ds_config *cfg) {
       snprintf(val, sizeof(val), "%lld %lld", cfg->cpu_quota, period);
       if (write_file(path, val) < 0) {
         ds_warn("[CGROUP] cpu.max: %s", strerror(errno));
+        cfg->cpu_quota = 0;
         err++;
       }
-    } else
+    } else {
       ds_warn("[CGROUP] 'cpu' controller not supported, limit skipped.");
+      cfg->cpu_quota = 0;
+    }
   }
   if (cfg->pids_limit) {
     if (ctrl_supported_v2(cg, "pids")) {
@@ -665,10 +674,13 @@ int ds_cgroup_apply_limits(struct ds_config *cfg) {
       snprintf(val, sizeof(val), "%lld", cfg->pids_limit);
       if (write_file(path, val) < 0) {
         ds_warn("[CGROUP] pids.max: %s", strerror(errno));
+        cfg->pids_limit = 0;
         err++;
       }
-    } else
+    } else {
       ds_warn("[CGROUP] 'pids' controller not supported, limit skipped.");
+      cfg->pids_limit = 0;
+    }
   }
   return err ? -1 : 0;
 }
