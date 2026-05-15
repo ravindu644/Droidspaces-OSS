@@ -580,11 +580,20 @@ fun ContainersScreen(
                 ErrorState()
             }
             containers.isEmpty() -> {
-                EmptyState(
-                    icon = Icons.Default.Storage,
-                    title = context.getString(R.string.no_containers_installed),
-                    description = context.getString(R.string.install_container_description)
-                )
+                if (containerViewModel.isRefreshing) {
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        LoadingIndicator(size = LoadingSize.Large)
+                    }
+                } else {
+                    EmptyState(
+                        icon = Icons.Default.Storage,
+                        title = context.getString(R.string.no_containers_installed),
+                        description = context.getString(R.string.install_container_description)
+                    )
+                }
             }
             else -> {
                 // Show container cards
