@@ -478,6 +478,6 @@
     <string name="privileged_disclaimer">By enabling these options, you are compromising your device security. We are NOT responsible for any data loss, bricked devices, or weird bugs. Do NOT report issues occurred while using these modes.</string>
     <string name="privileged_confirm_instruction">Type \"I WON\'T REPORT ANY BUGS\" exactly in capitals to confirm:</string>
     <string name="i_understand_caps">I WON\'T REPORT ANY BUGS</string>
-
     <string name="reboot_recommended">Reboot recommended to apply SELinux rules and start the daemon on boot.</string>
+    <string name="hw_access_disclaimer">Starting from Droidspaces v6.1.0, udevd has real access to USB, block, input, TTY, and network subsystems. Your container can own hardware that Android is currently using.\n\nIf your keyboard, SD card, or USB device stops working in Android after launching a container - that is NOT a bug. The container took it. You asked for full hardware access.\n\nDo NOT report issues caused by hardware conflicts or Kernel panics while using this mode.</string>
 </resources>

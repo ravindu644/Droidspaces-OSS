@@ -47,6 +47,7 @@ import com.droidspaces.app.ui.component.SettingsRowCard
 import com.droidspaces.app.ui.component.EnvironmentVariablesDialog
 import com.droidspaces.app.util.PortForward
 import com.droidspaces.app.ui.component.PrivilegedModeDialog
+import com.droidspaces.app.ui.component.HardwareAccessDialog
 import com.droidspaces.app.ui.component.DsDropdown
 import androidx.compose.material.icons.filled.Public
 import com.droidspaces.app.ui.component.UpstreamInterfaceList
@@ -326,6 +327,7 @@ fun EditContainerScreen(
 
     var showEnvDialog by remember { mutableStateOf(false) }
     var showPrivilegedDialog by remember { mutableStateOf(false) }
+    var showHwAccessDialog by remember { mutableStateOf(false) }
 
     if (showPrivilegedDialog) {
         PrivilegedModeDialog(
@@ -335,6 +337,16 @@ fun EditContainerScreen(
                 showPrivilegedDialog = false
             },
             onDismiss = { showPrivilegedDialog = false }
+        )
+    }
+
+    if (showHwAccessDialog) {
+        HardwareAccessDialog(
+            onConfirm = {
+                enableHwAccess = true
+                showHwAccessDialog = false
+            },
+            onDismiss = { showHwAccessDialog = false }
         )
     }
 
@@ -781,9 +793,13 @@ fun EditContainerScreen(
                 title = context.getString(R.string.hardware_access),
                 description = context.getString(R.string.hardware_access_description),
                 checked = enableHwAccess,
-                onCheckedChange = {
+                onCheckedChange = { newValue ->
                     clearFocus()
-                    enableHwAccess = it
+                    if (newValue) {
+                        showHwAccessDialog = true
+                    } else {
+                        enableHwAccess = false
+                    }
                 }
             )
 

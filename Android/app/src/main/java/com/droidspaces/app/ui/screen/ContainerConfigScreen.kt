@@ -34,6 +34,7 @@ import com.droidspaces.app.ui.component.FilePickerDialog
 import com.droidspaces.app.ui.component.SettingsRowCard
 import com.droidspaces.app.ui.component.EnvironmentVariablesDialog
 import com.droidspaces.app.ui.component.PrivilegedModeDialog
+import com.droidspaces.app.ui.component.HardwareAccessDialog
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.compose.foundation.lazy.LazyColumn
@@ -201,6 +202,7 @@ fun ContainerConfigScreen(
 
     var showEnvDialog by remember { mutableStateOf(false) }
     var showPrivilegedDialog by remember { mutableStateOf(false) }
+    var showHwAccessDialog by remember { mutableStateOf(false) }
 
     if (showPrivilegedDialog) {
         PrivilegedModeDialog(
@@ -210,6 +212,16 @@ fun ContainerConfigScreen(
                 showPrivilegedDialog = false
             },
             onDismiss = { showPrivilegedDialog = false }
+        )
+    }
+
+    if (showHwAccessDialog) {
+        HardwareAccessDialog(
+            onConfirm = {
+                enableHwAccess = true
+                showHwAccessDialog = false
+            },
+            onDismiss = { showHwAccessDialog = false }
         )
     }
 
@@ -447,7 +459,13 @@ fun ContainerConfigScreen(
                 title = context.getString(R.string.hardware_access),
                 description = context.getString(R.string.hardware_access_description),
                 checked = enableHwAccess,
-                onCheckedChange = { enableHwAccess = it }
+                onCheckedChange = { newValue ->
+                    if (newValue) {
+                        showHwAccessDialog = true
+                    } else {
+                        enableHwAccess = false
+                    }
+                }
             )
 
             ToggleCard(
