@@ -184,6 +184,16 @@ static int validate_configuration_cli(struct ds_config *cfg) {
     errors++;
   }
 
+  if (cfg->custom_init[0]) {
+    if (cfg->custom_init[0] != '/') {
+      ds_error("Custom init path must be absolute: %s", cfg->custom_init);
+      errors++;
+    } else if (strchr(cfg->custom_init, ' ')) {
+      ds_error("Custom init path cannot contain spaces: %s", cfg->custom_init);
+      errors++;
+    }
+  }
+
   return (errors > 0) ? -1 : 0;
 }
 
@@ -956,6 +966,11 @@ int main(int argc, char **argv) {
       break;
     }
     case 269:
+      if (strchr(optarg, ' ')) {
+        ds_error("--init: path cannot contain spaces: %s", optarg);
+        ret = 1;
+        goto cleanup;
+      }
       safe_strncpy(cfg.custom_init, optarg, sizeof(cfg.custom_init));
       break;
     default:

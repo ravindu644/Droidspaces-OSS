@@ -176,6 +176,7 @@ fun ContainerCard(
             if (container.forceCgroupv1) options.add(context.getString(R.string.cgroup_v1_option))
             if (container.blockNestedNs) options.add(context.getString(R.string.deadlock_shield_option))
             if (container.privileged.isNotEmpty()) options.add(context.getString(R.string.privileged_option))
+            if (container.customInit.isNotEmpty()) options.add(context.getString(R.string.custom_init_option))
             if (container.runAtBoot) options.add(context.getString(R.string.run_at_boot))
             if (options.isNotEmpty()) {
                 Text(context.getString(R.string.options_label, options.joinToString(", ")), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f))

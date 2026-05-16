@@ -265,6 +265,14 @@
     <string name="value_label">VALUE</string>
     <string name="add_variable">Add variable</string>
 
+    <!-- Custom Init -->
+    <string name="custom_init_label">Custom Init Binary</string>
+    <string name="custom_init_placeholder">/sbin/init (default)</string>
+    <string name="custom_init_hint">Leave empty to use the default init (/sbin/init)</string>
+    <string name="custom_init_error_absolute">Path must be absolute (start with /)</string>
+    <string name="custom_init_warning">Do not change this unless you know exactly what you are doing. Setting an incorrect init binary will prevent the container from booting.</string>
+    <string name="custom_init_option">Custom Init</string>
+
     <!-- Container Name Screen -->
     <string name="container_setup">Container Setup</string>
     <string name="container_information">Container Information</string>

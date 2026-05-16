@@ -97,6 +97,7 @@ fun EditContainerScreen(
     var blockNestedNs by remember { mutableStateOf(container.blockNestedNs) }
     var staticNatIp by remember { mutableStateOf(container.staticNatIp) }
     var privileged by remember { mutableStateOf(container.privileged) }
+    var customInit by remember { mutableStateOf(container.customInit) }
 
     // Track the "saved" baseline values - updated after each successful save
     var savedHostname by remember { mutableStateOf(container.hostname) }
@@ -118,6 +119,7 @@ fun EditContainerScreen(
     var savedBlockNestedNs by remember { mutableStateOf(container.blockNestedNs) }
     var savedStaticNatIp by remember { mutableStateOf(container.staticNatIp) }
     var savedPrivileged by remember { mutableStateOf(container.privileged) }
+    var savedCustomInit by remember { mutableStateOf(container.customInit) }
 
     // Navigation and internal UI states
     var showFilePicker by remember { mutableStateOf(false) }
@@ -150,7 +152,8 @@ fun EditContainerScreen(
             forceCgroupv1 != savedForceCgroupv1 ||
             blockNestedNs != savedBlockNestedNs ||
             staticNatIp != savedStaticNatIp ||
-            privileged != savedPrivileged
+            privileged != savedPrivileged ||
+            customInit != savedCustomInit
         }
     }
 
@@ -188,7 +191,8 @@ fun EditContainerScreen(
                     forceCgroupv1 = forceCgroupv1,
                     blockNestedNs = blockNestedNs,
                     staticNatIp = staticNatIp,
-                    privileged = privileged
+                    privileged = privileged,
+                    customInit = customInit
                 )
 
                 // Update config file
@@ -218,6 +222,7 @@ fun EditContainerScreen(
                         savedBlockNestedNs = blockNestedNs
                         savedStaticNatIp = staticNatIp
                         savedPrivileged = privileged
+                        savedCustomInit = customInit
 
                         // Refresh container list and SELinux status using ViewModel
                         containerViewModel.refresh()
@@ -936,6 +941,56 @@ fun EditContainerScreen(
                 }
             )
 
+            // Custom Init Binary
+            if (customInit.isNotEmpty()) {
+                Surface(
+                    color = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.15f),
+                    shape = RoundedCornerShape(16.dp),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.error.copy(alpha = 0.3f)),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Row(
+                        modifier = Modifier.padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Warning,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.error,
+                            modifier = Modifier.size(20.dp)
+                        )
+                        Text(
+                            text = context.getString(R.string.custom_init_warning),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.error
+                        )
+                    }
+                }
+            }
+
+            OutlinedTextField(
+                value = customInit,
+                onValueChange = { customInit = it.filter { !it.isWhitespace() } },
+                label = { Text(context.getString(R.string.custom_init_label)) },
+                placeholder = { Text(context.getString(R.string.custom_init_placeholder)) },
+                supportingText = {
+                    if (customInit.isNotEmpty() && !customInit.startsWith("/")) {
+                        Text(context.getString(R.string.custom_init_error_absolute),
+                             color = MaterialTheme.colorScheme.error)
+                    } else {
+                        Text(context.getString(R.string.custom_init_hint))
+                    }
+                },
+                isError = customInit.isNotEmpty() && !customInit.startsWith("/"),
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true,
+                shape = modernFieldShape,
+                colors = modernFieldColors,
+                leadingIcon = {
+                    Icon(Icons.Default.Terminal, contentDescription = null)
+                }
+            )
 
             // Bind Mounts Section
             Row(

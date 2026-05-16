@@ -1364,80 +1364,86 @@ int stop_rootfs(struct ds_config *cfg, int skip_unmount) {
                     sizeof(cfg->img_mount_point));
   }
 
-  /* 1. Detect init system and send the correct shutdown signal. */
-  ds_init_type_t init_type = DS_INIT_UNKNOWN;
-  const char *probe_root =
-      cfg->img_mount_point[0] ? cfg->img_mount_point : cfg->rootfs_path;
-  if (__builtin_expect((read_init_type(cfg->pidfile, &init_type) != 0 ||
-                        init_type == DS_INIT_UNKNOWN),
-                       0)) {
-    /* Fallback for containers launched before .init sidecars existed,
-     * or if runtime metadata was lost / non-informative. */
-    if (__builtin_expect(probe_root[0], '/'))
-      init_type = detect_container_init(probe_root);
-  }
-
-  switch (init_type) {
-  case DS_INIT_PROCD:
-  case DS_INIT_S6:
-  case DS_INIT_BUSYBOX:
-    kill(pid, SIGUSR2);
-    break;
-  case DS_INIT_RUNIT:
-    kill(pid, SIGCONT);
-    break;
-  case DS_INIT_SYSTEMD:
-    kill(pid, DS_SIG_STOP); /* SIGRTMIN+3 */
-    break;
-  case DS_INIT_SYSVINIT: {
-    /* sysvinit ignores all signals for shutdown -- it only listens on the
-     * initctl FIFO. Write a telinit-compatible init_request struct directly
-     * into the container's /run/initctl via /proc/<pid>/root. */
-    char initctl[PATH_MAX];
-    snprintf(initctl, sizeof(initctl), "/proc/%d/root/run/initctl", pid);
-
-    /* struct layout from initreq.h: magic(4) cmd(4) runlevel(4) sleeptime(4)
-     * data(368) = 384 bytes total. */
-    struct {
-      int magic;
-      int cmd;
-      int runlevel;
-      int sleeptime;
-      char data[368];
-    } req = {
-        .magic = 0x03091969, /* INIT_MAGIC */
-        .cmd = 1,            /* INIT_CMD_RUNLVL */
-        .runlevel = '0',     /* poweroff */
-        .sleeptime = 3,
-    };
-
-    int fd = open(initctl, O_WRONLY | O_NONBLOCK | O_CLOEXEC);
-    if (fd < 0) {
-      /* Fallback: try /dev/initctl (historical path, used by Slackware) */
-      snprintf(initctl, sizeof(initctl), "/proc/%d/root/dev/initctl", pid);
-      fd = open(initctl, O_WRONLY | O_NONBLOCK | O_CLOEXEC);
+  /* 1. Send shutdown signal. */
+  if (cfg->custom_init[0]) {
+    kill(pid, SIGKILL);
+  } else {
+    /* Detect init system and send the correct shutdown signal. */
+    ds_init_type_t init_type = DS_INIT_UNKNOWN;
+    const char *probe_root =
+        cfg->img_mount_point[0] ? cfg->img_mount_point : cfg->rootfs_path;
+    if (__builtin_expect((read_init_type(cfg->pidfile, &init_type) != 0 ||
+                          init_type == DS_INIT_UNKNOWN),
+                         0)) {
+      /* Fallback for containers launched before .init sidecars existed,
+       * or if runtime metadata was lost / non-informative. */
+      if (__builtin_expect(probe_root[0], '/'))
+        init_type = detect_container_init(probe_root);
     }
 
-    if (fd >= 0) {
-      if (write(fd, &req, sizeof(req)) != (ssize_t)sizeof(req))
-        ds_warn("sysvinit: short write to initctl, falling back to SIGPWR");
-      close(fd);
-    } else {
-      ds_warn("sysvinit: cannot open initctl (tried /run and /dev), falling "
-              "back to SIGPWR");
+    switch (init_type) {
+    case DS_INIT_PROCD:
+    case DS_INIT_S6:
+    case DS_INIT_BUSYBOX:
+      kill(pid, SIGUSR2);
+      break;
+    case DS_INIT_RUNIT:
+      kill(pid, SIGCONT);
+      break;
+    case DS_INIT_SYSTEMD:
+      kill(pid, DS_SIG_STOP); /* SIGRTMIN+3 */
+      break;
+    case DS_INIT_SYSVINIT: {
+      /* sysvinit ignores all signals for shutdown -- it only listens on the
+       * initctl FIFO. Write a telinit-compatible init_request struct directly
+       * into the container's /run/initctl via /proc/<pid>/root. */
+      char initctl[PATH_MAX];
+      snprintf(initctl, sizeof(initctl), "/proc/%d/root/run/initctl", pid);
+
+      /* struct layout from initreq.h: magic(4) cmd(4) runlevel(4) sleeptime(4)
+       * data(368) = 384 bytes total. */
+      struct {
+        int magic;
+        int cmd;
+        int runlevel;
+        int sleeptime;
+        char data[368];
+      } req = {
+          .magic = 0x03091969, /* INIT_MAGIC */
+          .cmd = 1,            /* INIT_CMD_RUNLVL */
+          .runlevel = '0',     /* poweroff */
+          .sleeptime = 3,
+      };
+
+      int fd = open(initctl, O_WRONLY | O_NONBLOCK | O_CLOEXEC);
+      if (fd < 0) {
+        /* Fallback: try /dev/initctl (historical path, used by Slackware) */
+        snprintf(initctl, sizeof(initctl), "/proc/%d/root/dev/initctl", pid);
+        fd = open(initctl, O_WRONLY | O_NONBLOCK | O_CLOEXEC);
+      }
+
+      if (fd >= 0) {
+        if (write(fd, &req, sizeof(req)) != (ssize_t)sizeof(req))
+          ds_warn("sysvinit: short write to initctl, falling back to SIGPWR");
+        close(fd);
+      } else {
+        ds_warn("sysvinit: cannot open initctl (tried /run and /dev), falling "
+                "back to SIGPWR");
+        kill(pid, SIGPWR);
+      }
+      break;
+    }
+    case DS_INIT_OPENRC:
       kill(pid, SIGPWR);
+      break;
+    default: /* unknown */
+      kill(pid, SIGTERM);
+      break;
     }
-    break;
+
+    ds_log("Waiting for graceful shutdown (this may take up to %d seconds)...",
+           DS_STOP_TIMEOUT);
   }
-  case DS_INIT_OPENRC:
-    kill(pid, SIGPWR);
-    break;
-  default: /* unknown */
-    kill(pid, SIGTERM);
-    break;
-  }
-  ds_log("Waiting for graceful shutdown (this may take up to %d seconds)...",
-         DS_STOP_TIMEOUT);
 
   /* 2. Wait for exit */
   int stopped = 0;
@@ -2360,7 +2366,13 @@ int show_info(struct ds_config *cfg, int trust_cfg_pid) {
       feat_count++;
     }
 
-    /* 14. Environment Variables */
+    /* 14. Custom Init */
+    if (cfg->custom_init[0]) {
+      printf("  " C_RED "Custom Init:" C_RESET " %s\n", cfg->custom_init);
+      feat_count++;
+    }
+
+    /* 15. Environment Variables */
     if (cfg->env_var_count > 0) {
       printf("  Env variables: %d loaded\n", cfg->env_var_count);
       feat_count++;
