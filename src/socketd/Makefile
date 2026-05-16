@@ -15,6 +15,9 @@ CXX ?= g++
 # Verbose control - V=1 shows full commands, V=0 keeps output tidy
 V ?= 0
 
+# Static link control - off by default
+STATIC ?= 0
+
 ifeq ($(V),1)
   Q       =
   msg_cxx =
@@ -31,6 +34,10 @@ CXXFLAGS ?= -Wall -Wextra -Wpedantic -Werror \
 
 LDFLAGS ?=
 LDLIBS   ?=
+
+ifeq ($(STATIC),1)
+  LDFLAGS += -static
+endif
 
 SRCS := \
 	main.cpp \
@@ -53,6 +60,7 @@ help:
 	@echo "Options:"
 	@echo "  V=1         - Show full compiler commands"
 	@echo "  CXX=...     - Override the C++ compiler"
+	@echo "  STATIC=1    - Link droidspaces-socketd statically"
 
 $(OUT_DIR):
 	$(Q)mkdir -p $(OUT_DIR)
