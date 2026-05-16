@@ -450,7 +450,8 @@ int internal_boot(struct ds_config *cfg) {
   if (!cfg->reboot_cycle) {
     if (cfg->bind_count > 0)
       ds_log("Setting up %d custom bind mount(s)...", cfg->bind_count);
-    ds_log("Booting '%s' (init: /sbin/init)...", cfg->container_name);
+    ds_log("Booting '%s' (init: %s)...", cfg->container_name,
+           cfg->custom_init[0] ? cfg->custom_init : DS_DEFAULT_INIT);
   }
 
   /* 20b. Write identity markers for PID discovery (AFTER logs to ensure CLI
@@ -553,9 +554,11 @@ int internal_boot(struct ds_config *cfg) {
   }
 
   /* 25. EXEC INIT */
+  char *init_bin =
+      cfg->custom_init[0] ? cfg->custom_init : (char *)DS_DEFAULT_INIT;
   char *init_args[16];
   int argc = 0;
-  init_args[argc++] = (char *)"/sbin/init";
+  init_args[argc++] = init_bin;
 
   /* Tell systemd which cgroup hierarchy the container was actually set up
    * with.  We use statfs() on /sys/fs/cgroup (now the container root after
@@ -567,7 +570,7 @@ int internal_boot(struct ds_config *cfg) {
 #ifndef CGROUP2_SUPER_MAGIC
 #define CGROUP2_SUPER_MAGIC 0x63677270
 #endif
-  if (is_systemd) {
+  if (is_systemd && !cfg->custom_init[0]) {
     struct statfs _cgsfs;
     if (statfs("/sys/fs/cgroup", &_cgsfs) == 0) {
       if ((unsigned long)_cgsfs.f_type == (unsigned long)CGROUP2_SUPER_MAGIC) {
@@ -584,10 +587,11 @@ int internal_boot(struct ds_config *cfg) {
 
   init_args[argc] = NULL;
 
-  if (execve("/sbin/init", init_args, environ) < 0) {
-    ds_error("Failed to execute /sbin/init: %s", strerror(errno));
+  if (execve(init_bin, init_args, environ) < 0) {
+    ds_error("Failed to execute %s: %s", init_bin, strerror(errno));
     ds_die("Container boot failed. Please ensure the rootfs path is correct "
-           "and contains a valid /sbin/init binary.");
+           "and contains a valid %s binary.",
+           init_bin);
   }
 
   return -1;

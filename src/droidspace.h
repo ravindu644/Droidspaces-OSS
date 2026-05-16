@@ -90,6 +90,7 @@
 #define DS_IMG_MOUNT_ROOT_UNIVERSAL "/mnt/Droidspaces"
 #define DS_MAX_MOUNT_TRIES 1024
 #define DS_BIND_INITIAL_CAP 4
+#define DS_DEFAULT_INIT "/sbin/init"
 #define DS_VOLATILE_SUBDIR "Volatile"
 #define DS_LOGS_SUBDIR "Logs"
 #define DS_NET_SUBDIR "Net"
@@ -323,6 +324,7 @@ struct ds_config {
   int is_img_mount;               /* 1 if rootfs was loop-mounted from .img */
   char img_mount_point[PATH_MAX]; /* where the .img was mounted */
   ds_init_type_t init_type;       /* detected container PID 1 init family */
+  char custom_init[PATH_MAX]; /* --init=PATH override (default: /sbin/init) */
 
   /* NAT networking synchronization pipes
    * Both pairs are initialised to {-1,-1} in main() after memset.

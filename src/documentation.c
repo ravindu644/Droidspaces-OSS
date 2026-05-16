@@ -362,6 +362,14 @@ static void print_page(int page, const char *bin) {
         bin);
     printf("  (All changes are stored in RAM and lost on exit)\n\n");
 
+    printf("%sCustom Init (--init):%s\n", bold, reset);
+    printf("  Override the default init binary (/sbin/init).\n");
+    printf("  Useful for distros with non-standard init paths, or for\n");
+    printf("  running a shell directly as PID 1 (e.g. for debugging).\n\n");
+    printf("  %s --name=mycontainer --rootfs=/path/to/rootfs "
+           "--init=/bin/bash start\n\n",
+           bin);
+
     printf("%sBind Mounts & Environment:%s\n", bold, reset);
     printf("  --bind /host:/cont    Bind mount host path\n");
     printf("  --env /path/to/env.list  Load environment variables\n\n");
@@ -417,7 +425,7 @@ static void handle_sigint(int sig) {
   (void)sig;
   if (g_old_tios_ptr)
     tcsetattr(STDIN_FILENO, TCSAFLUSH, g_old_tios_ptr);
-  printf("\033[?25h"); /* SHOW_CURSOR */
+  printf("\033[?25h");                      /* SHOW_CURSOR */
   write(STDOUT_FILENO, "\033[2J\033[H", 7); /* clear screen */
   _exit(0);
 }

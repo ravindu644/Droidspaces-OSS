@@ -404,7 +404,7 @@ int start_rootfs(struct ds_config *cfg) {
                  sizeof(cfg->img_mount_point));
   }
 
-  /* 2a. Verify /sbin/init exists before any side effects (NAT, config save).
+  /* 2a. Verify init binary exists before any side effects (NAT, config save).
    * For rootfs.img mode the image is now mounted; for directory mode the
    * rootfs_path is already set.  Either way we have a valid host path. */
   {
@@ -418,12 +418,16 @@ int start_rootfs(struct ds_config *cfg) {
     if (rlen > 0 && rootfs_norm[rlen - 1] == '/')
       rootfs_norm[rlen - 1] = '\0';
 
-    snprintf(init_path, sizeof(init_path), "%.4080s/sbin/init", rootfs_norm);
+    const char *init_bin =
+        cfg->custom_init[0] ? cfg->custom_init : DS_DEFAULT_INIT;
+    snprintf(init_path, sizeof(init_path), "%.*s%s",
+             (int)(sizeof(init_path) - strlen(init_bin) - 1), rootfs_norm,
+             init_bin);
     struct stat st;
     if (lstat(init_path, &st) != 0) {
       ds_error("Init binary not found: %s", init_path);
-      ds_error(
-          "Please ensure the rootfs path is correct and contains /sbin/init.");
+      ds_error("Please ensure the rootfs path is correct and contains %s.",
+               init_bin);
       if (cfg->is_img_mount)
         unmount_rootfs_img(cfg->img_mount_point, cfg->foreground);
       return -1;

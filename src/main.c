@@ -87,6 +87,7 @@ void print_usage(void) {
 
       C_BOLD "Options (Advanced):" C_RESET "\n"
       "  -f, --foreground          Run in foreground (attach console)\n"
+      "      --init=PATH           Custom init binary (default: /sbin/init)\n"
       "  -u, --user=USER           Run command as USER (for 'run' command "
       "only)\n"
       "  -E, --env=PATH            Load environment variables from file\n"
@@ -350,6 +351,7 @@ int main(int argc, char **argv) {
       {"memory", required_argument, 0, 266},
       {"cpus", required_argument, 0, 267},
       {"pids-limit", required_argument, 0, 268},
+      {"init", required_argument, 0, 269},
       {"help", no_argument, 0, 'v'},
       {0, 0, 0, 0}};
 
@@ -944,8 +946,7 @@ int main(int argc, char **argv) {
       /* Add a sane upper bound (4194304 = 2^22) matching the Linux kernel's
        * default pid_max ceiling. Values above this are almost certainly
        * user errors and would be rejected by the kernel with EINVAL. */
-      if (errno || end == optarg || *end != '\0' || p <= 0 ||
-          p > 4194304LL) {
+      if (errno || end == optarg || *end != '\0' || p <= 0 || p > 4194304LL) {
         ds_error("--pids-limit: invalid value (must be 1..4194304): %s",
                  optarg);
         ret = 1;
@@ -954,8 +955,8 @@ int main(int argc, char **argv) {
       cfg.pids_limit = p;
       break;
     }
-
-    case '?':
+    case 269:
+      safe_strncpy(cfg.custom_init, optarg, sizeof(cfg.custom_init));
       break;
     default:
       break;
