@@ -35,6 +35,7 @@ import com.topjohnwu.superuser.Shell
 import com.droidspaces.app.util.ContainerManager
 import com.droidspaces.app.util.ContainerInfo
 import com.droidspaces.app.util.ContainerCommandBuilder
+import com.droidspaces.app.util.ContainerOSInfoManager
 import com.droidspaces.app.util.ContainerOperationExecutor
 import com.droidspaces.app.util.ContainerLogger
 import com.droidspaces.app.util.ViewModelLogger
@@ -303,7 +304,10 @@ fun ContainersScreen(
                 // Refresh container status immediately on failure
                 containerViewModel.refresh()
             } else {
-                // Success - show snackbar
+                // Success - clear cached OS info for this container
+                ContainerOSInfoManager.clearCache(container.name, context)
+
+                // Show snackbar
                 scope.showSuccess(snackbarHostState, context.getString(R.string.container_uninstalled_success, container.name))
 
                 // Refresh container status immediately after successful uninstallation
