@@ -9,33 +9,42 @@ import androidx.compose.ui.res.painterResource
 import com.droidspaces.app.R
 
 object IconUtils {
+
+    // Returns drawable res ID for a distro name, or null for fallback (Storage icon).
+    // Safe to call from any thread — no Compose context needed.
+    fun getDistroIconRes(name: String?): Int? {
+        val s = name ?: return null
+        return when {
+            s.contains("Ubuntu", true) -> R.drawable.ic_ubuntu
+            s.contains("Debian", true) -> R.drawable.ic_debian
+            s.contains("Alpine", true) -> R.drawable.ic_alpine
+            s.contains("Arch", true) -> R.drawable.ic_arch
+            s.contains("Fedora", true) -> R.drawable.ic_fedora
+            s.contains("NixOS", true) -> R.drawable.ic_nixos
+            s.contains("OpenWrt", true) -> R.drawable.ic_openwrt
+            s.contains("Gentoo", true) -> R.drawable.ic_gentoo
+            s.contains("Devuan", true) -> R.drawable.ic_devuan
+            s.contains("Kali", true) -> R.drawable.ic_kali
+            s.contains("Suse", true) -> R.drawable.ic_suse
+            s.contains("CentOS", true) -> R.drawable.ic_centos
+            s.contains("Rocky", true) -> R.drawable.ic_rocky
+            s.contains("Alma", true) -> R.drawable.ic_almalinux
+            s.contains("Red", true) || s.contains("RHEL", true) -> R.drawable.ic_redhat
+            s.contains("Void", true) -> R.drawable.ic_void
+            s.contains("Manjaro", true) -> R.drawable.ic_manjaro
+            s.contains("Raspberry", true) || s.contains("Raspbian", true) -> R.drawable.ic_raspberry
+            s.contains("BusyBox", true) -> R.drawable.ic_busybox
+            s.contains("FreeBSD", true) -> R.drawable.ic_freebsd
+            s.contains("Slackware", true) -> R.drawable.ic_slackware
+            s.contains("Mint", true) -> R.drawable.ic_mint
+            else -> null
+        }
+    }
+
     @Composable
     fun getDistroIcon(name: String?): Painter {
-        val searchStr = name ?: ""
-        return when {
-            searchStr.contains("Ubuntu", true) -> painterResource(id = R.drawable.ic_ubuntu)
-            searchStr.contains("Debian", true) -> painterResource(id = R.drawable.ic_debian)
-            searchStr.contains("Alpine", true) -> painterResource(id = R.drawable.ic_alpine)
-            searchStr.contains("Arch", true) -> painterResource(id = R.drawable.ic_arch)
-            searchStr.contains("Fedora", true) -> painterResource(id = R.drawable.ic_fedora)
-            searchStr.contains("NixOS", true) -> painterResource(id = R.drawable.ic_nixos)
-            searchStr.contains("OpenWrt", true) -> painterResource(id = R.drawable.ic_openwrt)
-            searchStr.contains("Gentoo", true) -> painterResource(id = R.drawable.ic_gentoo)
-            searchStr.contains("Devuan", true) -> painterResource(id = R.drawable.ic_devuan)
-            searchStr.contains("Kali", true) -> painterResource(id = R.drawable.ic_kali)
-            searchStr.contains("Suse", true) -> painterResource(id = R.drawable.ic_suse)
-            searchStr.contains("CentOS", true) -> painterResource(id = R.drawable.ic_centos)
-            searchStr.contains("Rocky", true) -> painterResource(id = R.drawable.ic_rocky)
-            searchStr.contains("Alma", true) -> painterResource(id = R.drawable.ic_almalinux)
-            searchStr.contains("Red", true) || searchStr.contains("RHEL", true) -> painterResource(id = R.drawable.ic_redhat)
-            searchStr.contains("Void", true) -> painterResource(id = R.drawable.ic_void)
-            searchStr.contains("Manjaro", true) -> painterResource(id = R.drawable.ic_manjaro)
-            searchStr.contains("Raspberry", true) || searchStr.contains("Raspbian", true) -> painterResource(id = R.drawable.ic_raspberry)
-            searchStr.contains("BusyBox", true) -> painterResource(id = R.drawable.ic_busybox)
-            searchStr.contains("FreeBSD", true) -> painterResource(id = R.drawable.ic_freebsd)
-            searchStr.contains("Slackware", true) -> painterResource(id = R.drawable.ic_slackware)
-            searchStr.contains("Mint", true) -> painterResource(id = R.drawable.ic_mint)
-            else -> rememberVectorPainter(image = Icons.Default.Storage)
-        }
+        val res = getDistroIconRes(name)
+        return if (res != null) painterResource(id = res)
+        else rememberVectorPainter(image = Icons.Default.Storage)
     }
 }

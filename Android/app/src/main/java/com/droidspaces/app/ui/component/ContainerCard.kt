@@ -18,6 +18,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -32,7 +33,9 @@ import androidx.compose.ui.unit.sp
 import com.droidspaces.app.R
 import com.droidspaces.app.util.AnimationUtils
 import com.droidspaces.app.util.ContainerInfo
+import com.droidspaces.app.util.ContainerOSInfoManager
 import com.droidspaces.app.util.ContainerStatus
+import com.droidspaces.app.util.IconUtils
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
@@ -89,8 +92,13 @@ fun ContainerCard(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
+                    // Re-read cache whenever iconCacheVersion changes (bumped after prefetch)
+                    val cacheVersion by ContainerOSInfoManager.iconCacheVersion
+                    val cachedOsInfo = remember(container.name, cacheVersion) {
+                        ContainerOSInfoManager.getCachedOSInfo(container.name)
+                    }
                     Icon(
-                        imageVector = Icons.Default.Storage,
+                        painter = IconUtils.getDistroIcon(cachedOsInfo?.prettyName ?: cachedOsInfo?.name),
                         contentDescription = null,
                         modifier = Modifier.size(24.dp),
                         tint = if (container.isRunning) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)

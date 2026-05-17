@@ -44,9 +44,11 @@ fun RunningContainerCard(
     }
 
     LaunchedEffect(container.name, refreshTrigger) {
+        // Use cache on first load — prefetch ensures icon is ready on first boot
+        val useCache = refreshTrigger == 0 && ContainerOSInfoManager.getCachedOSInfo(container.name, context) != null
         osInfo = ContainerOSInfoManager.getOSInfo(
             containerName = container.name,
-            useCache = false,
+            useCache = useCache,
             appContext = context
         )
     }

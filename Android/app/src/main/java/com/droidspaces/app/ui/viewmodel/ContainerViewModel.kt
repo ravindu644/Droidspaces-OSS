@@ -9,6 +9,7 @@ import androidx.compose.runtime.setValue
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.droidspaces.app.util.ContainerInfo
+import com.droidspaces.app.util.ContainerOSInfoManager
 import com.droidspaces.app.util.ContainerManager
 import com.droidspaces.app.util.PreferencesManager
 import com.droidspaces.app.util.Constants
@@ -91,7 +92,14 @@ class ContainerViewModel(application: Application) : AndroidViewModel(applicatio
                 prefsManager.cachedContainerCount = result.size
                 prefsManager.cachedRunningCount = result.count { it.isRunning }
 
-                // Proactive user fetch for running containers - primes cache for terminal picker
+                // Prefetch distro icons for running containers (updates persistent cache)
+                result.filter { it.isRunning }.forEach { container ->
+                    launch(Dispatchers.IO) {
+                        ContainerOSInfoManager.prefetchDistroIcon(container.name, getApplication())
+                    }
+                }
+
+                // Proactive user fetch
                 result.filter { it.isRunning }.forEach { container ->
                     launch(Dispatchers.IO) {
                         try {
@@ -134,6 +142,13 @@ class ContainerViewModel(application: Application) : AndroidViewModel(applicatio
         prefsManager.saveCachedContainers(result)
         prefsManager.cachedContainerCount = result.size
         prefsManager.cachedRunningCount = result.count { it.isRunning }
+
+        // Prefetch distro icons for running containers (updates persistent cache)
+        result.filter { it.isRunning }.forEach { container ->
+            viewModelScope.launch(Dispatchers.IO) {
+                ContainerOSInfoManager.prefetchDistroIcon(container.name, getApplication())
+            }
+        }
 
         // Proactive user fetch for running containers
         result.filter { it.isRunning }.forEach { container ->
