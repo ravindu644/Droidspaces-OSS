@@ -17,6 +17,22 @@
         "type": "github"
       }
     },
+    "finix": {
+      "locked": {
+        "lastModified": 1778975258,
+        "narHash": "sha256-VJ+vqtRre/wK0pC7gufYDAxRWWrwqxqww9HxYRGDwaM=",
+        "owner": "finix-community",
+        "repo": "finix",
+        "rev": "472f60067422037c3fac09ede84ce70447e5c06e",
+        "type": "github"
+      },
+      "original": {
+        "owner": "finix-community",
+        "ref": "main",
+        "repo": "finix",
+        "type": "github"
+      }
+    },
     "flake-utils": {
       "inputs": {
         "systems": "systems"
@@ -37,6 +53,22 @@
     },
     "nixpkgs": {
       "locked": {
+        "lastModified": 1778458615,
+        "narHash": "sha256-cY07EsdhBJ8tFXPzDYevgqxRev9ZLxFonuq9wmq5kwg=",
+        "owner": "NixOS",
+        "repo": "nixpkgs",
+        "rev": "c6e5ca3c836a5f4dd9af9f2c1fc1c38f0fac988a",
+        "type": "github"
+      },
+      "original": {
+        "owner": "NixOS",
+        "repo": "nixpkgs",
+        "rev": "c6e5ca3c836a5f4dd9af9f2c1fc1c38f0fac988a",
+        "type": "github"
+      }
+    },
+    "nixpkgs-with-systemd-v259": {
+      "locked": {
         "lastModified": 1776329215,
         "narHash": "sha256-a8BYi3mzoJ/AcJP8UldOx8emoPRLeWqALZWu4ZvjPXw=",
         "owner": "NixOS",
@@ -54,8 +86,10 @@
     "root": {
       "inputs": {
         "artifacts": "artifacts",
+        "finix": "finix",
         "flake-utils": "flake-utils",
-        "nixpkgs": "nixpkgs"
+        "nixpkgs": "nixpkgs",
+        "nixpkgs-with-systemd-v259": "nixpkgs-with-systemd-v259"
       }
     },
     "systems": {
