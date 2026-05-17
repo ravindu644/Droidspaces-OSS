@@ -56,6 +56,12 @@ class ContainerInstallationViewModel : ViewModel() {
     var runAtBoot: Boolean by mutableStateOf(false)
         private set
 
+    var customInit: String by mutableStateOf("")
+        private set
+
+    var staticNatIp: String by mutableStateOf("")
+        private set
+
     var envFileContent: String? by mutableStateOf(null)
         private set
 
@@ -106,6 +112,8 @@ class ContainerInstallationViewModel : ViewModel() {
         bindMounts: List<BindMount>,
         dnsServers: String,
         runAtBoot: Boolean,
+        customInit: String,
+        staticNatIp: String,
         envFileContent: String?,
         upstreamInterfaces: List<String>,
         portForwards: List<PortForward>,
@@ -124,6 +132,8 @@ class ContainerInstallationViewModel : ViewModel() {
         this.bindMounts = bindMounts
         this.dnsServers = dnsServers
         this.runAtBoot = runAtBoot
+        this.customInit = customInit
+        this.staticNatIp = staticNatIp
         this.envFileContent = envFileContent
         this.upstreamInterfaces = upstreamInterfaces
         this.portForwards = portForwards
@@ -155,6 +165,8 @@ class ContainerInstallationViewModel : ViewModel() {
             bindMounts = bindMounts,
             dnsServers = dnsServers,
             runAtBoot = runAtBoot,
+            customInit = customInit,
+            staticNatIp = staticNatIp,
             envFileContent = envFileContent,
             status = ContainerStatus.STOPPED, // Default status for new container
             useSparseImage = useSparseImage,
@@ -182,6 +194,8 @@ class ContainerInstallationViewModel : ViewModel() {
         bindMounts = emptyList()
         dnsServers = ""
         runAtBoot = false
+        customInit = ""
+        staticNatIp = ""
         envFileContent = null
         useSparseImage = true
         sparseImageSizeGB = 8

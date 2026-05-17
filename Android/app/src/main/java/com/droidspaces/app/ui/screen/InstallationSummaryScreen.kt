@@ -9,6 +9,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material.ripple.rememberRipple
 import androidx.compose.material3.*
@@ -133,6 +134,14 @@ fun InstallationSummaryScreen(
                     SummaryItem(stringResource(R.string.tarball_label), tarballName, Icons.Default.Archive)
                     SummaryItem(stringResource(R.string.container_singular), config.name, Icons.Default.Storage)
                     SummaryItem(stringResource(R.string.hostname), config.hostname, Icons.Default.Computer)
+                    SummaryItem(
+                        stringResource(R.string.network_mode),
+                        stringResource(when (config.netMode) { "nat" -> R.string.network_mode_nat; "none" -> R.string.network_mode_none; else -> R.string.network_mode_host }),
+                        Icons.Default.Public
+                    )
+                    if (config.netMode == "nat" && config.staticNatIp.isNotEmpty()) {
+                        SummaryItem(stringResource(R.string.static_ip_address), config.staticNatIp, Icons.Default.NetworkCheck)
+                    }
                     if (config.useSparseImage && config.sparseImageSizeGB != null) {
                         SummaryItem(stringResource(R.string.storage_configuration), "${stringResource(R.string.sparse_image_configuration)} (${config.sparseImageSizeGB}GB)", Icons.Default.Storage)
                     } else {
@@ -183,11 +192,22 @@ fun InstallationSummaryScreen(
                         }
                     }
 
+                    if (config.upstreamInterfaces.isNotEmpty()) {
+                        SummaryItem(stringResource(R.string.upstream_interfaces_mandatory), config.upstreamInterfaces.joinToString(", "), Icons.Default.Public)
+                    }
+
+                    if (config.portForwards.isNotEmpty()) {
+                        config.portForwards.forEach { forward ->
+                            SummaryItem(stringResource(R.string.port_forwarding), "${forward.hostPort} → ${forward.containerPort ?: forward.hostPort} (${forward.proto})", Icons.AutoMirrored.Filled.ArrowForward)
+                        }
+                    }
+
                     if (!config.enableAndroidStorage &&
                         !config.enableHwAccess && !config.enableGpuMode && !config.selinuxPermissive &&
                         !config.volatileMode && config.bindMounts.isEmpty() &&
                         !config.runAtBoot && !config.disableIPv6 &&
                         !config.forceCgroupv1 && !config.blockNestedNs &&
+                        config.upstreamInterfaces.isEmpty() && config.portForwards.isEmpty() &&
                         config.envFileContent.isNullOrBlank()) {
                         Text(
                             text = stringResource(R.string.no_options_enabled),
