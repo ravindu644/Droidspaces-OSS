@@ -1,4 +1,5 @@
 #include "api_server.h"
+#include "../droidspace.h"
 
 #include <arpa/inet.h>
 #include <cerrno>
@@ -9,15 +10,193 @@
 #include <iostream>
 #include <sstream>
 #include <string>
+#include <ctime>
+#include <fstream>
+#include <limits>
 
 #include <netinet/in.h>
 #include <sys/socket.h>
+#include <sys/utsname.h>
 #include <unistd.h>
 
 namespace droidspaces::socketd {
 namespace {
 
 constexpr std::size_t kMaxRequestHeaderBytes = 16 * 1024;
+constexpr const char* kSocketApiVersion = "1.40";
+constexpr const char* kSocketMinApiVersion = "1.40";
+constexpr const char* kSocketOsType = "linux";
+
+std::string socketd_arch_name() {
+#if defined(__x86_64__)
+  return "amd64";
+#elif defined(__i386__)
+  return "386";
+#elif defined(__aarch64__)
+  return "arm64";
+#elif defined(__arm__)
+  return "arm";
+#elif defined(__riscv) && (__riscv_xlen == 64)
+  return "riscv64";
+#else
+  return "unknown";
+#endif
+}
+
+std::string socketd_kernel_version() {
+  struct utsname uts {};
+  if (::uname(&uts) != 0) {
+    return {};
+  }
+
+  return uts.release;
+}
+
+std::uint64_t socketd_mem_total_bytes() {
+  std::ifstream meminfo("/proc/meminfo");
+  if (!meminfo.is_open()) {
+    return 0;
+  }
+
+  std::string key;
+  std::uint64_t value_kib = 0;
+  std::string unit;
+
+  while (meminfo >> key >> value_kib >> unit) {
+    if (key == "MemTotal:") {
+      /*
+       * /proc/meminfo reports MemTotal in KiB.
+       */
+      return value_kib * 1024ULL;
+    }
+  }
+
+  return 0;
+}
+
+unsigned int socketd_ncpu() {
+  const long value = ::sysconf(_SC_NPROCESSORS_ONLN);
+  if (value <= 0) {
+    return 0;
+  }
+
+  if (static_cast<unsigned long>(value) >
+      std::numeric_limits<unsigned int>::max()) {
+    return std::numeric_limits<unsigned int>::max();
+  }
+
+  return static_cast<unsigned int>(value);
+}
+
+std::string socketd_hostname() {
+  char hostname[256] {};
+  if (::gethostname(hostname, sizeof(hostname) - 1) != 0) {
+    return "droidspaces";
+  }
+
+  hostname[sizeof(hostname) - 1] = '\0';
+
+  if (hostname[0] == '\0') {
+    return "droidspaces";
+  }
+
+  return hostname;
+}
+
+std::string socketd_system_time_utc() {
+  std::time_t now = std::time(nullptr);
+  if (now == static_cast<std::time_t>(-1)) {
+    return {};
+  }
+
+  std::tm tm {};
+#if defined(_POSIX_THREAD_SAFE_FUNCTIONS) || defined(__ANDROID__) || defined(__linux__)
+  if (::gmtime_r(&now, &tm) == nullptr) {
+    return {};
+  }
+#else
+  const std::tm* tmp = std::gmtime(&now);
+  if (tmp == nullptr) {
+    return {};
+  }
+  tm = *tmp;
+#endif
+
+  char buffer[64] {};
+  if (std::strftime(buffer, sizeof(buffer), "%Y-%m-%dT%H:%M:%SZ", &tm) == 0) {
+    return {};
+  }
+
+  return buffer;
+}
+
+std::string json_escape(const std::string& input) {
+  std::string out;
+  out.reserve(input.size());
+
+  constexpr char kHex[] = "0123456789abcdef";
+
+  for (unsigned char ch : input) {
+    switch (ch) {
+      case '"':
+        out += "\\\"";
+        break;
+      case '\\':
+        out += "\\\\";
+        break;
+      case '\b':
+        out += "\\b";
+        break;
+      case '\f':
+        out += "\\f";
+        break;
+      case '\n':
+        out += "\\n";
+        break;
+      case '\r':
+        out += "\\r";
+        break;
+      case '\t':
+        out += "\\t";
+        break;
+      default:
+        if (ch < 0x20) {
+          out += "\\u00";
+          out += kHex[(ch >> 4) & 0x0f];
+          out += kHex[ch & 0x0f];
+        } else {
+          out += static_cast<char>(ch);
+        }
+        break;
+    }
+  }
+
+  return out;
+}
+
+void debug_log_request_headers(const std::string& request) {
+  const std::size_t header_end = request.find("\r\n\r\n");
+
+  const std::size_t visible_len =
+      header_end == std::string::npos
+          ? request.size()
+          : header_end + 4;
+
+  std::cerr << "socketd: received HTTP request headers\n";
+  std::cerr << "----- BEGIN REQUEST -----\n";
+  std::cerr.write(request.data(), static_cast<std::streamsize>(visible_len));
+
+  /*
+   * HTTP headers already end with CRLF CRLF, but ensure the terminal output
+   * does not visually run into the separator if a malformed request arrives.
+   */
+  if (visible_len == 0 ||
+      request[visible_len - 1] != '\n') {
+    std::cerr << '\n';
+  }
+
+  std::cerr << "----- END REQUEST -----\n";
+}
 
 bool send_all(int fd, const void* data, std::size_t len, std::string& error) {
   const auto* p = static_cast<const std::uint8_t*>(data);
@@ -71,6 +250,14 @@ bool send_http_response(int fd,
   header += "\r\n";
 
   header += "Server: Droidspaces/6 (Container, like Docker)\r\n";
+  
+  header += "Api-Version: ";
+  header += kSocketApiVersion;
+  header += "\r\n";
+
+  header += "Ostype: ";
+  header += kSocketOsType;
+  header += "\r\n";
   
   header += "Connection: close\r\n";
   header += "\r\n";
@@ -136,27 +323,30 @@ bool is_ascii_digit(char c) {
   return c >= '0' && c <= '9';
 }
 
-bool is_versioned_ping_path(const std::string& path) {
-  constexpr const char* kSuffix = "/_ping";
-  constexpr std::size_t kSuffixLen = 6;
+bool is_versioned_api_path(const std::string& path,
+                           const char* endpoint_path) {
+  const std::size_t endpoint_len = std::strlen(endpoint_path);
 
-  if (path.size() <= kSuffixLen) {
+  if (path.size() <= endpoint_len) {
     return false;
   }
 
-  if (path.compare(path.size() - kSuffixLen, kSuffixLen, kSuffix) != 0) {
+  if (path.compare(path.size() - endpoint_len,
+                   endpoint_len,
+                   endpoint_path) != 0) {
     return false;
   }
 
-  const std::string prefix = path.substr(0, path.size() - kSuffixLen);
+  const std::string prefix =
+      path.substr(0, path.size() - endpoint_len);
 
   /*
-   * Accept forms like:
+   * Accept:
    *
    *   /v1.40/_ping
-   *   /v1.51/_ping
+   *   /v1.40/version
    *
-   * Prefix must be exactly:
+   * Prefix must be:
    *
    *   /v<digits>.<digits>
    */
@@ -197,12 +387,14 @@ bool is_versioned_ping_path(const std::string& path) {
   return i == prefix.size();
 }
 
-bool is_ping_target(const std::string& target) {
+bool is_api_target(const std::string& target,
+                   const char* endpoint_path) {
   const std::size_t query_pos = target.find('?');
   const std::string path =
       query_pos == std::string::npos ? target : target.substr(0, query_pos);
 
-  return path == "/_ping" || is_versioned_ping_path(path);
+  return path == endpoint_path ||
+         is_versioned_api_path(path, endpoint_path);
 }
 
 bool parse_port(const std::string& value,
@@ -231,6 +423,198 @@ bool parse_port(const std::string& value,
 
   port_out = static_cast<std::uint16_t>(parsed);
   return true;
+}
+
+std::string build_version_json() {
+  const std::string arch = socketd_arch_name();
+  const std::string kernel_version = socketd_kernel_version();
+
+  std::string body;
+  body.reserve(512);
+
+  body += "{";
+
+  body += "\"Platform\":{\"Name\":\"";
+  body += json_escape(DS_PROJECT_NAME);
+  body += "\"},";
+
+  body += "\"Components\":[{";
+  body += "\"Name\":\"Engine\",";
+  body += "\"Version\":\"";
+  body += json_escape(DS_VERSION);
+  body += "\",";
+  body += "\"Details\":{}";
+  body += "}],";
+
+  body += "\"Version\":\"";
+  body += json_escape(DS_VERSION);
+  body += "\",";
+
+  body += "\"ApiVersion\":\"";
+  body += kSocketApiVersion;
+  body += "\",";
+
+  body += "\"MinAPIVersion\":\"";
+  body += kSocketMinApiVersion;
+  body += "\",";
+
+  body += "\"Os\":\"";
+  body += kSocketOsType;
+  body += "\",";
+
+  body += "\"Arch\":\"";
+  body += json_escape(arch);
+  body += "\"";
+
+  if (!kernel_version.empty()) {
+    body += ",\"KernelVersion\":\"";
+    body += json_escape(kernel_version);
+    body += "\"";
+  }
+
+  body += "}\n";
+  return body;
+}
+
+bool send_version_ok(int fd, bool suppress_body, std::string& error) {
+  const std::string body = build_version_json();
+
+  return send_http_response(fd,
+                            200,
+                            "OK",
+                            "application/json",
+                            body,
+                            suppress_body,
+                            error);
+}
+
+std::string build_info_json() {
+  /*
+   * TODO(socketd):
+   * This /info response is intentionally synthesized locally so that early
+   * Portainer integration can proceed and reveal the next compatibility
+   * requirements. Replace or enrich this with DS_SOCKETD_OP_INFO once the
+   * privileged backend bridge has a stable information payload.
+   */
+  const std::string arch = socketd_arch_name();
+  const std::string kernel_version = socketd_kernel_version();
+  const std::string hostname = socketd_hostname();
+  const std::string system_time = socketd_system_time_utc();
+  const unsigned int ncpu = socketd_ncpu();
+  const std::uint64_t mem_total = socketd_mem_total_bytes();
+
+  std::string body;
+  body.reserve(1400);
+
+  body += "{";
+
+  /*
+   * Container and image counters are placeholders until INFO is backed by
+   * the privileged daemon.
+   */
+  body += "\"ID\":\"\",";
+  body += "\"Containers\":0,";
+  body += "\"ContainersRunning\":0,";
+  body += "\"ContainersPaused\":0,";
+  body += "\"ContainersStopped\":0,";
+  body += "\"Images\":0,";
+
+  body += "\"Driver\":\"droidspaces\",";
+  body += "\"DriverStatus\":[],";
+  body += "\"Plugins\":{";
+  body += "\"Volume\":[],";
+  body += "\"Network\":[],";
+  body += "\"Authorization\":[],";
+  body += "\"Log\":[]";
+  body += "},";
+
+  body += "\"MemoryLimit\":false,";
+  body += "\"SwapLimit\":false,";
+  body += "\"CpuCfsPeriod\":false,";
+  body += "\"CpuCfsQuota\":false,";
+  body += "\"CPUShares\":false,";
+  body += "\"CPUSet\":false,";
+  body += "\"PidsLimit\":false,";
+  body += "\"IPv4Forwarding\":false,";
+  body += "\"Debug\":false,";
+  body += "\"NFd\":0,";
+  body += "\"OomKillDisable\":false,";
+  body += "\"NGoroutines\":0,";
+
+  body += "\"SystemTime\":\"";
+  body += json_escape(system_time);
+  body += "\",";
+
+  body += "\"LoggingDriver\":\"\",";
+  body += "\"CgroupDriver\":\"\",";
+  body += "\"NEventsListener\":0,";
+
+  body += "\"KernelVersion\":\"";
+  body += json_escape(kernel_version);
+  body += "\",";
+
+  body += "\"OperatingSystem\":\"Droidspaces\",";
+  body += "\"OSVersion\":\"\",";
+  body += "\"OSType\":\"linux\",";
+
+  body += "\"Architecture\":\"";
+  body += json_escape(arch);
+  body += "\",";
+
+  body += "\"IndexServerAddress\":\"\",";
+  body += "\"RegistryConfig\":null,";
+
+  body += "\"NCPU\":";
+  body += std::to_string(ncpu);
+  body += ",";
+
+  body += "\"MemTotal\":";
+  body += std::to_string(mem_total);
+  body += ",";
+
+  body += "\"GenericResources\":[],";
+  body += "\"DockerRootDir\":\"\",";
+  body += "\"HttpProxy\":\"\",";
+  body += "\"HttpsProxy\":\"\",";
+  body += "\"NoProxy\":\"\",";
+
+  body += "\"Name\":\"";
+  body += json_escape(hostname);
+  body += "\",";
+
+  body += "\"Labels\":[],";
+  body += "\"ExperimentalBuild\":false,";
+
+  body += "\"ServerVersion\":\"";
+  body += json_escape(DS_VERSION);
+  body += "\",";
+
+  body += "\"Runtimes\":{},";
+  body += "\"DefaultRuntime\":\"\",";
+  body += "\"Swarm\":{\"NodeID\":\"\"},";
+  body += "\"LiveRestoreEnabled\":false,";
+  body += "\"Isolation\":\"\",";
+  body += "\"InitBinary\":\"\",";
+  body += "\"ContainerdCommit\":{\"ID\":\"\"},";
+  body += "\"RuncCommit\":{\"ID\":\"\"},";
+  body += "\"InitCommit\":{\"ID\":\"\"},";
+  body += "\"SecurityOptions\":[],";
+  body += "\"Warnings\":[]";
+
+  body += "}\n";
+  return body;
+}
+
+bool send_info_ok(int fd, bool suppress_body, std::string& error) {
+  const std::string body = build_info_json();
+
+  return send_http_response(fd,
+                            200,
+                            "OK",
+                            "application/json",
+                            body,
+                            suppress_body,
+                            error);
 }
 
 }  // namespace
@@ -354,6 +738,8 @@ bool ApiServer::handle_client(int client_fd, std::string& error) const {
       return false;
     }
   }
+// DEBUG FEATURE: perhaps remove later; do NOT expect this to stay.
+  debug_log_request_headers(request);
 
   const std::size_t line_end = request.find("\r\n");
   if (line_end == std::string::npos) {
@@ -380,8 +766,16 @@ bool ApiServer::handle_client(int client_fd, std::string& error) const {
   const bool is_head = method == "HEAD";
   const bool is_get = method == "GET";
 
-  if ((is_get || is_head) && is_ping_target(target)) {
+  if ((is_get || is_head) && is_api_target(target, "/_ping")) {
     return send_ping_ok(client_fd, is_head, error);
+  }
+  
+  if (is_get && is_api_target(target, "/version")) {
+    return send_version_ok(client_fd, false, error);
+  }
+  
+  if (is_get && is_api_target(target, "/info")) {
+    return send_info_ok(client_fd, false, error);
   }
 
   return send_not_found(client_fd, is_head, error);
