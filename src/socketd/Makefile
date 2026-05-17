@@ -41,7 +41,8 @@ endif
 
 SRCS := \
 	main.cpp \
-	backend_client.cpp
+	backend_client.cpp \
+	api_server.cpp
 
 OBJS := $(SRCS:%.cpp=$(OBJ_DIR)/%.o)
 DEPS := $(OBJS:.o=.d)
