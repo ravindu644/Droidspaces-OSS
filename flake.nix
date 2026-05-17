@@ -354,6 +354,16 @@
 
           systemd.services.NetworkManager.enable = lib.mkDefault false;
 
+          # Prevents systemd from acting on the power button when running
+          # on Android, where the power key is used to wake/sleep the device.
+          services.logind.settings.Login = {
+            HandlePowerKey = "ignore";
+            HandleSuspendKey = "ignore";
+            HandleHibernateKey = "ignore";
+            HandlePowerKeyLongPress = "ignore";
+            HandlePowerKeyLongPressHibernate = "ignore";
+          };
+
           nix.settings.experimental-features = ["nix-command" "flakes"];
 
           system.stateVersion = "26.05";
