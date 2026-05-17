@@ -97,6 +97,10 @@ class SystemStatsViewModel(application: Application) : AndroidViewModel(applicat
         containerJob = null
     }
 
+    fun clearContainerUsage(containerName: String) {
+        containerUsageMap.remove(containerName)
+    }
+
     fun stopMonitoring() {
         systemJob?.cancel()
         systemJob = null

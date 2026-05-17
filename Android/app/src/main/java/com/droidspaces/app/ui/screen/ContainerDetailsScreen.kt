@@ -27,6 +27,7 @@ import com.droidspaces.app.util.ContainerSystemdManager
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import com.droidspaces.app.util.AnimationUtils
+import com.droidspaces.app.util.IconUtils
 import com.droidspaces.app.ui.util.LoadingIndicator
 import com.droidspaces.app.ui.util.LoadingSize
 import androidx.compose.ui.platform.LocalContext
@@ -171,31 +172,7 @@ fun ContainerDetailsScreen(
                         osInfo?.let { info ->
                             // Dynamic Height Synced Grid - measure all 6 and find max
                             val tokens = mutableListOf<@Composable () -> Unit>().apply {
-                                add { IdentityToken(context.getString(R.string.distribution), info.prettyName ?: info.name ?: "Linux", when {
-                                    (info.prettyName ?: info.name ?: "").contains("Ubuntu", true) -> painterResource(id = R.drawable.ic_ubuntu)
-                                    (info.prettyName ?: info.name ?: "").contains("Debian", true) -> painterResource(id = R.drawable.ic_debian)
-                                    (info.prettyName ?: info.name ?: "").contains("Alpine", true) -> painterResource(id = R.drawable.ic_alpine)
-                                    (info.prettyName ?: info.name ?: "").contains("Arch", true) -> painterResource(id = R.drawable.ic_arch)
-                                    (info.prettyName ?: info.name ?: "").contains("Fedora", true) -> painterResource(id = R.drawable.ic_fedora)
-                                    (info.prettyName ?: info.name ?: "").contains("NixOS", true) -> painterResource(id = R.drawable.ic_nixos)
-                                    (info.prettyName ?: info.name ?: "").contains("OpenWrt", true) -> painterResource(id = R.drawable.ic_openwrt)
-                                    (info.prettyName ?: info.name ?: "").contains("Gentoo", true) -> painterResource(id = R.drawable.ic_gentoo)
-                                    (info.prettyName ?: info.name ?: "").contains("Devuan", true) -> painterResource(id = R.drawable.ic_devuan)
-                                    (info.prettyName ?: info.name ?: "").contains("Kali", true) -> painterResource(id = R.drawable.ic_kali)
-                                    (info.prettyName ?: info.name ?: "").contains("Suse", true) -> painterResource(id = R.drawable.ic_suse)
-                                    (info.prettyName ?: info.name ?: "").contains("CentOS", true) -> painterResource(id = R.drawable.ic_centos)
-                                    (info.prettyName ?: info.name ?: "").contains("Rocky", true) -> painterResource(id = R.drawable.ic_rocky)
-                                    (info.prettyName ?: info.name ?: "").contains("Alma", true) -> painterResource(id = R.drawable.ic_almalinux)
-                                    (info.prettyName ?: info.name ?: "").contains("Red", true) || (info.prettyName ?: info.name ?: "").contains("RHEL", true) -> painterResource(id = R.drawable.ic_redhat)
-                                    (info.prettyName ?: info.name ?: "").contains("Void", true) -> painterResource(id = R.drawable.ic_void)
-                                    (info.prettyName ?: info.name ?: "").contains("Manjaro", true) -> painterResource(id = R.drawable.ic_manjaro)
-                                    (info.prettyName ?: info.name ?: "").contains("Raspberry", true) || (info.prettyName ?: info.name ?: "").contains("Raspbian", true) -> painterResource(id = R.drawable.ic_raspberry)
-                                    (info.prettyName ?: info.name ?: "").contains("BusyBox", true) -> painterResource(id = R.drawable.ic_busybox)
-                                    (info.prettyName ?: info.name ?: "").contains("FreeBSD", true) -> painterResource(id = R.drawable.ic_freebsd)
-                                    (info.prettyName ?: info.name ?: "").contains("Slackware", true) -> painterResource(id = R.drawable.ic_slackware)
-                                    (info.prettyName ?: info.name ?: "").contains("Mint", true) -> painterResource(id = R.drawable.ic_mint)
-                                    else -> rememberVectorPainter(image = Icons.Default.Dashboard)
-                                }, MaterialTheme.colorScheme.primary) }
+                                add { IdentityToken(context.getString(R.string.distribution), info.prettyName ?: info.name ?: "Linux", IconUtils.getDistroIcon(info.prettyName ?: info.name), MaterialTheme.colorScheme.primary) }
                                 add { IdentityToken(context.getString(R.string.hostname), info.hostname ?: "localhost", rememberVectorPainter(image = Icons.Default.Computer), MaterialTheme.colorScheme.secondary) }
                                 add { IdentityToken(context.getString(R.string.uptime), info.uptime ?: "0s", rememberVectorPainter(image = Icons.Default.Timer), MaterialTheme.colorScheme.tertiary) }
                                 add { IdentityToken(context.getString(R.string.ip_address), info.ipAddress ?: "127.0.0.1", rememberVectorPainter(image = Icons.Default.Lan), MaterialTheme.colorScheme.outline) }
