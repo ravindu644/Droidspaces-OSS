@@ -589,7 +589,7 @@ int start_rootfs(struct ds_config *cfg) {
   android_optimizations(1);
 
   /* Record start time before fork so monitor and virtualize_update share it */
-  clock_gettime(CLOCK_MONOTONIC, &cfg->start_time);
+  clock_gettime(CLOCK_BOOTTIME, &cfg->start_time);
 
   /* 8. Fork Monitor Process */
   pid_t monitor_pid = fork();
@@ -1036,6 +1036,21 @@ int start_rootfs(struct ds_config *cfg) {
         if (r < 0 && errno != EINTR)
           break;
 
+        /* HOST mode: monitor never gets container_pid via mid_sync_pipe.
+         * Poll the pidfile (written by parent shortly after sync_pipe read)
+         * until we have a valid PID, then capture ns_inode once. */
+        if (cfg->container_pid <= 0 && cfg->pidfile[0]) {
+          pid_t p = -1;
+          if (read_and_validate_pid(cfg->pidfile, &p) == 0 && p > 0) {
+            cfg->container_pid = p;
+            cfg->ns_inode = ds_get_pid_ns_inode(p);
+            write_monitor_debug_log(cfg->container_name,
+                                    "[VIRT] resolved container_pid=%d "
+                                    "ns_inode=%lu from pidfile",
+                                    (int)p, cfg->ns_inode);
+          }
+        }
+
         ds_virtualize_update(cfg);
 
         if (sfd >= 0) {
@@ -1141,7 +1156,11 @@ int start_rootfs(struct ds_config *cfg) {
       }
 
       cfg->reboot_cycle = 1;
-      clock_gettime(CLOCK_MONOTONIC, &cfg->start_time);
+      clock_gettime(CLOCK_BOOTTIME, &cfg->start_time);
+      /* Refresh ns_inode: new container has a new PID namespace inode.
+       * Without this, ds_virtualize_update's PID-recycling guard rejects
+       * all writes after the first reboot cycle (stale inode != new pid ns). */
+      cfg->ns_inode = ds_get_pid_ns_inode(cfg->container_pid);
       if (cfg->foreground)
         ds_log_silent = 1;
 

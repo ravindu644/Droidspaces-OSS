@@ -23,7 +23,9 @@ int ds_virtualize_init(struct ds_config *cfg);
 
 /* Update dynamic virtual files from monitor process every 500ms.
  * Writes in-place to preserve bind-mount inodes. Guards against PID recycling
- * via ns_inode check. No-op if no limits set or container_pid is 0. */
+ * via ns_inode check. Always runs for uptime/loadavg regardless of limits.
+ * Uptime derived from container init PID's /proc/<pid>/stat starttime and
+ * CLOCK_BOOTTIME (lxcfs-style), not from host /proc/uptime. */
 void ds_virtualize_update(struct ds_config *cfg);
 
 /* Return PID namespace inode for identity verification. Returns 0 on error. */
