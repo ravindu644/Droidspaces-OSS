@@ -401,4 +401,8 @@
     <string name="deadlock_shield_option">死鎖防護</string>
     <string name="privileged_option">特權模式</string>
     <string name="error_container_name_too_long">名稱過長 - 最多17個字符（核心loop裝置路徑限制）</string>
+    <string name="network_mode_host_short">主機</string>
+    <string name="network_mode_nat_short">NAT</string>
+    <string name="network_mode_none_short">無</string>
+    <string name="hw_access_disclaimer">從 Droidspaces v6.1.0 開始，udevd 擁有 USB、區塊、輸入、TTY 和網路子系統的完全存取權。您的容器可以佔用 Android 目前正在使用的硬體。 \n\n如果在啟動容器後，您的鍵盤、SD 卡或 USB 裝置在 Android 中停止工作，這不是 bug。容器佔用了這些設備。您要求了完全的硬體存取權。 \n\n請勿報告在此模式下由硬體衝突或內核崩潰引起的問題。</string>
 </resources>

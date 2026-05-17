@@ -27,6 +27,7 @@ import com.droidspaces.app.util.ContainerSystemdManager
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import com.droidspaces.app.util.AnimationUtils
+import com.droidspaces.app.util.IconUtils
 import com.droidspaces.app.ui.util.LoadingIndicator
 import com.droidspaces.app.ui.util.LoadingSize
 import androidx.compose.ui.platform.LocalContext
@@ -36,6 +37,8 @@ import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.repeatOnLifecycle
 import androidx.lifecycle.LifecycleOwner
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.graphics.vector.rememberVectorPainter
 
 /**
  * Premium Container Details Screen - Zero glitches, buttery smooth animations
@@ -169,18 +172,13 @@ fun ContainerDetailsScreen(
                         osInfo?.let { info ->
                             // Dynamic Height Synced Grid - measure all 6 and find max
                             val tokens = mutableListOf<@Composable () -> Unit>().apply {
-                                add { IdentityToken(context.getString(R.string.distribution), info.prettyName ?: info.name ?: "Linux", when {
-                                    (info.prettyName ?: info.name ?: "").contains("Ubuntu", true) -> Icons.Default.Adjust
-                                    (info.prettyName ?: info.name ?: "").contains("Debian", true) -> Icons.Default.Circle
-                                    (info.prettyName ?: info.name ?: "").contains("Alpine", true) -> Icons.Default.Landscape
-                                    else -> Icons.Default.Dashboard
-                                }, MaterialTheme.colorScheme.primary) }
-                                add { IdentityToken(context.getString(R.string.hostname), info.hostname ?: "localhost", Icons.Default.Computer, MaterialTheme.colorScheme.secondary) }
-                                add { IdentityToken(context.getString(R.string.uptime), info.uptime ?: "0s", Icons.Default.Timer, MaterialTheme.colorScheme.tertiary) }
-                                add { IdentityToken(context.getString(R.string.ip_address), info.ipAddress ?: "127.0.0.1", Icons.Default.Lan, MaterialTheme.colorScheme.outline) }
+                                add { IdentityToken(context.getString(R.string.distribution), info.prettyName ?: info.name ?: "Linux", IconUtils.getDistroIcon(info.prettyName ?: info.name), MaterialTheme.colorScheme.primary) }
+                                add { IdentityToken(context.getString(R.string.hostname), info.hostname ?: "localhost", rememberVectorPainter(image = Icons.Default.Computer), MaterialTheme.colorScheme.secondary) }
+                                add { IdentityToken(context.getString(R.string.uptime), info.uptime ?: "0s", rememberVectorPainter(image = Icons.Default.Timer), MaterialTheme.colorScheme.tertiary) }
+                                add { IdentityToken(context.getString(R.string.ip_address), info.ipAddress ?: "127.0.0.1", rememberVectorPainter(image = Icons.Default.Lan), MaterialTheme.colorScheme.outline) }
                                 if (container.isRunning) {
-                                    add { IdentityToken(context.getString(R.string.cpu_usage_label), info.cpuUsage?.let { context.getString(R.string.cpu_percent_label, it) } ?: "---", Icons.Default.Speed, MaterialTheme.colorScheme.primary) }
-                                    add { IdentityToken(context.getString(R.string.ram_usage_label), info.ramUsageMb?.let { context.getString(R.string.ram_percent_label, it, info.ramPercent ?: 0.0) } ?: "---", Icons.Default.Memory, MaterialTheme.colorScheme.secondary) }
+                                    add { IdentityToken(context.getString(R.string.cpu_usage_label), info.cpuUsage?.let { context.getString(R.string.cpu_percent_label, it) } ?: "---", rememberVectorPainter(image = Icons.Default.Speed), MaterialTheme.colorScheme.primary) }
+                                    add { IdentityToken(context.getString(R.string.ram_usage_label), info.ramUsageMb?.let { context.getString(R.string.ram_percent_label, it, info.ramPercent ?: 0.0) } ?: "---", rememberVectorPainter(image = Icons.Default.Memory), MaterialTheme.colorScheme.secondary) }
                                 }
                             }
 
@@ -260,7 +258,7 @@ private fun hasOSInfoChanged(old: ContainerOSInfoManager.OSInfo, new: ContainerO
 private fun IdentityToken(
     label: String,
     value: String,
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    painter: androidx.compose.ui.graphics.painter.Painter,
     containerColor: androidx.compose.ui.graphics.Color,
     modifier: Modifier = Modifier
 ) {
@@ -285,7 +283,7 @@ private fun IdentityToken(
                     .padding(top = 2.dp)
             ) {
                 Icon(
-                    imageVector = icon,
+                    painter = painter,
                     contentDescription = null,
                     modifier = Modifier.size(13.dp),
                     tint = containerColor

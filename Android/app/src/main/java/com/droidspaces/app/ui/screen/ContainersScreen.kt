@@ -29,10 +29,13 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarDuration
 import kotlinx.coroutines.launch
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.droidspaces.app.ui.viewmodel.SystemStatsViewModel
 import com.topjohnwu.superuser.Shell
 import com.droidspaces.app.util.ContainerManager
 import com.droidspaces.app.util.ContainerInfo
 import com.droidspaces.app.util.ContainerCommandBuilder
+import com.droidspaces.app.util.ContainerOSInfoManager
 import com.droidspaces.app.util.ContainerOperationExecutor
 import com.droidspaces.app.util.ContainerLogger
 import com.droidspaces.app.util.ViewModelLogger
@@ -81,6 +84,7 @@ fun ContainersScreen(
 ) {
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
+    val systemStatsViewModel: SystemStatsViewModel = viewModel()
     val prefsManager = PreferencesManager.getInstance(context)
 
     val snackbarHostState = remember { SnackbarHostState() }
@@ -300,7 +304,10 @@ fun ContainersScreen(
                 // Refresh container status immediately on failure
                 containerViewModel.refresh()
             } else {
-                // Success - show snackbar
+                // Success - clear cached OS info for this container
+                ContainerOSInfoManager.clearCache(container.name, context)
+
+                // Show snackbar
                 scope.showSuccess(snackbarHostState, context.getString(R.string.container_uninstalled_success, container.name))
 
                 // Refresh container status immediately after successful uninstallation
@@ -362,6 +369,11 @@ fun ContainersScreen(
         }
 
         try {
+            // Clear stale usage cache on stop/restart
+            if (operation == "stop" || operation == "restart") {
+                systemStatsViewModel.clearContainerUsage(container.name)
+            }
+
             // Build command
             val command = when (operation) {
                 "start" -> ContainerCommandBuilder.buildStartCommand(container)

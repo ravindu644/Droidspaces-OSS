@@ -305,6 +305,13 @@ int ds_config_load(const char *config_path, struct ds_config *cfg) {
         ds_warn("config: ignoring invalid pids_limit '%s'", val);
     } else if (strcmp(key, "privileged") == 0) {
       parse_privileged(val, cfg);
+    } else if (strcmp(key, "custom_init") == 0) {
+      if (val[0] != '/')
+        ds_warn("config: ignoring non-absolute custom_init path '%s'", val);
+      else if (strchr(val, ' '))
+        ds_warn("config: ignoring custom_init path with spaces '%s'", val);
+      else
+        safe_strncpy(cfg->custom_init, val, sizeof(cfg->custom_init));
     } else if (strcmp(key, "bind_mounts") == 0) {
       parse_bind_mounts(val, cfg);
     } else if (strcmp(key, "dns_servers") == 0) {
@@ -709,6 +716,9 @@ int ds_config_save(const char *config_path, struct ds_config *cfg) {
   if (cfg->uuid[0])
     fprintf(f_out, "uuid=%s\n", cfg->uuid);
 
+  if (cfg->custom_init[0])
+    fprintf(f_out, "custom_init=%s\n", cfg->custom_init);
+
   if (cfg->dns_servers[0])
     fprintf(f_out, "dns_servers=%s\n", cfg->dns_servers);
 
@@ -766,6 +776,16 @@ int ds_config_validate(struct ds_config *cfg) {
   /* Image mode requires a name for the mount point */
   if (cfg->rootfs_img_path[0] && !cfg->container_name[0])
     errors++;
+
+  if (cfg->custom_init[0]) {
+    if (cfg->custom_init[0] != '/') {
+      ds_error("custom_init must be an absolute path: %s", cfg->custom_init);
+      errors++;
+    } else if (strchr(cfg->custom_init, ' ')) {
+      ds_error("custom_init cannot contain spaces: %s", cfg->custom_init);
+      errors++;
+    }
+  }
 
   return (errors > 0) ? -1 : 0;
 }

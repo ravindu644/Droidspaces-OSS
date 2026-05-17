@@ -2,6 +2,7 @@ package com.droidspaces.app.util
 
 import android.content.Context
 import android.util.Log
+import androidx.compose.runtime.mutableIntStateOf
 import com.topjohnwu.superuser.Shell
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -15,6 +16,9 @@ object ContainerOSInfoManager {
 
     // In-memory cache for OS info (container name -> OSInfo)
     private val cache = mutableMapOf<String, OSInfo>()
+
+    // Increments every time the icon cache is updated — Composables observe this to re-read icons
+    val iconCacheVersion = mutableIntStateOf(0)
 
     // Context for accessing preferences (set when needed)
     @Volatile
@@ -38,7 +42,35 @@ object ContainerOSInfoManager {
     )
 
     /**
-     * Read OS information from container's /etc/os-release and hostname from /etc/hostname.
+     * Lightweight fetch: reads only /etc/os-release to get PRETTY_NAME, then caches it.
+     * Called on container start so the icon is ready before the UI loads.
+     * Skips fetch if prettyName is already cached (forever cache).
+     * On every start we re-fetch to catch distro upgrades.
+     */
+    suspend fun prefetchDistroIcon(containerName: String, appContext: Context) = withContext(Dispatchers.IO) {
+        context = appContext.applicationContext
+        try {
+            val result = Shell.cmd(
+                "${Constants.DROIDSPACES_BINARY_PATH} --name=${ContainerCommandBuilder.quote(containerName)} run 'cat /etc/os-release 2>/dev/null || echo'"
+            ).exec()
+            if (!result.isSuccess || result.out.isEmpty()) return@withContext
+            val osInfo = parseOSRelease(result.out)
+            // Merge into existing cache entry if present, else store minimal info
+            val existing = cache[containerName]
+            val updated = existing?.copy(
+                prettyName = osInfo.prettyName ?: existing.prettyName,
+                name = osInfo.name ?: existing.name
+            ) ?: osInfo
+            cache[containerName] = updated
+            PreferencesManager.getInstance(appContext).saveContainerOSInfo(containerName, updated)
+            iconCacheVersion.intValue++
+            Log.i(TAG, "Icon prefetch done for $containerName: ${updated.prettyName}")
+        } catch (e: Exception) {
+            Log.w(TAG, "Icon prefetch failed for $containerName", e)
+        }
+    }
+
+    /**
      * Returns cached value if available for instant access.
      * Uses both in-memory and persistent cache.
      */
@@ -90,9 +122,7 @@ object ContainerOSInfoManager {
 
             // Get IP addresses (IPv4 only, excluding localhost)
             // Filter out 127.x.x.x addresses and get all other IPv4 addresses
-            val ipResult = Shell.cmd(
-                "${Constants.DROIDSPACES_BINARY_PATH} --name=${ContainerCommandBuilder.quote(containerName)} run 'ip -4 addr show 2>/dev/null | awk \"/inet / && \\$2 !~ /^127/ {split(\\$2,a,\\\"/\\\"); print a[1]}\" | tr \"\\n\" \" \" || echo'"
-            ).exec()
+            val ipResult = Shell.cmd(ContainerCommandBuilder.buildGetIpCommand(containerName)).exec()
 
             val ipAddress = if (ipResult.isSuccess && ipResult.out.isNotEmpty()) {
                 // Get all lines, filter valid IPv4 addresses (excluding localhost), join with comma
@@ -264,4 +294,3 @@ object ContainerOSInfoManager {
         return cleaned.takeIf { it.isNotEmpty() }
     }
 }
-

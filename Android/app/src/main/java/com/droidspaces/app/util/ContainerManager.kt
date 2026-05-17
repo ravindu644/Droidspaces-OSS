@@ -49,7 +49,8 @@ data class ContainerInfo(
     val forceCgroupv1: Boolean = false,
     val blockNestedNs: Boolean = false,
     val staticNatIp: String = "",
-    val privileged: String = ""
+    val privileged: String = "",
+    val customInit: String = ""
 ) {
     val isRunning: Boolean
         get() = status == ContainerStatus.RUNNING
@@ -99,6 +100,9 @@ data class ContainerInfo(
         }
         if (privileged.isNotEmpty()) {
             appendLine("privileged=$privileged")
+        }
+        if (customInit.isNotEmpty()) {
+            appendLine("custom_init=$customInit")
         }
     }
 }
@@ -293,7 +297,8 @@ object ContainerManager {
                 forceCgroupv1 = configMap["force_cgroupv1"] == "1",
                 blockNestedNs = configMap["block_nested_ns"] == "1",
                 staticNatIp = configMap["static_nat_ip"] ?: "",
-                privileged = configMap["privileged"] ?: ""
+                privileged = configMap["privileged"] ?: "",
+                customInit = configMap["custom_init"] ?: ""
             )
         } catch (e: Exception) {
             return null

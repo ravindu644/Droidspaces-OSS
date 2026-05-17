@@ -6,6 +6,8 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -20,6 +22,7 @@ import com.droidspaces.app.util.AnimationUtils
 import com.droidspaces.app.util.ContainerInfo
 import com.droidspaces.app.util.ContainerOSInfoManager
 import com.droidspaces.app.util.ContainerUsageCollector
+import com.droidspaces.app.util.IconUtils
 
 /**
  * Container card for Panel tab — shows container name, OS info, resource usage, and quick actions.
@@ -41,9 +44,11 @@ fun RunningContainerCard(
     }
 
     LaunchedEffect(container.name, refreshTrigger) {
+        // Use cache on first load — prefetch ensures icon is ready on first boot
+        val useCache = refreshTrigger == 0 && ContainerOSInfoManager.getCachedOSInfo(container.name, context) != null
         osInfo = ContainerOSInfoManager.getOSInfo(
             containerName = container.name,
-            useCache = false,
+            useCache = useCache,
             appContext = context
         )
     }
@@ -71,7 +76,7 @@ fun RunningContainerCard(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Icon(
-                    imageVector = Icons.Default.Storage,
+                    painter = IconUtils.getDistroIcon(osInfo?.prettyName ?: container.name),
                     contentDescription = null,
                     modifier = Modifier.size(24.dp),
                     tint = MaterialTheme.colorScheme.primary
@@ -130,12 +135,12 @@ fun RunningContainerCard(
                 )
             }
             Text(
-                text = context.getString(R.string.uptime_label, context.getString(R.string.uptime), usage?.uptime ?: osInfo?.uptime ?: ""),
+                text = context.getString(R.string.uptime_label, context.getString(R.string.uptime), usage?.uptime ?: ""),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
             )
             Text(
-                text = context.getString(R.string.ip_address_label, context.getString(R.string.ip_address), osInfo?.ipAddress ?: ""),
+                text = context.getString(R.string.ip_address_label, context.getString(R.string.ip_address), usage?.ipAddress ?: ""),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
             )

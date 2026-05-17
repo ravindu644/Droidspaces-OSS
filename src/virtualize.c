@@ -327,36 +327,81 @@ static char *gen_stat(struct ds_config *cfg, size_t *out_len) {
   return buf;
 }
 
-/* /proc/uptime - per-container uptime from cfg->start_time */
+/* Read container's CPU busy time (seconds) from cgv2 cpu.stat usage_usec.
+ * Ported from lxcfs get_reaper_busy() - cgv1 cpuacct.usage equivalent. */
+static double cg_cpu_busy_secs(const char *container_name) {
+  char safe_name[256];
+  sanitize_container_name(container_name, safe_name, sizeof(safe_name));
+  char path[PATH_MAX], buf[128];
+  snprintf(path, sizeof(path), "/sys/fs/cgroup/droidspaces/%s/cpu.stat",
+           safe_name);
+  if (read_file(path, buf, sizeof(buf)) <= 0)
+    return -1.0;
+  /* cpu.stat first line: "usage_usec <N>" */
+  char *p = strstr(buf, "usage_usec ");
+  if (!p)
+    return -1.0;
+  char *end;
+  long long usec = strtoll(p + 11, &end, 10);
+  return (end == p + 11) ? -1.0 : (double)usec / 1e6;
+}
+
+/* Read container init PID's start time from /proc/<pid>/stat field 22.
+ * Returns seconds-since-boot (same reference as CLOCK_BOOTTIME).
+ * Ported from lxcfs get_reaper_start_time_in_sec(). */
+static double container_start_time_secs(pid_t pid) {
+  char path[64];
+  snprintf(path, sizeof(path), "/proc/%d/stat", (int)pid);
+  FILE *f = fopen(path, "r");
+  if (!f)
+    return -1.0;
+  unsigned long long starttime = 0;
+  /* skip fields 1-21, read field 22 (starttime) */
+  int r = fscanf(f,
+                 "%*d %*s %*c %*d %*d %*d %*d %*d %*u " /* 1-9  */
+                 "%*u %*u %*u %*u %*u %*u %*d %*d "     /* 10-17 */
+                 "%*d %*d %*d %*d %llu",                /* 18-22 */
+                 &starttime);
+  fclose(f);
+  if (r != 1 || starttime == 0)
+    return -1.0;
+  long ticks = sysconf(_SC_CLK_TCK);
+  if (ticks <= 0)
+    return -1.0;
+  return (double)starttime / (double)ticks;
+}
+
+/* /proc/uptime - lxcfs-style: uptime = CLOCK_BOOTTIME - container_init_start.
+ * idle = up*ncpus - cpu_busy (from cgv2 cpu.stat).
+ * Falls back to cfg->start_time only if container_pid is not yet available. */
 static char *gen_uptime(struct ds_config *cfg, size_t *out_len) {
-  struct timespec now;
-  clock_gettime(CLOCK_MONOTONIC, &now);
-  double up = (double)(now.tv_sec - cfg->start_time.tv_sec) +
-              (double)(now.tv_nsec - cfg->start_time.tv_nsec) / 1e9;
+  struct timespec boot;
+  clock_gettime(CLOCK_BOOTTIME, &boot);
+  double boottime = (double)boot.tv_sec + (double)boot.tv_nsec / 1e9;
+
+  double up = -1.0;
+  if (cfg->container_pid > 0) {
+    double proc_start = container_start_time_secs(cfg->container_pid);
+    if (proc_start > 0.0)
+      up = boottime - proc_start;
+  }
+  if (up < 0.0) {
+    up = boottime - ((double)cfg->start_time.tv_sec +
+                     (double)cfg->start_time.tv_nsec / 1e9);
+  }
   if (up < 0.0)
     up = 0.0;
 
-  /* Scale idle time proportionally to container CPU count */
-  double host_idle = 0.0;
-  {
-    FILE *f = fopen("/proc/uptime", "r");
-    if (f) {
-      double hu;
-      if (fscanf(f, "%lf %lf", &hu, &host_idle) != 2)
-        host_idle = 0.0;
-      fclose(f);
-    }
-  }
-  int hcpus = (int)sysconf(_SC_NPROCESSORS_ONLN);
   int ccpus = container_cpus(cfg);
-  double idle = host_idle * ((double)ccpus / (double)hcpus);
-  if (idle > up * ccpus)
-    idle = up * ccpus;
+  double busy = cg_cpu_busy_secs(cfg->container_name);
+  double idle = (busy >= 0.0) ? (up * ccpus - busy) : (up * ccpus * 0.1);
+  if (idle < 0.0)
+    idle = 0.0;
 
-  char *buf = malloc(1024);
+  char *buf = malloc(64);
   if (!buf)
     return NULL;
-  *out_len = (size_t)snprintf(buf, 1024, "%.2f %.2f\n", up, idle);
+  *out_len = (size_t)snprintf(buf, 64, "%.2f %.2f\n", up, idle);
   return buf;
 }
 
@@ -559,12 +604,20 @@ int ds_virtualize_init(struct ds_config *cfg) {
 }
 
 void ds_virtualize_update(struct ds_config *cfg) {
-  if (!cfg->container_pid || cfg->container_pid <= 0)
+  if (cfg->container_pid <= 0)
     return;
 
   /* PID-recycling guard: verify container identity before touching its fs */
-  if (cfg->ns_inode && ds_get_pid_ns_inode(cfg->container_pid) != cfg->ns_inode)
-    return;
+  if (cfg->ns_inode) {
+    unsigned long live = ds_get_pid_ns_inode(cfg->container_pid);
+    if (live != cfg->ns_inode) {
+      write_monitor_debug_log(cfg->container_name,
+                              "[VIRT] update skipped: ns_inode mismatch "
+                              "(expected %lu, got %lu) pid=%d",
+                              cfg->ns_inode, live, (int)cfg->container_pid);
+      return;
+    }
+  }
 
   int has_mem = (cfg->memory_limit > 0);
   int has_cpu = (cfg->cpu_quota > 0);
@@ -586,17 +639,29 @@ void ds_virtualize_update(struct ds_config *cfg) {
       continue;
     size_t len = 0;
     char *buf = dyn[i].gen(cfg, &len);
-    if (!buf)
+    if (!buf) {
+      write_monitor_debug_log(cfg->container_name,
+                              "[VIRT] gen_%s returned NULL", dyn[i].name);
       continue;
+    }
 
     char path[PATH_MAX];
     snprintf(path, sizeof(path), "/proc/%d/root/" VPROC_PATH "/%s",
              (int)cfg->container_pid, dyn[i].name);
 
-    /* Only update if the vfile exists (i.e. init ran successfully) */
     struct stat st;
-    if (stat(path, &st) == 0)
-      write_inplace(path, buf, len);
+    if (stat(path, &st) != 0) {
+      write_monitor_debug_log(cfg->container_name,
+                              "[VIRT] vfile missing: %s (%s)", path,
+                              strerror(errno));
+      free(buf);
+      continue;
+    }
+
+    if (write_inplace(path, buf, len) < 0)
+      write_monitor_debug_log(cfg->container_name,
+                              "[VIRT] write_inplace failed: %s (%s)", path,
+                              strerror(errno));
     free(buf);
   }
 }
