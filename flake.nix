@@ -286,7 +286,7 @@
             "${modulesPath}/virtualisation/lxc-container.nix"
           ];
 
-          # These services are broken or unnecessary in droidspaces container
+          # These services are broken in droidspaces container
           systemd.services.nix-channel-init.enable = false;
           systemd.services.firewall.enable = false;
           systemd.services.wpa_supplicant.enable = false;
@@ -294,12 +294,17 @@
           networking.firewall.enable = false;
 
           # Theoretically systemd should detect container environment and not run udev
-          # but we will disable it anyways
-          services.udev.enable = false;
+          #  but with droidspaces' hardware access enabled, it runs regardless.
+          services.udev.enable = lib.mkForce false;
+          # For some reason, udevd stuff still runs with services.udev.enable
+          #  set to false so let's just disable the services directly
+          systemd.services.systemd-udevd.enable = lib.mkForce false;
+          systemd.services.systemd-udev-settle.enable = lib.mkForce false;
+          systemd.services.systemd-udev-trigger.enable = lib.mkForce false;
 
           nix.settings.experimental-features = ["nix-command" "flakes"];
 
-          system.stateVersion = "26.05";
+          systemd.services.NetworkManager.enable = false;
         };
       };
     };
