@@ -90,9 +90,7 @@ object ContainerOSInfoManager {
 
             // Get IP addresses (IPv4 only, excluding localhost)
             // Filter out 127.x.x.x addresses and get all other IPv4 addresses
-            val ipResult = Shell.cmd(
-                "${Constants.DROIDSPACES_BINARY_PATH} --name=${ContainerCommandBuilder.quote(containerName)} run 'ip -4 addr show 2>/dev/null | awk \"/inet / && \\$2 !~ /^127/ {split(\\$2,a,\\\"/\\\"); print a[1]}\" | tr \"\\n\" \" \" || echo'"
-            ).exec()
+            val ipResult = Shell.cmd(ContainerCommandBuilder.buildGetIpCommand(containerName)).exec()
 
             val ipAddress = if (ipResult.isSuccess && ipResult.out.isNotEmpty()) {
                 // Get all lines, filter valid IPv4 addresses (excluding localhost), join with comma
@@ -264,4 +262,3 @@ object ContainerOSInfoManager {
         return cleaned.takeIf { it.isNotEmpty() }
     }
 }
-

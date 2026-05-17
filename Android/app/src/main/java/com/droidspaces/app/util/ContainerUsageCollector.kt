@@ -17,7 +17,8 @@ object ContainerUsageCollector {
         val ramUsedKb: Long = 0,
         val ramTotalKb: Long = 0,
         val ramPercent: Double = 0.0,
-        val uptime: String? = null
+        val uptime: String? = null,
+        val ipAddress: String? = null
     )
 
     // Per-container CPU delta state - Not needed with the new usage command
@@ -56,6 +57,28 @@ object ContainerUsageCollector {
                     }
                 }
 
+                // Fetch IP address in real-time
+                val ipResult = Shell.cmd(ContainerCommandBuilder.buildGetIpCommand(containerName)).exec()
+
+                val ipAddress = if (ipResult.isSuccess && ipResult.out.isNotEmpty()) {
+                    val allIps = ipResult.out
+                        .flatMap { it.trim().split("\\s+".toRegex()) }
+                        .filter {
+                            it.isNotEmpty() &&
+                            it.matches(Regex("^\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}$")) &&
+                            !it.startsWith("127.")
+                        }
+                        .distinct()
+
+                    if (allIps.isNotEmpty()) {
+                        allIps.joinToString(", ")
+                    } else {
+                        null
+                    }
+                } else {
+                    null
+                }
+
                 val ramPercent = if (ramTotal > 0) {
                     (ramUsed.toDouble() / ramTotal * 100.0).coerceIn(0.0, 100.0)
                 } else 0.0
@@ -65,7 +88,8 @@ object ContainerUsageCollector {
                     ramUsedKb = ramUsed,
                     ramTotalKb = ramTotal,
                     ramPercent = ramPercent,
-                    uptime = uptime
+                    uptime = uptime,
+                    ipAddress = ipAddress
                 )
             }
         } catch (e: Exception) {

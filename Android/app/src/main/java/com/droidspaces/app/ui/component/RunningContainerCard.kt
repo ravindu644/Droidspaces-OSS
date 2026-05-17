@@ -130,12 +130,12 @@ fun RunningContainerCard(
                 )
             }
             Text(
-                text = context.getString(R.string.uptime_label, context.getString(R.string.uptime), usage?.uptime ?: osInfo?.uptime ?: ""),
+                text = context.getString(R.string.uptime_label, context.getString(R.string.uptime), usage?.uptime ?: ""),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
             )
             Text(
-                text = context.getString(R.string.ip_address_label, context.getString(R.string.ip_address), osInfo?.ipAddress ?: ""),
+                text = context.getString(R.string.ip_address_label, context.getString(R.string.ip_address), usage?.ipAddress ?: ""),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
             )
