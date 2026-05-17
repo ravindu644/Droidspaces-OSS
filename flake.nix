@@ -2,13 +2,18 @@
   description = "Droidspaces - High-performance Container Runtime";
 
   inputs = {
-    nixpkgs.url = "github:NixOS/nixpkgs/b86751bc4085f48661017fa226dee99fab6c651b";
+    nixpkgs.url = "github:NixOS/nixpkgs/c6e5ca3c836a5f4dd9af9f2c1fc1c38f0fac988a";
+
+    nixpkgs-with-systemd-v259.url = "github:NixOS/nixpkgs/b86751bc4085f48661017fa226dee99fab6c651b";
+
     flake-utils.url = "github:numtide/flake-utils";
 
     artifacts = {
       url = "github:loystonpais/Droidspaces-OSS/artifacts";
       flake = false;
     };
+
+    finix.url = "github:finix-community/finix?ref=main";
   };
 
   outputs = {
@@ -16,7 +21,8 @@
     nixpkgs,
     flake-utils,
     artifacts,
-  }: let
+    ...
+  } @ inputs: let
     lib = nixpkgs.lib;
     systems = ["x86_64-linux" "aarch64-linux"];
 
@@ -169,6 +175,25 @@
               inherit system;
               modules = [self.nixosModules.working-droidspaces-rootfs-minimal];
             }).config.system.build.tarball;
+
+          minimal-with-systemd-v259 =
+            (inputs.nixpkgs-with-systemd-v259.lib.nixosSystem {
+              inherit system;
+              modules = [self.nixosModules.working-droidspaces-rootfs-minimal];
+            }).config.system.build.tarball;
+        });
+
+        finixDroidspacesTarballs = lib.genAttrs systems (system: {
+          experimental =
+            (inputs.finix.lib.finixSystem {
+              inherit (pkgs) lib;
+              modules = [
+                {
+                  nixpkgs.pkgs = inputs.nixpkgs.lib.mkDefault pkgs;
+                }
+                self.nixosModules.finix-droidspaces-rootfs-experimental
+              ];
+            }).config.droidspaces.tarball;
         });
 
         manualTestVMs = let
@@ -182,10 +207,15 @@
               inherit system;
               modules = [self.nixosModules.test-system-nixos-rootfs];
             });
+
+            finix-rootfs = mkDynamicVM (nixpkgs.lib.nixosSystem {
+              inherit system;
+              modules = [self.nixosModules.test-system-finix-rootfs];
+            });
           });
         in {
           inherit forArch;
-          inherit (forArch.${system}) default nixos-rootfs;
+          inherit (forArch.${system}) default nixos-rootfs finix-rootfs;
         };
 
         androidApp = {
@@ -229,6 +259,23 @@
           environment.interactiveShellInit = ''
             echo '------'
             echo 'NixOS Droidspaces Minimal Rootfs is available at $NIXOS_ROOTFS'
+            echo '------'
+          '';
+        };
+
+        test-system-finix-rootfs = {pkgs, ...}: {
+          imports = [self.nixosModules.test-system-base];
+
+          environment.variables.FINIX_ROOTFS = let
+            system = pkgs.stdenv.hostPlatform.system;
+            tarballPath = "${self.legacyPackages.${system}.finixDroidspacesTarballs.${system}.experimental}";
+            file = builtins.elemAt (lib.filesystem.listFilesRecursive "${tarballPath}/tarball") 0;
+          in
+            file;
+
+          environment.interactiveShellInit = ''
+            echo '------'
+            echo 'Finix Droidspaces Minimal Rootfs is available at $FINIX_ROOTFS'
             echo '------'
           '';
         };
@@ -286,7 +333,7 @@
             "${modulesPath}/virtualisation/lxc-container.nix"
           ];
 
-          # These services are broken or unnecessary in droidspaces container
+          # These services are broken in droidspaces container
           systemd.services.nix-channel-init.enable = false;
           systemd.services.firewall.enable = false;
           systemd.services.wpa_supplicant.enable = false;
@@ -294,12 +341,139 @@
           networking.firewall.enable = false;
 
           # Theoretically systemd should detect container environment and not run udev
-          # but we will disable it anyways
-          services.udev.enable = false;
+          #  but with droidspaces' hardware access enabled, it runs regardless.
+          services.udev.enable = lib.mkForce false;
+          # For some reason, udevd stuff still runs with services.udev.enable
+          #  set to false so let's just disable the services directly
+          systemd.services.systemd-udevd.enable = lib.mkForce false;
+          systemd.services.systemd-udev-settle.enable = lib.mkForce false;
+          systemd.services.systemd-udev-trigger.enable = lib.mkForce false;
 
           nix.settings.experimental-features = ["nix-command" "flakes"];
 
-          system.stateVersion = "26.05";
+          systemd.services.NetworkManager.enable = false;
+        };
+
+        finix-droidspaces-rootfs-experimental = {pkgs, ...}: {
+          imports = with inputs.finix.nixosModules; [
+            openssh
+            nix-daemon
+            sudo
+            bash
+            sysklogd
+
+            # Set container stuff
+            ({
+              pkgs,
+              lib,
+              config,
+              ...
+            }: {
+              options = {
+                droidspaces.tarball = lib.mkOption {
+                  type = lib.types.path;
+                  description = "Path to droidspaces tarball to be extracted and used as rootfs";
+                };
+              };
+
+              config = {
+                boot.kernel.enable = false;
+                boot.initrd.enable = false;
+                boot.modprobeConfig.enable = false;
+
+                finit.tasks.register-nix-paths = {
+                  runlevels = "S";
+                  remain = true;
+                  pre = pkgs.writeShellScript "register-nix-paths-pre" ''
+                    test -f /nix-path-registration || exit 0
+                  '';
+                  command = pkgs.writeShellScript "register-nix-paths" ''
+                    ${lib.getExe' config.services.nix-daemon.package.out "nix-store"} --load-db < /nix-path-registration
+                    rm /nix-path-registration
+                    ${lib.getExe' config.services.nix-daemon.package.out "nix-env"} -p /nix/var/nix/profiles/system --set /run/current-system
+                  '';
+                  description = "Register Nix Store Paths";
+                };
+
+                droidspaces.tarball = pkgs.callPackage "${inputs.nixpkgs}/nixos/lib/make-system-tarball.nix" {
+                  fileName = "rootfs";
+                  extraArgs = "--owner=0";
+
+                  storeContents = [
+                    {
+                      object = config.system.build.toplevel;
+                      symlink = "none";
+                    }
+                  ];
+
+                  contents = [
+                    {
+                      source = pkgs.writeShellScript "init" ''
+                        systemConfig=${config.system.build.toplevel}
+
+                        export HOME=/root PATH=${lib.makeBinPath [pkgs.coreutils pkgs.util-linux]}
+
+                        echo "starting container..."
+
+                        # Required by the activation script
+                        install -m 0755 -d /etc
+                        if [ ! -h "/etc/nixos" ]; then
+                            install -m 0755 -d /etc/nixos
+                        fi
+                        install -m 01777 -d /tmp
+
+                        echo "running activation script..."
+                        $systemConfig/activate
+
+
+                        echo "starting finix..."
+                        exec ${config.system.build.toplevel}/init "$@"
+                      '';
+                      target = "/sbin/init";
+                    }
+                  ];
+
+                  extraCommands = "mkdir -p proc sys dev";
+                };
+              };
+            })
+          ];
+
+          services.sysklogd.enable = true;
+
+          services.nix-daemon.enable = true;
+          services.nix-daemon.nrBuildUsers = 32;
+          services.nix-daemon.settings = {
+            experimental-features = [
+              "nix-command"
+              "flakes"
+            ];
+
+            trusted-users = [
+              "root"
+              "@wheel"
+            ];
+          };
+
+          services.openssh.enable = true;
+
+          programs.sudo.enable = true;
+          programs.bash.enable = true;
+
+          users.users.test = {
+            isNormalUser = true;
+
+            extraGroups = [
+              "input"
+              "video"
+              "wheel"
+            ];
+          };
+
+          environment.systemPackages = with pkgs; [
+            nano
+            htop
+          ];
         };
       };
     };
