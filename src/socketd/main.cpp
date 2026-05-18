@@ -1,9 +1,11 @@
 #include "api_server.h"
 #include "backend_client.h"
+#include "event_log.h"
 
 #include "socketd_protocol.h"
 
 #include <csignal>
+#include <cstdio>
 #include <cstdint>
 #include <iostream>
 #include <string>
@@ -15,6 +17,8 @@ using droidspaces::socketd::BackendClient;
 using droidspaces::socketd::CapabilitiesResult;
 using droidspaces::socketd::TcpListenConfig;
 using droidspaces::socketd::parse_tcp_listen_endpoint;
+using droidspaces::socketd::SocketdEventAttributes;
+using droidspaces::socketd::record_socketd_event;
 
 constexpr std::uint32_t kRequiredBackendCapabilities =
     DS_SOCKETD_CAP_PROTOCOL_V1 |
@@ -53,12 +57,31 @@ bool check_backend(std::string& error) {
     error = "backend is missing required base capabilities";
     return false;
   }
-
+// To tty
   std::cerr << "socketd: backend handshake OK, capabilities mask: 0x"
             << std::hex
             << caps.mask
             << std::dec
             << '\n';
+            
+// To API
+const std::string caps_text = "0x" + [&caps]() {
+  char buffer[32] {};
+  std::snprintf(buffer, sizeof(buffer), "%x", caps.mask);
+  return std::string(buffer);
+}();
+
+const SocketdEventAttributes attrs[] = {
+    {"name", "droidspaces-backend"},
+    {"component", "socketd"},
+    {"capabilities", caps_text},
+};
+
+record_socketd_event("daemon",
+                     "connect",
+                     "droidspaces-backend",
+                     attrs,
+                     sizeof(attrs) / sizeof(attrs[0]));
 
   return true;
 }

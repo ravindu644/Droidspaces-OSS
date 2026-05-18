@@ -42,6 +42,9 @@ endif
 SRCS := \
 	main.cpp \
 	backend_client.cpp \
+	container_list.cpp \
+	snapshot_lists.cpp \
+	event_log.cpp \
 	api_server.cpp
 
 OBJS := $(SRCS:%.cpp=$(OBJ_DIR)/%.o)
