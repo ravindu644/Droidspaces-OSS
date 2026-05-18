@@ -405,4 +405,10 @@
     <string name="network_mode_nat_short">NAT</string>
     <string name="network_mode_none_short">無</string>
     <string name="hw_access_disclaimer">從 Droidspaces v6.1.0 開始，udevd 擁有 USB、區塊、輸入、TTY 和網路子系統的完全存取權。您的容器可以佔用 Android 目前正在使用的硬體。 \n\n如果在啟動容器後，您的鍵盤、SD 卡或 USB 裝置在 Android 中停止工作，這不是 bug。容器佔用了這些設備。您要求了完全的硬體存取權。 \n\n請勿報告在此模式下由硬體衝突或內核崩潰引起的問題。</string>
+    <string name="custom_init_label">自定義Init檔案</string>
+    <string name="custom_init_placeholder">/sbin/init (預設)</string>
+    <string name="custom_init_hint">留空則使用預設的 init 初始化程式（/sbin/init）</string>
+    <string name="custom_init_error_absolute">必須使用絕對路徑（以 / 開頭)</string>
+    <string name="custom_init_warning">除非您完全清楚自己在做什麼，否則請勿更改此設定。設定錯誤的初始化二進位檔案將導致容器無法啟動。</string>
+    <string name="custom_init_option">自定義Init</string>
 </resources>

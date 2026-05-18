@@ -409,4 +409,10 @@
     <string name="network_mode_nat_short">NAT</string>
     <string name="network_mode_none_short">无</string>
     <string name="hw_access_disclaimer">从 Droidspaces v6.1.0 版本开始，udevd 可完整接管 USB、块设备、输入设备、串口、网络子系统权限，容器能够直接占用安卓系统正在使用的硬件资源。\n\n若启动容器后，安卓端键盘、SD 卡、USB 外设等设备失效，这并非程序 BUG，是容器抢占占用了硬件资源，属于正常设计行为。\n\n请勿提交因硬件资源冲突、该模式引发内核宕机死机相关的问题反馈。</string>
+    <string name="custom_init_warning">除非你清楚你在做什么，否则不要更改此选项。设定错误的 init 可执行文件路径会导致容器无法启动。</string>
+    <string name="custom_init_label">自定义 Init 可执行文件</string>
+    <string name="custom_init_placeholder">/sbin/init（默认）</string>
+    <string name="custom_init_hint">留空以使用默认的 init (/sbin/init)</string>
+    <string name="custom_init_error_absolute">路径必须为绝对路径（以 / 开头）</string>
+    <string name="custom_init_option">自定义 Init</string>
 </resources>
