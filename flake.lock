@@ -67,6 +67,22 @@
         "type": "github"
       }
     },
+    "nixpkgs-with-systemd-v257": {
+      "locked": {
+        "lastModified": 1760596604,
+        "narHash": "sha256-J/i5K6AAz/y5dBePHQOuzC7MbhyTOKsd/GLezSbEFiM=",
+        "owner": "NixOS",
+        "repo": "nixpkgs",
+        "rev": "3cbe716e2346710d6e1f7c559363d14e11c32a43",
+        "type": "github"
+      },
+      "original": {
+        "owner": "NixOS",
+        "ref": "3cbe716e2346710d6e1f7c559363d14e11c32a4",
+        "repo": "nixpkgs",
+        "type": "github"
+      }
+    },
     "nixpkgs-with-systemd-v259": {
       "locked": {
         "lastModified": 1776329215,
@@ -89,6 +105,7 @@
         "finix": "finix",
         "flake-utils": "flake-utils",
         "nixpkgs": "nixpkgs",
+        "nixpkgs-with-systemd-v257": "nixpkgs-with-systemd-v257",
         "nixpkgs-with-systemd-v259": "nixpkgs-with-systemd-v259"
       }
     },
