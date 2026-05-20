@@ -1,4 +1,5 @@
 #include "api_server.h"
+#include "backend_client.h"
 #include "container_list.h"
 #include "snapshot_lists.h"
 #include "event_log.h"
@@ -587,13 +588,19 @@ bool send_version_ok(int fd, bool suppress_body, std::string& error) {
                             error);
 }
 
-std::string build_info_json() {
+bool build_info_json(std::string& body, std::string& error) {
+  BackendClient backend;
+  InfoResult info;
+
+  if (!backend.info(info, error)) {
+    return false;
+  }
+
   /*
-   * TODO(socketd):
-   * This /info response is intentionally synthesized locally so that early
-   * Portainer integration can proceed and reveal the next compatibility
-   * requirements. Replace or enrich this with DS_SOCKETD_OP_INFO once the
-   * privileged backend bridge has a stable information payload.
+   * /info remains primarily a socketd-local Docker-shaped compatibility
+   * document: host facts such as kernel, architecture, CPU count, and memory
+   * are gathered in this process. Backend INFO contributes the live
+   * Droidspaces inventory counters.
    */
   const std::string arch = socketd_arch_name();
   const std::string kernel_version = socketd_kernel_version();
@@ -602,20 +609,33 @@ std::string build_info_json() {
   const unsigned int ncpu = socketd_ncpu();
   const std::uint64_t mem_total = socketd_mem_total_bytes();
 
-  std::string body;
+  body.clear();
   body.reserve(1400);
 
   body += "{";
 
-  /*
-   * Container and image counters are placeholders until INFO is backed by
-   * the privileged daemon.
-   */
   body += "\"ID\":\"\",";
-  body += "\"Containers\":0,";
-  body += "\"ContainersRunning\":0,";
+
+  body += "\"Containers\":";
+  body += std::to_string(info.containers_total);
+  body += ",";
+
+  body += "\"ContainersRunning\":";
+  body += std::to_string(info.containers_running);
+  body += ",";
+
   body += "\"ContainersPaused\":0,";
-  body += "\"ContainersStopped\":0,";
+
+  body += "\"ContainersStopped\":";
+  body += std::to_string(info.containers_stopped);
+  body += ",";
+
+  /*
+   * CONCERN(socketd-info):
+   * The current INFO backend payload carries container inventory counters only.
+   * Preserve the existing Images=0 field until the plan explicitly extends the
+   * INFO wire payload or chooses a socketd-side count source for pseudo-images.
+   */
   body += "\"Images\":0,";
 
   body += "\"Driver\":\"droidspaces\",";
@@ -701,11 +721,15 @@ std::string build_info_json() {
   body += "\"Warnings\":[]";
 
   body += "}\n";
-  return body;
+  return true;
 }
 
 bool send_info_ok(int fd, bool suppress_body, std::string& error) {
-  const std::string body = build_info_json();
+  std::string body;
+
+  if (!build_info_json(body, error)) {
+    return false;
+  }
 
   return send_http_response(fd,
                             200,

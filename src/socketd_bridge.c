@@ -273,14 +273,10 @@ static void socketd_pack_container_record(
    */
   safe_strncpy(record->uuid, cfg->uuid, sizeof(record->uuid));
 
-  /*
-   * CONCERN(socketd-container-list):
-   * Phase 2.3 follows the implementation plan literally and exports
-   * cfg->rootfs_path here. Any later distinction between mounted rootfs paths
-   * and rootfs image source paths must be settled deliberately at the
-   * compatibility boundary.
-   */
-  safe_strncpy(record->rootfs_path, cfg->rootfs_path,
+  const char *rootfs_ref =
+      cfg->rootfs_img_path[0] ? cfg->rootfs_img_path : cfg->rootfs_path;
+
+  safe_strncpy(record->rootfs_path, rootfs_ref,
                sizeof(record->rootfs_path));
 
   safe_strncpy(record->hostname, cfg->hostname, sizeof(record->hostname));
