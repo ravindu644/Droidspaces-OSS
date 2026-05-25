@@ -9,109 +9,109 @@
 
 # Droidspaces
 
-**Droidspaces** is a lightweight, portable Linux containerization tool that lets you run full Linux environments on top of Android, Linux, or even in **minimal environments like Android recovery/Ramdisks**, with complete init system support including **systemd**, **OpenRC**, and other init systems (runit, s6, etc.).
+**Droidspaces** 是一款轻量级、可移植的 Linux 容器化工具，能让你在 Android、Linux 甚至**Android Recovery/Ramdisk 等最小化环境**中运行完整的 Linux 环境，支持完整的初始化系统，包括 **systemd**、**OpenRC** 以及其他初始化系统（runit、s6 等）。
 
-What makes Droidspaces unique is its **zero-dependency, native execution** on both Android and Linux. It's statically compiled against musl libc. If your device runs a Linux kernel, Droidspaces runs on it. No Termux, no middlemen, no setup overhead.
+Droidspaces 的独特之处在于其对 Android 和 Linux 的**零依赖、原生执行**能力。它基于 musl libc 进行静态编译。只要你的设备运行 Linux 内核，Droidspaces 就能运行。无需 Termux，无需中间层，无需繁琐配置。
 
-- **Tiny footprint:** under 300KB per platform
-- **Truly native:** runs directly on Android and Linux from the same binary
-- **Wide architecture support:** `aarch64`, `armhf`, `x86_64`, and `x86` as a single static binary
-- **Beautiful Android app:** manage unlimited containers and do everything the CLI can, all from a clean, intuitive GUI
+- **极致小巧：** 每平台不到 300KB
+- **真正原生：** 同一份二进制文件直接在 Android 和 Linux 上运行
+- **广泛架构支持：** `aarch64`、`armhf`、`x86_64`、`x86`，单一静态二进制
+- **精美 Android 应用：** 管理无限数量的容器，完成 CLI 能做的一切，全部通过简洁直观的 GUI 操作
 
-**Android** + **Linux Namespaces** = **Droidspaces**. Since Android is built on the Linux kernel, Droidspaces works seamlessly on Linux Desktop too. Both platforms are equally supported and maintained.
+**Android** + **Linux Namespaces** = **Droidspaces**。由于 Android 基于 Linux 内核构建，Droidspaces 同样能在 Linux 桌面端无缝运行。两个平台同等支持与维护。
 
 <details>
-<summary><b>View Project's Screenshots (Linux & Android)</b></summary>
+<summary><b>项目截图展示 (Linux & Android)</b></summary>
 
 <table align="center">
   <tr valign="top">
     <td colspan="3" align="center">
-      <b>Linux Showcase</b><br>
-      <i>Ubuntu + foreground mode</i><br>
+      <b>Linux 展示</b><br>
+      <i>Ubuntu + 前台模式</i><br>
       <img src="Documentation/resources/linux/linux-showcase.png" width="95%"><br><br>
     </td>
   </tr>
   <tr valign="top">
     <td align="center" width="33%">
-      <b>Android Home</b><br>
-      <i>Beautiful home screen</i><br>
+      <b>Android 主页</b><br>
+      <i>精美的主屏幕</i><br>
       <img src="Documentation/resources/gallery/1-home_page.png" width="95%">
     </td>
     <td align="center" width="33%">
-      <b>Android Containers</b><br>
-      <i>Installed in the container menu</i><br>
+      <b>Android 容器</b><br>
+      <i>容器菜单中已安装的容器</i><br>
       <img src="Documentation/resources/gallery/2-containers_tab.png" width="95%">
     </td>
     <td align="center" width="33%">
-      <b>Configuration menu</b><br>
-      <i>Hostname and Networking modes</i><br>
+      <b>配置菜单</b><br>
+      <i>主机名和网络模式</i><br>
       <img src="Documentation/resources/gallery/3_container_configuration.png" width="95%">
     </td>
   </tr>
   <tr valign="top">
     <td align="center" width="33%">
-      <b>Configuration menu</b><br>
-      <i>Integration & Hardware, 1st part</i><br>
+      <b>配置菜单</b><br>
+      <i>集成与硬件，第一部分</i><br>
       <img src="Documentation/resources/gallery/4_container_configuration.png" width="95%">
     </td>
     <td align="center" width="33%">
-      <b>Configuration menu</b><br>
-      <i>Security & boot, Advanced</i><br>
+      <b>配置菜单</b><br>
+      <i>安全与启动，高级选项</i><br>
       <img src="Documentation/resources/gallery/5_container_configuration.png" width="95%">
     </td>
     <td align="center" width="33%">
-      <b>Logging</b><br>
-      <i>Container boot-up logs</i><br>
+      <b>日志记录</b><br>
+      <i>容器启动日志</i><br>
       <img src="Documentation/resources/gallery/6_startup_logs.png" width="95%">
     </td>
   </tr>
   <tr valign="top">
     <td align="center" width="33%">
-      <b>Android Panel</b><br>
-      <i>Dashboard and portal access</i><br>
+      <b>Android 面板</b><br>
+      <i>仪表盘和门户访问</i><br>
       <img src="Documentation/resources/gallery/7_panel.png" width="95%">
     </td>
     <td align="center" width="33%">
-      <b>Container information</b><br>
-      <i>Manage the container in 1 place</i><br>
+      <b>容器信息</b><br>
+      <i>一站式管理容器</i><br>
       <img src="Documentation/resources/gallery/8_container_information.png" width="95%">
     </td>
     <td align="center" width="33%">
-      <b>Systemd services</b><br>
-      <i>Full systemd management</i><br>
+      <b>Systemd 服务</b><br>
+      <i>完整的 systemd 管理</i><br>
       <img src="Documentation/resources/gallery/9_systemd_menu.png" width="95%">
     </td>
   </tr>
   <tr valign="top">
     <td align="center" width="33%">
-      <b>User Picker</b><br>
-      <i>Summon up a terminal</i><br>
+      <b>用户选择器</b><br>
+      <i>召唤一个终端</i><br>
       <img src="Documentation/resources/gallery/10_terminal_user_picker.png" width="95%">
     </td>
     <td align="center" width="33%">
-      <b>Terminal UI</b><br>
-      <i>Love fastfetch ? here it is !</i><br>
+      <b>终端界面</b><br>
+      <i>喜欢 fastfetch？这就是！</i><br>
       <img src="Documentation/resources/gallery/11_terminal_fastfetch.png" width="95%">
     </td>
     <td align="center" width="33%">
-      <b>Isolation checks</b><br>
-      <i>Demonstration of isolated mounts</i><br>
+      <b>隔离检查</b><br>
+      <i>挂载隔离的演示</i><br>
       <img src="Documentation/resources/gallery/12_mnt_net_isolation.png" width="95%">
     </td>
   </tr>
   <tr valign="top">
     <td align="center" width="33%">
-      <b>Settings page</b><br>
-      <i>Check requirements, customization</i><br>
+      <b>设置页面</b><br>
+      <i>检查需求，自定义设置</i><br>
       <img src="Documentation/resources/gallery/13_settings_screen.png" width="95%">
     </td>
     <td align="center" width="33%">
-      <b>Requirements checker</b><br>
-      <i>Real-time system checks</i><br>
+      <b>需求检查器</b><br>
+      <i>实时系统检查</i><br>
       <img src="Documentation/resources/gallery/14_built_in_requirements_checker.png" width="95%">
     </td>
     <td align="center" width="33%">
-      <!-- Empty to balance the 3-column row -->
+      <!-- 空单元格用于平衡三列布局 -->
     </td>
   </tr>
 </table>
@@ -120,103 +120,103 @@ What makes Droidspaces unique is its **zero-dependency, native execution** on bo
 
 ---
 
-### Quick Navigation
+### 快速导航
 
-- [What is Droidspaces?](#what-is-droidspaces)
-- [Features](#features)
-- [Security & Isolation Philosophy](#security-model)
+- [什么是 Droidspaces？](#what-is-droidspaces)
+- [功能特性](#features)
+- [安全与隔离理念](#security-model)
 - [Droidspaces vs Chroot](#droidspaces-vs-chroot)
-- [Droidspaces vs LXC/Docker on Android](#droidspaces-vs-lxcdocker-on-android)
-- [Requirements](#requirements)
+- [Droidspaces vs LXC/Docker（在 Android 上）](#droidspaces-vs-lxcdocker-on-android)
+- [系统需求](#requirements)
     - [Android](#a-android-devices)
-        - [Rooting Requirements](#rooting-requirements)
-        - [Known Quirks](#known-quirks)
-        - [Android Kernel Requirements](#android-kernel-requirements)
-            - [Non-GKI (Legacy Kernels)](#non-GKI)
-            - [GKI (Modern Kernels)](#GKI)
-    - [Linux Desktop](#b-linux-desktop)
-- [Installation](#installation)
-- [Usage](#usage)
-- [Troubleshooting](./Documentation/Troubleshooting.md)
-- [Additional Documentation](#additional-documentation)
-- [Contributing](#contribution)
-- [Credits](#credits)
+        - [Root 需求](#rooting-requirements)
+        - [已知问题](#known-quirks)
+        - [Android 内核需求](#android-kernel-requirements)
+            - [Non-GKI（旧版内核）](#non-GKI)
+            - [GKI（现代内核）](#GKI)
+    - [Linux 桌面端](#b-linux-desktop)
+- [安装指南](#installation)
+- [使用指南](#usage)
+- [故障排除](./Documentation/Troubleshooting.md)
+- [更多文档](#additional-documentation)
+- [参与贡献](#contribution)
+- [致谢](#credits)
 
 ---
 
 <a id="what-is-droidspaces"></a>
 
-## What is Droidspaces?
+## 什么是 Droidspaces？
 
-Droidspaces is a **container runtime** that uses Linux kernel namespaces to run full Linux distributions with a real init system (systemd, OpenRC, etc.) as PID 1.
+Droidspaces 是一个**容器运行时**，利用 Linux 内核命名空间运行完整的 Linux 发行版，并以真正的初始化系统（systemd、OpenRC 等）作为 PID 1。
 
-Unlike traditional chroot, which simply changes the apparent root directory, Droidspaces creates proper process isolation. Each container gets its own PID tree, its own mount table, its own hostname, its own IPC resources, and its own cgroup hierarchy. The result is a full Linux environment that feels like a lightweight virtual machine, but with zero performance overhead because it shares the host kernel directly.
+与传统的 chroot 仅仅改变表面上的根目录不同，Droidspaces 创建了真正的进程隔离。每个容器拥有自己的 PID 树、自己的挂载表、自己的主机名、自己的 IPC 资源以及自己的 cgroup 层级。最终呈现的是一个完整的 Linux 环境，如同轻量级虚拟机一般，但由于直接共享宿主机内核，性能零损耗。
 
-Droidspaces is designed to work natively on anything that runs a Linux kernel, including **Android**, **Linux Desktop**, and **minimal environments like Android recovery/ramdisks**. On Android, it handles all kernel quirks, SELinux conflicts, complex networking scenarios, and encryption issues that break other container tools. On Linux Desktop, it works out of the box with no additional configuration needed. On ramdisks, it handles all the quirks like `pivot_root` as well!
+Droidspaces 的设计目标是原生运行在任何搭载 Linux 内核的设备上，包括 **Android**、**Linux 桌面端**以及 **Android Recovery/Ramdisk 等最小化环境**。在 Android 上，它处理了所有会导致其他容器工具崩溃的内核问题、SELinux 冲突、复杂网络场景和加密问题。在 Linux 桌面端，开箱即用，无需任何额外配置。在 Ramdisk 上，它同样能处理 `pivot_root` 等各种问题！
 
-The entire runtime is a **single static binary** under 300KB, compiled against musl libc with no external dependencies.
+整个运行时是一个**不到 300KB 的单一静态二进制文件**，基于 musl libc 编译，无任何外部依赖。
 
 ---
 
 <a id="features"></a>
 
-## Features
+## 功能特性
 
-| Feature | Description |
+| 功能 | 描述 |
 |---------|-------------|
-| **Init System Support** | Run systemd, OpenRC or any other init system as PID 1. Full service management and proper boot/shutdown/reboot sequences. |
-| **Deep Android Integration** | Supports two daemon modes: **Native init.rc** (lowest-level integration with auto-spawn/unkillable persistence) and **Userspace Daemon** (app-togglable, starts via `post-fs-data.sh`, no image modification required). **Both modes bypass root-domain seccomp blocks to ensure stable container lifecycles** [[init.rc Developer Guide](./init/README.md)]. |
-| **Namespace Isolation** | Complete isolation via PID, MNT, UTS, IPC, and Cgroup namespaces. Each container has its own process tree, mount table, hostname, IPC resources, and cgroup hierarchy. |
-| **Network Isolation** | **3 Networking Modes (Host, NAT, None)**. Pure network isolation via `CLONE_NEWNET` (NAT/None modes) or shared host networking (Host mode). Works on both Android and Linux. |
-| **Android GPU Acceleration** | Native hardware acceleration for Qualcomm Adreno GPUs via the Turnip driver. Use our [pre-built rootfs templates](https://github.com/ravindu644/Droidspaces-rootfs-builder/releases/latest) for an out-of-the-box experience. [[More info](./Documentation/GPU-Acceleration.md)] |
-| **Linux GPU Acceleration** | Zero-configuration GPU acceleration for AMD and Intel GPUs on Linux desktop hosts. [[More info](./Documentation/GPU-Acceleration.md)] |
-| **Port Forwarding** | Forward host ports to the container in NAT mode (e.g., `--port 22:22`). Supports TCP and UDP, as well as ranges like `1-500:1-500`. |
-| **Volatile Mode** | Ephemeral containers using OverlayFS. All changes are stored in RAM and discarded on exit. Perfect for testing and development. |
-| **Custom Bind Mounts** | Map host directories into containers at arbitrary mount points. Supports both chained (`-B a:b -B c:d`) and comma-separated (`-B a:b,c:d`) syntax. |
-| **Config File Support** | Load configurations directly from `.config` files using `--conf`. Integrates seamlessly with the CLI overrides (`--reset` is supported) and automatically syncs to the workspace for persistence. |
-| **Hardware Access Mode** | Expose host hardware (GPU, cameras, sensors, USB, block devices) directly to your containers with a single configuration toggle. |
-| **Multiple Containers** | Run unlimited containers simultaneously, each with its own name, PID file, and configuration. Start, stop, enter, and manage them independently. |
-| **In-container Reboot Support** | You can restart the container remotely without even touching Droidspaces! |
-| **Android Storage** | Bind-mount `/storage/emulated/0` into the container for direct access to the device's shared storage. |
-| **PTY/Console Support** | Full PTY isolation. Foreground mode provides an interactive console with proper terminal resize handling (binary only with the `-f` flag) |
-| **Multi-DNS Support** | Configure custom DNS servers (comma-separated) to bypass the host's default DNS lookup. If you don't specify any DNS servers, it falls back to your ISP's default DNS. |
-| **SELinux Permissive Mode** | Optionally set SELinux to permissive mode during container boot if needed. |
-| **Rootfs Image / Direct block device Support** | Boot containers from ext4 `.img` files with automatic loop mounting, filesystem checks, and SELinux context hardening if needed. Mounting block devices like partitions, sdcards are supported too in CLI ! **The Android app also supports creating portable containers in rootfs.img mode** [ [How to create an ext4 rootfs.img manually ? ](./Documentation/Installation-Linux.md#option-b-create-an-ext4-image-recommended)] |
-| **Auto-Recovery** | Automatic stale PID file cleanup, container scanning for orphaned processes, and robust config resurrection via in-memory metadata syncing from `/run/droidspaces`. |
-| **Cgroup Isolation (v1/v2)** | Per-container cgroup hierarchies (`/sys/fs/cgroup/droidspaces/<name>`) with full systemd compatibility. Supports both legacy v1 and modern v2 hierarchies. |
-| **Adaptive Security & Deadlock Shield** | Kernel-aware BPF filters resolve FBE keyring conflicts automatically on legacy kernels. A manual **Deadlock Shield** toggle is available to fix the specific VFS `grab_super()` deadlock on affected legacy devices (e.g., kernel 4.14.113). When the shield is disabled (default), Droidspaces grants full namespace freedom enabling features like **nested containers/Docker** natively on all kernels. |
-| **Privileged Mode** | Gain full access with the `--privileged` flag! Use with caution: do not report bugs when using this flag as it relaxes several security barriers for features like Flatpak/Bwrap/K3S. |
+| **初始化系统支持** | 以 PID 1 运行 systemd、OpenRC 或任何其他初始化系统。完整的服务管理和规范的启动/关机/重启流程。 |
+| **深度 Android 集成** | 支持两种守护进程模式：**原生 init.rc**（最底层的集成方式，自动生成/不可被杀死的持久性）和**用户空间守护进程**（应用内可切换，通过 `post-fs-data.sh` 启动，无需修改镜像）。**两种模式均绕过 root 域 seccomp 限制，确保容器生命周期稳定** [[init.rc 开发者指南](./init/README.md)]。 |
+| **命名空间隔离** | 通过 PID、MNT、UTS、IPC 和 Cgroup 命名空间实现完全隔离。每个容器拥有自己的进程树、挂载表、主机名、IPC 资源和 cgroup 层级。 |
+| **网络隔离** | **3 种网络模式（Host、NAT、None）**。通过 `CLONE_NEWNET` 实现纯网络隔离（NAT/None 模式）或共享宿主机网络（Host 模式）。在 Android 和 Linux 上均可使用。 |
+| **Android GPU 加速** | 通过 Turnip 驱动为 Qualcomm Adreno GPU 提供原生硬件加速。使用我们的[预构建 rootfs 模板](https://github.com/ravindu644/Droidspaces-rootfs-builder/releases/latest)获得开箱即用的体验。[[更多信息](./Documentation/GPU-Acceleration.md)] |
+| **Linux GPU 加速** | 在 Linux 桌面端为零配置的 AMD 和 Intel GPU 硬件加速。[[更多信息](./Documentation/GPU-Acceleration.md)] |
+| **端口转发** | 在 NAT 模式下将宿主机端口转发到容器（例如 `--port 22:22`）。支持 TCP 和 UDP，以及端口范围如 `1-500:1-500`。 |
+| **易失模式** | 使用 OverlayFS 的临时容器。所有更改存储在内存中，退出后丢弃。非常适合测试和开发。 |
+| **自定义绑定挂载** | 将宿主机目录映射到容器中的任意挂载点。支持链式语法（`-B a:b -B c:d`）和逗号分隔语法（`-B a:b,c:d`）。 |
+| **配置文件支持** | 使用 `--conf` 直接从 `.config` 文件加载配置。与 CLI 覆盖无缝集成（支持 `--reset`），并自动同步到工作区以持久化。 |
+| **硬件直通模式** | 通过单个配置开关，将宿主机硬件（GPU、摄像头、传感器、USB、块设备）直接暴露给你的容器。 |
+| **多容器管理** | 同时运行无限数量的容器，每个容器拥有独立的名称、PID 文件和配置。可独立启动、停止、进入和管理。 |
+| **容器内重启支持** | 无需触碰 Droidspaces 即可远程重启容器！ |
+| **Android 存储** | 将 `/storage/emulated/0` 绑定挂载到容器中，直接访问设备的共享存储空间。 |
+| **PTY/终端支持** | 完整的 PTY 隔离。前台模式提供交互式终端，支持正确的终端尺寸调整处理（仅限使用 `-f` 标志的二进制模式）。 |
+| **多 DNS 支持** | 配置自定义 DNS 服务器（逗号分隔），绕过宿主机的默认 DNS 查询。若不指定任何 DNS 服务器，则回退到 ISP 的默认 DNS。 |
+| **SELinux 宽容模式** | 可在容器启动时根据需要选择将 SELinux 设为宽容模式。 |
+| **Rootfs 镜像 / 直接块设备支持** | 从 ext4 `.img` 文件启动容器，支持自动 loop 挂载、文件系统检查以及 SELinux 上下文加固（如需要）。CLI 模式下也支持挂载分区、SD 卡等块设备！**Android 应用同样支持以 rootfs.img 模式创建可移植容器** [ [如何手动创建 ext4 rootfs.img？](./Documentation/Installation-Linux.md#option-b-create-an-ext4-image-recommended)] |
+| **自动恢复** | 自动清理残留的 PID 文件，扫描容器中的孤立进程，以及通过 `/run/droidspaces` 的内存元数据同步实现强大的配置恢复。 |
+| **Cgroup 隔离 (v1/v2)** | 每个容器独立的 cgroup 层级（`/sys/fs/cgroup/droidspaces/<name>`），完全兼容 systemd。同时支持旧版 v1 和现代 v2 层级。 |
+| **自适应安全与死锁护盾** | 内核感知的 BPF 过滤器可在旧版内核上自动解决 FBE 密钥环冲突。提供手动**死锁护盾**切换开关，用于修复受影响旧版设备（例如内核 4.14.113）上特定的 VFS `grab_super()` 死锁问题。护盾禁用时（默认），Droidspaces 授予完整的命名空间自由，可在所有内核上原生启用**嵌套容器/Docker** 等功能。 |
+| **特权模式** | 使用 `--privileged` 标志获取完全访问权限！请谨慎使用：启用此标志会放宽多项安全屏障以支持 Flatpak/Bwrap/K3S 等功能，使用此标志时请勿报告 bug。 |
 
 ---
 
 <a id="security-model"></a>
 
-## Security & Isolation Philosophy
+## 安全与隔离理念
 
 > [!IMPORTANT]
 >
-> Droidspaces is a **privileged container runtime** built for **power users** who prioritize simplicity, performance, and native integration over complex, production-grade jailing.
+> Droidspaces 是一个**特权容器运行时**，专为追求简洁、性能和原生集成的**高级用户**打造，而非复杂的生产级沙箱。
 >
-> To provide full systemd support, native hardware acceleration (GPU), and complex mounts/networking on Android, the container root needs real privileges. Even though Droidspaces does not use the heavily restricted "unprivileged" (User Namespace) mode, it applies several security layers:
-> - **Capability Dropping**: By default, Droidspaces drops high-risk capabilities (e.g., `CAP_SYS_MODULE`, `CAP_SYS_RAWIO`).
-> - **Mount Hardening**: Critical host paths are masked or remounted as read-only.
-> - **Seccomp Filters**: Common exploit vectors (like CVE-2026-31431 and malicious kernel module loading) are blocked by default.
+> 为了在 Android 上提供完整的 systemd 支持、原生硬件加速（GPU）以及复杂的挂载/网络功能，容器 root 需要真正的特权。尽管 Droidspaces 不使用严格受限的"非特权"（用户命名空间）模式，但它仍然应用了多层安全防护：
+> - **权能裁剪**：默认情况下，Droidspaces 会剥离高风险权能（如 `CAP_SYS_MODULE`、`CAP_SYS_RAWIO`）。
+> - **挂载加固**：关键的宿主机路径被屏蔽或重新挂载为只读。
+> - **Seccomp 过滤**：默认阻止常见的攻击向量（如 CVE-2026-31431 和恶意内核模块加载）。
 
 > [!WARNING]
 >
-> **A Container is not a Jail**
-> If a process runs as **root** inside a Droidspaces container, it has significant power.
+> **容器不等于监狱**
+> 如果进程在 Droidspaces 容器中以 **root** 身份运行，它将拥有相当大的权限。
 > 
-> A malicious root user can attempt to escape or manipulate the host. **Droidspaces is not a sandbox for untrusted code.**
+> 恶意的 root 用户可能试图逃逸或操纵宿主机。**Droidspaces 不是为不受信任代码设计的沙箱。**
 >
-> We focus on bringing a full Linux server experience to your pocket, not on building a production-grade fortress.
+> 我们专注于将完整的 Linux 服务器体验带到你的口袋中，而不是构建一个生产级的堡垒。
 
 > [!NOTE]
 >
-> **Our Security Advice:**
-> 1. **Don't daily-drive root**: Just as you would on a standard Linux PC, create a normal user inside your container and use `sudo`.
-> 2. **Be Careful with Modes**: Flags like `--privileged` and `--hw-access` intentionally relax security barriers. Use them only when necessary.
-> 3. **Respect the Host**: If you compromise your container's root, you compromise your device.
+> **我们的安全建议：**
+> 1. **不要日常使用 root**：就像在标准 Linux PC 上一样，在容器内创建普通用户并使用 `sudo`。
+> 2. **谨慎使用特殊模式**：`--privileged` 和 `--hw-access` 等标志会刻意放宽安全限制，仅在必要时使用。
+> 3. **尊重宿主机**：如果你容器的 root 权限被攻破，你的设备也将被攻破。
 
 ---
 
@@ -224,107 +224,107 @@ The entire runtime is a **single static binary** under 300KB, compiled against m
 
 ## Droidspaces vs Chroot
 
-| Feature | Chroot | Droidspaces |
+| 功能 | Chroot | Droidspaces |
 |---------|--------|-------------|
-| Init System | No. Cannot run systemd or OpenRC. | Yes. Full systemd/OpenRC, etc support as PID 1. |
-| Process Isolation | None. Shares the host PID space. | Full. Private PID namespace with its own PID tree. |
-| Filesystem Isolation | Partial. Only changes the apparent root. | Full. Uses `pivot_root` with a private mount namespace. |
-| Mount Isolation | None. Mount events propagate to the host. | Full. `MS_PRIVATE` prevents mount propagation. |
-| Cgroup Support | None. | Yes. Per-container cgroup hierarchies. |
-| Resource Accounting | None. | Yes. Via cgroup isolation. |
-| Service Management | Manual. Must start services individually. | Automatic. Init manages the full service lifecycle. |
-| Hostname Isolation | None. Shares the host hostname. | Yes. UTS namespace provides independent hostname. |
-| IPC Isolation | None. Shares System V IPC. | Yes. IPC namespace for semaphores and shared memory. |
-| Ephemeral Containers | Not possible. | Yes. Volatile mode via OverlayFS. |
+| 初始化系统 | 不支持。无法运行 systemd 或 OpenRC。 | 支持。完整的 systemd/OpenRC 等作为 PID 1。 |
+| 进程隔离 | 无。共享宿主机 PID 空间。 | 完全。私有 PID 命名空间，拥有独立的 PID 树。 |
+| 文件系统隔离 | 部分。仅改变表面上的根目录。 | 完全。使用 `pivot_root` 配合私有挂载命名空间。 |
+| 挂载隔离 | 无。挂载事件会传播到宿主机。 | 完全。`MS_PRIVATE` 阻止挂载传播。 |
+| Cgroup 支持 | 无。 | 支持。每个容器独立的 cgroup 层级。 |
+| 资源统计 | 无。 | 支持。通过 cgroup 隔离实现。 |
+| 服务管理 | 手动。必须逐个启动服务。 | 自动。初始化系统管理完整的服务生命周期。 |
+| 主机名隔离 | 无。共享宿主机主机名。 | 支持。UTS 命名空间提供独立主机名。 |
+| IPC 隔离 | 无。共享 System V IPC。 | 支持。IPC 命名空间隔离信号量和共享内存。 |
+| 临时容器 | 不可能。 | 支持。通过 OverlayFS 实现的易失模式。 |
 
 ---
 
 <a id="droidspaces-vs-lxcdocker-on-android"></a>
 
-## Droidspaces vs LXC/Docker on Android
+## Droidspaces vs LXC/Docker（在 Android 上）
 
-| Aspect | LXC/Docker | Droidspaces |
+| 方面 | LXC/Docker | Droidspaces |
 |--------|------------|-------------|
-| **Deep Android Integration** | None. Runs as a foreign process. | **Superior**. Native `init.rc` daemon or `post-fs-data.sh` modes. |
-| **Persistence** | Poor. Easily killed by system. | **Unkillable**. Init-level auto-spawn support. |
-| Dependencies | Many (liblxc, runc, containerd, etc.) | Zero. Single static binary. Runs on anything under the sun, including Android recovery if the kernel supports the features required by Droidspaces ! |
-| Setup Complexity | High. Requires Termux, cross-compiled libraries, manual config files. | Low. Download and install the APK, then run it on Android; download, extract, and run it on Linux. |
-| Older kernels Support | Spotty. Many features break on older kernels. | Full. Adaptive seccomp shield handles kernel quirks. |
-| **Network Isolation** | **Broken on Android**. Even with all kernel configs enabled, network isolation with internet access never works. | **First-in-Class**. Perfectly handles network isolation with internet access on Android out of the box. |
-| Binary Size | 10MB+ (plus dependencies) | Under 300KB per architecture. |
-| Android Optimizations | None. Not designed for Android. | Yes. SELinux handling, FBE keyring management, storage integration, networking fixes |
-| Termux Required | Often. Used as the execution environment. | Never. Runs directly as a native binary. Android app does have a built-in Terminal! |
-| Nested Containers | Complex setup required. | Supported natively on all kernels out of the box. |
-| Init System | LXC = yes, Docker = no. | Always. systemd/OpenRC as PID 1 by default. |
+| **深度 Android 集成** | 无。作为外部进程运行。 | **卓越**。原生 `init.rc` 守护进程或 `post-fs-data.sh` 模式。 |
+| **持久性** | 较差。容易被系统杀死。 | **不可杀死**。初始化级别的自动生成支持。 |
+| 依赖项 | 很多（liblxc、runc、containerd 等） | 零。单一静态二进制。只要内核支持 Droidspaces 所需的功能，它可以在任何设备上运行，包括 Android Recovery！ |
+| 设置复杂度 | 高。需要 Termux、交叉编译库、手动配置。 | 低。下载安装 APK，然后在 Android 上运行；下载、解压，即可在 Linux 上运行。 |
+| 旧版内核支持 | 不稳定。许多功能在旧内核上会出问题。 | 完全。自适应 seccomp 护盾处理内核兼容性问题。 |
+| **网络隔离** | **在 Android 上不可用**。即使启用所有内核配置，带互联网访问的网络隔离也无法工作。 | **业界领先**。在 Android 上完美处理网络隔离与互联网访问，开箱即用。 |
+| 二进制大小 | 10MB+（不含依赖项） | 每种架构不到 300KB。 |
+| Android 优化 | 无。并非为 Android 设计。 | 全面。SELinux 处理、FBE 密钥环管理、存储集成、网络修复。 |
+| 是否需要 Termux | 通常需要。用作执行环境。 | 从不需要。直接以原生二进制运行。Android 应用内置终端！ |
+| 嵌套容器 | 需要复杂配置。 | 所有内核上原生支持，开箱即用。 |
+| 初始化系统 | LXC = 支持，Docker = 不支持。 | 始终支持。默认以 systemd/OpenRC 作为 PID 1。 |
 
 ---
 
 <a id="requirements"></a>
 
-## Requirements
+## 系统需求
 
 <a id="a-android-devices"></a>
 
-### A. Android Devices
+### A. Android 设备
 
-Droidspaces supports Android devices running Linux kernel **3.10 and above**:
+Droidspaces 支持运行 Linux 内核 **3.10 及以上**版本的 Android 设备：
 
-| Kernel Version | Support Level | Notes |
+| 内核版本 | 支持级别 | 说明 |
 |----------------|---------------|-------|
-| 3.10 | Supported | **Legacy.** Minimum floor. Basic namespace support. systemd-based distros may be unstable; **Alpine** is recommended. |
-| 4.4 - 4.19 | Stable | **Hardened.** [Full support upto modern distros with systemd older than v258](./Documentation/Troubleshooting.md#modern-distros). Nested containers (Docker/Podman) are natively supported. If you encounter systemd hangs on specific kernels (like 4.14.113) due to the VFS deadlock bug, manually enable the **Deadlock Shield** [[more info](./Documentation/Features.md#vfs-deadlock)]. |
-| 5.4 - 5.10 | Recommended | **Mainline.** Full feature support including nested containers and Cgroup v2. |
-| 5.15+ | Premium | **Full.** Best performance and maximum compatibility with all modern distributions. |
+| 3.10 | 已支持 | **旧版。** 最低要求。基本的命名空间支持。基于 systemd 的发行版可能不稳定；推荐使用 **Alpine**。 |
+| 4.4 - 4.19 | 稳定 | **加固。** [完整支持 systemd 版本低于 v258 的现代发行版](./Documentation/Troubleshooting.md#modern-distros)。原生支持嵌套容器（Docker/Podman）。如果在特定内核（如 4.14.113）上遇到因 VFS 死锁 bug 导致的 systemd 挂起，请手动启用**死锁护盾** [[更多信息](./Documentation/Features.md#vfs-deadlock)]。 |
+| 5.4 - 5.10 | 推荐 | **主线。** 完整功能支持，包括嵌套容器和 Cgroup v2。 |
+| 5.15+ | 旗舰 | **完全。** 最佳性能和与现代发行版的最大兼容性。 |
 
 <a id="rooting-requirements"></a>
 
-#### Rooting Requirements
+#### Root 需求
 
-Your device must be rooted. The following rooting methods have been tested:
+你的设备必须已获取 root 权限。以下 root 方案已经过测试：
 
-| Root Method | Status | Notes |
+| Root 方案 | 状态 | 说明 |
 |-------------|--------|-------|
-| **KernelSU** | Fully Supported | Tested and stable. **Recommended**. Since Droidspaces requires a custom kernel anyway, we recommend adding KernelSU to your kernel. |
-| **APatch** | Supported* | *Requires enabling **Daemon Mode** in the Droidspaces app and a device reboot to bypass root-domain seccomp restrictions on userspace-initiated runtimes. |
-| **Magisk** | Supported* | *Requires enabling **Daemon Mode** in the Droidspaces app and a device reboot to bypass root-domain seccomp restrictions on userspace-initiated runtimes. |
+| **KernelSU** | 完全支持 | 已测试且稳定。**推荐**。由于 Droidspaces 本身就需要自定义内核，我们建议将 KernelSU 集成到你的内核中。 |
+| **APatch** | 支持* | *需要在 Droidspaces 应用中启用**守护进程模式**并重启设备，以绕过用户空间启动运行时的 root 域 seccomp 限制。 |
+| **Magisk** | 支持* | *需要在 Droidspaces 应用中启用**守护进程模式**并重启设备，以绕过用户空间启动运行时的 root 域 seccomp 限制。 |
 
 > [!TIP]
 >
-> Daemon Mode moves the container lifecycle management from the app's userspace to a persistent background service.
+> 守护进程模式将容器生命周期管理从应用的用户空间转移到持久化后台服务。
 
 <a id="known-quirks"></a>
 
 > [!CAUTION]
 >
-> **GrapheneOS is not supported** - because it blocks critical syscalls used for namespace isolation and containerization, making it impossible to run a userspace runtime like Droidspaces even with root access.
+> **不支持 GrapheneOS** - 因为它阻止了命名空间隔离和容器化所需的关键系统调用，即使有 root 访问权限也无法运行像 Droidspaces 这样的用户空间运行时。
 >
-> **SuSFS is not supported** - DO NOT REPORT ANY BUGS WHEN USING SUSFS. If you must use SuSFS with Droidspaces, ensure that "HIDE SUS MOUNTS FOR ALL PROCESSES" is disabled in your SuSFS4KSU settings to avoid container boot failures.
+> **不支持 SuSFS** - 使用 SUSFS 时请勿报告任何 BUG。如果必须在 Droidspaces 上使用 SuSFS，请确保在 SuSFS4KSU 设置中禁用"HIDE SUS MOUNTS FOR ALL PROCESSES"，以避免容器启动失败。
 
 <a id="android-kernel-requirements"></a>
 
-#### Android Kernel Requirements
+#### Android 内核需求
 
-Android kernels are often heavily modified and may have critical container features disabled. Your kernel must have specific configuration options enabled (Namespaces, Cgroups, Seccomp, etc.) to run Droidspaces.
+Android 内核通常经过大量修改，关键的容器功能可能被禁用。你的内核必须启用特定的配置选项（命名空间、Cgroups、Seccomp 等）才能运行 Droidspaces。
 
 <a id="non-GKI"></a>
 
-##### Non-GKI (Legacy Kernels)
-Covers kernels: **3.10, 3.18, 4.4, 4.9, 4.14, 4.19**. These kernels work plug-and-play after adding the required config fragments.
-See: [Legacy Kernel Configuration](Documentation/Kernel-Configuration.md#configuring-non-gki-kernels-legacy-kernels)
+##### Non-GKI（旧版内核）
+适用于内核：**3.10, 3.18, 4.4, 4.9, 4.14, 4.19**。添加所需的配置片段后，这些内核即可即插即用。
+参见：[旧版内核配置](Documentation/Kernel-Configuration.md#configuring-non-gki-kernels-legacy-kernels)
 
 <a id="GKI"></a>
 
-##### GKI (Modern Kernels)
-Covers kernels: **5.4, 5.10, 5.15, 6.1+**. These kernels require additional steps to handle ABI breakage caused by configuration changes.
-See: [Modern GKI Kernel Configuration](Documentation/Kernel-Configuration.md#configuring-gki-kernels)
+##### GKI（现代内核）
+适用于内核：**5.4, 5.10, 5.15, 6.1+**。这些内核需要额外步骤来处理因配置更改导致的 ABI 破坏。
+参见：[现代 GKI 内核配置](Documentation/Kernel-Configuration.md#configuring-gki-kernels)
 
-**Next Steps for Kernel Support:**
-- **Check automatically**: Use the built-in requirements checker in the Android app (**Settings** -> **Requirements**).
-- **Full Technical Guide**: [Kernel Configuration Guide](Documentation/Kernel-Configuration.md)
+**内核支持的后续步骤：**
+- **自动检查**：使用 Android 应用内置的需求检查器（**设置** -> **需求**）。
+- **完整技术指南**：[内核配置指南](Documentation/Kernel-Configuration.md)
 
 > [!TIP]
 >
-> **Need help compiling a kernel?** Check out this guide:
+> **需要帮助编译内核？** 请查看以下指南：
 >
 > https://github.com/ravindu644/Android-Kernel-Tutorials
 
@@ -332,13 +332,13 @@ See: [Modern GKI Kernel Configuration](Documentation/Kernel-Configuration.md#con
 
 <a id="b-linux-desktop"></a>
 
-### B. Linux Desktop
+### B. Linux 桌面端
 
-Most modern Linux desktop distributions already include all the requirements needed by Droidspaces by default. **No additional configuration is needed.**
+大多数现代 Linux 桌面发行版默认已包含 Droidspaces 所需的一切条件。**无需额外配置。**
 
-Just download the tarball from the [GitHub Releases](https://github.com/ravindu644/Droidspaces-OSS/releases/latest), extract it, and use the binary for your CPU architecture.
+只需从 [GitHub Releases](https://github.com/ravindu644/Droidspaces-OSS/releases/latest) 下载 tarball，解压，然后使用对应你 CPU 架构的二进制文件即可。
 
-You can verify your system meets all requirements by running:
+你可以通过运行以下命令来验证系统是否满足所有需求：
 
 ```bash
 sudo ./droidspaces check
@@ -348,69 +348,69 @@ sudo ./droidspaces check
 
 <a id="installation"></a>
 
-## Installation
+## 安装指南
 
-- [Android Installation Guide](Documentation/Installation-Android.md)
-- [Linux Installation Guide](Documentation/Installation-Linux.md)
+- [Android 安装指南](Documentation/Installation-Android.md)
+- [Linux 安装指南](Documentation/Installation-Linux.md)
 
 ---
 
 <a id="usage"></a>
 
-## Usage
+## 使用指南
 
-- [Android App Usage](Documentation/Usage-Android-App.md)
-- [Linux CLI Usage](Documentation/Linux-CLI.md)
+- [Android App 使用指南](Documentation/Usage-Android-App.md)
+- [Linux CLI 使用指南](Documentation/Linux-CLI.md)
 
 ---
 
 <a id="additional-documentation"></a>
 
-## Additional Documentation
+## 更多文档
 
-| Document | Description |
+| 文档 | 描述 |
 |----------|-------------|
-| [Feature Deep Dives](Documentation/Features.md) | Detailed explanation of each major feature. |
-| [Cool Things You Can Do (Tailscale, Docker, etc.)](Documentation/Cool-things-you-can-do.md) |
-| [Uninstallation Guide](Documentation/Uninstallation.md) | How to remove Droidspaces from your system. |
+| [功能深度解析](Documentation/Features.md) | 每个主要功能的详细说明。 |
+| [你可以做的酷炫事情（Tailscale、Docker 等）](Documentation/Cool-things-you-can-do.md) |
+| [卸载指南](Documentation/Uninstallation.md) | 如何从系统中移除 Droidspaces。 |
 
 ---
 
 <a id="contribution"></a>
 
-## Contributing
+## 参与贡献
 
-Contributions are welcome - feel free to open an issue or pull request on the [GitHub repository](https://github.com/ravindu644/Droidspaces-OSS).
+欢迎贡献 - 请随时在 [GitHub 仓库](https://github.com/ravindu644/Droidspaces-OSS)上提交 issue 或 pull request。
 
-For questions or support, join the [Telegram channel](http://t.me/Droidspaces).
+如有问题或需要支持，请加入 [Telegram 频道](http://t.me/Droidspaces)。
 
-To contribute translations for the Android app, visit the Weblate project:
+想要参与 Android 应用的翻译贡献，请访问 Weblate 项目：
 
 <a href="https://hosted.weblate.org/engage/droidspaces/">
-<img src="https://hosted.weblate.org/widget/droidspaces/open-graph.png" alt="Translation status" />
+<img src="https://hosted.weblate.org/widget/droidspaces/open-graph.png" alt="翻译状态" />
 </a>
 
 ---
 
 <a id="credits"></a>
 
-## Credits & Acknowledgments
+## 致谢
 
-Droidspaces is built upon the incredible work of the open-source community. Special thanks to these projects for their inspiration and contributions:
+Droidspaces 建立在开源社区的杰出工作之上。特别感谢以下项目的启发和贡献：
 
-*   **[LXC](https://github.com/lxc/lxc)** - For the core architectural vision and inspiration for modern Linux containerization.
-*   **[Brutal-Busybox](https://github.com/feravolt/Brutal_busybox)** - For the statically-linked BusyBox binaries used in the Android userspace app to perform certain operations.
-*   **[Magisk](https://github.com/topjohnwu/Magisk)** - For the `magiskpolicy` utility, providing the core engine for live SELinux patching.
-*   **[KernelSU-Next](https://github.com/KernelSU-Next/KernelSU-Next)**, **[MMRL](https://github.com/MMRLApp/MMRL)**, and **[LSPatch](https://github.com/LSPosed/LSPatch)** - For inspiring our modern UI design language and Android user experience.
-*   **[ReTerminal](https://github.com/RohitKushvaha01/ReTerminal)**, **[Termux](https://github.com/termux/termux-app)** , **[LXC-Manager](https://github.com/Container-On-Android/LXC-Manager)** - Terminal Backend for the built-in Terminal emulator.
-*   **[JetBrains Mono](https://www.jetbrains.com/legalforms/fonts/)** - The monospace typeface used throughout the app's terminal and code UI, licensed under the [SIL Open Font License 1.1](https://scripts.sil.org/OFL).
+*   **[LXC](https://github.com/lxc/lxc)** - 提供了现代 Linux 容器化的核心架构愿景和灵感。
+*   **[Brutal-Busybox](https://github.com/feravolt/Brutal_busybox)** - 为 Android 用户空间应用中某些操作提供了静态链接的 BusyBox 二进制文件。
+*   **[Magisk](https://github.com/topjohnwu/Magisk)** - 提供了 `magiskpolicy` 工具，为实时 SELinux 修补提供了核心引擎。
+*   **[KernelSU-Next](https://github.com/KernelSU-Next/KernelSU-Next)**、**[MMRL](https://github.com/MMRLApp/MMRL)** 和 **[LSPatch](https://github.com/LSPosed/LSPatch)** - 为我们现代化的 UI 设计语言和 Android 用户体验提供了灵感。
+*   **[ReTerminal](https://github.com/RohitKushvaha01/ReTerminal)**、**[Termux](https://github.com/termux/termux-app)**、**[LXC-Manager](https://github.com/Container-On-Android/LXC-Manager)** - 为内置终端模拟器提供了终端后端支持。
+*   **[JetBrains Mono](https://www.jetbrains.com/legalforms/fonts/)** - 应用中终端和代码 UI 使用的等宽字体，基于 [SIL Open Font License 1.1](https://scripts.sil.org/OFL) 许可。
 
 ---
 
-## License
+## 许可证
 
-Droidspaces is licensed under the [GNU General Public License v3.0](./LICENSE).
+Droidspaces 基于 [GNU General Public License v3.0](./LICENSE) 许可。
 
-Copyright (C) 2026 [ravindu644](https://github.com/ravindu644) and contributors.
+Copyright (C) 2026 [ravindu644](https://github.com/ravindu644) 和贡献者。
 
 ---
