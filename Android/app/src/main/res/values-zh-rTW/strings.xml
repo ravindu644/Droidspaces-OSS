@@ -61,7 +61,6 @@
     <string name="static_ip_description">為此容器設定一個 172.28.x.x 子網路內的靜態 IPv4 位址。留空以在首次啟動時自動分配。</string>
     <string name="gpu_access_description">將 GPU 節點鏡像到隔離的 /dev 目錄（不進行完整的硬體直通）</string>
     <string name="clear">清除</string>
-
     <string name="unknown">未知</string>
     <string name="error_start_must_be_less_than_end">起始值必須小於結束值</string>
     <string name="error_ports_must_be_numbers">連接埠必須是數字</string>
@@ -394,7 +393,6 @@
     <string name="feat_autoboot_title">開機時自動啟動</string>
     <string name="feat_autoboot_desc">即使螢幕鎖定且資料加密，也能在啟動時自動啟動容器。</string>
     <string name="install">安裝</string>
-
     <string name="please_wait_hint">請稍候，我們正在處理您的請求…</string>
     <string name="kernel_requirements_nongki">非 GKI 核心需求（≤4.19）</string>
     <string name="kernel_requirements_gki">GKI 核心需求（≥5.4）</string>
@@ -422,4 +420,31 @@
     <string name="notification_wakelock_off">喚醒鎖定：關閉</string>
     <string name="notification_channel_name">終端會話</string>
     <string name="notification_channel_desc">啟動的容器終端會話</string>
+    <string name="repo_title">Rootfs 倉庫</string>
+    <string name="repo_fab_label">儲存庫</string>
+    <string name="repo_refresh">重新整理</string>
+    <string name="repo_failed_to_load">載入儲存庫失敗</string>
+    <string name="repo_download">下載</string>
+    <string name="repo_cancel">取消</string>
+    <string name="repo_install">安裝</string>
+    <string name="repo_retry">重試</string>
+    <string name="repo_notification_description">下載Droidspaces rootfs</string>
+    <string name="repo_error_server_http">伺服器回傳 HTTP %1$d</string>
+    <string name="repo_error_no_assets">最新版本中未找到 rootfs tarball 文件</string>
+    <string name="repo_error_network">網路錯誤</string>
+    <string name="repo_dl_error_unknown">未知錯誤</string>
+    <string name="repo_dl_error_cannot_resume">無法繼續下載</string>
+    <string name="repo_dl_error_device_not_found">未找到存儲空間</string>
+    <string name="repo_dl_error_file_exists">檔案已經存在</string>
+    <string name="repo_dl_error_file_error">檔案系統錯誤</string>
+    <string name="repo_dl_error_http_data">HTTP資料錯誤</string>
+    <string name="repo_dl_error_no_space">儲存空間不足</string>
+    <string name="repo_dl_error_too_many_redirects">過多重新導向</string>
+    <string name="repo_dl_error_unhandled_http">意外的 HTTP 回應</string>
+    <string name="repo_dl_error_not_found">檔案未找到（404）</string>
+    <string name="repo_dl_error_code">錯誤代碼 %1$d</string>
+    <string name="repo_status_ready">已準備好</string>
+    <string name="repo_status_downloading">下載中</string>
+    <string name="repo_status_failed">失敗</string>
+    <string name="repo_downloads_count">%1$s 下載</string>
 </resources>

@@ -232,7 +232,6 @@
     <string name="init_system_not_available">Systemd/OpenRC Tidak Tersedia</string>
     <string name="init_system_not_available_desc">Container ini tidak memiliki systemd atau OpenRC yang terpasang</string>
     <string name="fetching_services">Sedang memuat layanan...</string>
-
     <string name="search_services">Mencari layanan...</string>
     <string name="enabled_legend">Aktif</string>
     <string name="disabled_legend">Tidak aktif</string>

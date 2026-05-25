@@ -155,7 +155,6 @@
     <string name="init_system_not_available">Systemd/OpenRC indisponível</string>
     <string name="init_system_not_available_desc">Este contêner não tem systemd ou OpenRC instalado</string>
     <string name="fetching_services">A buscar serviços...</string>
-
     <string name="search_services">Pesquisar serviços...</string>
     <string name="enabled_legend">Ativado</string>
     <string name="disabled_legend">Desativado</string>

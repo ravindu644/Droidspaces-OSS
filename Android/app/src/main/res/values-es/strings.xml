@@ -162,7 +162,6 @@
     <string name="init_system_not_available">Systemd/OpenRC no disponible</string>
     <string name="init_system_not_available_desc">Este contenedor no tiene systemd ni OpenRC instalado</string>
     <string name="fetching_services">Obteniendo servicios…</string>
-
     <string name="search_services">Buscar servicios…</string>
     <string name="enabled_legend">Habilitado</string>
     <string name="disabled_legend">Deshabilitado</string>

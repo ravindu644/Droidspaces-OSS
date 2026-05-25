@@ -6,4 +6,7 @@
     <plurals name="commit_count">
         <item quantity="other">%d 次提交</item>
     </plurals>
+    <plurals name="notification_sessions_running">
+        <item quantity="other">%d 个会话正在运行</item>
+    </plurals>
 </resources>

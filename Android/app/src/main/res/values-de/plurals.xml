@@ -1,7 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <plurals name="container_count">
-        <item quantity="one">%d container</item>
-        <item quantity="other">%d containers</item>
+        <item quantity="one">%d Container</item>
+        <item quantity="other">%d Container</item>
+    </plurals>
+    <plurals name="commit_count">
+        <item quantity="one">%d Commit</item>
+        <item quantity="other">%d Commits</item>
+    </plurals>
+    <plurals name="notification_sessions_running">
+        <item quantity="one">%d Sitzung läuft</item>
+        <item quantity="other">%d Sitzungen laufen</item>
     </plurals>
 </resources>

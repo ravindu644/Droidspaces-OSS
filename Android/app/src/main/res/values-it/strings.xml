@@ -256,7 +256,6 @@
     <string name="init_system_not_available">Systemd/OpenRC non disponibile</string>
     <string name="init_system_not_available_desc">Questo contenitore non ha systemd né OpenRC installato</string>
     <string name="fetching_services">Recupero servizi...</string>
-
     <string name="search_services">Cerca servizi...</string>
     <string name="enabled_legend">Abilitato</string>
     <string name="disabled_legend">Disabilitato</string>
@@ -409,7 +408,6 @@
     <string name="ram_percent_label">%1$d MB (%2$.1f%%)</string>
     <string name="sessions_running_plural">%1$d sessioni in esecuzione · toccare per ripristinare</string>
     <string name="session_running_singular">1 sessione in esecuzione · toccare per ripristinare</string>
-
     <string name="please_wait_hint">Attendi mentre elaboriamo la tua richiesta...</string>
     <string name="restore">Ripristina</string>
     <string name="export_container">Esporta il contenitore come tarball</string>

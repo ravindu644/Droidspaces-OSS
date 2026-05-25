@@ -177,7 +177,6 @@
     <string name="init_system_not_available">Systemd/OpenRC недоступен</string>
     <string name="init_system_not_available_desc">В этом контейнере не установлен systemd или OpenRC</string>
     <string name="fetching_services">Получение служб...</string>
-
     <string name="search_services">Поиск служб...</string>
     <string name="enabled_legend">Включено</string>
     <string name="disabled_legend">Отключено</string>

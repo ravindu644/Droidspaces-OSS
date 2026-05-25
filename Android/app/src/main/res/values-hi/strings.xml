@@ -177,7 +177,6 @@
     <string name="init_system_not_available">Systemd/OpenRC उपलब्ध नहीं</string>
     <string name="init_system_not_available_desc">इस कंटेनर में systemd या OpenRC स्थापित नहीं है</string>
     <string name="fetching_services">सेवाएँ प्राप्त की जा रही हैं...</string>
-
     <string name="search_services">सेवाएँ खोजें...</string>
     <string name="enabled_legend">सक्रिय</string>
     <string name="disabled_legend">निष्क्रिय</string>

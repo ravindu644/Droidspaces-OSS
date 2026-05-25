@@ -232,7 +232,6 @@
     <string name="no_local_users_found">未找到本地用户</string>
     <string name="container_path_placeholder">例如：/mnt/sdcard</string>
     <string name="installing_droidspaces">正在安装 Droidspaces</string>
-
     <string name="backend_not_available">后端不可用</string>
     <string name="no_enabled_services">没有已启用的服务</string>
     <string name="copy_login">复制登录命令</string>
@@ -401,7 +400,6 @@
     <string name="ram_percent_label">%1$d MB (%2$.1f%%)</string>
     <string name="sessions_running_plural">%1$d 会话正在运行 · 点击恢复</string>
     <string name="session_running_singular">一个会话正在运行 · 点击恢复</string>
-
     <string name="please_wait_hint">正在处理您的请求，请稍候...</string>
     <string name="restore">恢复</string>
     <string name="export_container">将容器导出为 tar 归档包</string>
@@ -415,9 +413,42 @@
     <string name="network_mode_none_short">无</string>
     <string name="hw_access_disclaimer">从 Droidspaces v6.1.0 版本开始，udevd 可完整接管 USB、块设备、输入设备、串口、网络子系统权限，容器能够直接占用安卓系统正在使用的硬件资源。\n\n若启动容器后，安卓端键盘、SD 卡、USB 外设等设备失效，这并非程序 BUG，是容器抢占占用了硬件资源，属于正常设计行为。\n\n请勿提交因硬件资源冲突、该模式引发内核宕机死机相关的问题反馈。</string>
     <string name="custom_init_warning">除非你清楚你在做什么，否则不要更改此选项。设定错误的 init 可执行文件路径会导致容器无法启动。</string>
-    <string name="custom_init_label">自定义 Init 可执行文件</string>
+    <string name="custom_init_label">指定 init 可执行文件路径</string>
     <string name="custom_init_placeholder">/sbin/init（默认）</string>
     <string name="custom_init_hint">留空以使用默认的 init (/sbin/init)</string>
     <string name="custom_init_error_absolute">路径必须为绝对路径（以 / 开头）</string>
-    <string name="custom_init_option">自定义 Init</string>
+    <string name="custom_init_option">自定义 init</string>
+    <string name="notification_title">Droidspaces 终端</string>
+    <string name="notification_wakelock_on">唤醒锁定：开</string>
+    <string name="notification_wakelock_off">唤醒锁定：关</string>
+    <string name="notification_channel_name">终端会话</string>
+    <string name="notification_channel_desc">活动中的容器终端会话</string>
+    <string name="repo_title">根文件系统仓库</string>
+    <string name="repo_fab_label">仓库</string>
+    <string name="repo_refresh">刷新</string>
+    <string name="repo_failed_to_load">仓库加载失败</string>
+    <string name="repo_download">下载</string>
+    <string name="repo_cancel">取消</string>
+    <string name="repo_install">安装</string>
+    <string name="repo_retry">重试</string>
+    <string name="repo_notification_description">下载 Droidspaces 根文件系统</string>
+    <string name="repo_error_server_http">服务器返回 HTTP %1$d</string>
+    <string name="repo_error_no_assets">最新发布版中未找到根文件系统压缩包</string>
+    <string name="repo_error_network">网络错误</string>
+    <string name="repo_dl_error_unknown">未知错误</string>
+    <string name="repo_dl_error_cannot_resume">无法恢复下载</string>
+    <string name="repo_dl_error_device_not_found">未找到存储</string>
+    <string name="repo_dl_error_file_exists">文件已经存在</string>
+    <string name="repo_dl_error_file_error">文件系统错误</string>
+    <string name="repo_dl_error_http_data">HTTP 数据错误</string>
+    <string name="repo_dl_error_no_space">存储空间不足</string>
+    <string name="repo_dl_error_too_many_redirects">重定向次数过多</string>
+    <string name="repo_dl_error_unhandled_http">HTTP 响应异常</string>
+    <string name="repo_dl_error_not_found">文件不存在（404）</string>
+    <string name="repo_dl_error_code">错误码 ：%1$d</string>
+    <string name="repo_status_ready">就绪</string>
+    <string name="repo_status_downloading">下载中</string>
+    <string name="repo_status_failed">失败</string>
+    <string name="repo_downloads_count">%1$s 个下载</string>
+    <string name="notification_action_exit">退出</string>
 </resources>
