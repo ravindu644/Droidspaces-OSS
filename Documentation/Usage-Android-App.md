@@ -1,3 +1,11 @@
+<!--
+title: Android App Usage Guide
+section: Guides
+order: 4
+desc: Complete guide to the Droidspaces Android app. Manage containers, configure networking, stats, terminal, and kernel settings.
+keywords: Droidspaces Android app, container manager Android, NAT mode, systemd networkd, terminal usage, kernel settings
+-->
+
 # Android App Usage Guide
 
 The Droidspaces Android app provides a premium GUI for managing Linux containers. It abstracts away the complexity of namespaces and mounts while giving you high-level control over your environments.

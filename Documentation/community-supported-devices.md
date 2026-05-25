@@ -1,3 +1,11 @@
+<!--
+title: Community-supported Android devices
+section: Reference
+order: 3
+desc: Community-maintained compatibility list of Android devices verified to run Droidspaces.
+keywords: droidspaces, supported, devices, android, device, compatibility, kernel, support, list, hardware
+-->
+
 # Community-supported Android devices
 
 > [!NOTE]

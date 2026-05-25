@@ -1,3 +1,11 @@
+<!--
+title: Kernel Configuration Guide
+section: Guides
+order: 3
+desc: Complete guide to compiling a custom Android kernel with Droidspaces support, including non-GKI and GKI patches and compatibility fixes.
+keywords: kernel, configuration, droidspaces, android, compile, gki, nongki, patches, compatibility
+-->
+
 # Kernel Configuration Guide
 
 This guide explains how to compile a Linux kernel with Droidspaces support for Android devices.

@@ -1,3 +1,11 @@
+<!--
+title: Droidspaces GPU Acceleration Guide
+section: Guides
+order: 2
+desc: Enable GPU acceleration in Droidspaces containers on Android and Linux. Covers Termux X11, VirGL, Turnip for native Adreno, and desktop GPU passthrough.
+keywords: gpu, acceleration, droidspaces, termux, virgl, turnip, adreno, container, graphics
+-->
+
 # Droidspaces GPU Acceleration Guide
 
 This guide provides step-by-step instructions for enabling GPU acceleration in your Droidspaces containers. Whether you are running on an Android device or a Linux desktop, Droidspaces offers multiple ways to leverage hardware acceleration for a smooth graphical experience.

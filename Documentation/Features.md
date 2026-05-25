@@ -1,3 +1,11 @@
+<!--
+title: Feature Deep Dives
+section: Guides
+order: 1
+desc: Deep dive into every Droidspaces feature: namespace isolation, init system support, OverlayFS volatile mode, GPU acceleration, cgroup isolation, seccomp shields, and Android-specific tuning.
+keywords: droidspaces, features, namespace, isolation, cgroup, overlayfs, volatile, mode, init, system, support, gpu, acceleration
+-->
+
 # Feature Deep Dives
 
 Detailed explanations of each major Droidspaces feature and how it works under the hood.

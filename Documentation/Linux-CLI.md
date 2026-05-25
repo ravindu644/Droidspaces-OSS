@@ -1,3 +1,11 @@
+<!--
+title: Linux CLI Guide
+section: Guides
+order: 5
+desc: Full Droidspaces Linux CLI reference. Every command, flag, and config option explained.
+keywords: droidspaces, cli, linux, container, command, line, reference, bind, mount, nat, networking
+-->
+
 # Linux CLI Guide
 
 Complete guide to using Droidspaces from the command line on Linux.

@@ -1,3 +1,11 @@
+<!--
+title: Troubleshooting
+section: Reference
+order: 1
+desc: Troubleshoot Droidspaces containers: systemd hangs, paranoid networking, SELinux corruption, OverlayFS f2fs, sparse image reclaim, WiFi power save.
+keywords: droidspaces, troubleshooting, systemd, hang, fix, network, issues, selinux, overlayfs, ffs, container, errors
+-->
+
 # Troubleshooting
 
 Common issues, their causes, and how to fix them.
