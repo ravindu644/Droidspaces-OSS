@@ -79,8 +79,8 @@ fun RootfsRepoSheet(
             val filteredAssets = remember(displayAssets, searchQuery) {
                 if (searchQuery.isBlank()) displayAssets
                 else displayAssets.filter {
-                    val friendly = getFriendlyName(it.name)
-                    friendly.contains(searchQuery, ignoreCase = true) || it.name.contains(searchQuery, ignoreCase = true)
+                    it.name.contains(searchQuery, ignoreCase = true) ||
+                    it.description.contains(searchQuery, ignoreCase = true)
                 }
             }
 
@@ -163,7 +163,7 @@ fun RootfsRepoSheet(
                                 onDownload     = { vm.startDownload(it) },
                                 onCancel       = { vm.cancelDownload(it) },
                                 onInstall      = { uri -> onDismiss(); onInstall(uri) },
-                                onRetry        = { vm.resetAsset(it.name) }
+                                onRetry        = { vm.resetAsset(it.file) }
                             )
                         }
                         if (isLoading) {
@@ -252,10 +252,10 @@ private fun RepoListContent(
         contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
-        items(assets, key = { it.name }) { asset ->
+        items(assets, key = { it.file }) { asset ->
             RootfsAssetCard(
                 asset      = asset,
-                state      = downloadStates[asset.name] ?: AssetDownloadState.Idle,
+                state      = downloadStates[asset.file] ?: AssetDownloadState.Idle,
                 onDownload = { onDownload(asset) },
                 onCancel   = { onCancel(asset) },
                 onInstall  = onInstall,
@@ -316,7 +316,7 @@ private fun RootfsAssetCard(
                     )
                     var nameFontSize by remember(asset.name) { mutableStateOf(16.sp) }
                     Text(
-                        text = getFriendlyName(asset.name),
+                        text = asset.name,
                         style = MaterialTheme.typography.titleMedium.copy(fontSize = nameFontSize),
                         fontWeight = FontWeight.SemiBold,
                         maxLines = 1,
@@ -360,6 +360,15 @@ private fun RootfsAssetCard(
 
             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
 
+            if (asset.description.isNotEmpty()) {
+                Text(
+                    text = asset.description,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.75f),
+                    modifier = Modifier.padding(horizontal = 2.dp)
+                )
+            }
+
             // Resource Bar (CPU/RAM Style details block)
             Surface(
                 modifier = Modifier.fillMaxWidth(),
@@ -390,8 +399,8 @@ private fun RootfsAssetCard(
                         )
                     }
 
-                    val arch = getArchitecture(asset.name)
-                    if (arch != "unknown") {
+                    val arch = asset.architecture
+                    if (arch.isNotEmpty()) {
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(4.dp)
@@ -545,32 +554,6 @@ private fun formatSize(bytes: Long): String = when {
 
 private fun formatCount(count: Int): String =
     if (count >= 1_000) "%.1fk".format(count / 1_000.0) else count.toString()
-
-private fun getFriendlyName(fileName: String): String {
-    val prefix = fileName.substringBefore("-Droidspaces-rootfs-")
-        .substringBefore("-droidspaces-rootfs-")
-    return prefix
-        .replace("-base", " Base")
-        .replace("-Minimal-Systemd", " Minimal Systemd")
-        .replace("-Minimal", " Minimal")
-        .replace("-Systemd", " Systemd")
-        .replace("-latest", " Latest")
-        .replace("-v", " v")
-        .replace("-and-up", " and up")
-        .replace("-", " ")
-        .trim()
-}
-
-private fun getArchitecture(fileName: String): String {
-    return when {
-        fileName.contains("aarch64", true) -> "aarch64"
-        fileName.contains("x86_64", true)  -> "x86_64"
-        fileName.contains("armhf", true)   -> "armhf"
-        fileName.contains("x86", true) || fileName.contains("i386", true) -> "x86"
-        fileName.contains("amd64", true)   -> "x86_64"
-        else -> "unknown"
-    }
-}
 
 @Composable
 private fun RepoSearchBar(query: String, onQueryChange: (String) -> Unit) {

@@ -522,11 +522,12 @@ int setup_dev(const char *rootfs, int hw_access, int gpu_mode,
      * WARNING: This is a shared singleton. We MUST be careful. */
     if (domount("devtmpfs", dev_path, "devtmpfs", MS_NOSUID | MS_NOEXEC,
                 "mode=755") == 0) {
-      /* Clean up conflicting nodes from the shared devtmpfs.
-       * We MUST immediately recreate them in create_devices() as REAL
-       * character devices to prevent host breakage. This also performs
-       * DRM master and host display isolation. */
-      prune_host_devices(dev_path, privileged_mask);
+      /* On Android, /dev is a private tmpfs owned by ueventd - safe to modify.
+       * On Linux, /dev is the host's shared devtmpfs (one instance,
+       * kernel-managed). Unlinking nodes here removes them from the host
+       * permanently. Skip on Linux. */
+      if (is_android())
+        prune_host_devices(dev_path, privileged_mask);
 
       /* devtmpfs is the kernel's own instance and does NOT contain nodes
        * that Android's ueventd created in its tmpfs-based /dev (kgsl-3d0,

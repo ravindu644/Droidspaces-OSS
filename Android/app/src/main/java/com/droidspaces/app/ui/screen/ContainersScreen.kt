@@ -373,8 +373,14 @@ fun ContainersScreen(
         }
 
         try {
-            // Clear stale usage cache on stop/restart
+            // Kill terminal sessions + clear usage cache before stop/restart
             if (operation == "stop" || operation == "restart") {
+                context.startService(
+                    android.content.Intent(context, com.droidspaces.app.service.TerminalSessionService::class.java).apply {
+                        action = com.droidspaces.app.service.TerminalSessionService.ACTION_STOP_CONTAINER_SESSIONS
+                        putExtra(com.droidspaces.app.service.TerminalSessionService.EXTRA_CONTAINER_NAME, container.name)
+                    }
+                )
                 systemStatsViewModel.clearContainerUsage(container.name)
             }
 

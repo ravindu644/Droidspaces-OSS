@@ -401,10 +401,64 @@ Because the Deadlock Shield is now strictly an **opt-in toggle** rather than a h
 
 ## Android-Specific Tuning
 
-Droidspaces includes several sophisticated subsystems designed specifically to handle the "opinionated" nature of the Android Linux kernel.
+To handle the "opinionated" nature of the Android Linux kernel and ensure container stability, network connectivity, and hardware access, several adjustments must be applied to the container's rootfs.
 
-### Safe Udev Trigger
+> [!NOTE]
+>
+> The Droidspaces backend itself does not alter the rootfs. These changes are applied automatically when the user installs a new rootfs tarball using the Android App's built-in installer, or are pre-baked when using our official rootfs tarball from the [Droidspaces rootfs-builder](https://github.com/Droidspaces/Droidspaces-rootfs-builder).
 
-Standard Linux distributions use `udevadm trigger` to "coldplug" hardware devices during boot. On many Android devices, triggering all devices simultaneously causes the kernel to deadlock or panic because Android's own hardware drivers (which are already running) do not expect another manager to re-trigger them.
+### 1. Android Network & Hardware Groups
 
-**The Solution**: Droidspaces masks the standard udev trigger services and installs a **Safe Udev Trigger**. This service only triggers a strictly defined subset of subsystems (`usb`, `block`, `input`, `tty`) that are safe to re-scan. This enables the container to see new USB drives or keyboards without risking a system crash.
+Older Android kernels restrict network socket creation and direct hardware access to specific, hardcoded Group IDs (GIDs). Droidspaces maps and configures these groups inside the container's rootfs:
+
+- **GID Mapping**: Appends Android-specific groups to `/etc/group`:
+  - `aid_inet` (3003): Allows internet access.
+  - `aid_net_raw` (3004): Allows raw socket creation (e.g., for `ping`).
+  - `aid_net_admin` (3005): Allows network administration.
+- **Permissions Assignment**: Adds the container's `root` user to the `aid_inet`, `aid_net_raw`, `input`, `video`, and `tty` groups.
+- **Package Manager Fix**: Configures the Debian/Ubuntu `_apt` user to use `aid_inet` as its primary group, allowing packages to be installed and updated without permission errors.
+- **User Automation**: Modifies `/etc/adduser.conf` so any newly created user automatically inherits these groups.
+
+### 2. Udev Trigger & Service Overrides
+
+Standard Linux distributions run `udevadm trigger` to coldplug hardware devices during boot. Triggering all subsystems simultaneously on an Android device can cause the kernel to panic.
+
+- **Hardware Access Guards**: Since udev services are only useful when hardware access is explicitly enabled, Droidspaces injects a drop-in `ExecCondition` override that prevents `systemd-udevd.service`, `systemd-udev-trigger.service`, and `systemd-udev-settle.service` from starting unless the container is configured with hardware access (`enable_hw_access=1`):
+  ```ini
+  [Service]
+  ExecCondition=
+  ExecCondition=/bin/sh -c "grep -q 'enable_hw_access=1' /run/droidspaces/container.config"
+  ```
+- **Safe Udev Trigger**: Instead of scanning everything, Droidspaces overrides the default `systemd-udev-trigger.service` using a drop-in configuration. If hardware access is enabled, this limits the trigger to a strictly defined, safe subset of subsystems:
+  ```ini
+  [Service]
+  ExecStart=
+  ExecStart=-/usr/bin/udevadm trigger --subsystem-match=usb --subsystem-match=block --subsystem-match=input --subsystem-match=tty --subsystem-match=net
+  ```
+  This allows the container to dynamically detect new USB drives, keyboards, and network interfaces without risking a host crash.
+- **Read-Only Path Fix**: Overrides `ConditionPathIsReadWrite` for all udev units to prevent failures in environments where key system directories are mounted read-only.
+
+### 3. Optimizing systemd & Logging
+
+The Android kernel is notoriously verbose. Without tuning, standard `journald` setups would read host kernel messages and generate gigabytes of logs, quickly filling up the device's internal storage:
+
+- **Journald Adjustments**: Disables reading kernel messages and system auditing (`ReadKMsg=no`, `Audit=no`) in `journald.conf` to prevent the container from hoarding system-wide kernel logs.
+- **Volatile Storage**: Configures systemd journal logs to store in-memory only (`Storage=volatile`) and enforces strict maximum size constraints (200MB) to prevent constant writes from wearing out and filling the device's physical internal flash storage.
+- **Service Masking**: Masks `systemd-networkd-wait-online.service` to prevent boot delays, and `systemd-journald-audit.socket` to prevent systemd deadlocks in old kernels like 4.9.
+- **Power Key Handling**: Instructs `systemd-logind` to ignore host power and suspend key events so the container does not attempt to handle host power state transitions.
+
+### 4. NAT Mode Network Guards
+
+Under Host networking mode, running network managers like `NetworkManager` or `systemd-networkd` inside the container can conflict with the Android host's routing tables and break cellular/Wi-Fi connectivity.
+
+Droidspaces injects a drop-in `ExecCondition` override for standard network services (such as `NetworkManager.service`, `systemd-networkd.service`, `dhcpcd.service`, and `systemd-resolved.service`). This ensures these services only execute if the container is explicitly configured in NAT mode:
+```ini
+[Service]
+ExecCondition=
+ExecCondition=/bin/sh -c "grep -q 'net_mode=nat' /run/droidspaces/container.config"
+```
+
+### 5. Storage and DHCP Configuration
+
+- **systemd-networkd Config**: Automatically configures `10-eth-dhcp.network` to enable DHCP and IPv6 route acceptance for any `eth*` interfaces.
+- **Logrotate Limit**: Enforces a `maxsize 50M` limit in `/etc/logrotate.conf` to prevent logs from consuming excessive disk space over time.

@@ -53,8 +53,10 @@ class RootfsRepoViewModel(application: Application) : AndroidViewModel(applicati
             when (val result = RootfsRepository.fetchAssets(getApplication())) {
                 is RepoResult.Success -> {
                     val ctx = getApplication<Application>()
-                    val prePopulated = result.assets.mapNotNull { asset ->                        val uri = findDownloadedUri(ctx, asset.name)
-                        if (uri != null) asset.name to AssetDownloadState.Done(uri) else null
+                    val prePopulated = result.assets.mapNotNull { asset ->
+                        val filename = asset.downloadUrl.substringAfterLast("/")
+                        val uri = findDownloadedUri(ctx, filename)
+                        if (uri != null) asset.file to AssetDownloadState.Done(uri) else null
                     }.toMap()
                     // Only preserve active downloads; Done/Failed states are re-derived
                     // from the filesystem via prePopulated so deleted files revert to Idle
@@ -117,15 +119,15 @@ class RootfsRepoViewModel(application: Application) : AndroidViewModel(applicati
     }
 
     fun startDownload(asset: RootfsAsset) {
-        if (downloadStates[asset.name] is AssetDownloadState.Downloading) return
+        if (downloadStates[asset.file] is AssetDownloadState.Downloading) return
         val ctx = getApplication<Application>()
-        downloadJobs[asset.name]?.cancel()
+        downloadJobs[asset.file]?.cancel()
         val downloadId = RootfsDownloadManager.enqueue(ctx, asset)
-        downloadIds[asset.name] = downloadId
-        downloadJobs[asset.name] = viewModelScope.launch {
+        downloadIds[asset.file] = downloadId
+        downloadJobs[asset.file] = viewModelScope.launch {
             RootfsDownloadManager.pollFlow(ctx, asset, downloadId).collect { status ->
                 downloadStates = downloadStates.toMutableMap().apply {
-                    put(asset.name, when (status) {
+                    put(asset.file, when (status) {
                         is DownloadStatus.Progress  -> AssetDownloadState.Downloading(status.percent)
                         is DownloadStatus.Completed -> AssetDownloadState.Done(status.fileUri)
                         is DownloadStatus.Failed    -> AssetDownloadState.Failed(status.reason)
@@ -137,15 +139,15 @@ class RootfsRepoViewModel(application: Application) : AndroidViewModel(applicati
 
     fun cancelDownload(asset: RootfsAsset) {
         val ctx = getApplication<Application>()
-        downloadIds[asset.name]?.let { RootfsDownloadManager.cancel(ctx, it) }
-        downloadIds.remove(asset.name)
-        downloadJobs[asset.name]?.cancel()
-        downloadJobs.remove(asset.name)
-        downloadStates = downloadStates.toMutableMap().apply { put(asset.name, AssetDownloadState.Idle) }
+        downloadIds[asset.file]?.let { RootfsDownloadManager.cancel(ctx, it) }
+        downloadIds.remove(asset.file)
+        downloadJobs[asset.file]?.cancel()
+        downloadJobs.remove(asset.file)
+        downloadStates = downloadStates.toMutableMap().apply { put(asset.file, AssetDownloadState.Idle) }
     }
 
     /** Reset a completed/failed asset so the user can retry. */
-    fun resetAsset(assetName: String) {
-        downloadStates = downloadStates.toMutableMap().apply { put(assetName, AssetDownloadState.Idle) }
+    fun resetAsset(assetFile: String) {
+        downloadStates = downloadStates.toMutableMap().apply { put(assetFile, AssetDownloadState.Idle) }
     }
 }
