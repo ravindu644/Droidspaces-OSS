@@ -1,3 +1,11 @@
+<!--
+title: Cool Things You Can Do with Droidspaces
+section: Recipes
+order: 1
+desc: Cool projects with Droidspaces: secure mobile server with Tailscale + UFW + Fail2Ban, and Docker containers nested inside Droidspaces.
+keywords: droidspaces, projects, android, server, tailscale, ufw, failban, container, nested, docker
+-->
+
 # Cool Things You Can Do with Droidspaces
 
 > [!IMPORTANT]

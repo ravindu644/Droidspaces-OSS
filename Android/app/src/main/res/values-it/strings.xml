@@ -69,9 +69,7 @@
     <string name="about_description">Gestore di contenitori LXC-Style per Android</string>
     <string name="developers">Sviluppatore/i</string>
     <string name="developer_ravindu644" translatable="false">ravindu644</string>
-    <string name="developer_ravindu644_role">Backend, UI</string>
-    <string name="developer_thesithumsandaruwan" translatable="false">thesithumsandaruwan</string>
-    <string name="developer_thesithumsandaruwan_role">UI</string>
+    <string name="developer_ravindu644_role">Maintainer</string>
     <string name="telegram_channel">Canale Telegram</string>
     <string name="contributors">Contributori</string>
     <string name="github">GitHub</string>
@@ -111,7 +109,7 @@
     <string name="start">Avvia</string>
     <string name="stop">Arresta</string>
     <string name="restart">Riavvia</string>
-    <string name="ipv6_option">No IPv6</string>
+    <string name="ipv6_option">Disable IPv6</string>
     <string name="storage_option">Archiviazione</string>
     <string name="hw_option">HW</string>
     <string name="x11_option">X11</string>
@@ -147,8 +145,8 @@
     <string name="hardware_access_description">Accesso hardware completo</string>
     <string name="gpu_access">Accesso GPU</string>
     <string name="gpu_access_description">Specchia i nodi GPU in /dev isolato (senza passthrough hardware completo)</string>
-    <string name="termux_x11">Configura Termux X11</string>
-    <string name="termux_x11_description">Abilita il montaggio del socket X11 per Termux-X11</string>
+    <string name="termux_x11">Configura Termux:X11</string>
+    <string name="termux_x11_description">Abilita il montaggio del socket X11 per Termux:X11</string>
     <string name="selinux_permissive">SELinux Permissivo</string>
     <string name="selinux_permissive_description">Imposta SELinux in modalità permissiva</string>
     <string name="run_at_boot">Avvia all\'avvio</string>
@@ -163,8 +161,8 @@
     <string name="cat_security">Sicurezza &amp; Avvio</string>
     <string name="cat_advanced">Opzioni Avanzate</string>
     <string name="network_mode">Modalità di rete</string>
-    <string name="network_mode_host">Host (Predefinita)</string>
-    <string name="network_mode_nat">NAT (Isolata)</string>
+    <string name="network_mode_host">Host</string>
+    <string name="network_mode_nat">NAT (Predefinita)</string>
     <string name="network_mode_none">Nessuna (Air-gapped)</string>
     <string name="nat_settings">Impostazioni NAT</string>
     <string name="upstream_interfaces_mandatory">Interfacce Upstream (Obbligatorie)</string>
@@ -193,7 +191,7 @@
     <string name="saving">Salvataggio in corso...</string>
     <string name="save_changes">Salva modifiche</string>
     <string name="static_ip_address">Indirizzo IP statico</string>
-    <string name="static_ip_description">Imposta un IPv4 statico per questo contenitore nella subnet 172.28.x.x.</string>
+    <string name="static_ip_description">Imposta un IPv4 statico per questo contenitore nella subnet 172.28.x.x. Lascia vuoto per l\'assegnazione automatica al primo avvio.</string>
     <string name="octet_label">Ottetto %1$d</string>
     <string name="error_octet_range">Intervallo: 1-254</string>
     <string name="error_ip_collision">Questo IP è già assegnato a \"%1$s\"</string>
@@ -252,9 +250,12 @@
     <string name="start_container_first">Avvia prima un contenitore per visualizzarlo qui</string>
     <!-- Systemd Screen -->
     <string name="systemd_services">Servizi Systemd</string>
+    <string name="openrc_services">Servizi OpenRC</string>
+    <string name="openrc">OpenRC</string>
+    <string name="init_system">Sistema di Init</string>
+    <string name="init_system_not_available">Systemd/OpenRC non disponibile</string>
+    <string name="init_system_not_available_desc">Questo contenitore non ha systemd né OpenRC installato</string>
     <string name="fetching_services">Recupero servizi...</string>
-    <string name="systemd_not_available">Systemd non disponibile</string>
-    <string name="systemd_not_available_message">\@string/systemd_not_available_desc</string>
     <string name="search_services">Cerca servizi...</string>
     <string name="enabled_legend">Abilitato</string>
     <string name="disabled_legend">Disabilitato</string>
@@ -362,7 +363,7 @@
     <string name="starting_migration">Avvio operazione di migrazione...</string>
     <string name="starting_resizing">Avvio operazione di ridimensionamento...</string>
     <string name="help_card_title">Nuovo su Droidspaces?</string>
-    <string name="help_card_message">Tocca qui per imparare come configurare il tuo primo contenitore Android !</string>
+    <string name="help_card_message">Tocca qui per imparare come configurare il tuo primo contenitore Linux!</string>
     <string name="help_card_url">https://github.com/ravindu644/Droidspaces-OSS/blob/main/Documentation/Installation-Android.md</string>
     <string name="privileged_mode">Modalità Privilegiata</string>
     <string name="privileged_mode_description">Configura il rilassamento granulare della sicurezza per la virtualizzazione annidata o l\'accesso hardware avanzato.</string>
@@ -407,10 +408,36 @@
     <string name="ram_percent_label">%1$d MB (%2$.1f%%)</string>
     <string name="sessions_running_plural">%1$d sessioni in esecuzione · toccare per ripristinare</string>
     <string name="session_running_singular">1 sessione in esecuzione · toccare per ripristinare</string>
-    <string name="systemd_not_available_desc">Questo contenitore non ha systemd installato o in esecuzione</string>
     <string name="please_wait_hint">Attendi mentre elaboriamo la tua richiesta...</string>
     <string name="restore">Ripristina</string>
     <string name="export_container">Esporta il contenitore come tarball</string>
     <string name="export_container_failed">Esportazione del contenitore %1$s non riuscita</string>
     <string name="starting_export">Avvio dell\'esportazione in corso...</string>
+    <string name="welcome_tagline">Contenitori Linux. Nativi. Nessun overhead.</string>
+    <string name="feat_containers_title">Contenitori Linux reali</string>
+    <string name="feat_containers_desc">Stessa tecnologia di namespace del kernel di LXC, Podman e Docker. Nessuna emulazione, nessun chroot.</string>
+    <string name="feat_overhead_title">Zero overhead</string>
+    <string name="feat_overhead_desc">Comunica direttamente con il kernel Linux host. Nessun hypervisor, nessun livello di macchina virtuale.</string>
+    <string name="feat_unkillable_title">Indistruttibile per progettazione</string>
+    <string name="feat_unkillable_desc">Supporta l\'integrazione nativa init.rc e daemon userspace a 2 livelli. Completamente indistruttibile.</string>
+    <string name="feat_init_title">systemd / OpenRC come PID 1</string>
+    <string name="feat_init_desc">Supporto completo del sistema init. Gestione dei servizi reale, non un ambiente simulato.</string>
+    <string name="feat_isolation_title">Isolamento completo</string>
+    <string name="feat_isolation_desc">Albero PID privato, tabella di montaggio, nome host, IPC e gerarchia cgroup per contenitore.</string>
+    <string name="feat_hardware_title">Accesso completo hardware/GPU</string>
+    <string name="feat_hardware_desc">Esporre l\'hardware host (GPU, sensori, USB, dispositivi a blocchi) direttamente ai contenitori.</string>
+    <string name="feat_privileged_title">Contenitori con privilegi completi</string>
+    <string name="feat_privileged_desc">Abbassa le barriere di sicurezza con la modalità privilegiata per utenti avanzati.</string>
+    <string name="feat_autoboot_title">Avvio automatico all\'accensione</string>
+    <string name="feat_autoboot_desc">Avvia automaticamente i contenitori all\'avvio, anche se lo schermo è bloccato e i dati sono crittografati.</string>
+    <string name="kernel_requirements_nongki">Requisiti Kernel non-GKI (&lt;=4.19)</string>
+    <string name="kernel_requirements_gki">Requisiti Kernel GKI (&gt;=5.4)</string>
+    <string name="guide">Guida</string>
+    <string name="gpu_option">GPU</string>
+    <string name="selinux_permissive_option">SELinux Permissive</string>
+    <string name="volatile_option">Volatile</string>
+    <string name="cgroup_v1_option">Cgroup V1</string>
+    <string name="deadlock_shield_option">Scudo di blocco</string>
+    <string name="privileged_option">Privilegiato</string>
+    <string name="error_container_name_too_long">Nome troppo lungo - massimo 17 caratteri (limite del percorso del dispositivo loop del kernel)</string>
 </resources>

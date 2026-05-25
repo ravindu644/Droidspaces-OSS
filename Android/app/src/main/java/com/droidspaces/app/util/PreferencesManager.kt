@@ -266,6 +266,50 @@ class PreferencesManager private constructor(context: Context) {
         prefs.edit().remove("${KEY_CONTAINER_OS_INFO_PREFIX}$containerName").apply()
     }
 
+    /**
+     * Save the entire container list to cache.
+     * Stores names in one key and each config in its own key.
+     */
+    fun saveCachedContainers(containers: List<ContainerInfo>) {
+        val editor = prefs.edit()
+        
+        // 1. Clear old configs to avoid stale data
+        val oldNamesText = prefs.getString(KEY_CACHED_CONTAINER_NAMES, null)
+        if (!oldNamesText.isNullOrEmpty()) {
+            oldNamesText.split(",").forEach { name ->
+                editor.remove("${KEY_CACHED_CONTAINER_CONFIG_PREFIX}$name")
+            }
+        }
+
+        // 2. Save new names
+        val names = containers.joinToString(",") { it.name }
+        editor.putString(KEY_CACHED_CONTAINER_NAMES, names)
+        
+        // 3. Save each container's config content
+        containers.forEach { container ->
+            editor.putString("${KEY_CACHED_CONTAINER_CONFIG_PREFIX}${container.name}", container.toConfigContent())
+        }
+        editor.apply()
+    }
+
+    /**
+     * Load the entire container list from cache.
+     * Note: status will always be STOPPED and pid will be null.
+     */
+    val cachedContainers: List<ContainerInfo>
+        get() {
+            val namesText = prefs.getString(KEY_CACHED_CONTAINER_NAMES, null) ?: return emptyList()
+            if (namesText.isEmpty()) return emptyList()
+            
+            val names = namesText.split(",")
+            return names.mapNotNull { name ->
+                val configContent = prefs.getString("${KEY_CACHED_CONTAINER_CONFIG_PREFIX}$name", null)
+                if (configContent != null) {
+                    ContainerManager.parseConfig(configContent, name)
+                } else null
+            }
+        }
+
     companion object {
         private const val PREFS_NAME = Constants.PREFS_NAME
         private const val KEY_SETUP_COMPLETED = Constants.KEY_SETUP_COMPLETED
@@ -287,6 +331,8 @@ class PreferencesManager private constructor(context: Context) {
         const val KEY_SYMLINK_ENABLED = Constants.KEY_SYMLINK_ENABLED
         const val KEY_CONTAINER_LOG_PREFIX = Constants.KEY_CONTAINER_LOG_PREFIX
         private const val KEY_CONTAINER_OS_INFO_PREFIX = Constants.KEY_CONTAINER_OS_INFO_PREFIX
+        private const val KEY_CACHED_CONTAINER_NAMES = Constants.KEY_CACHED_CONTAINER_NAMES
+        private const val KEY_CACHED_CONTAINER_CONFIG_PREFIX = Constants.KEY_CACHED_CONTAINER_CONFIG_PREFIX
 
         // Double-checked locking pattern for thread-safe singleton
         // @Volatile ensures visibility across threads without full synchronization

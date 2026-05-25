@@ -23,6 +23,7 @@ import androidx.compose.ui.window.DialogProperties
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.widget.Toast
+import androidx.compose.ui.platform.LocalConfiguration
 import com.droidspaces.app.R
 import com.droidspaces.app.util.AnsiColorParser
 
@@ -39,6 +40,8 @@ fun TerminalDialog(
     isBlocking: Boolean = false
 ) {
     val context = LocalContext.current
+    val configuration = LocalConfiguration.current
+    val screenHeight = configuration.screenHeightDp.dp
     val dialogShape = RoundedCornerShape(28.dp)
     val buttonShape = RoundedCornerShape(14.dp)
 
@@ -53,7 +56,7 @@ fun TerminalDialog(
         Surface(
             modifier = Modifier
                 .fillMaxWidth()
-                .fillMaxHeight(0.75f)
+                .height(screenHeight * 0.75f)
                 .padding(horizontal = 16.dp),
             shape = dialogShape,
             color = MaterialTheme.colorScheme.surfaceContainer,

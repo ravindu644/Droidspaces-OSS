@@ -77,6 +77,8 @@ class TerminalSessionService : Service() {
                                 stopForeground(true)
                             }
                             stopSelf()
+                        } else {
+                            updateNotification()
                         }
                     }.onFailure { it.printStackTrace() }
                 }, 300)
@@ -183,14 +185,18 @@ class TerminalSessionService : Service() {
             Intent(this, TerminalSessionService::class.java).apply { action = ACTION_WAKE_LOCK_TOGGLE },
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
         )
-        val wakeLockLabel = if (wakeLock?.isHeld == true) "Wake lock: ON" else "Wake lock: OFF"
+        val wakeLockLabel = if (wakeLock?.isHeld == true) {
+            getString(R.string.notification_wakelock_on)
+        } else {
+            getString(R.string.notification_wakelock_off)
+        }
         return NotificationCompat.Builder(this, CHANNEL_ID)
-            .setContentTitle("Droidspaces Terminal")
+            .setContentTitle(getString(R.string.notification_title))
             .setContentText(notificationText())
             .setSmallIcon(R.drawable.ic_launcher_foreground)
             .setContentIntent(openIntent)
             .addAction(NotificationCompat.Action.Builder(null, wakeLockLabel, wakeLockIntent).build())
-            .addAction(NotificationCompat.Action.Builder(null, "EXIT", exitIntent).build())
+            .addAction(NotificationCompat.Action.Builder(null, getString(R.string.notification_action_exit), exitIntent).build())
             .setOngoing(true)
             .build()
     }
@@ -201,14 +207,16 @@ class TerminalSessionService : Service() {
 
     private fun notificationText(): String {
         val n = sessions.size
-        return if (n == 1) "1 session running" else "$n sessions running"
+        return resources.getQuantityString(R.plurals.notification_sessions_running, n, n)
     }
 
     private fun createNotificationChannel() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val channel = NotificationChannel(
-                CHANNEL_ID, "Terminal Sessions", NotificationManager.IMPORTANCE_LOW
-            ).apply { description = "Active container terminal sessions" }
+                CHANNEL_ID,
+                getString(R.string.notification_channel_name),
+                NotificationManager.IMPORTANCE_LOW
+            ).apply { description = getString(R.string.notification_channel_desc) }
             notificationManager.createNotificationChannel(channel)
         }
     }

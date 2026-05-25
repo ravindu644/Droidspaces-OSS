@@ -565,7 +565,6 @@ int setup_dev(const char *rootfs, int hw_access, int gpu_mode,
 
 int create_devices(const char *rootfs, int hw_access, int privileged_mask) {
   (void)hw_access;
-  (void)privileged_mask;
   const struct {
     const char *name;
     mode_t mode;
@@ -630,11 +629,16 @@ int create_devices(const char *rootfs, int hw_access, int privileged_mask) {
   /* 4. Create /dev/tty1-N as symlinks to /dev/null.
    * For non-systemd inits (openrc, busybox): silences "can't open /dev/ttyN"
    * log spam -- the node exists, agetty opens /dev/null and exits cleanly.
+   *
+   * Skip in privileged+unfiltered-dev mode: devtmpfs already provides real
+   * ttyN char device nodes and we must not clobber them with symlinks.
    */
-  for (int i = 1; i <= DS_MAX_TTYS; i++) {
-    snprintf(path, sizeof(path), "%s/dev/tty%d", rootfs, i);
-    force_unlink(path);
-    symlink("/dev/null", path);
+  if (!(privileged_mask & DS_PRIV_UNFILTERED)) {
+    for (int i = 1; i <= DS_MAX_TTYS; i++) {
+      snprintf(path, sizeof(path), "%s/dev/tty%d", rootfs, i);
+      force_unlink(path);
+      symlink("/dev/null", path);
+    }
   }
   /* Standard symlinks */
   char tgt[PATH_MAX];
@@ -1247,64 +1251,6 @@ int unmount_rootfs_img(const char *mount_point, int silent) {
 /* ---------------------------------------------------------------------------
  * Container introspection helpers (used by info/show)
  * ---------------------------------------------------------------------------*/
-
-/* Get filesystem type of a mountpoint inside container namespace.
- * Reads /proc/<pid>/mounts which is already namespace-aware. */
-int get_container_mount_fstype(pid_t pid, const char *path, char *fstype,
-                               size_t size) {
-  char mounts_path[PATH_MAX];
-  snprintf(mounts_path, sizeof(mounts_path), "/proc/%d/mounts", pid);
-
-  FILE *fp = fopen(mounts_path, "r");
-  if (!fp)
-    return -1;
-
-  char line[512];
-  while (fgets(line, sizeof(line), fp)) {
-    char mount_path[PATH_MAX];
-    char type[64];
-    if (sscanf(line, "%*s %s %s", mount_path, type) == 2) {
-      if (strcmp(mount_path, path) == 0) {
-        safe_strncpy(fstype, type, size);
-        fclose(fp);
-        return 0;
-      }
-    }
-  }
-  fclose(fp);
-  return -1;
-}
-
-/* Detect if Android storage is mounted inside the container */
-int detect_android_storage_in_container(pid_t pid) {
-  if (pid <= 0)
-    return 0;
-
-  char fstype[64];
-  if (get_container_mount_fstype(pid, "/storage/emulated/0", fstype,
-                                 sizeof(fstype)) != 0)
-    return 0;
-
-  /* Verify /storage/emulated/0/Android exists inside container */
-  char path[PATH_MAX];
-  struct stat st;
-  if (build_proc_root_path(pid, "/storage/emulated/0/Android", path,
-                           sizeof(path)) != 0)
-    return 0;
-
-  if (stat(path, &st) < 0 || !S_ISDIR(st.st_mode))
-    return 0;
-
-  return 1;
-}
-
-/* Detect if HW access is enabled (devtmpfs mounted at /dev) */
-int detect_hw_access_in_container(pid_t pid) {
-  char fstype[64];
-  if (get_container_mount_fstype(pid, "/dev", fstype, sizeof(fstype)) == 0)
-    return strcmp(fstype, "devtmpfs") == 0;
-  return 0;
-}
 
 /* Ensure host devpts is mounted - specifically for Android Recovery
  * environments where /dev/pts is often missing or unmounted, causing openpty()

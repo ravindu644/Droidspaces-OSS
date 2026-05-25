@@ -3,4 +3,10 @@
     <plurals name="container_count">
         <item quantity="other">%d កុងតឺន័រ</item>
     </plurals>
+    <plurals name="commit_count">
+        <item quantity="other">%d បញ្ជូនកូដ (commits)</item>
+    </plurals>
+    <plurals name="notification_sessions_running">
+        <item quantity="other">%d សេសសិន កំពុងដំណើរការ</item>
+    </plurals>
 </resources>

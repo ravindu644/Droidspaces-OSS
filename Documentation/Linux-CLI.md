@@ -1,3 +1,11 @@
+<!--
+title: Linux CLI Guide
+section: Guides
+order: 5
+desc: Full Droidspaces Linux CLI reference. Every command, flag, and config option explained.
+keywords: droidspaces, cli, linux, container, command, line, reference, bind, mount, nat, networking
+-->
+
 # Linux CLI Guide
 
 Complete guide to using Droidspaces from the command line on Linux.
@@ -67,7 +75,6 @@ sudo droidspaces --name=web,db,app stop
 | `restart` | Fast restart (under 200ms) by preserving loop mounts. |
 | `enter [user]` | Open an interactive shell inside a running container. |
 | `run <cmd>` | Execute a single command without opening a full shell. Use `-u`/`--user` to run as a specific container user. |
-| `status` | Show if a specific container is running. |
 | `info` | Show deep technical details about a container. |
 | `show` | List all currently running containers in a table. |
 | `scan` | Detect and register orphaned/untracked containers. |

@@ -2,6 +2,8 @@ package com.droidspaces.app.ui.screen
 import androidx.compose.ui.graphics.Color
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
@@ -28,7 +30,7 @@ import com.droidspaces.app.ui.util.rememberClearFocus
 import androidx.compose.ui.platform.LocalContext
 import com.droidspaces.app.R
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun ContainerNameScreen(
     initialName: String = "",
@@ -159,6 +161,8 @@ fun ContainerNameScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
+                .consumeWindowInsets(innerPadding)
+                .imePadding()
                 .clickable(
                     indication = null,
                     interactionSource = remember { MutableInteractionSource() }
@@ -169,6 +173,7 @@ fun ContainerNameScreen(
             Column(
                 modifier = Modifier
                     .fillMaxSize()
+                    .verticalScroll(rememberScrollState())
                     .padding(horizontal = 24.dp)
                     .padding(top = 24.dp),
                 verticalArrangement = Arrangement.spacedBy(24.dp)

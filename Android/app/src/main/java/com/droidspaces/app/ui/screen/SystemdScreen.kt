@@ -41,15 +41,15 @@ private val JetBrainsMono = FontFamily(
 )
 
 // UI States
-private sealed class ScreenState {
-    data object Loading : ScreenState()
-    data object SystemdNotAvailable : ScreenState()
-    data class Ready(val services: List<ServiceInfo>) : ScreenState()
+private sealed class SystemdScreenState {
+    data object Loading : SystemdScreenState()
+    data object SystemdNotAvailable : SystemdScreenState()
+    data class Ready(val services: List<ServiceInfo>) : SystemdScreenState()
 }
 
-private sealed class ActionState {
-    data object Idle : ActionState()
-    data class InProgress(val serviceName: String, val actionName: String) : ActionState()
+private sealed class SystemdActionState {
+    data object Idle : SystemdActionState()
+    data class InProgress(val serviceName: String, val actionName: String) : SystemdActionState()
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -64,8 +64,8 @@ fun SystemdScreen(
 
     LaunchedEffect(Unit) { ContainerSystemdManager.initialize(context) }
 
-    var screenState by remember { mutableStateOf<ScreenState>(ScreenState.Loading) }
-    var actionState by remember { mutableStateOf<ActionState>(ActionState.Idle) }
+    var screenState by remember { mutableStateOf<SystemdScreenState>(SystemdScreenState.Loading) }
+    var actionState by remember { mutableStateOf<SystemdActionState>(SystemdActionState.Idle) }
     var selectedFilter by remember { mutableStateOf(ServiceFilter.RUNNING) }
     var logsDialogContent by remember { mutableStateOf<List<String>?>(null) }
     var searchQuery by remember { mutableStateOf("") }
@@ -75,19 +75,19 @@ fun SystemdScreen(
 
     fun fetchServices() {
         fetchJob?.cancel()
-        screenState = ScreenState.Loading
+        screenState = SystemdScreenState.Loading
         fetchJob = scope.launch {
             try {
                 val available = ContainerSystemdManager.isSystemdAvailable(containerName)
                 if (!available) {
-                    screenState = ScreenState.SystemdNotAvailable
+                    screenState = SystemdScreenState.SystemdNotAvailable
                     return@launch
                 }
                 val services = ContainerSystemdManager.getAllServices(containerName)
-                screenState = ScreenState.Ready(services)
+                screenState = SystemdScreenState.Ready(services)
             } catch (e: Exception) {
                 if (e is kotlinx.coroutines.CancellationException) throw e
-                screenState = ScreenState.SystemdNotAvailable
+                screenState = SystemdScreenState.SystemdNotAvailable
             }
         }
     }
@@ -95,13 +95,13 @@ fun SystemdScreen(
     fun executeAction(serviceName: String, actionName: String, action: suspend () -> ContainerSystemdManager.CommandResult) {
         actionJob?.cancel()
         fetchJob?.cancel()
-        actionState = ActionState.InProgress(serviceName, actionName)
+        actionState = SystemdActionState.InProgress(serviceName, actionName)
         actionJob = scope.launch {
             try {
                 val result = action()
-                actionState = ActionState.Idle
+                actionState = SystemdActionState.Idle
                 if (result.isSuccess) {
-                    screenState = ScreenState.Loading
+                    screenState = SystemdScreenState.Loading
                     scope.showSuccess(snackbarHostState, context.getString(R.string.action_successful, actionName, serviceName))
                     fetchServices()
                 } else {
@@ -110,7 +110,7 @@ fun SystemdScreen(
                     else scope.showError(snackbarHostState, context.getString(R.string.failed_to_action, actionName, serviceName))
                 }
             } catch (e: Exception) {
-                actionState = ActionState.Idle
+                actionState = SystemdActionState.Idle
                 if (e is kotlinx.coroutines.CancellationException) throw e
                 scope.showError(snackbarHostState, context.getString(R.string.error_unknown, e.message ?: context.getString(R.string.unknown)))
             }
@@ -119,7 +119,7 @@ fun SystemdScreen(
 
     LaunchedEffect(containerName) { fetchServices() }
 
-    val allServices = (screenState as? ScreenState.Ready)?.services ?: emptyList()
+    val allServices = (screenState as? SystemdScreenState.Ready)?.services ?: emptyList()
     val filteredServices = remember(allServices, selectedFilter, searchQuery) {
         if (searchQuery.isBlank()) ContainerSystemdManager.filterServices(allServices, selectedFilter)
         else allServices.filter { it.name.contains(searchQuery, ignoreCase = true) }
@@ -145,7 +145,7 @@ fun SystemdScreen(
                 CenterAlignedTopAppBar(
                     title = { Text(context.getString(R.string.systemd_services), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold) },
                     navigationIcon = { IconButton(onClick = onNavigateBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, context.getString(R.string.back)) } },
-                    actions = { IconButton(onClick = { fetchServices() }, enabled = screenState !is ScreenState.Loading && actionState is ActionState.Idle) { Icon(Icons.Default.Refresh, context.getString(R.string.refresh)) } },
+                    actions = { IconButton(onClick = { fetchServices() }, enabled = screenState !is SystemdScreenState.Loading && actionState is SystemdActionState.Idle) { Icon(Icons.Default.Refresh, context.getString(R.string.refresh)) } },
                     colors = TopAppBarDefaults.centerAlignedTopAppBarColors(containerColor = Color.Transparent, scrolledContainerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.95f))
                 )
             },
@@ -155,9 +155,9 @@ fun SystemdScreen(
             ClearFocusOnClickOutside(modifier = Modifier.padding(padding).fillMaxSize()) {
                 Box(modifier = Modifier.fillMaxSize()) {
                     when (screenState) {
-                        is ScreenState.Loading -> FullScreenLoading(message = context.getString(R.string.fetching_services))
-                        is ScreenState.SystemdNotAvailable -> SystemdNotAvailable()
-                        is ScreenState.Ready -> {
+                        is SystemdScreenState.Loading -> FullScreenLoading(message = context.getString(R.string.fetching_services))
+                        is SystemdScreenState.SystemdNotAvailable -> SystemdNotAvailable()
+                        is SystemdScreenState.Ready -> {
                             Column(modifier = Modifier.fillMaxSize()) {
                                 SearchBar(query = searchQuery, onQueryChange = { searchQuery = it })
                                 FilterChipsRow(selectedFilter = selectedFilter, serviceCounts = serviceCounts, onFilterSelected = { selectedFilter = it; clearFocus() })
@@ -178,7 +178,7 @@ fun SystemdScreen(
         }
     }
 
-    (actionState as? ActionState.InProgress)?.let { state -> ProgressDialog(message = context.getString(R.string.actioning_service, state.actionName, state.serviceName)) }
+    (actionState as? SystemdActionState.InProgress)?.let { state -> ProgressDialog(message = context.getString(R.string.actioning_service, state.actionName, state.serviceName)) }
     logsDialogContent?.let { logs -> ErrorLogsDialog(logs = logs, onDismiss = { logsDialogContent = null }) }
 }
 
@@ -397,8 +397,8 @@ private fun SystemdNotAvailable() {
         Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(24.dp), modifier = Modifier.padding(32.dp)) {
             Surface(shape = CircleShape, color = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.2f), modifier = Modifier.size(120.dp), border = BorderStroke(2.dp, MaterialTheme.colorScheme.error.copy(alpha = 0.2f))) { Box(contentAlignment = Alignment.Center) { Icon(Icons.Default.Warning, null, modifier = Modifier.size(56.dp), tint = MaterialTheme.colorScheme.error) } }
             Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text(context.getString(R.string.systemd_not_available), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
-                Text(context.getString(R.string.systemd_not_available_desc), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.Center)
+                Text(context.getString(R.string.init_system_not_available), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
+                Text(context.getString(R.string.init_system_not_available_desc), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.Center)
             }
         }
     }

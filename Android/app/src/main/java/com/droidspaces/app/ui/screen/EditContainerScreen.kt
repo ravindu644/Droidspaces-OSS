@@ -47,7 +47,9 @@ import com.droidspaces.app.ui.component.SettingsRowCard
 import com.droidspaces.app.ui.component.EnvironmentVariablesDialog
 import com.droidspaces.app.util.PortForward
 import com.droidspaces.app.ui.component.PrivilegedModeDialog
-import com.droidspaces.app.ui.component.NetworkModeSelector
+import com.droidspaces.app.ui.component.HardwareAccessDialog
+import com.droidspaces.app.ui.component.DsDropdown
+import androidx.compose.material.icons.filled.Public
 import com.droidspaces.app.ui.component.UpstreamInterfaceList
 import com.droidspaces.app.ui.component.PortForwardingList
 import androidx.compose.ui.window.Dialog
@@ -95,6 +97,7 @@ fun EditContainerScreen(
     var blockNestedNs by remember { mutableStateOf(container.blockNestedNs) }
     var staticNatIp by remember { mutableStateOf(container.staticNatIp) }
     var privileged by remember { mutableStateOf(container.privileged) }
+    var customInit by remember { mutableStateOf(container.customInit) }
 
     // Track the "saved" baseline values - updated after each successful save
     var savedHostname by remember { mutableStateOf(container.hostname) }
@@ -116,6 +119,7 @@ fun EditContainerScreen(
     var savedBlockNestedNs by remember { mutableStateOf(container.blockNestedNs) }
     var savedStaticNatIp by remember { mutableStateOf(container.staticNatIp) }
     var savedPrivileged by remember { mutableStateOf(container.privileged) }
+    var savedCustomInit by remember { mutableStateOf(container.customInit) }
 
     // Navigation and internal UI states
     var showFilePicker by remember { mutableStateOf(false) }
@@ -148,7 +152,8 @@ fun EditContainerScreen(
             forceCgroupv1 != savedForceCgroupv1 ||
             blockNestedNs != savedBlockNestedNs ||
             staticNatIp != savedStaticNatIp ||
-            privileged != savedPrivileged
+            privileged != savedPrivileged ||
+            customInit != savedCustomInit
         }
     }
 
@@ -186,7 +191,8 @@ fun EditContainerScreen(
                     forceCgroupv1 = forceCgroupv1,
                     blockNestedNs = blockNestedNs,
                     staticNatIp = staticNatIp,
-                    privileged = privileged
+                    privileged = privileged,
+                    customInit = customInit
                 )
 
                 // Update config file
@@ -216,6 +222,7 @@ fun EditContainerScreen(
                         savedBlockNestedNs = blockNestedNs
                         savedStaticNatIp = staticNatIp
                         savedPrivileged = privileged
+                        savedCustomInit = customInit
 
                         // Refresh container list and SELinux status using ViewModel
                         containerViewModel.refresh()
@@ -258,9 +265,10 @@ fun EditContainerScreen(
             Surface(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 24.dp),
+                    .padding(horizontal = 24.dp)
+                    .imePadding(),
                 shape = RoundedCornerShape(24.dp),
-                color = MaterialTheme.colorScheme.surfaceVariant,
+                color = MaterialTheme.colorScheme.surfaceContainer,
                 border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)),
                 tonalElevation = 0.dp
             ) {
@@ -324,6 +332,7 @@ fun EditContainerScreen(
 
     var showEnvDialog by remember { mutableStateOf(false) }
     var showPrivilegedDialog by remember { mutableStateOf(false) }
+    var showHwAccessDialog by remember { mutableStateOf(false) }
 
     if (showPrivilegedDialog) {
         PrivilegedModeDialog(
@@ -333,6 +342,16 @@ fun EditContainerScreen(
                 showPrivilegedDialog = false
             },
             onDismiss = { showPrivilegedDialog = false }
+        )
+    }
+
+    if (showHwAccessDialog) {
+        HardwareAccessDialog(
+            onConfirm = {
+                enableHwAccess = true
+                showHwAccessDialog = false
+            },
+            onDismiss = { showHwAccessDialog = false }
         )
     }
 
@@ -463,7 +482,10 @@ fun EditContainerScreen(
         }
     ) { innerPadding ->
         ClearFocusOnClickOutside(
-            modifier = Modifier.padding(innerPadding)
+            modifier = Modifier
+                .padding(innerPadding)
+                .consumeWindowInsets(innerPadding)
+                .imePadding()
         ) {
             Column(
                 modifier = Modifier
@@ -537,13 +559,13 @@ fun EditContainerScreen(
                 modifier = Modifier.padding(top = 8.dp)
             )
 
-            NetworkModeSelector(
-                netMode = netMode,
-                onModeChange = { mode ->
-                    clearFocus()
-                    netMode = mode
-                    if (mode != "host") disableIPv6 = false
-                }
+            DsDropdown(
+                label = context.getString(R.string.network_mode),
+                selected = netMode,
+                options = listOf("nat", "host", "none"),
+                displayName = { context.getString(when (it) { "nat" -> R.string.network_mode_nat; "none" -> R.string.network_mode_none; else -> R.string.network_mode_host }) },
+                onSelect = { mode -> clearFocus(); netMode = mode; if (mode != "host") disableIPv6 = false },
+                leadingIcon = Icons.Default.Public
             )
 
             androidx.compose.animation.AnimatedVisibility(
@@ -776,9 +798,13 @@ fun EditContainerScreen(
                 title = context.getString(R.string.hardware_access),
                 description = context.getString(R.string.hardware_access_description),
                 checked = enableHwAccess,
-                onCheckedChange = {
+                onCheckedChange = { newValue ->
                     clearFocus()
-                    enableHwAccess = it
+                    if (newValue) {
+                        showHwAccessDialog = true
+                    } else {
+                        enableHwAccess = false
+                    }
                 }
             )
 
@@ -915,6 +941,56 @@ fun EditContainerScreen(
                 }
             )
 
+            // Custom Init Binary
+            if (customInit.isNotEmpty()) {
+                Surface(
+                    color = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.15f),
+                    shape = RoundedCornerShape(16.dp),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.error.copy(alpha = 0.3f)),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Row(
+                        modifier = Modifier.padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Warning,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.error,
+                            modifier = Modifier.size(20.dp)
+                        )
+                        Text(
+                            text = context.getString(R.string.custom_init_warning),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.error
+                        )
+                    }
+                }
+            }
+
+            OutlinedTextField(
+                value = customInit,
+                onValueChange = { customInit = it.filter { !it.isWhitespace() } },
+                label = { Text(context.getString(R.string.custom_init_label)) },
+                placeholder = { Text(context.getString(R.string.custom_init_placeholder)) },
+                supportingText = {
+                    if (customInit.isNotEmpty() && !customInit.startsWith("/")) {
+                        Text(context.getString(R.string.custom_init_error_absolute),
+                             color = MaterialTheme.colorScheme.error)
+                    } else {
+                        Text(context.getString(R.string.custom_init_hint))
+                    }
+                },
+                isError = customInit.isNotEmpty() && !customInit.startsWith("/"),
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true,
+                shape = modernFieldShape,
+                colors = modernFieldColors,
+                leadingIcon = {
+                    Icon(Icons.Default.Terminal, contentDescription = null)
+                }
+            )
 
             // Bind Mounts Section
             Row(

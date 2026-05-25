@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -55,9 +56,15 @@ fun InstallationProgressScreen(
         }
     }
 
-    // Prevent back button during installation
-    BackHandler(enabled = installationState == InstallationState.INSTALLING) {
-        // Block back button during installation
+    // Handle back button behavior
+    BackHandler(enabled = true) {
+        when (installationState) {
+            InstallationState.ERROR -> onError()
+            InstallationState.SUCCESS -> onSuccess()
+            InstallationState.INSTALLING -> {
+                // Blocked: Do nothing during installation
+            }
+        }
     }
 
     // Start installation
@@ -97,6 +104,15 @@ fun InstallationProgressScreen(
                             InstallationState.ERROR -> context.getString(R.string.installation_failed)
                         }
                     )
+                },
+                navigationIcon = {
+                    if (installationState != InstallationState.INSTALLING) {
+                        IconButton(onClick = {
+                            if (installationState == InstallationState.SUCCESS) onSuccess() else onError()
+                        }) {
+                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = context.getString(R.string.back))
+                        }
+                    }
                 }
             )
         }

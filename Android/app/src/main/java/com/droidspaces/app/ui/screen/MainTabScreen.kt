@@ -536,7 +536,6 @@ private fun ControlPanelTabContent(
             containerViewModel = containerViewModel,
             onNavigateToContainerDetails = onNavigateToContainerDetails,
             onNavigateToTerminal = onNavigateToTerminal,
-            refreshTrigger = refreshTrigger
         )
     }
 }

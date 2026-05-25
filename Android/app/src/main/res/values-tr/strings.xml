@@ -63,8 +63,6 @@
     <string name="developers">Geliştirici(ler)</string>
     <string name="developer_ravindu644" translatable="false">ravindu644</string>
     <string name="developer_ravindu644_role">Backend, Arayüz</string>
-    <string name="developer_thesithumsandaruwan" translatable="false">thesithumsandaruwan</string>
-    <string name="developer_thesithumsandaruwan_role">Arayüz</string>
     <string name="telegram_channel">Telegram Kanalı</string>
     <string name="contributors">Katkıda Bulunanlar</string>
     <string name="github">GitHub</string>
@@ -180,7 +178,7 @@
     <string name="saving">Kaydediliyor...</string>
     <string name="save_changes">Değişiklikleri Kaydet</string>
     <string name="static_ip_address">Statik IP Adresi</string>
-    <string name="static_ip_description">Bu konteyner için 172.28.x.x alt ağı içinde statik bir IPv4 adresi ayarlayın.</string>
+    <string name="static_ip_description">Bu konteyner için 172.28.x.x alt ağı içinde statik bir IPv4 adresi ayarlayın. İlk açılışta otomatik atama için boş bırakın.</string>
     <string name="octet_label">Sekizli %1$d</string>
     <string name="error_octet_range">Aralık: 1-254</string>
     <string name="error_ip_collision">Bu IP adresi halihazırda “%1$s”e atanmış durumda</string>
@@ -234,9 +232,12 @@
     <string name="no_containers_running">Çalışan konteyner yok</string>
     <string name="start_container_first">Burada görebilmek için önce bir konteyner başlatın</string>
     <string name="systemd_services">Systemd Servisleri</string>
+    <string name="openrc_services">OpenRC Servisleri</string>
+    <string name="openrc">OpenRC</string>
+    <string name="init_system">Init Sistemi</string>
+    <string name="init_system_not_available">Systemd/OpenRC mevcut değil</string>
+    <string name="init_system_not_available_desc">Bu konteynerde systemd veya OpenRC yüklü değil</string>
     <string name="fetching_services">Hizmetler yükleniyor...</string>
-    <string name="systemd_not_available">Systemd Kullanılamıyor</string>
-    <string name="systemd_not_available_message">Bu konteynerde systemd yüklü değil veya çalışmıyor</string>
     <string name="search_services">Servisleri Ara...</string>
     <string name="enabled_legend">Etkin</string>
     <string name="disabled_legend">Devre Dışı</string>
@@ -329,7 +330,7 @@
     <string name="starting_migration">Taşıma işlemi başlatılıyor...</string>
     <string name="starting_resizing">Boyut değiştirme işlemi başlatılıyor...</string>
     <string name="help_card_title">Droidspaces\'e yeni misiniz?</string>
-    <string name="help_card_message">İlk Android konteynerinizi nasıl kuracağınızı öğrenmek için buraya dokunun!</string>
+    <string name="help_card_message">İlk Linux konteynerinizi nasıl kuracağınızı öğrenmek için buraya dokunun!</string>
     <string name="help_card_url">https://github.com/ravindu644/Droidspaces-OSS/blob/main/Documentation/Installation-Android.md</string>
     <string name="reboot_recommended">SELinux kurallarının devreye girmesi ve daemon\'ın önyüklemede başlaması için sistemi yeniden başlatmanız önerilir.</string>
     <string name="failure_in_operation">Failure in %1$sing container %2$s</string>

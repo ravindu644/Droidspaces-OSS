@@ -13,12 +13,15 @@
 
 What makes Droidspaces unique is its **zero-dependency, native execution** on both Android and Linux. It's statically compiled against musl libc. If your device runs a Linux kernel, Droidspaces runs on it. No Termux, no middlemen, no setup overhead.
 
-- **Tiny footprint:** under 300KB per platform
+- **Tiny footprint:** under 400KB per platform
 - **Truly native:** runs directly on Android and Linux from the same binary
-- **Wide architecture support:** `aarch64`, `armhf`, `x86_64`, and `x86` as a single static binary
+- **Wide architecture support:** `aarch64`, `armhf`, `x86_64`, `x86`, and `riscv64` as a single static binary
 - **Beautiful Android app:** manage unlimited containers and do everything the CLI can, all from a clean, intuitive GUI
 
 **Android** + **Linux Namespaces** = **Droidspaces**. Since Android is built on the Linux kernel, Droidspaces works seamlessly on Linux Desktop too. Both platforms are equally supported and maintained.
+
+> [!TIP]
+> Check out [Community-supported Android devices](./Documentation/community-supported-devices.md) for a growing list of phones known to run Droidspaces.
 
 <details>
 <summary><b>View Project's Screenshots (Linux & Android)</b></summary>
@@ -125,8 +128,7 @@ What makes Droidspaces unique is its **zero-dependency, native execution** on bo
 - [What is Droidspaces?](#what-is-droidspaces)
 - [Features](#features)
 - [Security & Isolation Philosophy](#security-model)
-- [Droidspaces vs Chroot](#droidspaces-vs-chroot)
-- [Droidspaces vs LXC/Docker on Android](#droidspaces-vs-lxcdocker-on-android)
+- [Droidspaces vs The Alternatives](#droidspaces-vs-the-alternatives)
 - [Requirements](#requirements)
     - [Android](#a-android-devices)
         - [Rooting Requirements](#rooting-requirements)
@@ -136,6 +138,7 @@ What makes Droidspaces unique is its **zero-dependency, native execution** on bo
             - [GKI (Modern Kernels)](#GKI)
     - [Linux Desktop](#b-linux-desktop)
 - [Installation](#installation)
+- [Community-supported Android devices](./Documentation/community-supported-devices.md)
 - [Usage](#usage)
 - [Troubleshooting](./Documentation/Troubleshooting.md)
 - [Additional Documentation](#additional-documentation)
@@ -154,7 +157,7 @@ Unlike traditional chroot, which simply changes the apparent root directory, Dro
 
 Droidspaces is designed to work natively on anything that runs a Linux kernel, including **Android**, **Linux Desktop**, and **minimal environments like Android recovery/ramdisks**. On Android, it handles all kernel quirks, SELinux conflicts, complex networking scenarios, and encryption issues that break other container tools. On Linux Desktop, it works out of the box with no additional configuration needed. On ramdisks, it handles all the quirks like `pivot_root` as well!
 
-The entire runtime is a **single static binary** under 300KB, compiled against musl libc with no external dependencies.
+The entire runtime is a **single static binary** under 400KB, compiled against musl libc with no external dependencies.
 
 ---
 
@@ -220,42 +223,37 @@ The entire runtime is a **single static binary** under 300KB, compiled against m
 
 ---
 
-<a id="droidspaces-vs-chroot"></a>
+<a id="droidspaces-vs-the-alternatives"></a>
 
-## Droidspaces vs Chroot
+## Droidspaces vs The Alternatives
 
-| Feature | Chroot | Droidspaces |
-|---------|--------|-------------|
-| Init System | No. Cannot run systemd or OpenRC. | Yes. Full systemd/OpenRC, etc support as PID 1. |
-| Process Isolation | None. Shares the host PID space. | Full. Private PID namespace with its own PID tree. |
-| Filesystem Isolation | Partial. Only changes the apparent root. | Full. Uses `pivot_root` with a private mount namespace. |
-| Mount Isolation | None. Mount events propagate to the host. | Full. `MS_PRIVATE` prevents mount propagation. |
-| Cgroup Support | None. | Yes. Per-container cgroup hierarchies. |
-| Resource Accounting | None. | Yes. Via cgroup isolation. |
-| Service Management | Manual. Must start services individually. | Automatic. Init manages the full service lifecycle. |
-| Hostname Isolation | None. Shares the host hostname. | Yes. UTS namespace provides independent hostname. |
-| IPC Isolation | None. Shares System V IPC. | Yes. IPC namespace for semaphores and shared memory. |
-| Ephemeral Containers | Not possible. | Yes. Volatile mode via OverlayFS. |
-
----
-
-<a id="droidspaces-vs-lxcdocker-on-android"></a>
-
-## Droidspaces vs LXC/Docker on Android
-
-| Aspect | LXC/Docker | Droidspaces |
-|--------|------------|-------------|
-| **Deep Android Integration** | None. Runs as a foreign process. | **Superior**. Native `init.rc` daemon or `post-fs-data.sh` modes. |
-| **Persistence** | Poor. Easily killed by system. | **Unkillable**. Init-level auto-spawn support. |
-| Dependencies | Many (liblxc, runc, containerd, etc.) | Zero. Single static binary. Runs on anything under the sun, including Android recovery if the kernel supports the features required by Droidspaces ! |
-| Setup Complexity | High. Requires Termux, cross-compiled libraries, manual config files. | Low. Download and install the APK, then run it on Android; download, extract, and run it on Linux. |
-| Older kernels Support | Spotty. Many features break on older kernels. | Full. Adaptive seccomp shield handles kernel quirks. |
-| **Network Isolation** | **Broken on Android**. Even with all kernel configs enabled, network isolation with internet access never works. | **First-in-Class**. Perfectly handles network isolation with internet access on Android out of the box. |
-| Binary Size | 10MB+ (plus dependencies) | Under 300KB per architecture. |
-| Android Optimizations | None. Not designed for Android. | Yes. SELinux handling, FBE keyring management, storage integration, networking fixes |
-| Termux Required | Often. Used as the execution environment. | Never. Runs directly as a native binary. Android app does have a built-in Terminal! |
-| Nested Containers | Complex setup required. | Supported natively on all kernels out of the box. |
-| Init System | LXC = yes, Docker = no. | Always. systemd/OpenRC as PID 1 by default. |
+| Category | **Droidspaces** | LXC + Termux | Docker + Termux | Chroot | PRoot |
+|----------|-----------------|--------------|-----------------|--------|-------|
+| **Technology** | **Namespaces** | Namespaces | Namespaces | Path redirection only | Syscall hooking (PTRACE) |
+| **Performance** | **Native** | Native | Native | Native | Moderate (PTRACE overhead on every syscall) |
+| **Boot Time (systemd)** | **150ms - 750ms** | 750ms - 2000ms | N/A (systemd not supported) | N/A | N/A |
+| **Init System (PID 1)** | **Yes (full systemd/OpenRC/runit/s6/SysVinit support)** | Yes (full systemd/OpenRC/runit/s6/SysVinit support) | No | None | None |
+| **Process Isolation** | **Full** | Full | Full | None (shares host PID namespace) | None (shares host PID namespace) |
+| **Filesystem Isolation** | **Full** | Full | Full | None (`chroot /proc/1/root /system/bin/sh` escapes instantly) | Limited |
+| **Mount Isolation** | **Full** | Full | Full | None | None |
+| **IPC / UTS / Cgroup Isolation** | **Full** | Full | Full | None | None |
+| **Container Persistence on Android** | **Truly unkillable. Survives 15+ days. Immune to "Don't Keep Activities" and "No Background Processes" in Developer Options.** | Low (killed by Android LMK / battery optimization) | Low (killed by Android LMK / battery optimization) | Low (killed by Android LMK / battery optimization) | Low (killed by Android LMK / battery optimization) |
+| **Data Persistence (app uninstall)** | **Zero data loss. All containers, configs, and data live in `/data/local/Droidspaces`, fully independent of the app. The binary and daemons run in their own process session (`setsid`), detached from the app's process group. Uninstalling the app stops nothing and deletes nothing.** | Everything dies on Termux uninstall. LXC configs and rootfs stored inside Termux (`/data/data/com.termux`); uninstalling Termux wipes everything. | Everything dies on Termux uninstall. Container data in `/data/docker` survives but is inaccessible without reinstalling the entire stack. | Safe if rootfs is in `/data/local/`. Unsafe if stored inside Termux home directory. | Everything dies on Termux uninstall. PRoot rootfs typically lives in `/data/data/com.termux`; uninstalling Termux deletes it. |
+| **Run at Boot** | **Yes (native `init.rc` / `service.d`). Auto-starts containers even if the phone is locked, `/data` is encrypted, and before any user app has even started.** | No | No | No | No |
+| **Network Isolation on Android** | **First-in-class. Full NAT/Veth + internet works out of the box. No manual configuration needed.** | Internet works only in host-network mode (`lxc.net.0.type = none`). True network isolation (veth + NAT) often requires manual bridge, iptables, and ip_forward setup - and still breaks on most devices. | Requires `--network host` to get internet; actual network isolation with internet access often does not work reliably on Android. | None (no network namespace) | None (no network namespace) |
+| **Hardware & Native GPU Access** | **Full (single toggle). Adreno Turnip, USB, sensors, network interfaces, block devices. Full `systemd-udevd` support - behaves like a real Linux PC.** | Manual bind mounts, no udev | Manual bind mounts, no udev | Manual bind mounts, no udev | None |
+| **Termux-X11 Support** | **Full (single toggle)** | Manual socket passthrough | Manual socket passthrough | Manual socket passthrough | Manual socket passthrough |
+| **Privileged Mode** | **Full + customizable (`--nomask`, `--nocaps`, `--noseccomp`, etc.)** | Manual config | Yes (`--privileged`) | Full (no guardrails) | No |
+| **Nested Containers (Docker-in-DS)** | **Natively supported on all kernels** | Complex manual setup | Complex manual setup | No | No |
+| **Ephemeral / Volatile Containers** | **Yes (OverlayFS, RAM-backed, zero persistence on exit)** | No | Yes | No | No |
+| **Portable rootfs.img Support** | **Yes (native loop mount, fsck, SELinux hardening)** | No | No | No | No |
+| **Older Kernel Support (3.10+)** | **Full** | Spotty (cgroup conflicts, broken on many old Android kernels) | Spotty (cgroup conflicts, broken on many old Android kernels) | N/A | N/A |
+| **Android-Specific Optimizations** | **SELinux live patching, FBE keyring handling, storage integration, networking fixes, etc.** | None (not designed for Android) | None (not designed for Android) | None | None |
+| **Root Required** | **Yes** | Yes | Yes | Yes | No |
+| **Termux Required** | **Never. Zero dependencies.** | Yes | Yes | No | Yes |
+| **Setup Complexity** | **Low. Install APK and run.** | High (manual cgroup mounts, manual config changes, manual daemon start) | High (manual cgroup mounts, manual config changes, manual daemon start) | Medium (manual mount script required every boot) | Medium |
+| **Binary Size** | **~400KB per architecture** | 10MB+ | 50MB+ | N/A | ~10MB |
+| **Dependencies** | **Zero. Single static musl binary.** | Termux + liblxc + templates | Termux + dockerd + containerd + runc | Termux or any shell environment | Termux + proot binary |
 
 ---
 
@@ -401,7 +399,7 @@ Droidspaces is built upon the incredible work of the open-source community. Spec
 *   **[LXC](https://github.com/lxc/lxc)** - For the core architectural vision and inspiration for modern Linux containerization.
 *   **[Brutal-Busybox](https://github.com/feravolt/Brutal_busybox)** - For the statically-linked BusyBox binaries used in the Android userspace app to perform certain operations.
 *   **[Magisk](https://github.com/topjohnwu/Magisk)** - For the `magiskpolicy` utility, providing the core engine for live SELinux patching.
-*   **[KernelSU-Next](https://github.com/KernelSU-Next/KernelSU-Next)**, **[MMRL](https://github.com/MMRLApp/MMRL)**, and **[LSPatch](https://github.com/LSPosed/LSPatch)** - For inspiring our modern UI design language and Android user experience.
+*   ~~**[KernelSU-Next](https://github.com/KernelSU-Next/KernelSU-Next)**, **[MMRL](https://github.com/MMRLApp/MMRL)**, and **[LSPatch](https://github.com/LSPosed/LSPatch)** - For inspiring our modern UI design language and Android user experience.~~
 *   **[ReTerminal](https://github.com/RohitKushvaha01/ReTerminal)**, **[Termux](https://github.com/termux/termux-app)** , **[LXC-Manager](https://github.com/Container-On-Android/LXC-Manager)** - Terminal Backend for the built-in Terminal emulator.
 *   **[JetBrains Mono](https://www.jetbrains.com/legalforms/fonts/)** - The monospace typeface used throughout the app's terminal and code UI, licensed under the [SIL Open Font License 1.1](https://scripts.sil.org/OFL).
 

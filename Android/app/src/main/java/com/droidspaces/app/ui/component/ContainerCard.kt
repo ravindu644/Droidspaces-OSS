@@ -18,6 +18,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -32,7 +33,9 @@ import androidx.compose.ui.unit.sp
 import com.droidspaces.app.R
 import com.droidspaces.app.util.AnimationUtils
 import com.droidspaces.app.util.ContainerInfo
+import com.droidspaces.app.util.ContainerOSInfoManager
 import com.droidspaces.app.util.ContainerStatus
+import com.droidspaces.app.util.IconUtils
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
@@ -89,8 +92,13 @@ fun ContainerCard(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
+                    // Re-read cache whenever iconCacheVersion changes (bumped after prefetch)
+                    val cacheVersion by ContainerOSInfoManager.iconCacheVersion
+                    val cachedOsInfo = remember(container.name, cacheVersion) {
+                        ContainerOSInfoManager.getCachedOSInfo(container.name)
+                    }
                     Icon(
-                        imageVector = Icons.Default.Storage,
+                        painter = IconUtils.getDistroIcon(cachedOsInfo?.prettyName ?: cachedOsInfo?.name),
                         contentDescription = null,
                         modifier = Modifier.size(24.dp),
                         tint = if (container.isRunning) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
@@ -148,19 +156,19 @@ fun ContainerCard(
             }
 
             // Info Rows
-            val hasHostname = container.hostname.isNotEmpty() && container.hostname != container.name
+            val displayHostname = container.hostname.takeIf { it.isNotEmpty() } ?: container.name
             val hasSparseImage = container.useSparseImage && container.sparseImageSizeGB != null
-            if (hasHostname || hasSparseImage) {
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                    if (hasHostname) {
-                        Icon(Icons.Default.Computer, null, modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f))
-                        Text(context.getString(R.string.hostname_label, container.hostname), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f))
-                    }
-                    if (hasHostname && hasSparseImage) Text(context.getString(R.string.comma), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f))
-                    if (hasSparseImage) {
-                        Icon(painterResource(id = R.drawable.ic_disk), null, modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f))
-                        Text(context.getString(R.string.gb_size, container.sparseImageSizeGB ?: 0), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f))
-                    }
+            val netModeLabel = when (container.netMode) { "nat" -> context.getString(R.string.network_mode_nat_short); "none" -> context.getString(R.string.network_mode_none_short); else -> context.getString(R.string.network_mode_host_short) }
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                Icon(Icons.Default.Computer, null, modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f))
+                Text(context.getString(R.string.hostname_label, displayHostname), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f))
+                Text(context.getString(R.string.comma), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f))
+                Icon(Icons.Default.Public, null, modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f))
+                Text(netModeLabel, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f))
+                if (hasSparseImage) {
+                    Text(context.getString(R.string.comma), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f))
+                    Icon(painterResource(id = R.drawable.ic_disk), null, modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f))
+                    Text(context.getString(R.string.gb_size, container.sparseImageSizeGB ?: 0), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f))
                 }
             }
 
@@ -169,7 +177,14 @@ fun ContainerCard(
             if (container.disableIPv6) options.add(context.getString(R.string.ipv6_option))
             if (container.enableAndroidStorage) options.add(context.getString(R.string.storage_option))
             if (container.enableHwAccess) options.add(context.getString(R.string.hw_option))
+            if (container.enableGpuMode || container.enableHwAccess) options.add(context.getString(R.string.gpu_option))
             if (container.enableTermuxX11) options.add(context.getString(R.string.x11_option))
+            if (container.selinuxPermissive) options.add(context.getString(R.string.selinux_permissive_option))
+            if (container.volatileMode) options.add(context.getString(R.string.volatile_option))
+            if (container.forceCgroupv1) options.add(context.getString(R.string.cgroup_v1_option))
+            if (container.blockNestedNs) options.add(context.getString(R.string.deadlock_shield_option))
+            if (container.privileged.isNotEmpty()) options.add(context.getString(R.string.privileged_option))
+            if (container.customInit.isNotEmpty()) options.add(context.getString(R.string.custom_init_option))
             if (container.runAtBoot) options.add(context.getString(R.string.run_at_boot))
             if (options.isNotEmpty()) {
                 Text(context.getString(R.string.options_label, options.joinToString(", ")), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f))

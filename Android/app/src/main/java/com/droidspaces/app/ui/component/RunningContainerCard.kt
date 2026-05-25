@@ -6,6 +6,8 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -19,34 +21,21 @@ import com.droidspaces.app.service.TerminalSessionService
 import com.droidspaces.app.util.AnimationUtils
 import com.droidspaces.app.util.ContainerInfo
 import com.droidspaces.app.util.ContainerOSInfoManager
-import com.droidspaces.app.util.ContainerUsageCollector
+import com.droidspaces.app.util.IconUtils
 
 /**
  * Container card for Panel tab — shows container name, OS info, resource usage, and quick actions.
- * Uses droidspaces --name run commands for accurate in-container metrics.
+ * Receives fully-populated OSInfo from SystemStatsViewModel (single polling source).
  */
 @Composable
 fun RunningContainerCard(
     container: ContainerInfo,
     onEnter: () -> Unit = {},
     onTerminalClick: () -> Unit = {},
-    usage: ContainerUsageCollector.ContainerUsage? = null,
-    refreshTrigger: Int = 0,
+    osInfo: ContainerOSInfoManager.OSInfo? = null,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
-
-    var osInfo by remember {
-        mutableStateOf(ContainerOSInfoManager.getCachedOSInfo(container.name, context))
-    }
-
-    LaunchedEffect(container.name, refreshTrigger) {
-        osInfo = ContainerOSInfoManager.getOSInfo(
-            containerName = container.name,
-            useCache = false,
-            appContext = context
-        )
-    }
 
     val cardShape = RoundedCornerShape(20.dp)
 
@@ -71,7 +60,7 @@ fun RunningContainerCard(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Icon(
-                    imageVector = Icons.Default.Storage,
+                    painter = IconUtils.getDistroIcon(osInfo?.prettyName ?: container.name),
                     contentDescription = null,
                     modifier = Modifier.size(24.dp),
                     tint = MaterialTheme.colorScheme.primary
@@ -130,7 +119,7 @@ fun RunningContainerCard(
                 )
             }
             Text(
-                text = context.getString(R.string.uptime_label, context.getString(R.string.uptime), usage?.uptime ?: osInfo?.uptime ?: ""),
+                text = context.getString(R.string.uptime_label, context.getString(R.string.uptime), osInfo?.uptime ?: ""),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
             )
@@ -140,60 +129,59 @@ fun RunningContainerCard(
                 color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
             )
 
+
             // Resource usage row — only shown when we have real data
-            usage?.let { stats ->
-                if (stats.ramUsedKb > 0 || stats.cpuPercent >= 0.0) {
-                    Surface(
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(10.dp),
-                        color = MaterialTheme.colorScheme.surfaceContainerHigh,
-                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f))
+            val ramUsedKb = ((osInfo?.ramUsageMb ?: 0L) * 1024L)
+            val cpuPercent = osInfo?.cpuUsage ?: -1.0
+            if (ramUsedKb > 0 || cpuPercent >= 0.0) {
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(10.dp),
+                    color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f))
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
-                        Row(
-                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(16.dp)
-                        ) {
-                            // CPU
-                            if (stats.cpuPercent >= 0.0) {
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(4.dp)
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Default.Speed,
-                                        contentDescription = null,
-                                        modifier = Modifier.size(13.dp),
-                                        tint = MaterialTheme.colorScheme.primary
-                                    )
-                                    Text(
-                                        text = "${context.getString(R.string.cpu)} ${context.getString(R.string.cpu_percent_label, stats.cpuPercent)}",
-                                        style = MaterialTheme.typography.labelSmall,
-                                        fontWeight = FontWeight.Medium,
-                                        color = MaterialTheme.colorScheme.primary
-                                    )
-                                }
+                        if (cpuPercent >= 0.0) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Speed,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(13.dp),
+                                    tint = MaterialTheme.colorScheme.primary
+                                )
+                                Text(
+                                    text = "${context.getString(R.string.cpu)} ${context.getString(R.string.cpu_percent_label, cpuPercent)}",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    fontWeight = FontWeight.Medium,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
                             }
-                            // RAM
-                            if (stats.ramUsedKb > 0) {
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(4.dp)
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Default.Memory,
-                                        contentDescription = null,
-                                        modifier = Modifier.size(13.dp),
-                                        tint = MaterialTheme.colorScheme.secondary
-                                    )
-                                    val ramMb = stats.ramUsedKb / 1024
-                                    Text(
-                                        text = "${context.getString(R.string.ram)} ${context.getString(R.string.ram_percent_label, ramMb.toInt(), stats.ramPercent)}",
-                                        style = MaterialTheme.typography.labelSmall,
-                                        fontWeight = FontWeight.Medium,
-                                        color = MaterialTheme.colorScheme.secondary
-                                    )
-                                }
+                        }
+                        if (ramUsedKb > 0) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Memory,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(13.dp),
+                                    tint = MaterialTheme.colorScheme.secondary
+                                )
+                                val ramMb = osInfo?.ramUsageMb ?: 0L
+                                Text(
+                                    text = "${context.getString(R.string.ram)} ${context.getString(R.string.ram_percent_label, ramMb.toInt(), osInfo?.ramPercent ?: 0.0)}",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    fontWeight = FontWeight.Medium,
+                                    color = MaterialTheme.colorScheme.secondary
+                                )
                             }
                         }
                     }

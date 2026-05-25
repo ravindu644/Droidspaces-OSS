@@ -85,17 +85,27 @@ fun ContainerTerminalScreen(
         list
     }
 
-    val hostname = remember(containerName) {
-        ContainerOSInfoManager.getCachedOSInfo(containerName, context)?.hostname
-            ?: containerName.take(12)
-    }
-
     val tabs = remember { mutableStateListOf<TerminalTab>() }
     var activeTabId by remember { mutableStateOf("") }
     var showUserPicker by remember { mutableStateOf(false) }
 
-    LaunchedEffect(binder) {
+    // Resolve hostname reactively; picker is shown only after binder+hostname are both ready
+    var hostname by remember(containerName) {
+        mutableStateOf(
+            ContainerOSInfoManager.getCachedOSInfo(containerName, context)?.hostname
+                ?: containerName.take(12)
+        )
+    }
+    var hostnameReady by remember { mutableStateOf(hostname != containerName.take(12)) }
+    LaunchedEffect(containerName) {
+        val resolved = ContainerOSInfoManager.getOSInfo(containerName, useCache = true, appContext = context).hostname
+        if (resolved != null) hostname = resolved
+        hostnameReady = true
+    }
+
+    LaunchedEffect(binder, hostnameReady) {
         binder ?: return@LaunchedEffect
+        if (!hostnameReady) return@LaunchedEffect
         if (tabs.isNotEmpty()) return@LaunchedEffect
         val existing = TerminalSessionService.globalSessionList
             .filter { (_, info) -> info.containerName == containerName }

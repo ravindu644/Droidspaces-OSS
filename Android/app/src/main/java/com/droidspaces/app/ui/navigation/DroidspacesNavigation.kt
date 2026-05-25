@@ -33,6 +33,7 @@ import com.droidspaces.app.ui.screen.InstallationProgressScreen
 import com.droidspaces.app.ui.screen.EditContainerScreen
 import com.droidspaces.app.ui.screen.ContainerDetailsScreen
 import com.droidspaces.app.ui.screen.SystemdScreen
+import com.droidspaces.app.ui.screen.OpenRCScreen
 import com.droidspaces.app.ui.screen.ContainerTerminalScreen
 import com.droidspaces.app.ui.viewmodel.ContainerInstallationViewModel
 import com.droidspaces.app.ui.viewmodel.ContainerViewModel
@@ -88,6 +89,9 @@ sealed class Screen(val route: String) {
     }
     data object Systemd : Screen("systemd/{containerName}") {
         fun createRoute(containerName: String) = "systemd/${Uri.encode(containerName)}"
+    }
+    data object OpenRC : Screen("openrc/{containerName}") {
+        fun createRoute(containerName: String) = "openrc/${Uri.encode(containerName)}"
     }
 
     data object Terminal : Screen("terminal/{containerName}") {
@@ -307,14 +311,16 @@ fun DroidspacesNavigation(
                 initialBindMounts = viewModel.bindMounts,
                 initialDnsServers = viewModel.dnsServers,
                 initialRunAtBoot = viewModel.runAtBoot,
+                initialCustomInit = viewModel.customInit,
+                initialStaticNatIp = viewModel.staticNatIp,
                 initialForceCgroupv1 = viewModel.forceCgroupv1,
                 initialBlockNestedNs = viewModel.blockNestedNs,
                 initialPrivileged = viewModel.privileged,
                 initialEnvFileContent = viewModel.envFileContent ?: "",
                 initialUpstreamInterfaces = viewModel.upstreamInterfaces,
                 initialPortForwards = viewModel.portForwards,
-                onNext = { netMode, disableIPv6, enableAndroidStorage, enableHwAccess, enableGpuMode, enableTermuxX11, selinuxPermissive, volatileMode, bindMounts, dnsServers, runAtBoot, forceCgroupv1, blockNestedNs, privileged, envFileContent, upstreamInterfaces, portForwards ->
-                    viewModel.setConfig(netMode, disableIPv6, enableAndroidStorage, enableHwAccess, enableGpuMode, enableTermuxX11, selinuxPermissive, volatileMode, bindMounts, dnsServers, runAtBoot, envFileContent, upstreamInterfaces, portForwards, forceCgroupv1, blockNestedNs, privileged)
+                onNext = { netMode, disableIPv6, enableAndroidStorage, enableHwAccess, enableGpuMode, enableTermuxX11, selinuxPermissive, volatileMode, bindMounts, dnsServers, runAtBoot, customInit, staticNatIp, forceCgroupv1, blockNestedNs, privileged, envFileContent, upstreamInterfaces, portForwards ->
+                    viewModel.setConfig(netMode, disableIPv6, enableAndroidStorage, enableHwAccess, enableGpuMode, enableTermuxX11, selinuxPermissive, volatileMode, bindMounts, dnsServers, runAtBoot, customInit, staticNatIp, envFileContent, upstreamInterfaces, portForwards, forceCgroupv1, blockNestedNs, privileged)
                     navController.navigate(Screen.SparseImageConfig.route)
                 },
                 onBack = {
@@ -424,7 +430,7 @@ fun DroidspacesNavigation(
                         navController.popBackStack(Screen.Home.route, false)
                     },
                     onError = {
-                        navController.popBackStack(Screen.InstallationSummary.route, false)
+                        navController.popBackStack(Screen.Home.route, false)
                     }
                 )
             } else {
@@ -532,8 +538,13 @@ fun DroidspacesNavigation(
                 ContainerDetailsScreen(
                     container = it,
                     onNavigateBack = { navController.popBackStack() },
-                    onNavigateToSystemd = {
-                        navController.navigate(Screen.Systemd.createRoute(containerName))
+                    onNavigateToServices = { initSystem ->
+                        when (initSystem) {
+                            com.droidspaces.app.ui.screen.InitSystem.SYSTEMD ->
+                                navController.navigate(Screen.Systemd.createRoute(containerName))
+                            com.droidspaces.app.ui.screen.InitSystem.OPENRC ->
+                                navController.navigate(Screen.OpenRC.createRoute(containerName))
+                        }
                     },
                     onNavigateToTerminal = {
                         navController.navigate(Screen.Terminal.createRoute(containerName))
@@ -554,6 +565,21 @@ fun DroidspacesNavigation(
         ) { backStackEntry ->
             val containerName = backStackEntry.arguments?.getString("containerName") ?: ""
             SystemdScreen(
+                containerName = containerName,
+                onNavigateBack = { navController.popBackStack() }
+            )
+        }
+
+        composable(
+            route = Screen.OpenRC.route,
+            arguments = listOf(
+                navArgument("containerName") { type = NavType.StringType }
+            ),
+            enterTransition = defaultEnterTransition,
+            exitTransition = defaultExitTransition
+        ) { backStackEntry ->
+            val containerName = backStackEntry.arguments?.getString("containerName") ?: ""
+            OpenRCScreen(
                 containerName = containerName,
                 onNavigateBack = { navController.popBackStack() }
             )

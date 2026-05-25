@@ -16,20 +16,19 @@ int is_android(void) {
   if (cached_result != -1)
     return cached_result;
 
-  /* Check for Android-specific environments or files.
-   * Exception: Android Recovery/Ramdisk environments are ramfs-based and
-   * should not be treated as a full Android host even if the /system is
-   * mounted (prevents incorrect optimizations and storage setups). */
-  if (is_ramfs("/")) {
+  /* Priority 1: Check for recovery environment (e.g., TWRP) */
+  if (access("/system/bin/recovery", F_OK) == 0) {
     cached_result = 0;
-    return cached_result;
   }
-
-  if (getenv("ANDROID_ROOT") || access("/system/bin/app_process", F_OK) == 0 ||
-      access("/system/build.prop", F_OK) == 0)
+  /* Priority 2: Check for core Android system markers */
+  else if (access("/system/build.prop", F_OK) == 0 ||
+           access("/system/bin/app_process", F_OK) == 0) {
     cached_result = 1;
-  else
+  }
+  /* Fallback: Not a standard Android environment */
+  else {
     cached_result = 0;
+  }
 
   return cached_result;
 }

@@ -13,7 +13,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import com.droidspaces.app.util.AndroidSystemStatsCollector
 import com.droidspaces.app.util.ContainerInfo
-import com.droidspaces.app.util.ContainerUsageCollector
+import com.droidspaces.app.util.ContainerOSInfoManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -49,8 +49,8 @@ class SystemStatsViewModel(application: Application) : AndroidViewModel(applicat
     var systemUsage by mutableStateOf(AndroidSystemStatsCollector.SystemUsage())
         private set
 
-    // Per-container usage stats (containerName -> ContainerUsage)
-    var containerUsageMap = mutableStateMapOf<String, ContainerUsageCollector.ContainerUsage>()
+    // Per-container OS info (containerName -> OSInfo) — single source of truth for all UI
+    var containerUsageMap = mutableStateMapOf<String, ContainerOSInfoManager.OSInfo>()
         private set
 
     private var systemJob: Job? = null
@@ -81,10 +81,14 @@ class SystemStatsViewModel(application: Application) : AndroidViewModel(applicat
             while (true) {
                 running.forEach { container ->
                     try {
-                        val usage = ContainerUsageCollector.collectUsage(container.name)
-                        containerUsageMap[container.name] = usage
+                        val osInfo = ContainerOSInfoManager.getOSInfo(
+                            containerName = container.name,
+                            useCache = false,
+                            appContext = getApplication()
+                        )
+                        containerUsageMap[container.name] = osInfo
                     } catch (e: Exception) {
-                        Log.e(TAG, "Failed to collect usage for ${container.name}", e)
+                        Log.e(TAG, "Failed to collect info for ${container.name}", e)
                     }
                 }
                 delay(CONTAINER_INTERVAL_MS)
@@ -95,6 +99,10 @@ class SystemStatsViewModel(application: Application) : AndroidViewModel(applicat
     fun stopContainerMonitoring() {
         containerJob?.cancel()
         containerJob = null
+    }
+
+    fun clearContainerUsage(containerName: String) {
+        containerUsageMap.remove(containerName)
     }
 
     fun stopMonitoring() {

@@ -27,7 +27,14 @@ int ds_openpty(int *master, int *slave, char *name) {
 
   /* try kernel 4.13+ path-free method first */
   int s = ioctl(m, TIOCGPTPEER, O_RDWR | O_NOCTTY | O_CLOEXEC);
-  if (s < 0) {
+  if (s >= 0) {
+    if (name) {
+      unsigned int ptyno;
+      if (ioctl(m, TIOCGPTN, &ptyno) == 0) {
+        snprintf(name, PATH_MAX, "/dev/pts/%u", ptyno);
+      }
+    }
+  } else {
     /* fallback: build /dev/pts/N path */
     unsigned int ptyno;
     if (ioctl(m, TIOCGPTN, &ptyno) < 0)
@@ -36,11 +43,6 @@ int ds_openpty(int *master, int *slave, char *name) {
     s = open(name, O_RDWR | O_NOCTTY | O_CLOEXEC);
     if (s < 0)
       goto err;
-  } else if (name) {
-    /* populate name even on the fast path */
-    unsigned int ptyno;
-    if (ioctl(m, TIOCGPTN, &ptyno) == 0)
-      snprintf(name, PATH_MAX, "/dev/pts/%u", ptyno);
   }
 
   *master = m;

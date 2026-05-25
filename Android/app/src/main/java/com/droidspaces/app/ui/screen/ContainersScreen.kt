@@ -29,10 +29,13 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarDuration
 import kotlinx.coroutines.launch
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.droidspaces.app.ui.viewmodel.SystemStatsViewModel
 import com.topjohnwu.superuser.Shell
 import com.droidspaces.app.util.ContainerManager
 import com.droidspaces.app.util.ContainerInfo
 import com.droidspaces.app.util.ContainerCommandBuilder
+import com.droidspaces.app.util.ContainerOSInfoManager
 import com.droidspaces.app.util.ContainerOperationExecutor
 import com.droidspaces.app.util.ContainerLogger
 import com.droidspaces.app.util.ViewModelLogger
@@ -44,6 +47,7 @@ import com.droidspaces.app.ui.component.TerminalDialog
 import com.droidspaces.app.ui.component.EmptyState
 import com.droidspaces.app.ui.component.ErrorState
 import com.droidspaces.app.ui.component.RootUnavailableState
+import com.droidspaces.app.ui.component.RootfsRepoSheet
 import com.droidspaces.app.ui.viewmodel.ContainerViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -81,6 +85,7 @@ fun ContainersScreen(
 ) {
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
+    val systemStatsViewModel: SystemStatsViewModel = viewModel()
     val prefsManager = PreferencesManager.getInstance(context)
 
     val snackbarHostState = remember { SnackbarHostState() }
@@ -102,6 +107,9 @@ fun ContainersScreen(
 
     // Export state - tracks which container is pending export (waiting for file picker)
     var pendingExportContainer by remember { mutableStateOf<ContainerInfo?>(null) }
+
+    // Repo sheet visibility
+    var showRepoSheet by remember { mutableStateOf(false) }
 
     // Execute container export - writes archive to user-picked URI via temp file
     suspend fun executeExport(container: ContainerInfo, outputUri: Uri) {
@@ -300,7 +308,10 @@ fun ContainersScreen(
                 // Refresh container status immediately on failure
                 containerViewModel.refresh()
             } else {
-                // Success - show snackbar
+                // Success - clear cached OS info for this container
+                ContainerOSInfoManager.clearCache(container.name, context)
+
+                // Show snackbar
                 scope.showSuccess(snackbarHostState, context.getString(R.string.container_uninstalled_success, container.name))
 
                 // Refresh container status immediately after successful uninstallation
@@ -362,6 +373,11 @@ fun ContainersScreen(
         }
 
         try {
+            // Clear stale usage cache on stop/restart
+            if (operation == "stop" || operation == "restart") {
+                systemStatsViewModel.clearContainerUsage(container.name)
+            }
+
             // Build command
             val command = when (operation) {
                 "start" -> ContainerCommandBuilder.buildStartCommand(container)
@@ -580,11 +596,20 @@ fun ContainersScreen(
                 ErrorState()
             }
             containers.isEmpty() -> {
-                EmptyState(
-                    icon = Icons.Default.Storage,
-                    title = context.getString(R.string.no_containers_installed),
-                    description = context.getString(R.string.install_container_description)
-                )
+                if (containerViewModel.isRefreshing) {
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        LoadingIndicator(size = LoadingSize.Large)
+                    }
+                } else {
+                    EmptyState(
+                        icon = Icons.Default.Storage,
+                        title = context.getString(R.string.no_containers_installed),
+                        description = context.getString(R.string.install_container_description)
+                    )
+                }
             }
             else -> {
                 // Show container cards
@@ -663,29 +688,58 @@ fun ContainersScreen(
 
         // FAB LAYER (Above everything, below dialogs)
         if (isBackendAvailable && isRootAvailable) {
-            ExtendedFloatingActionButton(
-                onClick = { filePickerLauncher.launch("*/*") },
+            Column(
                 modifier = Modifier
                     .align(Alignment.BottomEnd)
                     .navigationBarsPadding()
-                    .padding(end = 24.dp, bottom = 88.dp), // 88dp clears the floating tab bar
-                shape = RoundedCornerShape(20.dp),
-                containerColor = MaterialTheme.colorScheme.primary,
-                contentColor = MaterialTheme.colorScheme.onPrimary,
-                icon = {
+                    .padding(end = 24.dp, bottom = 88.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+                horizontalAlignment = Alignment.End
+            ) {
+                // Small secondary FAB: browse online repo (icon only)
+                SmallFloatingActionButton(
+                    onClick = { showRepoSheet = true },
+                    shape = RoundedCornerShape(16.dp),
+                    containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                    contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+                    elevation = FloatingActionButtonDefaults.elevation(0.dp, 0.dp, 0.dp, 0.dp)
+                ) {
                     Icon(
-                        imageVector = Icons.Default.Add,
-                        contentDescription = null,
+                        imageVector = Icons.Default.CloudDownload,
+                        contentDescription = context.getString(R.string.repo_fab_label),
                         modifier = Modifier.size(20.dp)
                     )
-                },
-                text = {
-                    Text(
-                        text = context.getString(R.string.install),
-                        style = MaterialTheme.typography.labelLarge,
-                        fontWeight = FontWeight.Bold
-                    )
                 }
+
+                // Primary FAB: install local file
+                ExtendedFloatingActionButton(
+                    onClick = { filePickerLauncher.launch("*/*") },
+                    shape = RoundedCornerShape(20.dp),
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    contentColor = MaterialTheme.colorScheme.onPrimary,
+                    icon = {
+                        Icon(
+                            imageVector = Icons.Default.Add,
+                            contentDescription = null,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    },
+                    text = {
+                        Text(
+                            text = context.getString(R.string.install),
+                            style = MaterialTheme.typography.labelLarge,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                )
+            }
+        }
+
+        // Repo bottom sheet
+        if (showRepoSheet) {
+            RootfsRepoSheet(
+                onDismiss = { showRepoSheet = false },
+                onInstall = { uri -> onNavigateToInstallation(uri) }
             )
         }
 
@@ -813,7 +867,8 @@ private fun SparseSizeDialog(
         Surface(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 24.dp),
+                .padding(horizontal = 24.dp)
+                .imePadding(),
             shape = dialogShape,
             color = MaterialTheme.colorScheme.surfaceContainer,
             border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)),

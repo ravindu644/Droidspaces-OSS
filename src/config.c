@@ -47,6 +47,19 @@ static int parse_bool(const char *val) {
   return 0;
 }
 
+/* Safe positive integer parser: uses strtoll with full error checking.
+ * Returns -1 on any error (overflow, empty, non-numeric, negative). */
+static long long parse_ll_positive(const char *val) {
+  if (!val || !*val)
+    return -1;
+  char *end;
+  errno = 0;
+  long long v = strtoll(val, &end, 10);
+  if (errno || end == val || *end != '\0' || v <= 0)
+    return -1;
+  return v;
+}
+
 void parse_privileged(const char *value, struct ds_config *cfg) {
   if (!value)
     return;
@@ -266,8 +279,39 @@ int ds_config_load(const char *config_path, struct ds_config *cfg) {
       cfg->force_cgroupv1 = parse_bool(val);
     } else if (strcmp(key, "block_nested_ns") == 0) {
       cfg->block_nested_ns = parse_bool(val);
+    } else if (strcmp(key, "memory_limit") == 0) {
+      long long v = parse_ll_positive(val);
+      if (v > 0)
+        cfg->memory_limit = v;
+      else
+        ds_warn("config: ignoring invalid memory_limit '%s'", val);
+    } else if (strcmp(key, "cpu_quota") == 0) {
+      long long v = parse_ll_positive(val);
+      if (v > 0)
+        cfg->cpu_quota = v;
+      else
+        ds_warn("config: ignoring invalid cpu_quota '%s'", val);
+    } else if (strcmp(key, "cpu_period") == 0) {
+      long long v = parse_ll_positive(val);
+      if (v > 0)
+        cfg->cpu_period = v;
+      else
+        ds_warn("config: ignoring invalid cpu_period '%s'", val);
+    } else if (strcmp(key, "pids_limit") == 0) {
+      long long v = parse_ll_positive(val);
+      if (v > 0)
+        cfg->pids_limit = v;
+      else
+        ds_warn("config: ignoring invalid pids_limit '%s'", val);
     } else if (strcmp(key, "privileged") == 0) {
       parse_privileged(val, cfg);
+    } else if (strcmp(key, "custom_init") == 0) {
+      if (val[0] != '/')
+        ds_warn("config: ignoring non-absolute custom_init path '%s'", val);
+      else if (strchr(val, ' '))
+        ds_warn("config: ignoring custom_init path with spaces '%s'", val);
+      else
+        safe_strncpy(cfg->custom_init, val, sizeof(cfg->custom_init));
     } else if (strcmp(key, "bind_mounts") == 0) {
       parse_bind_mounts(val, cfg);
     } else if (strcmp(key, "dns_servers") == 0) {
@@ -536,149 +580,206 @@ void free_config_unknown_lines(struct ds_config *cfg) {
   cfg->unknown_head = cfg->unknown_tail = NULL;
 }
 
+static void ds_config_serialize_known(FILE *f, struct ds_config *cfg) {
+  fprintf(f, "# Droidspaces Container Configuration\n");
+  fprintf(f, "# Generated automatically - Changes may be overwritten\n\n");
+
+  /* Write managed keys */
+  if (cfg->container_name[0])
+    fprintf(f, "name=%s\n", cfg->container_name);
+  if (cfg->hostname[0])
+    fprintf(f, "hostname=%s\n", cfg->hostname);
+
+  if (cfg->is_img_mount && cfg->rootfs_img_path[0]) {
+    char *abs_path = ds_resolve_path_arg(cfg->rootfs_img_path);
+    fprintf(f, "rootfs_path=%s\n", abs_path ? abs_path : cfg->rootfs_img_path);
+    free(abs_path);
+  } else if (cfg->rootfs_path[0]) {
+    char *abs_path = ds_resolve_path_arg(cfg->rootfs_path);
+    fprintf(f, "rootfs_path=%s\n", abs_path ? abs_path : cfg->rootfs_path);
+    free(abs_path);
+  }
+
+  fprintf(f, "disable_ipv6=%d\n", cfg->disable_ipv6);
+  if (is_android()) {
+    fprintf(f, "enable_android_storage=%d\n", cfg->android_storage);
+    fprintf(f, "enable_termux_x11=%d\n", cfg->termux_x11);
+  }
+  fprintf(f, "enable_hw_access=%d\n", cfg->hw_access);
+  fprintf(f, "enable_gpu_mode=%d\n", cfg->gpu_mode);
+  fprintf(f, "selinux_permissive=%d\n", cfg->selinux_permissive);
+  fprintf(f, "volatile_mode=%d\n", cfg->volatile_mode);
+  fprintf(f, "force_cgroupv1=%d\n", cfg->force_cgroupv1);
+  fprintf(f, "block_nested_ns=%d\n", cfg->block_nested_ns);
+  if (cfg->memory_limit > 0)
+    fprintf(f, "memory_limit=%lld\n", cfg->memory_limit);
+  if (cfg->cpu_quota > 0)
+    fprintf(f, "cpu_quota=%lld\n", cfg->cpu_quota);
+  if (cfg->cpu_period > 0)
+    fprintf(f, "cpu_period=%lld\n", cfg->cpu_period);
+  if (cfg->pids_limit > 0)
+    fprintf(f, "pids_limit=%lld\n", cfg->pids_limit);
+
+  if (cfg->privileged_mask > 0) {
+    fprintf(f, "privileged=");
+    int first = 1;
+    if (cfg->privileged_mask == DS_PRIV_FULL) {
+      fprintf(f, "full");
+    } else {
+      if (cfg->privileged_mask & DS_PRIV_NOMASK) {
+        fprintf(f, "%snomask", first ? "" : ",");
+        first = 0;
+      }
+      if (cfg->privileged_mask & DS_PRIV_NOCAPS) {
+        fprintf(f, "%snocaps", first ? "" : ",");
+        first = 0;
+      }
+      if (cfg->privileged_mask & DS_PRIV_NOSEC) {
+        fprintf(f, "%snoseccomp", first ? "" : ",");
+        first = 0;
+      }
+      if (cfg->privileged_mask & DS_PRIV_SHARED) {
+        fprintf(f, "%sshared", first ? "" : ",");
+        first = 0;
+      }
+      if (cfg->privileged_mask & DS_PRIV_UNFILTERED) {
+        fprintf(f, "%sunfiltered-dev", first ? "" : ",");
+        first = 0;
+      }
+    }
+    fprintf(f, "\n");
+  }
+
+  fprintf(f, "foreground=%d\n", cfg->foreground);
+
+  if (cfg->net_mode == DS_NET_NAT) {
+    fprintf(f, "net_mode=nat\n");
+  } else if (cfg->net_mode == DS_NET_NONE) {
+    fprintf(f, "net_mode=none\n");
+  } else {
+    fprintf(f, "net_mode=host\n");
+  }
+
+  if (cfg->net_mode == DS_NET_NAT && cfg->upstream_iface_count > 0) {
+    fprintf(f, "upstream_interfaces=");
+    for (int i = 0; i < cfg->upstream_iface_count; i++) {
+      fprintf(f, "%s%s", cfg->upstream_ifaces[i],
+              (i < cfg->upstream_iface_count - 1) ? "," : "");
+    }
+    fprintf(f, "\n");
+  }
+
+  if (cfg->net_mode == DS_NET_NAT && cfg->port_forward_count > 0) {
+    fprintf(f, "port_forwards=");
+    for (int i = 0; i < cfg->port_forward_count; i++) {
+      const struct ds_port_forward *pf = &cfg->port_forwards[i];
+      if (pf->host_port_end) {
+        fprintf(f, "%u-%u:%u-%u/%s", pf->host_port, pf->host_port_end,
+                pf->container_port, pf->container_port_end, pf->proto);
+      } else {
+        fprintf(f, "%u:%u/%s", pf->host_port, pf->container_port, pf->proto);
+      }
+      if (i < cfg->port_forward_count - 1)
+        fprintf(f, ",");
+    }
+    fprintf(f, "\n");
+  }
+
+  if (cfg->net_mode == DS_NET_NAT && cfg->static_nat_ip[0])
+    fprintf(f, "static_nat_ip=%s\n", cfg->static_nat_ip);
+
+  if (cfg->env_file[0]) {
+    char *abs_path = ds_resolve_path_arg(cfg->env_file);
+    fprintf(f, "env_file=%s\n", abs_path ? abs_path : cfg->env_file);
+    free(abs_path);
+  }
+  if (cfg->uuid[0])
+    fprintf(f, "uuid=%s\n", cfg->uuid);
+
+  if (cfg->custom_init[0]) {
+    char *abs_path = ds_resolve_path_arg(cfg->custom_init);
+    fprintf(f, "custom_init=%s\n", abs_path ? abs_path : cfg->custom_init);
+    free(abs_path);
+  }
+
+  if (cfg->dns_servers[0])
+    fprintf(f, "dns_servers=%s\n", cfg->dns_servers);
+
+  if (cfg->bind_count > 0) {
+    fprintf(f, "bind_mounts=");
+    for (int i = 0; i < cfg->bind_count; i++) {
+      char *abs_src = ds_resolve_path_arg(cfg->binds[i].src);
+      char *abs_dest = ds_resolve_path_arg(cfg->binds[i].dest);
+      fprintf(f, "%s:%s%s", abs_src ? abs_src : cfg->binds[i].src,
+              abs_dest ? abs_dest : cfg->binds[i].dest,
+              (i < cfg->bind_count - 1) ? "," : "");
+      free(abs_src);
+      free(abs_dest);
+    }
+    fprintf(f, "\n");
+  }
+}
+
 int ds_config_save(const char *config_path, struct ds_config *cfg) {
   /* Sort bind mounts before saving so they are persisted in a sane order. */
   sort_bind_mounts(cfg);
 
+  /* Compare new config with existing disk configuration to avoid redundant
+   * writes */
+  struct ds_config disk_cfg = {0};
+  struct stat st;
+  int is_equal = 0;
+  if (stat(config_path, &st) == 0) {
+    if (ds_config_load(config_path, &disk_cfg) == 0) {
+      sort_bind_mounts(&disk_cfg);
+
+      char *buf_cfg = NULL;
+      size_t size_cfg = 0;
+      char *buf_disk = NULL;
+      size_t size_disk = 0;
+      FILE *f_cfg = open_memstream(&buf_cfg, &size_cfg);
+      FILE *f_disk = open_memstream(&buf_disk, &size_disk);
+
+      if (f_cfg && f_disk) {
+        ds_config_serialize_known(f_cfg, cfg);
+        ds_config_serialize_known(f_disk, &disk_cfg);
+        fclose(f_cfg);
+        fclose(f_disk);
+        if (size_cfg == size_disk && memcmp(buf_cfg, buf_disk, size_cfg) == 0) {
+          is_equal = 1;
+        }
+      } else {
+        if (f_cfg)
+          fclose(f_cfg);
+        if (f_disk)
+          fclose(f_disk);
+      }
+      free(buf_cfg);
+      free(buf_disk);
+      free_config_binds(&disk_cfg);
+      free_config_unknown_lines(&disk_cfg);
+
+      if (is_equal) {
+        if (!cfg->config_file_existed) {
+          cfg->config_file_existed = 1;
+        }
+        return 0;
+      }
+    }
+  }
+
   char temp_path[PATH_MAX];
   snprintf(temp_path, sizeof(temp_path), "%s.tmp", config_path);
-
-  /* Step 1: Skip Step 1 - we now use the in-memory preservation from
-   * ds_config_load. This ensures mirroring and internal backups preserve all
-   * metadata. */
 
   /* Step 2: Write all configurations to temporary file */
   FILE *f_out = fopen(temp_path, "we");
   if (!f_out)
     return -1;
 
-  fprintf(f_out, "# Droidspaces Container Configuration\n");
-  fprintf(f_out, "# Generated automatically - Changes may be overwritten\n\n");
-
-  /* Write managed keys */
-  if (cfg->container_name[0])
-    fprintf(f_out, "name=%s\n", cfg->container_name);
-  if (cfg->hostname[0])
-    fprintf(f_out, "hostname=%s\n", cfg->hostname);
-
-  if (cfg->is_img_mount && cfg->rootfs_img_path[0]) {
-    char *abs_path = ds_resolve_path_arg(cfg->rootfs_img_path);
-    fprintf(f_out, "rootfs_path=%s\n",
-            abs_path ? abs_path : cfg->rootfs_img_path);
-    free(abs_path);
-  } else if (cfg->rootfs_path[0]) {
-    char *abs_path = ds_resolve_path_arg(cfg->rootfs_path);
-    fprintf(f_out, "rootfs_path=%s\n", abs_path ? abs_path : cfg->rootfs_path);
-    free(abs_path);
-  }
-
-  fprintf(f_out, "disable_ipv6=%d\n", cfg->disable_ipv6);
-  if (is_android()) {
-    fprintf(f_out, "enable_android_storage=%d\n", cfg->android_storage);
-    fprintf(f_out, "enable_termux_x11=%d\n", cfg->termux_x11);
-  }
-  fprintf(f_out, "enable_hw_access=%d\n", cfg->hw_access);
-  fprintf(f_out, "enable_gpu_mode=%d\n", cfg->gpu_mode);
-  fprintf(f_out, "selinux_permissive=%d\n", cfg->selinux_permissive);
-  fprintf(f_out, "volatile_mode=%d\n", cfg->volatile_mode);
-  fprintf(f_out, "force_cgroupv1=%d\n", cfg->force_cgroupv1);
-  fprintf(f_out, "block_nested_ns=%d\n", cfg->block_nested_ns);
-
-  if (cfg->privileged_mask > 0) {
-    fprintf(f_out, "privileged=");
-    int first = 1;
-    if (cfg->privileged_mask == DS_PRIV_FULL) {
-      fprintf(f_out, "full");
-    } else {
-      if (cfg->privileged_mask & DS_PRIV_NOMASK) {
-        fprintf(f_out, "%snomask", first ? "" : ",");
-        first = 0;
-      }
-      if (cfg->privileged_mask & DS_PRIV_NOCAPS) {
-        fprintf(f_out, "%snocaps", first ? "" : ",");
-        first = 0;
-      }
-      if (cfg->privileged_mask & DS_PRIV_NOSEC) {
-        fprintf(f_out, "%snoseccomp", first ? "" : ",");
-        first = 0;
-      }
-      if (cfg->privileged_mask & DS_PRIV_SHARED) {
-        fprintf(f_out, "%sshared", first ? "" : ",");
-        first = 0;
-      }
-      if (cfg->privileged_mask & DS_PRIV_UNFILTERED) {
-        fprintf(f_out, "%sunfiltered-dev", first ? "" : ",");
-        first = 0;
-      }
-    }
-    fprintf(f_out, "\n");
-  }
-
-  fprintf(f_out, "foreground=%d\n", cfg->foreground);
-
-  if (cfg->net_mode == DS_NET_NAT) {
-    fprintf(f_out, "net_mode=nat\n");
-  } else if (cfg->net_mode == DS_NET_NONE) {
-    fprintf(f_out, "net_mode=none\n");
-  } else {
-    fprintf(f_out, "net_mode=host\n");
-  }
-
-  /* NAT-mode extras: upstream interfaces and port forwards */
-  if (cfg->net_mode == DS_NET_NAT && cfg->upstream_iface_count > 0) {
-    fprintf(f_out, "upstream_interfaces=");
-    for (int i = 0; i < cfg->upstream_iface_count; i++) {
-      fprintf(f_out, "%s%s", cfg->upstream_ifaces[i],
-              (i < cfg->upstream_iface_count - 1) ? "," : "");
-    }
-    fprintf(f_out, "\n");
-  }
-
-  if (cfg->net_mode == DS_NET_NAT && cfg->port_forward_count > 0) {
-    fprintf(f_out, "port_forwards=");
-    for (int i = 0; i < cfg->port_forward_count; i++) {
-      const struct ds_port_forward *pf = &cfg->port_forwards[i];
-      if (pf->host_port_end) {
-        /* Range mapping: START-END:START-END/proto */
-        fprintf(f_out, "%u-%u:%u-%u/%s", pf->host_port, pf->host_port_end,
-                pf->container_port, pf->container_port_end, pf->proto);
-      } else {
-        /* Single port: HOST:CONTAINER/proto */
-        fprintf(f_out, "%u:%u/%s", pf->host_port, pf->container_port,
-                pf->proto);
-      }
-      if (i < cfg->port_forward_count - 1)
-        fprintf(f_out, ",");
-    }
-    fprintf(f_out, "\n");
-  }
-
-  /* Persist the resolved static NAT IP so every subsequent boot reuses
-   * the same address.  Written for all NAT containers (user-supplied or
-   * auto-assigned); skipped for host/none modes where it's irrelevant. */
-  if (cfg->net_mode == DS_NET_NAT && cfg->static_nat_ip[0])
-    fprintf(f_out, "static_nat_ip=%s\n", cfg->static_nat_ip);
-
-  if (cfg->env_file[0])
-    fprintf(f_out, "env_file=%s\n", cfg->env_file);
-  if (cfg->uuid[0])
-    fprintf(f_out, "uuid=%s\n", cfg->uuid);
-
-  if (cfg->dns_servers[0])
-    fprintf(f_out, "dns_servers=%s\n", cfg->dns_servers);
-
-  if (cfg->bind_count > 0) {
-    fprintf(f_out, "bind_mounts=");
-    for (int i = 0; i < cfg->bind_count; i++) {
-      fprintf(f_out, "%s:%s%s", cfg->binds[i].src, cfg->binds[i].dest,
-              (i < cfg->bind_count - 1) ? "," : "");
-    }
-    fprintf(f_out, "\n");
-  }
+  ds_config_serialize_known(f_out, cfg);
 
   /* Step 3: Append preserved keys (Android App Config) from memory */
   if (cfg->unknown_head) {
-    fprintf(f_out, "\n# Android App Configuration\n");
     struct ds_config_line *node = cfg->unknown_head;
     while (node) {
       fprintf(f_out, "%s", node->line);
@@ -721,6 +822,16 @@ int ds_config_validate(struct ds_config *cfg) {
   /* Image mode requires a name for the mount point */
   if (cfg->rootfs_img_path[0] && !cfg->container_name[0])
     errors++;
+
+  if (cfg->custom_init[0]) {
+    if (cfg->custom_init[0] != '/') {
+      ds_error("custom_init must be an absolute path: %s", cfg->custom_init);
+      errors++;
+    } else if (strchr(cfg->custom_init, ' ')) {
+      ds_error("custom_init cannot contain spaces: %s", cfg->custom_init);
+      errors++;
+    }
+  }
 
   return (errors > 0) ? -1 : 0;
 }

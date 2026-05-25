@@ -1,3 +1,11 @@
+<!--
+title: Kernel Configuration Guide
+section: Guides
+order: 3
+desc: Complete guide to compiling a custom Android kernel with Droidspaces support, including non-GKI and GKI patches and compatibility fixes.
+keywords: kernel, configuration, droidspaces, android, compile, gki, nongki, patches, compatibility
+-->
+
 # Kernel Configuration Guide
 
 This guide explains how to compile a Linux kernel with Droidspaces support for Android devices.
@@ -73,6 +81,11 @@ CONFIG_DEVTMPFS=y
 
 # Overlay filesystem support (required for volatile mode)
 CONFIG_OVERLAY_FS=y
+
+# Enable xattr, posix acl support on tmpfs
+# For NixOS support
+CONFIG_TMPFS_POSIX_ACL=y
+CONFIG_TMPFS_XATTR=y
 
 # Firmware loading support
 CONFIG_FW_LOADER=y
@@ -226,10 +239,10 @@ CONFIG_PID_NS=y
 # HW Access Support
 CONFIG_DEVTMPFS=y
 
-# --- Below configs are optional but recommended ---
-
-# Networking (Docker/NAT support)
+# Networking (Enhanced NAT support)
 CONFIG_NETFILTER_XT_MATCH_ADDRTYPE=y
+
+# --- Below configs are optional but recommended ---
 
 # UFW support
 CONFIG_NETFILTER_XT_TARGET_REJECT=y
@@ -241,6 +254,11 @@ CONFIG_IP_SET=y
 CONFIG_IP_SET_HASH_IP=y
 CONFIG_IP_SET_HASH_NET=y
 CONFIG_NETFILTER_XT_SET=y
+
+# Enable xattr, posix acl support on tmpfs
+# For NixOS support
+CONFIG_TMPFS_POSIX_ACL=y
+CONFIG_TMPFS_XATTR=y
 ```
 
 **Workflow Rules:**

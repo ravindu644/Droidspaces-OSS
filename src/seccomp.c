@@ -13,6 +13,13 @@
 #include <stddef.h>
 #include <sys/prctl.h>
 
+/* AUDIT_ARCH_RISCV64 was added to linux/audit.h in 4.15.  Older kernel
+ * headers don't have it; fall back to the canonical value
+ * (EM_RISCV | __AUDIT_ARCH_64BIT | __AUDIT_ARCH_LE). */
+#ifndef AUDIT_ARCH_RISCV64
+#define AUDIT_ARCH_RISCV64 0xC00000F3u
+#endif
+
 /* ---------------------------------------------------------------------------
  * Android System Call Filtering (Seccomp)
  * ---------------------------------------------------------------------------*/
@@ -24,8 +31,7 @@
  * Applied unconditionally to all kernels and all modes.
  */
 int ds_seccomp_apply_minimal(int hw_access, int privileged_mask) {
-  (void)hw_access;
-  static struct sock_filter filter[72];
+  static struct sock_filter filter[84];
   int curr = 0;
 
   /* 1. Validate Architecture */
@@ -43,6 +49,9 @@ int ds_seccomp_apply_minimal(int hw_access, int privileged_mask) {
 #elif defined(__i386__)
   filter[curr++] = (struct sock_filter)BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K,
                                                 AUDIT_ARCH_I386, 1, 0);
+#elif defined(__riscv) && __riscv_xlen == 64
+  filter[curr++] = (struct sock_filter)BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K,
+                                                AUDIT_ARCH_RISCV64, 1, 0);
 #endif
   filter[curr++] =
       (struct sock_filter)BPF_STMT(BPF_RET | BPF_K, SECCOMP_RET_KILL_PROCESS);
@@ -140,6 +149,90 @@ int ds_seccomp_apply_minimal(int hw_access, int privileged_mask) {
     /* Reload nr for any rules that follow this block. */
     filter[curr++] = (struct sock_filter)BPF_STMT(
         BPF_LD | BPF_W | BPF_ABS, offsetof(struct seccomp_data, nr));
+
+    /*
+     * 10. Block host clock modification syscalls.
+     *
+     * CAP_SYS_TIME dropped from the bounding set is insufficient: the kernel
+     * checks the capability against the *initial* user namespace, and
+     * Droidspaces containers run as real root without a user namespace, so
+     * the check passes even after the bounding-set drop.  Seccomp is the
+     * only reliable barrier.
+     *
+     * Blocked: settimeofday, adjtimex, clock_settime, clock_adjtime,
+     *          clock_settime64 (32-bit ARM compat, ifdef-guarded).
+     * TZ changes (/etc/localtime, TZ env) are pure userspace and unaffected.
+     */
+#ifdef __NR_settimeofday
+    filter[curr++] = (struct sock_filter)BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K,
+                                                  __NR_settimeofday, 0, 1);
+    filter[curr++] = (struct sock_filter)BPF_STMT(
+        BPF_RET | BPF_K, SECCOMP_RET_ERRNO | (EPERM & SECCOMP_RET_DATA));
+#endif
+#ifdef __NR_adjtimex
+    filter[curr++] = (struct sock_filter)BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K,
+                                                  __NR_adjtimex, 0, 1);
+    filter[curr++] = (struct sock_filter)BPF_STMT(
+        BPF_RET | BPF_K, SECCOMP_RET_ERRNO | (EPERM & SECCOMP_RET_DATA));
+#endif
+#ifdef __NR_clock_settime
+    filter[curr++] = (struct sock_filter)BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K,
+                                                  __NR_clock_settime, 0, 1);
+    filter[curr++] = (struct sock_filter)BPF_STMT(
+        BPF_RET | BPF_K, SECCOMP_RET_ERRNO | (EPERM & SECCOMP_RET_DATA));
+#endif
+#ifdef __NR_clock_adjtime
+    filter[curr++] = (struct sock_filter)BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K,
+                                                  __NR_clock_adjtime, 0, 1);
+    filter[curr++] = (struct sock_filter)BPF_STMT(
+        BPF_RET | BPF_K, SECCOMP_RET_ERRNO | (EPERM & SECCOMP_RET_DATA));
+#endif
+#ifdef __NR_clock_settime64
+    filter[curr++] = (struct sock_filter)BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K,
+                                                  __NR_clock_settime64, 0, 1);
+    filter[curr++] = (struct sock_filter)BPF_STMT(
+        BPF_RET | BPF_K, SECCOMP_RET_ERRNO | (EPERM & SECCOMP_RET_DATA));
+#endif
+
+    if (!hw_access) {
+      /*
+       * 11. Block mknod/mknodat for block/char devices.  The container's
+       * /dev tmpfs is mounted without MS_NODEV (so pre-populated device
+       * nodes work), which means CAP_MKNOD-equipped processes inside can
+       * create arbitrary block devices (e.g. /dev/sda, major 8 minor 0)
+       * and read raw host storage.  Pipes, sockets, and regular files
+       * created via mknod stay allowed (systemd, dbus need them).
+       *
+       * S_IFCHR is 0x2000 and S_IFBLK is 0x6000; both have bit 0x2000 set,
+       * while S_IFREG/S_IFIFO/S_IFSOCK/S_IFDIR/S_IFLNK do not.  A single
+       * BPF_JSET on S_IFCHR catches both device types.
+       */
+#ifdef __NR_mknod
+      /* mknod(path, mode, dev) - mode is args[1] */
+      filter[curr++] = (struct sock_filter)BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K,
+                                                    __NR_mknod, 0, 4);
+      filter[curr++] = (struct sock_filter)BPF_STMT(
+          BPF_LD | BPF_W | BPF_ABS, offsetof(struct seccomp_data, args[1]));
+      filter[curr++] = (struct sock_filter)BPF_JUMP(BPF_JMP | BPF_JSET | BPF_K,
+                                                    S_IFCHR, 0, 1);
+      filter[curr++] = (struct sock_filter)BPF_STMT(
+          BPF_RET | BPF_K, SECCOMP_RET_ERRNO | (EPERM & SECCOMP_RET_DATA));
+      /* Reload nr for any rules that follow this block. */
+      filter[curr++] = (struct sock_filter)BPF_STMT(
+          BPF_LD | BPF_W | BPF_ABS, offsetof(struct seccomp_data, nr));
+#endif
+      /* mknodat(dirfd, path, mode, dev) - mode is args[2] */
+      filter[curr++] = (struct sock_filter)BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K,
+                                                    __NR_mknodat, 0, 4);
+      filter[curr++] = (struct sock_filter)BPF_STMT(
+          BPF_LD | BPF_W | BPF_ABS, offsetof(struct seccomp_data, args[2]));
+      filter[curr++] = (struct sock_filter)BPF_JUMP(BPF_JMP | BPF_JSET | BPF_K,
+                                                    S_IFCHR, 0, 1);
+      filter[curr++] = (struct sock_filter)BPF_STMT(
+          BPF_RET | BPF_K, SECCOMP_RET_ERRNO | (EPERM & SECCOMP_RET_DATA));
+      filter[curr++] = (struct sock_filter)BPF_STMT(
+          BPF_LD | BPF_W | BPF_ABS, offsetof(struct seccomp_data, nr));
+    }
   }
 
   /* Allow everything else */
@@ -194,6 +287,8 @@ int android_seccomp_setup(int is_systemd, int block_nested_ns) {
       BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, AUDIT_ARCH_ARM, 1, 0),
 #elif defined(__i386__)
       BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, AUDIT_ARCH_I386, 1, 0),
+#elif defined(__riscv) && __riscv_xlen == 64
+      BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, AUDIT_ARCH_RISCV64, 1, 0),
 #endif
       BPF_STMT(BPF_RET | BPF_K, SECCOMP_RET_KILL_PROCESS), /* wrong arch */
       BPF_STMT(BPF_LD | BPF_W | BPF_ABS, offsetof(struct seccomp_data, nr)),

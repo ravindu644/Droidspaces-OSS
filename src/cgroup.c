@@ -343,67 +343,74 @@ int ds_cgroup_attach(pid_t target_pid) {
 /* ---------------------------------------------------------------------------
  * ds_cgroup_detach
  *
- * Removes the ds-enter-<pid> leaf cgroup directories that ds_cgroup_attach()
- * created for a single enter/run session.  Must be called by the parent after
- * waitpid() so the leaf is guaranteed to be empty.
+ * Removes ds-enter-<pid> leaf cgroup dirs created by ds_cgroup_attach().
+ * Must be called after waitpid() so the leaf is guaranteed empty.
+ *
+ * The old implementation reconstructed the path manually and got the depth
+ * wrong (missed intermediate scopes like init.scope), causing stale dirs.
+ * This version does a recursive scan of /sys/fs/cgroup and removes every
+ * dir named "ds-enter-<pid>" regardless of depth - works for both v1 and v2.
  * ---------------------------------------------------------------------------*/
-void ds_cgroup_detach(pid_t child_pid, const char *container_name) {
-  /* After child exits, we clean up the leaf cgroups we created in attach.
-   * Since we create them in every mounted hierarchy under /sys/fs/cgroup,
-   * we just iterate that dir again. */
-  (void)container_name; /* reserved for future per-layout targeting */
 
-  DIR *d = opendir("/sys/fs/cgroup");
+/* Wait up to 500ms for cgroup.events populated=0 (cgroupv2),
+ * or tasks file empty (cgroupv1), before rmdir. */
+static void wait_cgroup_empty(const char *leaf_path) {
+  /* cgroupv2: poll cgroup.events */
+  char events[PATH_MAX];
+  snprintf(events, sizeof(events), "%s/cgroup.events", leaf_path);
+  if (access(events, R_OK) == 0) {
+    for (int i = 0; i < 50; i++) {
+      char buf[256] = {0};
+      if (read_file(events, buf, sizeof(buf)) > 0 && strstr(buf, "populated 0"))
+        return;
+      usleep(10000);
+    }
+    return;
+  }
+
+  /* cgroupv1: poll tasks file */
+  char tasks[PATH_MAX];
+  snprintf(tasks, sizeof(tasks), "%s/tasks", leaf_path);
+  for (int i = 0; i < 50; i++) {
+    char buf[64] = {0};
+    if (read_file(tasks, buf, sizeof(buf)) > 0 && buf[0] == '\0')
+      return;
+    usleep(10000);
+  }
+}
+
+/* Recursively walk 'dir_path'; rmdir any entry named 'target'. */
+static void find_and_rmdir(const char *dir_path, const char *target) {
+  DIR *d = opendir(dir_path);
   if (!d)
     return;
-
-  char enter_suffix[64];
-  snprintf(enter_suffix, sizeof(enter_suffix), "/ds-enter-%d", (int)child_pid);
 
   struct dirent *de;
   while ((de = readdir(d)) != NULL) {
     if (de->d_name[0] == '.')
       continue;
-
-    char cg_root[PATH_MAX];
-    snprintf(cg_root, sizeof(cg_root), "/sys/fs/cgroup/%s", de->d_name);
-    struct stat st;
-    if (stat(cg_root, &st) != 0 || !S_ISDIR(st.st_mode)) {
-      if (strcmp(de->d_name, "cgroup.procs") == 0)
-        safe_strncpy(cg_root, "/sys/fs/cgroup", sizeof(cg_root));
-      else
-        continue;
-    }
-
-    /* We need to recursively find and rmdir the ds-enter leaf.
-     * For simplicity, since we know it's a descendant of /droidspaces/,
-     * we can just walk the container's subtree. */
-    char ds_dir[PATH_MAX];
-    snprintf(ds_dir, sizeof(ds_dir), "%s/droidspaces", cg_root);
-
-    DIR *top = opendir(ds_dir);
-    if (!top) {
-      /* Try directly in root (no container name nesting) */
-      char direct[PATH_MAX];
-      snprintf(direct, sizeof(direct), "%s%s", cg_root, enter_suffix);
-      rmdir(direct);
+    if (de->d_type != DT_DIR)
       continue;
-    }
 
-    struct dirent *inner;
-    while ((inner = readdir(top)) != NULL) {
-      if (inner->d_name[0] == '.')
-        continue;
-      char leaf[PATH_MAX];
-      snprintf(leaf, sizeof(leaf), "%s/%s%s", ds_dir, inner->d_name,
-               enter_suffix);
-      rmdir(leaf);
+    char child[PATH_MAX];
+    snprintf(child, sizeof(child), "%s/%s", dir_path, de->d_name);
+
+    if (strcmp(de->d_name, target) == 0) {
+      wait_cgroup_empty(child);
+      rmdir(child);
+    } else {
+      find_and_rmdir(child, target);
     }
-    closedir(top);
-    if (strcmp(de->d_name, "cgroup.procs") == 0)
-      break;
   }
   closedir(d);
+}
+
+void ds_cgroup_detach(pid_t child_pid, const char *container_name) {
+  (void)container_name;
+
+  char target[64];
+  snprintf(target, sizeof(target), "ds-enter-%d", (int)child_pid);
+  find_and_rmdir("/sys/fs/cgroup", target);
 }
 
 /* ---------------------------------------------------------------------------
@@ -535,8 +542,14 @@ void ds_cgroup_cleanup_container(const char *container_name) {
 static int ds_host_supports_v2_cached = -1;
 
 void print_cgroup_status(struct ds_config *cfg) {
+  int limits_set = (cfg->memory_limit || cfg->cpu_quota || cfg->pids_limit);
+
   if (cfg->force_cgroupv1) {
     ds_warn("Using legacy Cgroup V1 hierarchy (forced by --force-cgroupv1)");
+    if (limits_set) {
+      ds_warn("Resource limits (--memory/--cpus/--pids-limit) require "
+              "cgroup v2 and will not be applied for this container.");
+    }
     return;
   }
 
@@ -545,5 +558,175 @@ void print_cgroup_status(struct ds_config *cfg) {
 
   if (!ds_host_supports_v2_cached) {
     ds_warn("Host does not support Cgroup V2 (falling back to legacy V1)");
+    if (limits_set) {
+      ds_warn("[CGROUP] Resource limits (--memory/--cpus/--pids-limit) require "
+              "cgroup v2 and will not be applied on this host.");
+    }
   }
+}
+
+/* Returns 1 if 'name' appears in a space/newline-separated controller list. */
+static int ctrl_in_list(const char *list, const char *name) {
+  const char *p = list;
+  size_t nlen = strlen(name);
+  while (*p) {
+    while (*p == ' ' || *p == '\n')
+      p++;
+    if (strncmp(p, name, nlen) == 0 &&
+        (p[nlen] == ' ' || p[nlen] == '\n' || p[nlen] == '\0'))
+      return 1;
+    while (*p && *p != ' ' && *p != '\n')
+      p++;
+  }
+  return 0;
+}
+
+/* Public wrapper for cross-TU use (e.g. container.c). */
+int ds_cg_word_in_list(const char *list, const char *name) {
+  return ctrl_in_list(list, name);
+}
+
+/* Check controller availability before touching any cgroup files. */
+static int ctrl_supported_v2(const char *cg_path, const char *name) {
+  if (strlen(cg_path) > PATH_MAX - 32)
+    return 0;
+  char buf[256];
+  char path[PATH_MAX + 64];
+  snprintf(path, sizeof(path), "%s/cgroup.controllers", cg_path);
+  if (read_file(path, buf, sizeof(buf)) <= 0)
+    return 0;
+  return ctrl_in_list(buf, name);
+}
+
+/* Helper: parse a cgroup integer file that may contain "max" (unlimited).
+ * Returns the parsed value, or -1 on error/unlimited. */
+static long long parse_cgroup_ll(const char *buf) {
+  if (strncmp(buf, "max", 3) == 0)
+    return -1; /* unlimited */
+  char *end;
+  errno = 0;
+  long long v = strtoll(buf, &end, 10);
+  if (errno || end == buf)
+    return -1;
+  return v;
+}
+
+int ds_cgroup_apply_limits(struct ds_config *cfg) {
+  if (!cfg->memory_limit && !cfg->cpu_quota && !cfg->pids_limit)
+    return 0;
+
+  /* Resource limits require cgroup v2. v1 hierarchies are often pre-claimed
+   * by the host systemd and cannot be reliably delegated. Skip with a
+   * warning when --force-cgroupv1 is active or the host has no v2 mount. */
+  if (cfg->force_cgroupv1 || !ds_cgroup_host_is_v2()) {
+    cfg->memory_limit = 0;
+    cfg->cpu_quota = 0;
+    cfg->pids_limit = 0;
+    return 0;
+  }
+
+  char safe_name[256];
+  sanitize_container_name(cfg->container_name, safe_name, sizeof(safe_name));
+
+  char cg[PATH_MAX - 64];
+  char path[PATH_MAX + 64], val[64];
+  int err = 0;
+
+  snprintf(cg, sizeof(cg), "/sys/fs/cgroup/droidspaces/%s", safe_name);
+  if (access(cg, F_OK) != 0) {
+    ds_warn("[CGROUP] Container cgroup not found, limits skipped.");
+    return -1;
+  }
+  /* Check the delegated cgroup's controllers, not the root. Controllers
+   * must be enabled in subtree_control of each parent to be usable here. */
+  if (cfg->memory_limit) {
+    if (ctrl_supported_v2(cg, "memory")) {
+      snprintf(path, sizeof(path), "%s/memory.max", cg);
+      snprintf(val, sizeof(val), "%lld", cfg->memory_limit);
+      if (write_file(path, val) < 0) {
+        ds_warn("[CGROUP] memory.max: %s", strerror(errno));
+        cfg->memory_limit = 0;
+        err++;
+      }
+    } else {
+      ds_warn("[CGROUP] 'memory' controller not supported, limit skipped.");
+      cfg->memory_limit = 0;
+    }
+  }
+  if (cfg->cpu_quota) {
+    if (ctrl_supported_v2(cg, "cpu")) {
+      long long period = cfg->cpu_period > 0 ? cfg->cpu_period : 100000;
+      snprintf(path, sizeof(path), "%s/cpu.max", cg);
+      snprintf(val, sizeof(val), "%lld %lld", cfg->cpu_quota, period);
+      if (write_file(path, val) < 0) {
+        ds_warn("[CGROUP] cpu.max: %s", strerror(errno));
+        cfg->cpu_quota = 0;
+        err++;
+      }
+    } else {
+      ds_warn("[CGROUP] 'cpu' controller not supported, limit skipped.");
+      cfg->cpu_quota = 0;
+    }
+  }
+  if (cfg->pids_limit) {
+    if (ctrl_supported_v2(cg, "pids")) {
+      snprintf(path, sizeof(path), "%s/pids.max", cg);
+      snprintf(val, sizeof(val), "%lld", cfg->pids_limit);
+      if (write_file(path, val) < 0) {
+        ds_warn("[CGROUP] pids.max: %s", strerror(errno));
+        cfg->pids_limit = 0;
+        err++;
+      }
+    } else {
+      ds_warn("[CGROUP] 'pids' controller not supported, limit skipped.");
+      cfg->pids_limit = 0;
+    }
+  }
+  return err ? -1 : 0;
+}
+
+int ds_cgroup_get_usage(struct ds_config *cfg, long long *mem,
+                        long long *cpu_us, long long *pids) {
+  if (mem)
+    *mem = -1;
+  if (cpu_us)
+    *cpu_us = -1;
+  if (pids)
+    *pids = -1;
+
+  char safe_name[256];
+  sanitize_container_name(cfg->container_name, safe_name, sizeof(safe_name));
+
+  int v2 = ds_cgroup_host_is_v2();
+  /* Keep cg strictly within PATH_MAX-64 so the suffix appended
+   * into path never overflows the PATH_MAX+64 path buffer. */
+  char cg[PATH_MAX - 64];
+  char path[PATH_MAX + 64], buf[256];
+
+  if (v2) {
+    snprintf(cg, sizeof(cg), "/sys/fs/cgroup/droidspaces/%s", safe_name);
+    if (access(cg, F_OK) != 0)
+      return -1;
+    /* Use parse_cgroup_ll() so that "max" (= unlimited/not set)
+     * is reported as -1 rather than silently becoming 0. */
+    if (mem) {
+      snprintf(path, sizeof(path), "%s/memory.current", cg);
+      if (read_file(path, buf, sizeof(buf)) > 0)
+        *mem = parse_cgroup_ll(buf);
+    }
+    if (cpu_us) {
+      snprintf(path, sizeof(path), "%s/cpu.stat", cg);
+      if (read_file(path, buf, sizeof(buf)) > 0) {
+        char *p = strstr(buf, "usage_usec ");
+        if (p)
+          *cpu_us = parse_cgroup_ll(p + 11);
+      }
+    }
+    if (pids) {
+      snprintf(path, sizeof(path), "%s/pids.current", cg);
+      if (read_file(path, buf, sizeof(buf)) > 0)
+        *pids = parse_cgroup_ll(buf);
+    }
+  }
+  return 0;
 }

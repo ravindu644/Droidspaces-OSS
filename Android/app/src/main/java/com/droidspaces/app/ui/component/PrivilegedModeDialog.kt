@@ -68,6 +68,8 @@ fun PrivilegedModeDialog(
         }
     }
 
+    val allOff = !nomask && !nocaps && !noseccomp && !shared && !unfiltered && !full
+
     Dialog(
         onDismissRequest = onDismiss,
         properties = DialogProperties(usePlatformDefaultWidth = false)
@@ -127,7 +129,7 @@ fun PrivilegedModeDialog(
 
                     HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
 
-                    PrivilegedToggleRow(
+                    ToggleCard(
                         title = "nomask",
                         description = context.getString(R.string.privileged_nomask_desc),
                         checked = nomask,
@@ -135,7 +137,7 @@ fun PrivilegedModeDialog(
                         enabled = !full
                     )
 
-                    PrivilegedToggleRow(
+                    ToggleCard(
                         title = "nocaps",
                         description = context.getString(R.string.privileged_nocaps_desc),
                         checked = nocaps,
@@ -143,7 +145,7 @@ fun PrivilegedModeDialog(
                         enabled = !full
                     )
 
-                    PrivilegedToggleRow(
+                    ToggleCard(
                         title = "noseccomp",
                         description = context.getString(R.string.privileged_noseccomp_desc),
                         checked = noseccomp,
@@ -151,7 +153,7 @@ fun PrivilegedModeDialog(
                         enabled = !full
                     )
 
-                    PrivilegedToggleRow(
+                    ToggleCard(
                         title = "shared",
                         description = context.getString(R.string.privileged_shared_desc),
                         checked = shared,
@@ -159,7 +161,7 @@ fun PrivilegedModeDialog(
                         enabled = !full
                     )
 
-                    PrivilegedToggleRow(
+                    ToggleCard(
                         title = "unfiltered-dev",
                         description = context.getString(R.string.privileged_unfiltered_desc),
                         checked = unfiltered,
@@ -169,27 +171,29 @@ fun PrivilegedModeDialog(
                 }
 
                 // Confirmation Gate
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text(
-                        text = context.getString(R.string.privileged_confirm_instruction),
-                        style = MaterialTheme.typography.labelMedium,
-                        fontWeight = FontWeight.Bold
-                    )
-                    OutlinedTextField(
-                        value = confirmText,
-                        onValueChange = { confirmText = it },
-                        modifier = Modifier.fillMaxWidth(),
-                        placeholder = { Text(context.getString(R.string.i_understand_caps)) },
-                        singleLine = true,
-                        isError = confirmText.isNotEmpty() && !isConfirmed,
-                        shape = RoundedCornerShape(14.dp),
-                        colors = OutlinedTextFieldDefaults.colors(
-                            unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
-                            focusedBorderColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.8f),
-                            unfocusedContainerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.5f),
-                            focusedContainerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.7f)
+                if (!allOff) {
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text(
+                            text = context.getString(R.string.privileged_confirm_instruction),
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = FontWeight.Bold
                         )
-                    )
+                        OutlinedTextField(
+                            value = confirmText,
+                            onValueChange = { confirmText = it },
+                            modifier = Modifier.fillMaxWidth(),
+                            placeholder = { Text(context.getString(R.string.i_understand_caps)) },
+                            singleLine = true,
+                            isError = confirmText.isNotEmpty() && !isConfirmed,
+                            shape = RoundedCornerShape(14.dp),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
+                                focusedBorderColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.8f),
+                                unfocusedContainerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.5f),
+                                focusedContainerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.7f)
+                            )
+                        )
+                    }
                 }
 
                 // Buttons
@@ -207,7 +211,7 @@ fun PrivilegedModeDialog(
                     }
                     Surface(
                         modifier = Modifier.weight(1f).clip(RoundedCornerShape(14.dp)).clickable(
-                            enabled = isConfirmed,
+                            enabled = isConfirmed || allOff,
                             onClick = {
                                 val tags = mutableListOf<String>()
                                 if (full) {
@@ -223,7 +227,11 @@ fun PrivilegedModeDialog(
                             }
                         ),
                         shape = RoundedCornerShape(14.dp),
-                        color = if (isConfirmed) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f),
+                        color = if (isConfirmed || allOff) {
+                            if (allOff) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
+                        } else {
+                            MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f)
+                        },
                         tonalElevation = 0.dp
                     ) {
                         Box(modifier = Modifier.padding(14.dp), contentAlignment = Alignment.Center) {
@@ -231,7 +239,11 @@ fun PrivilegedModeDialog(
                                 context.getString(R.string.ok),
                                 style = MaterialTheme.typography.labelLarge,
                                 fontWeight = FontWeight.SemiBold,
-                                color = if (isConfirmed) MaterialTheme.colorScheme.onError else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+                                color = if (isConfirmed || allOff) {
+                                    if (allOff) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onError
+                                } else {
+                                    MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+                                }
                             )
                         }
                     }
@@ -241,45 +253,4 @@ fun PrivilegedModeDialog(
     }
 }
 
-@Composable
-private fun PrivilegedToggleRow(
-    title: String,
-    description: String,
-    checked: Boolean,
-    onCheckedChange: (Boolean) -> Unit,
-    enabled: Boolean = true
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(12.dp))
-            .clickable(enabled = enabled, onClick = { onCheckedChange(!checked) })
-            .padding(vertical = 8.dp, horizontal = 4.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.bodyLarge,
-                fontWeight = FontWeight.SemiBold,
-                color = if (enabled) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
-            )
-            Text(
-                text = description,
-                style = MaterialTheme.typography.bodySmall,
-                color = if (enabled) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.38f)
-            )
-        }
-        Switch(
-            checked = checked,
-            onCheckedChange = onCheckedChange,
-            enabled = enabled,
-            colors = SwitchDefaults.colors(
-                checkedThumbColor = MaterialTheme.colorScheme.onPrimary,
-                checkedTrackColor = MaterialTheme.colorScheme.primary,
-                uncheckedThumbColor = MaterialTheme.colorScheme.outline,
-                uncheckedTrackColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
-            )
-        )
-    }
-}
+

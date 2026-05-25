@@ -74,7 +74,10 @@
     <string name="reinstall_backend_description">Reinstall binaries and boot module</string>
     <string name="requirements">Requirements</string>
     <string name="kernel_requirements">Kernel Requirements</string>
+    <string name="kernel_requirements_nongki">non-GKI Kernel Requirements (&lt;=4.19)</string>
+    <string name="kernel_requirements_gki">GKI Kernel Requirements (&gt;=5.4)</string>
     <string name="copy">Copy</string>
+    <string name="guide">Guide</string>
     <string name="appearance_section">Appearance</string>
     <string name="language">Language</string>
     <string name="system_default">System Default</string>
@@ -95,9 +98,7 @@
     <string name="about_description">LXC-Style container manager for Android</string>
     <string name="developers">Developer(s)</string>
     <string name="developer_ravindu644">ravindu644</string>
-    <string name="developer_ravindu644_role">Backend, UI</string>
-    <string name="developer_thesithumsandaruwan">thesithumsandaruwan</string>
-    <string name="developer_thesithumsandaruwan_role">UI</string>
+    <string name="developer_ravindu644_role">Maintainer</string>
     <string name="telegram_channel">Telegram Channel</string>
     <string name="contributors">Contributors</string>
     <string name="github">GitHub</string>
@@ -140,10 +141,16 @@
     <string name="start">Start</string>
     <string name="stop">Stop</string>
     <string name="restart">Restart</string>
-    <string name="ipv6_option">No IPv6</string>
+    <string name="ipv6_option">Disable IPv6</string>
     <string name="storage_option">Storage</string>
     <string name="hw_option">HW</string>
+    <string name="gpu_option">GPU</string>
     <string name="x11_option">X11</string>
+    <string name="selinux_permissive_option">SELinux Permissive</string>
+    <string name="volatile_option">Volatile</string>
+    <string name="cgroup_v1_option">Cgroup V1</string>
+    <string name="deadlock_shield_option">Deadlock Shield</string>
+    <string name="privileged_option">Privileged</string>
     <string name="installation_setup_summary">Installation Summary</string>
     <string name="review_configuration">Review Configuration</string>
     <string name="tarball_label">Tarball</string>
@@ -182,8 +189,8 @@
     <string name="hardware_access_description">Full hardware access</string>
     <string name="gpu_access">GPU Access</string>
     <string name="gpu_access_description">Mirror GPU nodes into isolated /dev (no full hardware passthrough)</string>
-    <string name="termux_x11">Configure Termux X11</string>
-    <string name="termux_x11_description">Enable X11 socket mounting for Termux-X11</string>
+    <string name="termux_x11">Configure Termux:X11</string>
+    <string name="termux_x11_description">Enable X11 socket mounting for Termux:X11</string>
     <string name="selinux_permissive">SELinux Permissive</string>
     <string name="selinux_permissive_description">Set SELinux permissive</string>
     <string name="run_at_boot">Run at Boot</string>
@@ -200,9 +207,12 @@
     <string name="cat_security">Security &amp; Boot</string>
     <string name="cat_advanced">Advanced Options</string>
     <string name="network_mode">Network Mode</string>
-    <string name="network_mode_host">Host (Default)</string>
-    <string name="network_mode_nat">NAT (Isolated)</string>
+    <string name="network_mode_host">Host</string>
+    <string name="network_mode_nat">NAT (Default)</string>
     <string name="network_mode_none">None (Air-gapped)</string>
+    <string name="network_mode_host_short">Host</string>
+    <string name="network_mode_nat_short">NAT</string>
+    <string name="network_mode_none_short">None</string>
     <string name="nat_settings">NAT Settings</string>
     <string name="upstream_interfaces_mandatory">Upstream Interfaces (Mandatory)</string>
     <string name="upstream_interfaces_required_error">You must specify at least one upstream interface for NAT mode.</string>
@@ -230,7 +240,7 @@
     <string name="saving">Saving...</string>
     <string name="save_changes">Save Changes</string>
     <string name="static_ip_address">Static IP Address</string>
-    <string name="static_ip_description">Set a static IPv4 for this container within the 172.28.x.x subnet.</string>
+    <string name="static_ip_description">Set a static IPv4 for this container within the 172.28.x.x subnet. Leave it empty to auto-assign at first boot.</string>
     <string name="octet_label">Octet %1$d</string>
     <string name="error_octet_range">Range: 1-254</string>
     <string name="error_ip_collision">This IP is already assigned to \"%1$s\"</string>
@@ -254,6 +264,14 @@
     <string name="key_label">KEY</string>
     <string name="value_label">VALUE</string>
     <string name="add_variable">Add variable</string>
+
+    <!-- Custom Init -->
+    <string name="custom_init_label">Custom Init Binary</string>
+    <string name="custom_init_placeholder">/sbin/init (default)</string>
+    <string name="custom_init_hint">Leave empty to use the default init (/sbin/init)</string>
+    <string name="custom_init_error_absolute">Path must be absolute (start with /)</string>
+    <string name="custom_init_warning">Do not change this unless you know exactly what you are doing. Setting an incorrect init binary will prevent the container from booting.</string>
+    <string name="custom_init_option">Custom Init</string>
 
     <!-- Container Name Screen -->
     <string name="container_setup">Container Setup</string>
@@ -324,10 +342,13 @@
 
     <!-- Systemd Screen -->
     <string name="systemd_services">Systemd Services</string>
+    <string name="openrc_services">OpenRC Services</string>
+    <string name="openrc">OpenRC</string>
+    <string name="init_system">Init System</string>
+    <string name="init_system_not_available">Systemd/OpenRC Not Available</string>
+    <string name="init_system_not_available_desc">This container does not have systemd or OpenRC installed</string>
     <string name="fetching_services">Fetching services...</string>
-    <string name="systemd_not_available">Systemd Not Available</string>
-    <string name="systemd_not_available_desc">This container does not have systemd installed or running</string>
-    <string name="systemd_not_available_message">@string/systemd_not_available_desc</string>
+
     <string name="search_services">Search services...</string>
     <string name="enabled_legend">Enabled</string>
     <string name="disabled_legend">Disabled</string>
@@ -413,6 +434,7 @@
     <!-- Validation Error Messages -->
     <string name="error_container_name_empty">Container name cannot be empty</string>
     <string name="error_container_name_invalid">Container name can only contain letters, numbers, hyphens (-), underscores (_), dots (.), and spaces</string>
+    <string name="error_container_name_too_long">Name too long - max 17 characters (kernel loop device path limit)</string>
     <string name="error_hostname_invalid">Hostname can only contain letters, numbers, and dashes (-)</string>
 
     <!-- Process List -->
@@ -441,6 +463,14 @@
     <string name="grant_permission">Grant Permission</string>
     <string name="i_understand">I Understand</string>
 
+    <!-- Terminal Session Notification -->
+    <string name="notification_title">Droidspaces Terminal</string>
+    <string name="notification_action_exit">EXIT</string>
+    <string name="notification_wakelock_on">Wake lock: ON</string>
+    <string name="notification_wakelock_off">Wake lock: OFF</string>
+    <string name="notification_channel_name">Terminal Sessions</string>
+    <string name="notification_channel_desc">Active container terminal sessions</string>
+
     <!-- Sparse Image Management -->
     <string name="migrate_to_sparse_image">Migrate to a sparse image</string>
     <string name="resize_sparse_image">Resize the sparse image</string>
@@ -454,7 +484,7 @@
     <string name="starting_migration">Starting migration operation...</string>
     <string name="starting_resizing">Starting resizing operation...</string>
     <string name="help_card_title">New to Droidspaces?</string>
-    <string name="help_card_message">Tap here to learn how to setup your first Android container !</string>
+    <string name="help_card_message">Tap here to learn how to setup your first Linux container!</string>
     <string name="help_card_url">https://github.com/ravindu644/Droidspaces-OSS/blob/main/Documentation/Installation-Android.md</string>
     <string name="privileged_mode">Privileged Mode</string>
     <string name="privileged_mode_description">Configure granular security relaxation for nested virtualization or advanced hardware access.</string>
@@ -468,6 +498,35 @@
     <string name="privileged_disclaimer">By enabling these options, you are compromising your device security. We are NOT responsible for any data loss, bricked devices, or weird bugs. Do NOT report issues occurred while using these modes.</string>
     <string name="privileged_confirm_instruction">Type \"I WON\'T REPORT ANY BUGS\" exactly in capitals to confirm:</string>
     <string name="i_understand_caps">I WON\'T REPORT ANY BUGS</string>
-
     <string name="reboot_recommended">Reboot recommended to apply SELinux rules and start the daemon on boot.</string>
+    <string name="hw_access_disclaimer">Starting from Droidspaces v6.1.0, udevd has real access to USB, block, input, TTY, and network subsystems. Your container can own hardware that Android is currently using.\n\nIf your keyboard, SD card, or USB device stops working in Android after launching a container - that is NOT a bug. The container took it. You asked for full hardware access.\n\nDo NOT report issues caused by hardware conflicts or Kernel panics while using this mode.</string>
+
+    <!-- Rootfs repository -->
+    <string name="repo_title">Rootfs Repository</string>
+    <string name="repo_fab_label">Repository</string>
+    <string name="repo_refresh">Refresh</string>
+    <string name="repo_failed_to_load">Failed to load repository</string>
+    <string name="repo_download">Download</string>
+    <string name="repo_cancel">Cancel</string>
+    <string name="repo_install">Install</string>
+    <string name="repo_retry">Retry</string>
+    <string name="repo_notification_description">Droidspaces rootfs download</string>
+    <string name="repo_error_server_http">Server returned HTTP %1$d</string>
+    <string name="repo_error_no_assets">No rootfs tarballs found in latest release</string>
+    <string name="repo_error_network">Network error</string>
+    <string name="repo_dl_error_unknown">Unknown error</string>
+    <string name="repo_dl_error_cannot_resume">Cannot resume download</string>
+    <string name="repo_dl_error_device_not_found">Storage not found</string>
+    <string name="repo_dl_error_file_exists">File already exists</string>
+    <string name="repo_dl_error_file_error">File system error</string>
+    <string name="repo_dl_error_http_data">HTTP data error</string>
+    <string name="repo_dl_error_no_space">Insufficient storage</string>
+    <string name="repo_dl_error_too_many_redirects">Too many redirects</string>
+    <string name="repo_dl_error_unhandled_http">Unexpected HTTP response</string>
+    <string name="repo_dl_error_not_found">File not found (404)</string>
+    <string name="repo_dl_error_code">Error code %1$d</string>
+    <string name="repo_status_ready">READY</string>
+    <string name="repo_status_downloading">DOWNLOADING</string>
+    <string name="repo_status_failed">FAILED</string>
+    <string name="repo_downloads_count">%1$s downloads</string>
 </resources>

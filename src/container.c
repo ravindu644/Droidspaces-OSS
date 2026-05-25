@@ -153,9 +153,17 @@ static void cleanup_container_resources(struct ds_config *cfg, pid_t pid,
   if (!force_cleanup)
     sync();
 
-  if (is_android() && !skip_unmount && count_running_containers(NULL, 0) == 0) {
-    android_optimizations(0);
-    cleanup_unified_tmpfs();
+  if (is_android() && !skip_unmount) {
+    if (count_running_containers(NULL, 0) == 0) {
+      android_optimizations(0);
+      cleanup_unified_tmpfs();
+    }
+    /* SELinux: Restore enforcing mode if no other permissive containers are
+     * running, but only if at least one permissive container is installed. */
+    int selinux_needs = check_selinux_permissive_needs();
+    if (selinux_needs == 0) {
+      ds_set_selinux_permissive(0);
+    }
   }
 
   /* 1. Cleanup firmware path (hw_access mode only; skip on force-cleanup
@@ -216,6 +224,7 @@ static void cleanup_container_resources(struct ds_config *cfg, pid_t pid,
    * so start_rootfs() can detect the existing mount and reuse it. */
   if (!skip_unmount) {
     remove_mount_path(cfg->pidfile);
+    remove_init_type(cfg->pidfile);
     if (cfg->pidfile[0])
       unlink(cfg->pidfile);
     if (global_pidfile[0] && strcmp(cfg->pidfile, global_pidfile) != 0)
@@ -310,7 +319,7 @@ int start_rootfs(struct ds_config *cfg) {
   }
 
   /* 1. Logo & Uniqueness Check */
-  print_ds_banner();
+  check_kernel_recommendation();
 
   /* 1b. Name Uniqueness Check
    * We no longer auto-generate or increment names. The name must be provided
@@ -367,7 +376,7 @@ int start_rootfs(struct ds_config *cfg) {
   /* If the user requested permissive mode, ensure it's applied.
    * ds_set_selinux_permissive() is a no-op if host is already permissive. */
   if (cfg->selinux_permissive) {
-    ds_set_selinux_permissive();
+    ds_set_selinux_permissive(1);
   }
 
   if (cfg->android_storage && !is_android())
@@ -394,6 +403,50 @@ int start_rootfs(struct ds_config *cfg) {
                  sizeof(cfg->img_mount_point));
   }
 
+  /* 2a. Verify init binary exists before any side effects (NAT, config save).
+   * For rootfs.img mode the image is now mounted; for directory mode the
+   * rootfs_path is already set.  Either way we have a valid host path. */
+  {
+    char init_path[PATH_MAX];
+    char rootfs_norm[PATH_MAX];
+    if (cfg->is_img_mount && cfg->img_mount_point[0])
+      safe_strncpy(rootfs_norm, cfg->img_mount_point, sizeof(rootfs_norm));
+    else
+      safe_strncpy(rootfs_norm, cfg->rootfs_path, sizeof(rootfs_norm));
+    size_t rlen = strlen(rootfs_norm);
+    if (rlen > 0 && rootfs_norm[rlen - 1] == '/')
+      rootfs_norm[rlen - 1] = '\0';
+
+    const char *init_bin =
+        cfg->custom_init[0] ? cfg->custom_init : DS_DEFAULT_INIT;
+    snprintf(init_path, sizeof(init_path), "%.*s%s",
+             (int)(sizeof(init_path) - strlen(init_bin) - 1), rootfs_norm,
+             init_bin);
+    struct stat st;
+    if (lstat(init_path, &st) != 0) {
+      ds_error("Init binary not found: %s", init_path);
+      ds_error("Please ensure the rootfs path is correct and contains %s.",
+               init_bin);
+      if (cfg->is_img_mount)
+        unmount_rootfs_img(cfg->img_mount_point, cfg->foreground);
+      return -1;
+    }
+    /* Absolute symlinks resolve correctly inside the container after
+     * pivot_root, so skip the X_OK check for symlinks. */
+    if (!S_ISLNK(st.st_mode) && access(init_path, X_OK) != 0) {
+      ds_error("Init binary is not executable: %s", init_path);
+      ds_error("Ensure it has executable permissions.");
+      if (cfg->is_img_mount)
+        unmount_rootfs_img(cfg->img_mount_point, cfg->foreground);
+      return -1;
+    }
+
+    /* Classify the container init family while the normalized host rootfs
+     * path is already in scope. Detecting here avoids rebuilding the same
+     * probe path later solely for shutdown metadata. */
+    cfg->init_type = detect_container_init(rootfs_norm);
+  }
+
   /* 2b. Android Termux Bridge Preparation - only if flag is set */
   if (is_android() && cfg->termux_x11) {
     stop_termux_if_running();
@@ -405,7 +458,21 @@ int start_rootfs(struct ds_config *cfg) {
     goto cleanup;
   }
 
-  generate_uuid(cfg->uuid, sizeof(cfg->uuid));
+  {
+    char active_uuids[DS_MAX_CONTAINERS][DS_UUID_LEN + 1];
+    int uuid_count = collect_active_uuids(active_uuids, DS_MAX_CONTAINERS);
+    int need_new = (cfg->uuid[0] == '\0');
+    if (!need_new) {
+      for (int _i = 0; _i < uuid_count; _i++) {
+        if (strcmp(cfg->uuid, active_uuids[_i]) == 0) {
+          need_new = 1;
+          break;
+        }
+      }
+    }
+    if (need_new)
+      generate_uuid(cfg->uuid, sizeof(cfg->uuid));
+  }
 
   /* Resolve and lock in the container's static NAT IP before the first save.
    *
@@ -470,40 +537,6 @@ int start_rootfs(struct ds_config *cfg) {
   }
 
   /* 4. Parent-side PTY allocation (LXC Model) */
-  /* CRITICAL: Before forking, verify /sbin/init exists in the rootfs */
-  char init_path[PATH_MAX];
-  char rootfs_norm[PATH_MAX];
-  if (cfg->is_img_mount && cfg->img_mount_point[0]) {
-    safe_strncpy(rootfs_norm, cfg->img_mount_point, sizeof(rootfs_norm));
-  } else {
-    safe_strncpy(rootfs_norm, cfg->rootfs_path, sizeof(rootfs_norm));
-  }
-  size_t rlen = strlen(rootfs_norm);
-  if (rlen > 0 && rootfs_norm[rlen - 1] == '/')
-    rootfs_norm[rlen - 1] = '\0';
-
-  snprintf(init_path, sizeof(init_path), "%.4080s/sbin/init", rootfs_norm);
-  struct stat st;
-  if (lstat(init_path, &st) != 0) {
-    ds_error("Init binary not found: %s", init_path);
-    ds_error(
-        "Please ensure the rootfs path is correct and contains /sbin/init.");
-    goto cleanup;
-  }
-
-  /*
-   * Robust Check: If it's a symlink, we MUST assume it's valid.
-   * Absolute symlinks (e.g. /sbin/init -> /lib/systemd/systemd) will appear
-   * "broken" from the host's perspective, but will resolve correctly inside
-   * the container after pivot_root.
-   */
-  if (!S_ISLNK(st.st_mode) && access(init_path, X_OK) != 0) {
-    ds_error("Init binary is not executable: %s", init_path);
-    ds_error("Ensure it has executable permissions.");
-    if (cfg->is_img_mount)
-      unmount_rootfs_img(cfg->img_mount_point, cfg->foreground);
-    return -1;
-  }
 
   /* Firmware path - hw_access mode only.
    * By this point cfg->rootfs_path is fully resolved and the
@@ -568,6 +601,9 @@ int start_rootfs(struct ds_config *cfg) {
   fix_networking_host(cfg);
   android_optimizations(1);
 
+  /* Record start time before fork so monitor and virtualize_update share it */
+  clock_gettime(CLOCK_BOOTTIME, &cfg->start_time);
+
   /* 8. Fork Monitor Process */
   pid_t monitor_pid = fork();
   if (monitor_pid < 0) {
@@ -624,6 +660,51 @@ int start_rootfs(struct ds_config *cfg) {
         char safe_name[256];
         sanitize_container_name(cfg->container_name, safe_name,
                                 sizeof(safe_name));
+
+        /* v2: enable requested controllers top-down BEFORE mkdir.
+         * Controllers only appear in a child cgroup if the parent's
+         * subtree_control has them enabled first. Walk two levels:
+         * /sys/fs/cgroup -> /sys/fs/cgroup/droidspaces */
+        if (cfg->memory_limit || cfg->cpu_quota || cfg->pids_limit) {
+          /* Build enable string with snprintf offsets instead of strncat to
+           * avoid truncation. Use ds_cg_word_in_list() for exact word-boundary
+           * matching to prevent false positives (e.g. matching "cpuset"
+           * when looking for "cpu"). */
+          char enable[64] = {0};
+          char buf[256];
+          int eoff = 0;
+          if (read_file("/sys/fs/cgroup/cgroup.controllers", buf, sizeof(buf)) >
+              0) {
+            if (cfg->memory_limit && ds_cg_word_in_list(buf, "memory")) {
+              int n = snprintf(enable + eoff, sizeof(enable) - (size_t)eoff,
+                               "%s+memory", eoff ? " " : "");
+              if (n > 0)
+                eoff += n;
+            }
+            if (cfg->cpu_quota && ds_cg_word_in_list(buf, "cpu")) {
+              int n = snprintf(enable + eoff, sizeof(enable) - (size_t)eoff,
+                               "%s+cpu", eoff ? " " : "");
+              if (n > 0)
+                eoff += n;
+            }
+            if (cfg->pids_limit && ds_cg_word_in_list(buf, "pids")) {
+              int n = snprintf(enable + eoff, sizeof(enable) - (size_t)eoff,
+                               "%s+pids", eoff ? " " : "");
+              if (n > 0)
+                eoff += n;
+            }
+          }
+          if (eoff > 0) {
+            if (write_file("/sys/fs/cgroup/cgroup.subtree_control", enable) < 0)
+              ds_warn("[CGROUP] subtree_control (root): %s", strerror(errno));
+            mkdir_p("/sys/fs/cgroup/droidspaces", 0755);
+            if (write_file("/sys/fs/cgroup/droidspaces/cgroup.subtree_control",
+                           enable) < 0)
+              ds_warn("[CGROUP] subtree_control (droidspaces): %s",
+                      strerror(errno));
+          }
+        }
+
         char cg_path[PATH_MAX];
         snprintf(cg_path, sizeof(cg_path), "/sys/fs/cgroup/droidspaces/%s",
                  safe_name);
@@ -645,6 +726,13 @@ int start_rootfs(struct ds_config *cfg) {
        * cgroupns with full rights so setup_cgroups() can create named
        * v1 hierarchies. */
     }
+
+    /* Apply resource limits. On v2 hosts this writes memory.max / cpu.max /
+     * pids.max into the delegated cgroup. On v1 or --force-cgroupv1 the
+     * function skips with a warning since v1 delegation is unreliable. */
+    if (ds_cgroup_apply_limits(cfg) < 0 &&
+        (cfg->memory_limit || cfg->cpu_quota || cfg->pids_limit))
+      ds_warn("[CGROUP] Some resource limits could not be enforced.");
 
     if (unshare(ns_flags) < 0)
       ds_die("unshare failed: %s", strerror(errno));
@@ -910,6 +998,11 @@ int start_rootfs(struct ds_config *cfg) {
       }
     }
 
+    /* Capture PID namespace inode for virtualization PID-recycling guard.
+     * container_pid may be 0 on HOST mode until pidfile is written - that's
+     * fine; ds_get_pid_ns_inode(0) returns 0 and update will skip safely. */
+    cfg->ns_inode = ds_get_pid_ns_inode(cfg->container_pid);
+
     /* Ensure monitor is not sitting inside any mount point */
     if (chdir("/") < 0) {
       ds_warn("Failed to chdir to /: %s", strerror(errno));
@@ -939,9 +1032,57 @@ int start_rootfs(struct ds_config *cfg) {
       sync_pipe[1] = -1;
     }
 
-    int status;
-    while (waitpid(mid_pid, &status, 0) < 0 && errno == EINTR)
-      ;
+    /* Monitor heartbeat loop: 500ms poll + virtualization update.
+     * WNOHANG lets us update virtual /proc files while waiting for mid_pid. */
+    int status = 0;
+    {
+      sigset_t mask;
+      sigemptyset(&mask);
+      sigaddset(&mask, SIGCHLD);
+      sigprocmask(SIG_BLOCK, &mask, NULL);
+      int sfd = signalfd(-1, &mask, SFD_NONBLOCK | SFD_CLOEXEC);
+
+      while (1) {
+        pid_t r = waitpid(mid_pid, &status, WNOHANG);
+        if (r == mid_pid)
+          break;
+        if (r < 0 && errno != EINTR)
+          break;
+
+        /* HOST mode: monitor never gets container_pid via mid_sync_pipe.
+         * Poll the pidfile (written by parent shortly after sync_pipe read)
+         * until we have a valid PID, then capture ns_inode once. */
+        if (cfg->container_pid <= 0 && cfg->pidfile[0]) {
+          pid_t p = -1;
+          if (read_and_validate_pid(cfg->pidfile, &p) == 0 && p > 0) {
+            cfg->container_pid = p;
+            cfg->ns_inode = ds_get_pid_ns_inode(p);
+            write_monitor_debug_log(cfg->container_name,
+                                    "[VIRT] resolved container_pid=%d "
+                                    "ns_inode=%lu from pidfile",
+                                    (int)p, cfg->ns_inode);
+          }
+        }
+
+        ds_virtualize_update(cfg);
+
+        if (sfd >= 0) {
+          struct pollfd pfd = {.fd = sfd, .events = POLLIN};
+          poll(&pfd, 1, 500);
+          if (pfd.revents & POLLIN) {
+            struct signalfd_siginfo si;
+            while (read(sfd, &si, sizeof(si)) == (ssize_t)sizeof(si))
+              ; /* drain */
+          }
+        } else {
+          usleep(500000);
+        }
+      }
+
+      if (sfd >= 0)
+        close(sfd);
+      sigprocmask(SIG_UNBLOCK, &mask, NULL);
+    }
 
     /* Log what monitor saw */
     if (WIFEXITED(status)) {
@@ -1028,8 +1169,20 @@ int start_rootfs(struct ds_config *cfg) {
       }
 
       cfg->reboot_cycle = 1;
+      clock_gettime(CLOCK_BOOTTIME, &cfg->start_time);
+      /* Refresh ns_inode: new container has a new PID namespace inode.
+       * Without this, ds_virtualize_update's PID-recycling guard rejects
+       * all writes after the first reboot cycle (stale inode != new pid ns). */
+      cfg->ns_inode = ds_get_pid_ns_inode(cfg->container_pid);
       if (cfg->foreground)
         ds_log_silent = 1;
+
+      /* ds_dhcp_server_start() memsets g_dhcp under g_dhcp_lock on the next
+       * cycle, racing the still-running dhcp_server_loop thread that reads from
+       * the same memory.  The DHCP thread is intentionally joinable so stop()
+       * can join before memset. */
+      ds_dhcp_server_stop();
+      ds_socketd_record_core_event("restart", cfg->container_name, cfg->uuid);
 
       goto reboot_loop;
     }
@@ -1120,6 +1273,9 @@ int start_rootfs(struct ds_config *cfg) {
   if (cfg->is_img_mount)
     save_mount_path(cfg->pidfile, cfg->img_mount_point);
 
+  /* Also save init type */
+  save_init_type(cfg->pidfile, cfg->init_type);
+
   /* 11. Foreground or background finish */
   if (cfg->foreground) {
 
@@ -1163,6 +1319,7 @@ int start_rootfs(struct ds_config *cfg) {
     }
 
     show_info(cfg, 1);
+    ds_socketd_record_core_event("start", cfg->container_name, cfg->uuid);
     ds_log("Container '%s' is running in background.", cfg->container_name);
     if (is_android()) {
       ds_log("Use 'su -c \"%s --name='%s' enter\"' to connect.", cfg->prog_name,
@@ -1241,21 +1398,86 @@ int stop_rootfs(struct ds_config *cfg, int skip_unmount) {
                     sizeof(cfg->img_mount_point));
   }
 
-  /* 1. Try graceful shutdown with a "signal bucket" to support multiple init
-   * systems:
-   * - SIGRTMIN+3: Standard systemd poweroff signal in containers.
-   * - SIGTERM: Universal signal for graceful termination (Alpine/OpenRC reacts
-   * to this).
-   * - SIGPWR: Universal power failure signal (often used by LXC/SysVinit for
-   * shutdown).
-   * - SIGCONT: Shutdown signal for Void/runit.
-   */
-  kill(pid, DS_SIG_STOP);
-  kill(pid, SIGPWR);
-  kill(pid, SIGCONT);
-  kill(pid, SIGTERM);
-  ds_log("Waiting for graceful shutdown (this may take up to %d seconds)...",
-         DS_STOP_TIMEOUT);
+  /* 1. Send shutdown signal. */
+  if (cfg->custom_init[0]) {
+    kill(pid, SIGKILL);
+  } else {
+    /* Detect init system and send the correct shutdown signal. */
+    ds_init_type_t init_type = DS_INIT_UNKNOWN;
+    const char *probe_root =
+        cfg->img_mount_point[0] ? cfg->img_mount_point : cfg->rootfs_path;
+    if (__builtin_expect((read_init_type(cfg->pidfile, &init_type) != 0 ||
+                          init_type == DS_INIT_UNKNOWN),
+                         0)) {
+      /* Fallback for containers launched before .init sidecars existed,
+       * or if runtime metadata was lost / non-informative. */
+      if (__builtin_expect(probe_root[0], '/'))
+        init_type = detect_container_init(probe_root);
+    }
+
+    switch (init_type) {
+    case DS_INIT_PROCD:
+    case DS_INIT_S6:
+    case DS_INIT_BUSYBOX:
+      kill(pid, SIGUSR2);
+      break;
+    case DS_INIT_RUNIT:
+      kill(pid, SIGCONT);
+      break;
+    case DS_INIT_SYSTEMD:
+      kill(pid, DS_SIG_STOP); /* SIGRTMIN+3 */
+      break;
+    case DS_INIT_SYSVINIT: {
+      /* sysvinit ignores all signals for shutdown -- it only listens on the
+       * initctl FIFO. Write a telinit-compatible init_request struct directly
+       * into the container's /run/initctl via /proc/<pid>/root. */
+      char initctl[PATH_MAX];
+      snprintf(initctl, sizeof(initctl), "/proc/%d/root/run/initctl", pid);
+
+      /* struct layout from initreq.h: magic(4) cmd(4) runlevel(4) sleeptime(4)
+       * data(368) = 384 bytes total. */
+      struct {
+        int magic;
+        int cmd;
+        int runlevel;
+        int sleeptime;
+        char data[368];
+      } req = {
+          .magic = 0x03091969, /* INIT_MAGIC */
+          .cmd = 1,            /* INIT_CMD_RUNLVL */
+          .runlevel = '0',     /* poweroff */
+          .sleeptime = 3,
+      };
+
+      int fd = open(initctl, O_WRONLY | O_NONBLOCK | O_CLOEXEC);
+      if (fd < 0) {
+        /* Fallback: try /dev/initctl (historical path, used by Slackware) */
+        snprintf(initctl, sizeof(initctl), "/proc/%d/root/dev/initctl", pid);
+        fd = open(initctl, O_WRONLY | O_NONBLOCK | O_CLOEXEC);
+      }
+
+      if (fd >= 0) {
+        if (write(fd, &req, sizeof(req)) != (ssize_t)sizeof(req))
+          ds_warn("sysvinit: short write to initctl, falling back to SIGPWR");
+        close(fd);
+      } else {
+        ds_warn("sysvinit: cannot open initctl (tried /run and /dev), falling "
+                "back to SIGPWR");
+        kill(pid, SIGPWR);
+      }
+      break;
+    }
+    case DS_INIT_OPENRC:
+      kill(pid, SIGPWR);
+      break;
+    default: /* unknown */
+      kill(pid, SIGTERM);
+      break;
+    }
+
+    ds_log("Waiting for graceful shutdown (this may take up to %d seconds)...",
+           DS_STOP_TIMEOUT);
+  }
 
   /* 2. Wait for exit */
   int stopped = 0;
@@ -1308,6 +1530,7 @@ int stop_rootfs(struct ds_config *cfg, int skip_unmount) {
 
   /* 5. Complete resource cleanup. */
   cleanup_container_resources(cfg, pid, skip_unmount, unkillable);
+  ds_socketd_record_core_event("die", cfg->container_name, cfg->uuid);
 
   if (!cfg->foreground)
     ds_log("Container '%s' stopped.", cfg->container_name);
@@ -1406,15 +1629,12 @@ int enter_rootfs(struct ds_config *cfg, const char *user) {
     ds_log_silent = prev_silent;
   }
 
-  ds_log("Entering container '%s' as %s...", cfg->container_name, user);
-
-  /* Allocate PTY in host mnt namespace - /dev/ptmx is a real char device here.
-   * On kernel 3.x the container's /dev/ptmx may be a dangling symlink. */
+  /* PTY allocation is deferred until after entering the container namespaces.
+   * This ensures the slave PTY is part of the container's private devpts
+   * instance. */
   struct ds_tty_info tty;
-  if (ds_terminal_create(&tty) < 0) {
-    free_config_env_vars(cfg);
-    return -1;
-  }
+  memset(&tty, 0, sizeof(tty));
+  tty.master = tty.slave = -1;
 
   int sv[2];
   if (socketpair(AF_UNIX, SOCK_STREAM, 0, sv) < 0) {
@@ -1424,17 +1644,11 @@ int enter_rootfs(struct ds_config *cfg, const char *user) {
     return -1;
   }
 
-  /* Send slave fd to child before fork so it can use it after setns */
-  if (ds_send_fd(sv[0], tty.slave) < 0) {
-    close(sv[0]);
-    close(sv[1]);
-    close(tty.master);
-    close(tty.slave);
-    free_config_env_vars(cfg);
-    return -1;
-  }
+  /* Parent will receive master FD from child after namespace entry */
   close(tty.slave);
   tty.slave = -1;
+  close(tty.master);
+  tty.master = -1;
 
   pid_t child = fork();
   if (child < 0) {
@@ -1448,10 +1662,9 @@ int enter_rootfs(struct ds_config *cfg, const char *user) {
   if (child == 0) {
     close(sv[0]);
 
-    /* Receive slave fd that was pre-allocated in host mnt namespace */
-    tty.slave = ds_recv_fd(sv[1]);
-    if (tty.slave < 0)
-      _exit(EXIT_FAILURE);
+    /* In this refactored flow, the child allocates the PTY itself after setns.
+     */
+    tty.slave = -1;
 
     /* cgroup attach before entering namespaces */
     ds_log_silent = 1;
@@ -1460,6 +1673,17 @@ int enter_rootfs(struct ds_config *cfg, const char *user) {
 
     if (enter_namespace(pid, cfg) < 0)
       _exit(EXIT_FAILURE);
+
+    /* Now that we are in the container's mount namespace, allocate a PTY.
+     * This ensures its path (e.g. /dev/pts/0) exists and is resolvable. */
+    if (ds_terminal_create(&tty) < 0)
+      _exit(EXIT_FAILURE);
+
+    /* Send master FD back to parent (host monitor) */
+    if (ds_send_fd(sv[1], tty.master) < 0)
+      _exit(EXIT_FAILURE);
+    close(tty.master);
+    tty.master = -1;
 
     /* Apply identical security hardening as internal_boot().
      * Seccomp filters and capability bounding set drops are per-process and
@@ -1506,11 +1730,6 @@ int enter_rootfs(struct ds_config *cfg, const char *user) {
       _exit(EXIT_FAILURE);
     signal(SIGHUP, SIG_IGN);
 
-    /* Send master FD back to parent */
-    if (ds_send_fd(sv[1], tty.master) < 0)
-      _exit(EXIT_FAILURE);
-
-    close(tty.master);
     close(sv[1]);
 
     /* Must fork again to actually be in the new PID namespace */
@@ -1679,6 +1898,20 @@ int run_in_rootfs(struct ds_config *cfg, int argc, char **argv,
       ds_env_boot_setup(cfg);
       load_etc_environment();
 
+      /* Append NixOS binary path so Nix-managed tools (e.g. ip, hostname)
+       * are available without requiring the caller to prefix PATH manually. */
+      {
+        const char *cur_path = getenv("PATH");
+        if (cur_path) {
+          char nix_path[4096];
+          snprintf(nix_path, sizeof(nix_path), "%s:/run/current-system/sw/bin",
+                   cur_path);
+          setenv("PATH", nix_path, 1);
+        } else {
+          setenv("PATH", "/run/current-system/sw/bin", 1);
+        }
+      }
+
       /* Run the command directly as an alien process (instant results) */
       if (as_user != NULL) {
         /* Build the command string for su -c.
@@ -1786,17 +2019,15 @@ static void get_os_pretty(const char *osrelease_path, char *buf, size_t size) {
 }
 
 int show_info(struct ds_config *cfg, int trust_cfg_pid) {
-  /* Host info */
-  const char *host = is_android() ? "Android" : "Linux";
-  const char *arch = get_architecture();
-  printf(C_GREEN "Host:" C_RESET " %s %s\n", host, arch);
-
-  /* Case 1: No container name specified */
+  /* Case 1: No container name specified - try auto-resolution or listing */
   if (cfg->container_name[0] == '\0') {
     char first_name[256];
     int count = count_running_containers(first_name, sizeof(first_name));
 
     if (count == 0) {
+      const char *host = is_android() ? "Android" : "Linux";
+      const char *arch = get_architecture();
+      printf(C_GREEN "Host:" C_RESET " %s %s\n", host, arch);
       printf("\n" C_YELLOW "Container:" C_RESET " No containers running.\n\n");
       return 0;
     }
@@ -1807,21 +2038,32 @@ int show_info(struct ds_config *cfg, int trust_cfg_pid) {
                    sizeof(cfg->container_name));
       resolve_pidfile_from_name(first_name, cfg->pidfile, sizeof(cfg->pidfile));
     } else {
-      /* Multiple containers running, show list */
+      /* Multiple containers running, show Host info and list */
+      const char *host = is_android() ? "Android" : "Linux";
+      const char *arch = get_architecture();
+      printf(C_GREEN "Host:" C_RESET " %s %s\n", host, arch);
       printf("\n" C_YELLOW "Multiple containers running:" C_RESET "\n");
-      show_containers();
+      show_containers(cfg);
       printf("\nUse '" C_GREEN "--name <NAME> info" C_RESET
              "' for detailed information.\n\n");
       return 0;
     }
   }
 
-  /* Case 2: Specific name specified or auto-resolved */
+  /* Now we have a container name. Ensure its config is loaded from the source
+   * of truth (container.config) so we show accurate feature info without
+   * expensive live probing. */
+  if (!trust_cfg_pid) {
+    ds_config_load_by_name(cfg->container_name, cfg);
+  }
+
+  /* Case 2: Ensure pidfile resolved. */
   if (cfg->pidfile[0] == '\0' && cfg->container_name[0] != '\0') {
     resolve_pidfile_from_name(cfg->container_name, cfg->pidfile,
                               sizeof(cfg->pidfile));
   }
 
+  /* Case 3: Validate running status */
   pid_t pid = 0;
   if (trust_cfg_pid && cfg->container_pid > 0) {
     /* Trust the PID we just got from the sync pipe.
@@ -1832,10 +2074,153 @@ int show_info(struct ds_config *cfg, int trust_cfg_pid) {
     is_container_running(cfg, &pid);
   }
 
-  printf("\n" C_GREEN "Container:" C_RESET " %s (%s)\n", cfg->container_name,
-         pid > 0 ? "RUNNING" : "STOPPED");
+  if (pid <= 0) {
+    ds_error("Container '%s' is not running or invalid.", cfg->container_name);
+    return -1;
+  }
 
-  if (pid > 0) {
+  /* Success - print Host and detailed Container info */
+  if (cfg->format_output) {
+    const char *host = is_android() ? "Android" : "Linux";
+    const char *arch = get_architecture();
+    printf("HOST_PLATFORM=%s\n", host);
+    printf("HOST_ARCH=%s\n", arch);
+    printf("CONTAINER_NAME=%s\n", cfg->container_name);
+    printf("CONTAINER_PID=%d\n", pid);
+
+    char pretty[256];
+    char osr_path[PATH_MAX];
+    if (build_proc_root_path(pid, "/etc/os-release", osr_path,
+                             sizeof(osr_path)) == 0) {
+      get_os_pretty(osr_path, pretty, sizeof(pretty));
+      if (pretty[0])
+        printf("CONTAINER_OS=%s\n", pretty);
+    }
+
+    if (cfg->hostname[0])
+      printf("CONTAINER_HOSTNAME=%s\n", cfg->hostname);
+
+    if (!trust_cfg_pid) {
+      long uptime_sec = ds_get_container_uptime(pid);
+      if (uptime_sec >= 0) {
+        char uptime_str[128];
+        ds_format_uptime(uptime_sec, uptime_str, sizeof(uptime_str));
+        printf("CONTAINER_UPTIME=%s\n", uptime_str);
+        printf("CONTAINER_UPTIME_SEC=%ld\n", uptime_sec);
+      }
+    }
+
+    const char *net;
+    switch (cfg->net_mode) {
+    case DS_NET_NAT:
+      net = "NAT";
+      break;
+    case DS_NET_NONE:
+      net = "none";
+      break;
+    default:
+      net = "host";
+      break;
+    }
+    printf("NETWORKING_MODE=%s\n", net);
+
+    if (cfg->net_mode == DS_NET_NAT) {
+      const char *ip =
+          cfg->static_nat_ip[0] ? cfg->static_nat_ip : cfg->nat_container_ip;
+      if (ip[0])
+        printf("NAT_IP=%s\n", ip);
+
+      if (cfg->upstream_iface_count > 0) {
+        printf("UPSTREAM_INTERFACES=");
+        for (int i = 0; i < cfg->upstream_iface_count; i++) {
+          printf("%s%s", cfg->upstream_ifaces[i],
+                 (i < cfg->upstream_iface_count - 1) ? "," : "");
+        }
+        printf("\n");
+      }
+    }
+
+    printf("DISABLE_IPV6=%d\n", cfg->disable_ipv6);
+    if (is_android())
+      printf("ANDROID_STORAGE=%d\n", cfg->android_storage);
+
+    if (cfg->hw_access)
+      printf("HW_ACCESS=full\n");
+    else if (cfg->gpu_mode)
+      printf("HW_ACCESS=GPU\n");
+    else
+      printf("HW_ACCESS=none\n");
+
+    if (is_android())
+      printf("TERMUX_X11=%d\n", cfg->termux_x11);
+
+    if (access("/sys/fs/selinux/enforce", R_OK) == 0) {
+      printf("SELINUX=%s\n",
+             ds_get_selinux_status() == 0 ? "Permissive" : "Enforcing");
+    }
+
+    printf("VOLATILE_MODE=%d\n", cfg->volatile_mode);
+    printf("FORCE_CGROUP_V1=%d\n", cfg->force_cgroupv1);
+    printf("DEADLOCK_SHIELD=%d\n", cfg->block_nested_ns);
+    printf("FOREGROUND_MODE=%d\n", cfg->foreground);
+
+    printf("DNS_SERVERS=%s\n", cfg->dns_servers[0] ? cfg->dns_servers : "");
+
+    printf("PORT_FORWARDS=");
+    for (int i = 0; i < cfg->port_forward_count; i++) {
+      struct ds_port_forward *pf = &cfg->port_forwards[i];
+      if (pf->host_port_end == 0) {
+        printf("%d:%d/%s", pf->host_port, pf->container_port, pf->proto);
+      } else {
+        printf("%d-%d:%d-%d/%s", pf->host_port, pf->host_port_end,
+               pf->container_port, pf->container_port_end, pf->proto);
+      }
+      if (i < cfg->port_forward_count - 1)
+        printf(",");
+    }
+    printf("\n");
+
+    if (cfg->privileged_mask > 0) {
+      printf("PRIVILEGED_MODE=");
+      if (cfg->privileged_mask == DS_PRIV_FULL) {
+        printf("full");
+      } else {
+        int first = 1;
+        if (cfg->privileged_mask & DS_PRIV_NOMASK) {
+          printf("%snomask", first ? "" : ",");
+          first = 0;
+        }
+        if (cfg->privileged_mask & DS_PRIV_NOCAPS) {
+          printf("%snocaps", first ? "" : ",");
+          first = 0;
+        }
+        if (cfg->privileged_mask & DS_PRIV_NOSEC) {
+          printf("%snoseccomp", first ? "" : ",");
+          first = 0;
+        }
+        if (cfg->privileged_mask & DS_PRIV_SHARED) {
+          printf("%sshared", first ? "" : ",");
+          first = 0;
+        }
+        if (cfg->privileged_mask & DS_PRIV_UNFILTERED) {
+          printf("%sunfiltered-dev", first ? "" : ",");
+          first = 0;
+        }
+      }
+      printf("\n");
+    }
+
+    printf("BIND_MOUNT_COUNT=%d\n", cfg->bind_count);
+    printf("ENV_VAR_COUNT=%d\n", cfg->env_var_count);
+    show_container_usage(cfg);
+  } else {
+    /* Human-readable output */
+    const char *host = is_android() ? "Android" : "Linux";
+    const char *arch = get_architecture();
+    printf(C_GREEN "Host:" C_RESET " %s %s\n", host, arch);
+
+    printf("\n" C_GREEN "Container:" C_RESET " %s (RUNNING)\n",
+           cfg->container_name);
     printf("  PID: %d\n", pid);
 
     char pretty[256];
@@ -1847,16 +2232,23 @@ int show_info(struct ds_config *cfg, int trust_cfg_pid) {
         printf("  OS: %s\n", pretty);
     }
 
-    printf("\n" C_GREEN "Features:" C_RESET "\n");
+    if (cfg->hostname[0])
+      printf("  Hostname: %s\n", cfg->hostname);
 
-    /* SELinux */
-    if (access("/sys/fs/selinux/enforce", R_OK) == 0) {
-      const char *sel =
-          ds_get_selinux_status() == 0 ? "Permissive" : "Enforcing";
-      printf("  SELinux: %s\n", sel);
+    /* Uptime (only if called from info command) */
+    if (!trust_cfg_pid) {
+      long uptime_sec = ds_get_container_uptime(pid);
+      if (uptime_sec >= 0) {
+        char uptime_str[128];
+        ds_format_uptime(uptime_sec, uptime_str, sizeof(uptime_str));
+        printf("  Uptime: %s\n", uptime_str);
+      }
     }
 
-    /* Networking */
+    printf("\n" C_GREEN "Features:" C_RESET "\n");
+    int feat_count = 0;
+
+    /* 1. Networking Mode */
     const char *net;
     switch (cfg->net_mode) {
     case DS_NET_NAT:
@@ -1870,33 +2262,206 @@ int show_info(struct ds_config *cfg, int trust_cfg_pid) {
       break;
     }
     printf("  Networking: %s\n", net);
+    feat_count++;
 
-    /* Android storage */
-    printf("  Android storage: %s\n",
-           detect_android_storage_in_container(pid) ? "enabled" : "disabled");
+    /* 2. NAT Configuration (IP, Upstream, Ports) */
+    if (cfg->net_mode == DS_NET_NAT) {
+      const char *ip =
+          cfg->static_nat_ip[0] ? cfg->static_nat_ip : cfg->nat_container_ip;
+      if (ip[0]) {
+        printf("  NAT IP: %s\n", ip);
+        feat_count++;
+      }
 
-    /* HW access */
-    int hw = detect_hw_access_in_container(pid);
-    if (hw)
-      printf("  " C_RED "HW access: full" C_RESET "\n");
-    else if (cfg->gpu_mode)
+      if (cfg->upstream_iface_count > 0) {
+        printf("  Upstream ifaces: ");
+        for (int i = 0; i < cfg->upstream_iface_count; i++) {
+          printf("%s%s", cfg->upstream_ifaces[i],
+                 (i < cfg->upstream_iface_count - 1) ? ", " : "");
+        }
+        printf("\n");
+        feat_count++;
+      }
+
+      if (cfg->port_forward_count > 0) {
+        printf("  Port forwards: ");
+        for (int i = 0; i < cfg->port_forward_count; i++) {
+          struct ds_port_forward *pf = &cfg->port_forwards[i];
+          if (pf->host_port_end == 0) {
+            printf("%d:%d", pf->host_port, pf->container_port);
+          } else {
+            printf("%d-%d:%d-%d", pf->host_port, pf->host_port_end,
+                   pf->container_port, pf->container_port_end);
+          }
+          printf("/%s%s", pf->proto,
+                 (i < cfg->port_forward_count - 1) ? ", " : "");
+        }
+        printf("\n");
+        feat_count++;
+      }
+    }
+
+    /* 3. DNS */
+    if (cfg->dns_servers[0]) {
+      printf("  DNS Servers: %s\n", cfg->dns_servers);
+      feat_count++;
+    }
+
+    /* 4. IPv6 */
+    if (cfg->disable_ipv6) {
+      printf("  Disable IPv6: yes\n");
+      feat_count++;
+    }
+
+    /* 5. Android Storage */
+    if (is_android() && cfg->android_storage) {
+      printf("  Android storage: enabled\n");
+      feat_count++;
+    }
+
+    /* 6. HW/GPU Access */
+    if (cfg->hw_access) {
+      printf("  " C_RED "HW access:" C_RESET " full\n");
+      feat_count++;
+    } else if (cfg->gpu_mode) {
       printf("  HW access: GPU\n");
-    else
-      printf("  HW access: " C_DIM "none" C_RESET "\n");
-  } else {
-    /* Best effort: read os-release from rootfs path */
-    if (cfg->rootfs_path[0]) {
-      char osr_path[PATH_MAX];
-      snprintf(osr_path, sizeof(osr_path), "%.4070s/etc/os-release",
-               cfg->rootfs_path);
-      char pretty[256];
-      get_os_pretty(osr_path, pretty, sizeof(pretty));
-      if (pretty[0])
-        printf("  Rootfs OS: %s\n", pretty);
+      feat_count++;
+    }
+
+    /* 7. Termux-X11 */
+    if (is_android() && cfg->termux_x11) {
+      printf("  Termux-X11: enabled\n");
+      feat_count++;
+    }
+
+    /* 8. SELinux Status */
+    if (access("/sys/fs/selinux/enforce", R_OK) == 0) {
+      int status = ds_get_selinux_status();
+      if (status == 0) {
+        printf("  " C_RED "SELinux:" C_RESET " Permissive\n");
+      } else {
+        printf("  SELinux: Enforcing\n");
+      }
+      feat_count++;
+    }
+
+    /* 9. Volatile Mode */
+    if (cfg->volatile_mode) {
+      printf("  Volatile mode: enabled\n");
+      feat_count++;
+    }
+
+    /* 10. Cgroup v1 */
+    if (cfg->force_cgroupv1) {
+      printf("  " C_RED "Force Cgroup V1:" C_RESET " yes\n");
+      feat_count++;
+    }
+
+    /* 11. Deadlock Shield (block_nested_ns) */
+    if (cfg->block_nested_ns) {
+      printf("  " C_RED "Deadlock Shield:" C_RESET " enabled\n");
+      feat_count++;
+    }
+
+    /* 12. Privileged Mode */
+    if (cfg->privileged_mask > 0) {
+      printf("  " C_RED "Privileged mode:" C_RESET " ");
+      if (cfg->privileged_mask == DS_PRIV_FULL) {
+        printf("full");
+      } else {
+        int first = 1;
+        if (cfg->privileged_mask & DS_PRIV_NOMASK) {
+          printf("%snomask", first ? "" : ", ");
+          first = 0;
+        }
+        if (cfg->privileged_mask & DS_PRIV_NOCAPS) {
+          printf("%snocaps", first ? "" : ", ");
+          first = 0;
+        }
+        if (cfg->privileged_mask & DS_PRIV_NOSEC) {
+          printf("%snoseccomp", first ? "" : ", ");
+          first = 0;
+        }
+        if (cfg->privileged_mask & DS_PRIV_SHARED) {
+          printf("%sshared", first ? "" : ", ");
+          first = 0;
+        }
+        if (cfg->privileged_mask & DS_PRIV_UNFILTERED) {
+          printf("%sunfiltered-dev", first ? "" : ", ");
+          first = 0;
+        }
+      }
+      printf("\n");
+      feat_count++;
+    }
+
+    /* 13. Bind Mounts */
+    if (cfg->bind_count > 0) {
+      printf("  Bind mounts: %d active\n", cfg->bind_count);
+      feat_count++;
+    }
+
+    /* 14. Custom Init */
+    if (cfg->custom_init[0]) {
+      printf("  " C_RED "Custom Init:" C_RESET " %s\n", cfg->custom_init);
+      feat_count++;
+    }
+
+    /* 15. Environment Variables */
+    if (cfg->env_var_count > 0) {
+      printf("  Env variables: %d loaded\n", cfg->env_var_count);
+      feat_count++;
+    }
+
+    if (feat_count == 0) {
+      printf("  None\n");
     }
   }
-  printf("\n");
 
+  /* Resource limits & live usage. Only show if Cgroup V2 is active,
+   * since we skip resource management entirely on V1. We also skip this
+   * when called during the boot sequence (!trust_cfg_pid). */
+  if (!trust_cfg_pid &&
+      (cfg->memory_limit || cfg->cpu_quota || cfg->pids_limit) &&
+      !cfg->force_cgroupv1 && ds_cgroup_host_is_v2()) {
+    long long mu = -1, cu = -1, pu = -1;
+    ds_cgroup_get_usage(cfg, &mu, &cu, &pu);
+    printf("\n" C_GREEN "Resources:" C_RESET "\n");
+
+    if (cfg->memory_limit) {
+      char used[32] = "?", lim[32];
+      if (mu >= 0)
+        ds_format_size(mu, used, sizeof(used));
+      ds_format_size(cfg->memory_limit, lim, sizeof(lim));
+      printf("  Memory : %s / %s\n", used, lim);
+    }
+    if (cfg->cpu_quota) {
+      long long period = cfg->cpu_period > 0 ? cfg->cpu_period : 100000;
+      double cores = (double)cfg->cpu_quota / period;
+      printf("  CPU    : %.2f cores", cores);
+      if (cu >= 0) {
+        long uptime = ds_get_container_uptime(pid);
+        if (uptime > 0) {
+          /* Average usage as percentage of total capacity (all allocated
+           * cores). cu is in usec, uptime in sec. */
+          double usage_sec = (double)cu / 1e6;
+          double avg_util = (usage_sec / (double)uptime) / cores * 100.0;
+          printf(" (Avg usage: %.1f%%)", avg_util);
+        } else {
+          printf(" (used: %.3fs)", (double)cu / 1e6);
+        }
+      }
+      printf("\n");
+    }
+    if (cfg->pids_limit) {
+      printf("  PIDs   : limit %lld", cfg->pids_limit);
+      if (pu >= 0)
+        printf(" (current: %lld)", pu);
+      printf("\n");
+    }
+  }
+
+  printf("\n");
   return 0;
 }
 
@@ -1911,5 +2476,6 @@ int restart_rootfs(struct ds_config *cfg) {
     return -1;
   }
   putchar('\n');
+  print_ds_banner();
   return start_rootfs(cfg);
 }

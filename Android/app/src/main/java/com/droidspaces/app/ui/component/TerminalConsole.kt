@@ -2,6 +2,7 @@ package com.droidspaces.app.ui.component
 
 import android.util.Log
 import androidx.compose.animation.core.*
+import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
@@ -13,6 +14,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
@@ -115,8 +117,14 @@ fun TerminalConsole(
     modifier: Modifier = Modifier,
     maxHeight: Dp? = null
 ) {
+    val orientation = LocalConfiguration.current.orientation
     val verticalScrollState = rememberScrollState()
     val horizontalScrollState = rememberScrollState()
+
+    // After rotation, snap to bottom so auto-scroll resumes cleanly
+    LaunchedEffect(orientation) {
+        verticalScrollState.scrollTo(verticalScrollState.maxValue)
+    }
 
     var userScrolledUp by remember { mutableStateOf(false) }
     var isAutoScrolling by remember { mutableStateOf(false) }

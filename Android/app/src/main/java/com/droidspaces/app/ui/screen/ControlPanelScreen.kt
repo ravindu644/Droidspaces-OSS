@@ -36,7 +36,6 @@ fun ControlPanelScreen(
     containerViewModel: ContainerViewModel,
     onNavigateToContainerDetails: (String) -> Unit = {},
     onNavigateToTerminal: (String) -> Unit = {},
-    refreshTrigger: Int = 0
 ) {
     val context = LocalContext.current
     val snackbarHostState = remember { SnackbarHostState() }
@@ -122,8 +121,7 @@ fun ControlPanelScreen(
                                 onTerminalClick = {
                                     onNavigateToTerminal(container.name)
                                 },
-                                usage = containerUsageMap[container.name],
-                                refreshTrigger = refreshTrigger
+                                osInfo = containerUsageMap[container.name],
                             )
                         }
                     }

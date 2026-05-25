@@ -23,7 +23,7 @@ class ContainerInstallationViewModel : ViewModel() {
     var hostname: String by mutableStateOf("")
         private set
 
-    var netMode: String by mutableStateOf("host")
+    var netMode: String by mutableStateOf("nat")
         private set
 
     var disableIPv6: Boolean by mutableStateOf(false)
@@ -56,10 +56,16 @@ class ContainerInstallationViewModel : ViewModel() {
     var runAtBoot: Boolean by mutableStateOf(false)
         private set
 
+    var customInit: String by mutableStateOf("")
+        private set
+
+    var staticNatIp: String by mutableStateOf("")
+        private set
+
     var envFileContent: String? by mutableStateOf(null)
         private set
 
-    var useSparseImage: Boolean by mutableStateOf(false)
+    var useSparseImage: Boolean by mutableStateOf(true)
         private set
 
     var sparseImageSizeGB: Int by mutableStateOf(8)
@@ -106,6 +112,8 @@ class ContainerInstallationViewModel : ViewModel() {
         bindMounts: List<BindMount>,
         dnsServers: String,
         runAtBoot: Boolean,
+        customInit: String,
+        staticNatIp: String,
         envFileContent: String?,
         upstreamInterfaces: List<String>,
         portForwards: List<PortForward>,
@@ -124,6 +132,8 @@ class ContainerInstallationViewModel : ViewModel() {
         this.bindMounts = bindMounts
         this.dnsServers = dnsServers
         this.runAtBoot = runAtBoot
+        this.customInit = customInit
+        this.staticNatIp = staticNatIp
         this.envFileContent = envFileContent
         this.upstreamInterfaces = upstreamInterfaces
         this.portForwards = portForwards
@@ -155,6 +165,8 @@ class ContainerInstallationViewModel : ViewModel() {
             bindMounts = bindMounts,
             dnsServers = dnsServers,
             runAtBoot = runAtBoot,
+            customInit = customInit,
+            staticNatIp = staticNatIp,
             envFileContent = envFileContent,
             status = ContainerStatus.STOPPED, // Default status for new container
             useSparseImage = useSparseImage,
@@ -171,7 +183,7 @@ class ContainerInstallationViewModel : ViewModel() {
         tarballUri = null
         containerName = ""
         hostname = ""
-        netMode = "host"
+        netMode = "nat"
         disableIPv6 = false
         enableAndroidStorage = false
         enableHwAccess = false
@@ -182,8 +194,10 @@ class ContainerInstallationViewModel : ViewModel() {
         bindMounts = emptyList()
         dnsServers = ""
         runAtBoot = false
+        customInit = ""
+        staticNatIp = ""
         envFileContent = null
-        useSparseImage = false
+        useSparseImage = true
         sparseImageSizeGB = 8
         upstreamInterfaces = emptyList()
         portForwards = emptyList()

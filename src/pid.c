@@ -221,6 +221,7 @@ int count_running_containers(char *first_name, size_t size) {
         /* Explicit pruning during scan */
         unlink(tmp_cfg.pidfile);
         remove_mount_path(tmp_cfg.pidfile);
+        remove_init_type(tmp_cfg.pidfile);
       }
     }
   }
@@ -310,6 +311,55 @@ pid_t find_container_init_pid(const char *uuid) {
   return 0;
 }
 
+int collect_active_uuids(char uuids[][DS_UUID_LEN + 1], int max_uuids) {
+  if (!uuids || max_uuids <= 0)
+    return 0;
+
+  pid_t *pids = NULL;
+  size_t count = 0;
+  char path[PATH_MAX];
+  int found = 0;
+
+  if (collect_pids(&pids, &count) < 0)
+    return 0;
+
+  for (size_t i = 0; i < count && found < max_uuids; i++) {
+    if (build_proc_root_path(pids[i], "/run/droidspaces", path, sizeof(path)) <
+        0)
+      continue;
+    if (access(path, F_OK) != 0)
+      continue;
+
+    DIR *d = opendir(path);
+    if (!d)
+      continue;
+
+    struct dirent *ent;
+    while ((ent = readdir(d)) != NULL && found < max_uuids) {
+      if (strlen(ent->d_name) != DS_UUID_LEN)
+        continue;
+      /* Verify it's all hex chars -- UUID marker files are 32 hex chars */
+      int is_uuid = 1;
+      for (int j = 0; j < DS_UUID_LEN; j++) {
+        char c = ent->d_name[j];
+        if (!((c >= '0' && c <= '9') || (c >= 'a' && c <= 'f'))) {
+          is_uuid = 0;
+          break;
+        }
+      }
+      if (is_uuid) {
+        memcpy(uuids[found], ent->d_name, DS_UUID_LEN);
+        uuids[found][DS_UUID_LEN] = '\0';
+        found++;
+      }
+    }
+    closedir(d);
+  }
+
+  free(pids);
+  return found;
+}
+
 pid_t find_container_by_name(const char *name) {
   if (!name || name[0] == '\0')
     return 0;
@@ -368,7 +418,7 @@ int sync_pidfile(const char *src_pidfile, const char *name) {
  * Status reporting
  * ---------------------------------------------------------------------------*/
 
-int show_containers(void) {
+int show_containers(struct ds_config *cfg) {
   DIR *d = opendir(get_pids_dir());
   if (!d) {
     if (errno == ENOENT) {
@@ -385,7 +435,12 @@ int show_containers(void) {
   } *containers = NULL;
 
   int count = 0;
+  int totalcount = 0;
   int cap = 32;
+  char container_dir[1024];
+  snprintf(container_dir, sizeof(container_dir), "%s/%s", get_workspace_dir(),
+           DS_CONTAINERS_DIR);
+  totalcount = count_folders(container_dir);
   containers = malloc(cap * sizeof(struct container_info));
   if (!containers) {
     closedir(d);
@@ -437,6 +492,7 @@ int show_containers(void) {
         /* Explicit pruning during scan */
         unlink(tmp_cfg.pidfile);
         remove_mount_path(tmp_cfg.pidfile);
+        remove_init_type(tmp_cfg.pidfile);
       }
     }
   }
@@ -448,8 +504,18 @@ int show_containers(void) {
     return 0;
   }
 
-  if (max_name_len > 60)
-    max_name_len = 60;
+  if (cfg->format_output) {
+    printf("TOTAL_CONTAINERS=%d\n", totalcount);
+    printf("RUN_CONTAINERS=%d\n", count);
+
+    for (int i = 0; i < count; i++) {
+      printf("CONT_%s=%d\n", containers[i].name, containers[i].pid);
+    }
+
+    printf("\n");
+  } else {
+    if (max_name_len > 60)
+      max_name_len = 60;
 
 /* Helper to print horizontal line */
 #define PRINT_LINE(start, mid, end)                                            \
@@ -463,20 +529,20 @@ int show_containers(void) {
     printf("%s\n", end);                                                       \
   } while (0)
 
-  printf("\n");
-  PRINT_LINE("┌", "┬", "┐");
-  printf("│ %-*s │ %-8s │\n", (int)max_name_len, "NAME", "PID");
-  PRINT_LINE("├", "┼", "┤");
+    printf("\n");
+    PRINT_LINE("┌", "┬", "┐");
+    printf("│ %-*s │ %-8s │\n", (int)max_name_len, "NAME", "PID");
+    PRINT_LINE("├", "┼", "┤");
 
-  for (int i = 0; i < count; i++) {
-    printf("│ %-*s │ %-8d │\n", (int)max_name_len, containers[i].name,
-           containers[i].pid);
-  }
+    for (int i = 0; i < count; i++) {
+      printf("│ %-*s │ %-8d │\n", (int)max_name_len, containers[i].name,
+             containers[i].pid);
+    }
 
-  PRINT_LINE("└", "┴", "┘");
-  printf("\n");
+    PRINT_LINE("└", "┴", "┘");
+    printf("\n");
 #undef PRINT_LINE
-
+  }
   free(containers);
   return 0;
 }
@@ -676,6 +742,7 @@ int scan_containers(void) {
         /* Stale PID file, nuke it */
         unlink(pf);
         remove_mount_path(pf);
+        remove_init_type(pf);
       }
     }
     closedir(d);
@@ -726,4 +793,80 @@ int scan_containers(void) {
            recovered_found, orphaned_found);
 
   return 0;
+}
+
+/**
+ * Scans all installed containers and their running status to determine
+ * if the host SELinux permissive mode is still needed.
+ *
+ * Returns:
+ *  -1: No containers with 'selinux-permissive=yes' are installed.
+ *   0: At least one permissive container is installed, but none are running.
+ *   1: At least one permissive container is currently running.
+ */
+int check_selinux_permissive_needs(void) {
+  char pids_path[PATH_MAX];
+  snprintf(pids_path, sizeof(pids_path), "%s", get_pids_dir());
+  DIR *pd = opendir(pids_path);
+  if (!pd)
+    return -1;
+
+  /* Phase 1: Fast check - are any permissive containers currently running? */
+  struct dirent *ent;
+  while ((ent = readdir(pd)) != NULL) {
+    if (!is_pid_file(ent->d_name))
+      continue;
+
+    char name[256];
+    get_container_name_from_pidfile(ent->d_name, name, sizeof(name));
+
+    struct ds_config tmp_cfg = {0};
+    if (ds_config_load_by_name(name, &tmp_cfg) == 0) {
+      pid_t pid;
+      /* Check if THIS running container needs permissive mode */
+      if (tmp_cfg.selinux_permissive && is_container_running(&tmp_cfg, &pid)) {
+        free_config_binds(&tmp_cfg);
+        free_config_env_vars(&tmp_cfg);
+        free_config_unknown_lines(&tmp_cfg);
+        closedir(pd);
+        return 1; /* Found a running permissive container - stay permissive */
+      }
+      free_config_binds(&tmp_cfg);
+      free_config_env_vars(&tmp_cfg);
+      free_config_unknown_lines(&tmp_cfg);
+    }
+  }
+  closedir(pd);
+
+  /* Phase 2: None are running. But is at least one permissive container
+   * installed? (Requirement: do nothing if none installed). */
+  char containers_path[PATH_MAX];
+  snprintf(containers_path, sizeof(containers_path), "%s/Containers",
+           get_workspace_dir());
+  DIR *cd = opendir(containers_path);
+  if (!cd)
+    return -1;
+
+  int permissive_installed = 0;
+  while ((ent = readdir(cd)) != NULL) {
+    if (ent->d_name[0] == '.')
+      continue;
+
+    struct ds_config tmp_cfg = {0};
+    if (ds_config_load_by_name(ent->d_name, &tmp_cfg) == 0) {
+      if (tmp_cfg.selinux_permissive) {
+        permissive_installed = 1;
+        free_config_binds(&tmp_cfg);
+        free_config_env_vars(&tmp_cfg);
+        free_config_unknown_lines(&tmp_cfg);
+        break;
+      }
+      free_config_binds(&tmp_cfg);
+      free_config_env_vars(&tmp_cfg);
+      free_config_unknown_lines(&tmp_cfg);
+    }
+  }
+  closedir(cd);
+
+  return permissive_installed ? 0 : -1;
 }

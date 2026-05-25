@@ -17,7 +17,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.focus.onFocusChanged
+import com.droidspaces.app.ui.component.DsDropdown
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -77,8 +77,6 @@ fun ContainerUsersCard(
         }
     }
 
-    // Dropdown expanded state - single source of truth
-    var isDropdownExpanded by remember { mutableStateOf(false) }
 
     LaunchedEffect(containerName, refreshTrigger) {
         scope.launch {
@@ -94,13 +92,6 @@ fun ContainerUsersCard(
         }
     }
 
-    // Unified unfocus function - prevents race conditions
-    fun unfocusDropdown() {
-        if (isDropdownExpanded) {
-            isDropdownExpanded = false
-        }
-        clearFocus()
-    }
 
     // Manual refresh function with premium rotation animation
     fun refreshUsers() {
@@ -236,7 +227,7 @@ fun ContainerUsersCard(
                             indication = null,
                             interactionSource = remember { MutableInteractionSource() }
                         ) {
-                            unfocusDropdown()
+                            clearFocus()
                         }
                 ) {
                     users.forEach { user ->
@@ -254,65 +245,13 @@ fun ContainerUsersCard(
                 }
             }
 
-            // User selection dropdown - optimized with single source of truth
-            ExposedDropdownMenuBox(
-                expanded = isDropdownExpanded,
-                onExpandedChange = { newExpanded ->
-                    // Direct state update - no conditional logic to prevent race conditions
-                    isDropdownExpanded = newExpanded
-                    // Clear focus when closing
-                    if (!newExpanded) {
-                        clearFocus()
-                    }
-                },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .heightIn(min = 56.dp)
-            ) {
-                OutlinedTextField(
-                    value = selectedUser,
-                    onValueChange = {},
-                    readOnly = true,
-                    label = { Text(context.getString(R.string.select_user)) },
-                    trailingIcon = {
-                        ExposedDropdownMenuDefaults.TrailingIcon(expanded = isDropdownExpanded)
-                    },
-                    shape = RoundedCornerShape(16.dp),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
-                        focusedBorderColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.8f),
-                        unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerLow,
-                        focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
-                    ),
-                modifier = Modifier
-                    .menuAnchor()
-                    .fillMaxWidth()
-                    .onFocusChanged { focusState ->
-                        // Handle focus loss - close dropdown immediately for smooth animation
-                        // No delay needed - direct state update prevents race conditions
-                        if (!focusState.isFocused && isDropdownExpanded) {
-                            isDropdownExpanded = false
-                        }
-                    }
-                )
-                ExposedDropdownMenu(
-                    expanded = isDropdownExpanded,
-                    onDismissRequest = {
-                        unfocusDropdown()
-                    },
-                    modifier = Modifier.heightIn(max = 200.dp)
-                ) {
-                    availableUsers.forEach { user ->
-                        DropdownMenuItem(
-                            text = { Text(user) },
-                            onClick = {
-                                selectedUser = user
-                                unfocusDropdown()
-                            }
-                        )
-                    }
-                }
-            }
+            DsDropdown(
+                label = context.getString(R.string.select_user),
+                selected = selectedUser,
+                options = availableUsers,
+                displayName = { it },
+                onSelect = { selectedUser = it }
+            )
 
             // Copy login button - right aligned, same dimensions and style as Manage button
             Row(
@@ -321,7 +260,7 @@ fun ContainerUsersCard(
             ) {
                 Button(
                     onClick = {
-                        unfocusDropdown()
+                        clearFocus()
                         scope.launch {
                             // Check if droidspaces is in PATH, otherwise use full path
                             val droidspacesCmd = withContext(Dispatchers.IO) {

@@ -21,6 +21,7 @@
 #include <grp.h>
 #include <limits.h>
 #include <net/if.h>
+#include <poll.h>
 #include <pthread.h>
 #include <sched.h>
 #include <signal.h>
@@ -66,7 +67,7 @@
  * ---------------------------------------------------------------------------*/
 
 #define DS_PROJECT_NAME "Droidspaces"
-#define DS_VERSION "6.0.0"
+#define DS_VERSION "6.2.0"
 #define DS_MIN_KERNEL_MAJOR 3
 #define DS_MIN_KERNEL_MINOR 10
 #define DS_RECOMMENDED_KERNEL_MAJOR 4
@@ -85,10 +86,12 @@
 /* Workspace paths */
 #define DS_WORKSPACE_ANDROID "/data/local/Droidspaces"
 #define DS_WORKSPACE_LINUX "/var/lib/Droidspaces"
+#define DS_CONTAINERS_DIR "Containers"
 #define DS_PIDS_SUBDIR "Pids"
 #define DS_IMG_MOUNT_ROOT_UNIVERSAL "/mnt/Droidspaces"
 #define DS_MAX_MOUNT_TRIES 1024
 #define DS_BIND_INITIAL_CAP 4
+#define DS_DEFAULT_INIT "/sbin/init"
 #define DS_VOLATILE_SUBDIR "Volatile"
 #define DS_LOGS_SUBDIR "Logs"
 #define DS_NET_SUBDIR "Net"
@@ -128,6 +131,7 @@
 #define DS_EXT_PID ".pid"
 #define DS_EXT_MOUNT ".mount"
 #define DS_EXT_LOCK ".lock"
+#define DS_EXT_INIT ".init"
 
 /* Signals */
 #define DS_SIG_STOP (SIGRTMIN + 3)
@@ -271,12 +275,23 @@ struct ds_port_forward {
                              */
 #define DS_PRIV_FULL (0xFF) /* All above */
 
+typedef enum {
+  DS_INIT_UNKNOWN = 0,
+  DS_INIT_SYSTEMD,  /* SIGRTMIN+3 */
+  DS_INIT_PROCD,    /* SIGUSR2    -- OpenWrt; SIGTERM = reboot there! */
+  DS_INIT_OPENRC,   /* SIGTERM    */
+  DS_INIT_RUNIT,    /* SIGCONT    */
+  DS_INIT_S6,       /* SIGUSR2    */
+  DS_INIT_BUSYBOX,  /* SIGUSR2    */
+  DS_INIT_SYSVINIT, /* SIGTERM    */
+} ds_init_type_t;
+
 struct ds_config {
   /* Paths */
   char rootfs_path[PATH_MAX];     /* --rootfs=  */
   char rootfs_img_path[PATH_MAX]; /* --rootfs-img= */
   char pidfile[PATH_MAX];         /* --pidfile= or auto-resolved */
-  char container_name[256];       /* --name= or auto-generated */
+  char container_name[256];       /* --name= (mandatory) */
   char hostname[256];             /* --hostname= or container_name */
   char dns_servers[1024];         /* --dns= (comma/space separated) */
   enum ds_net_mode net_mode;      /* --net=host|nat|none */
@@ -300,6 +315,7 @@ struct ds_config {
   int block_nested_ns;    /* --block-nested-namespaces: fix VFS deadlock by
                                blocking nested namespace creation */
   int privileged_mask;    /* --privileged bitmask */
+  int format_output;      /* --format: machine-parseable output (KEY=VALUE) */
   char prog_name[64];     /* argv[0] for logging */
 
   /* Runtime state */
@@ -308,6 +324,8 @@ struct ds_config {
   pid_t intermediate_pid;         /* intermediate fork pid */
   int is_img_mount;               /* 1 if rootfs was loop-mounted from .img */
   char img_mount_point[PATH_MAX]; /* where the .img was mounted */
+  ds_init_type_t init_type;       /* detected container PID 1 init family */
+  char custom_init[PATH_MAX]; /* --init=PATH override (default: /sbin/init) */
 
   /* NAT networking synchronization pipes
    * Both pairs are initialised to {-1,-1} in main() after memset.
@@ -354,6 +372,16 @@ struct ds_config {
   /* Upstream interfaces for NAT routing (--upstream wlan0,rmnet0,...) */
   char upstream_ifaces[DS_MAX_UPSTREAM_IFACES][IFNAMSIZ];
   int upstream_iface_count;
+
+  /* Resource limits (0 = unlimited) */
+  long long memory_limit; /* bytes */
+  long long cpu_quota;    /* us per period */
+  long long cpu_period;   /* us (default 100000) */
+  long long pids_limit;
+
+  /* Resource virtualization (auto-enabled when limits are set) */
+  struct timespec start_time; /* container start time (CLOCK_MONOTONIC) */
+  unsigned long ns_inode;     /* PID namespace inode for PID-recycling guard */
 };
 
 /* ---------------------------------------------------------------------------
@@ -363,6 +391,8 @@ struct ds_config {
 void safe_strncpy(char *dst, const char *src, size_t size);
 char *ds_resolve_path_arg(const char *path);
 void ds_resolve_argv_paths(int argc, char **argv);
+long ds_get_container_uptime(pid_t pid);
+void ds_format_uptime(long uptime_sec, char *buf, size_t size);
 int is_ramfs(const char *path);
 int is_subpath(const char *parent, const char *child);
 int is_running_in_termux(void);
@@ -383,13 +413,14 @@ int read_and_validate_pid(const char *pidfile, pid_t *pid_out);
 int save_mount_path(const char *pidfile, const char *mount_path);
 int read_mount_path(const char *pidfile, char *buf, size_t size);
 int remove_mount_path(const char *pidfile);
+int save_init_type(const char *pidfile, ds_init_type_t init_type);
+int read_init_type(const char *pidfile, ds_init_type_t *init_type_out);
+int remove_init_type(const char *pidfile);
 void firmware_path_add(const char *fw_path);
 void firmware_path_remove(const char *fw_path);
 int run_command(char *const argv[]);
 int run_command_quiet(char *const argv[]);
 int run_command_log(char *const argv[]);
-int ds_get_selinux_status(void);
-void ds_set_selinux_permissive(void);
 int get_selinux_context(const char *path, char *buf, size_t size);
 int set_selinux_context(const char *path, const char *context);
 int ds_send_fd(int sock, int fd);
@@ -397,15 +428,20 @@ int ds_recv_fd(int sock);
 void print_ds_banner(void);
 void print_privileged_warning(int privileged_mask);
 int is_systemd_rootfs(const char *path);
+
+ds_init_type_t detect_container_init(const char *path);
 int get_user_shell(const char *user, char *shell_buf, size_t size);
 void check_kernel_recommendation(void);
 void write_monitor_debug_log(const char *name, const char *fmt, ...);
+void ds_socketd_record_core_event(const char *action,
+                                  const char *container_name, const char *uuid);
 int copy_file(const char *src, const char *dst);
 void sort_bind_mounts(struct ds_config *cfg);
 void sanitize_container_name(const char *name, char *out, size_t size);
 int validate_container_name(const char *name);
 int reject_container_name(const char *name);
 int validate_bind_destination(const char *dest);
+int count_folders(const char *path);
 
 /* ---------------------------------------------------------------------------
  * config.c
@@ -432,7 +468,7 @@ void parse_privileged(const char *value, struct ds_config *cfg);
 
 int is_android(void);
 void android_optimizations(int enable);
-void ds_set_selinux_permissive(void);
+void ds_set_selinux_permissive(int enable);
 int ds_get_selinux_status(void);
 void android_remount_data_suid(void);
 int android_setup_storage(const char *rootfs_path);
@@ -461,10 +497,6 @@ int setup_custom_binds(struct ds_config *cfg, const char *rootfs);
 int mount_rootfs_img(const char *img_path, char *mount_point, size_t mp_size,
                      const char *name);
 int unmount_rootfs_img(const char *mount_point, int silent);
-int get_container_mount_fstype(pid_t pid, const char *path, char *fstype,
-                               size_t size);
-int detect_android_storage_in_container(pid_t pid);
-int detect_hw_access_in_container(pid_t pid);
 int is_mountpoint(const char *path);
 
 /* ---------------------------------------------------------------------------
@@ -482,6 +514,22 @@ void ds_cgroup_detach(pid_t child_pid, const char *container_name);
 /* Remove the entire /sys/fs/cgroup/droidspaces/<name>/ subtree on stop. */
 void ds_cgroup_cleanup_container(const char *container_name);
 void print_cgroup_status(struct ds_config *cfg);
+int ds_cgroup_apply_limits(struct ds_config *cfg);
+int ds_cgroup_get_usage(struct ds_config *cfg, long long *mem,
+                        long long *cpu_us, long long *pids);
+long long ds_parse_size(const char *str);
+void ds_format_size(long long bytes, char *buf, size_t sz);
+/* Word-boundary controller name check (used by container.c for subtree_control
+ * building; wraps the static ctrl_in_list in cgroup.c). */
+int ds_cg_word_in_list(const char *list, const char *name);
+
+/* ---------------------------------------------------------------------------
+ * virtualize.c
+ * ---------------------------------------------------------------------------*/
+
+int ds_virtualize_init(struct ds_config *cfg);
+void ds_virtualize_update(struct ds_config *cfg);
+unsigned long ds_get_pid_ns_inode(pid_t pid);
 
 /* ---------------------------------------------------------------------------
  * hardware.c
@@ -643,10 +691,12 @@ int is_container_init(pid_t pid);
 int ds_metadata_sync(pid_t pid);
 int count_running_containers(char *first_name, size_t size);
 pid_t find_container_init_pid(const char *uuid);
+int collect_active_uuids(char uuids[][DS_UUID_LEN + 1], int max_uuids);
 pid_t find_container_by_name(const char *name);
 int sync_pidfile(const char *src_pidfile, const char *name);
-int show_containers(void);
+int show_containers(struct ds_config *cfg);
 int scan_containers(void);
+int check_selinux_permissive_needs(void);
 void write_plain_env_file(const char *src, const char *dst);
 
 /* ---------------------------------------------------------------------------

@@ -1,3 +1,11 @@
+<!--
+title: Droidspaces GPU Acceleration Guide
+section: Guides
+order: 2
+desc: Enable GPU acceleration in Droidspaces containers on Android and Linux. Covers Termux X11, VirGL, Turnip for native Adreno, and desktop GPU passthrough.
+keywords: gpu, acceleration, droidspaces, termux, virgl, turnip, adreno, container, graphics
+-->
+
 # Droidspaces GPU Acceleration Guide
 
 This guide provides step-by-step instructions for enabling GPU acceleration in your Droidspaces containers. Whether you are running on an Android device or a Linux desktop, Droidspaces offers multiple ways to leverage hardware acceleration for a smooth graphical experience.
@@ -17,6 +25,10 @@ This guide provides step-by-step instructions for enabling GPU acceleration in y
 ## Android
 
 Hardware acceleration on Android is achieved by bridging the container's graphics stack with a host-side X server (Termux-X11). Droidspaces handles the complex mount management and security contexts required to make this seamless.
+
+> [!TIP]
+>
+> If you want to enjoy an out-of-the-box XFCE desktop environment experience, you can download our pre-configured XFCE tarballs from the official [Droidspaces Rootfs Builder Releases](https://github.com/Droidspaces/Droidspaces-rootfs-builder/releases).
 
 <a id="termux-x11"></a>
 
@@ -55,6 +67,12 @@ When you enable the **Termux X11** toggle in the Droidspaces app, the following 
 
 6. **Verify**: Run `glxgears` inside the container terminal. The output will render in the Termux-X11 app.
 
+7. **Start Desktop Environment**: To launch the full XFCE desktop (if installed), run:
+
+   ```bash
+   dbus-launch --exit-with-session startxfce4
+   ```
+
 ---
 
 <a id="virgl"></a>
@@ -89,6 +107,12 @@ This method provides **GPU acceleration for non-Qualcomm devices (Mali/PowerVR)*
    ```
 
 5. **Verify Acceleration**: Run `glxinfo -B` and look for "VirGL" in the renderer string.
+
+6. **Start Desktop Environment**: To launch the full XFCE desktop (if installed), run:
+
+   ```bash
+   dbus-launch --exit-with-session startxfce4
+   ```
 
 > [!TIP]
 >
@@ -133,6 +157,12 @@ For Qualcomm Adreno GPUs, Droidspaces supports **native hardware acceleration** 
    ```bash
    dbus-launch --exit-with-session startxfce4
    ```
+
+> [!TIP]
+> **If you encounter any problems related to DRI3,** try editing `/data/adb/modules/droidspaces/etc/droidspaces.te` and uncommenting the line:
+>
+> `allow untrusted_app_27 droidspacesd fd use`
+
 ---
 
 <a id="linux"></a>

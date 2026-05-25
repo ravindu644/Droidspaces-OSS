@@ -60,8 +60,6 @@
     <string name="developers">සංවර්ධකයින්</string>
     <string name="developer_ravindu644" translatable="false">ravindu644</string>
     <string name="developer_ravindu644_role">Backend, UI</string>
-    <string name="developer_thesithumsandaruwan" translatable="false">thesithumsandaruwan</string>
-    <string name="developer_thesithumsandaruwan_role">UI</string>
     <string name="telegram_channel">Telegram චැනලය</string>
     <string name="contributors">දායකත්වය ලබා දුන් අය</string>
     <string name="github">GitHub</string>
@@ -139,8 +137,8 @@
     <string name="cat_security">ආරක්ෂාව සහ පද්ධති පණගැන්වීම</string>
     <string name="cat_advanced">වැඩිදුර සැකසුම්</string>
     <string name="network_mode">ජාල ක්‍රමය</string>
-    <string name="network_mode_host">Host (පෙරනිමිය)</string>
-    <string name="network_mode_nat">NAT (හුදෙකලා)</string>
+    <string name="network_mode_host">Host</string>
+    <string name="network_mode_nat">NAT (පෙරනිමිය)</string>
     <string name="network_mode_none">කිසිවක් නැත (Air-gapped)</string>
     <string name="nat_settings">NAT සැකසුම්</string>
     <string name="upstream_interfaces_mandatory">ප්‍රභව අතුරුමුහුණත් (අනිවාර්ය)</string>
@@ -169,7 +167,7 @@
     <string name="saving">සුරකිමින් පවතී...</string>
     <string name="save_changes">වෙනස්කම් සුරකින්න</string>
     <string name="static_ip_address">ස්ථාවර IP ලිපිනය</string>
-    <string name="static_ip_description">මෙම කන්ටේනරය සඳහා 172.28.x.x උපජාලය තුළ ස්ථාවර IPv4 ලිපිනයක් සකසන්න.</string>
+    <string name="static_ip_description">මෙම කන්ටේනරය සඳහා 172.28.x.x උපජාලය තුළ ස්ථාවර IPv4 ලිපිනයක් සකසන්න. පළමු පණගැන්වීමේදී ස්වයංක්‍රීයව ලිපිනයක් ලබා ගැනීමට මෙය හිස්ව තබන්න.</string>
     <string name="octet_label">Octet %1$d</string>
     <string name="error_octet_range">පරාසය: 1-254</string>
     <string name="error_ip_collision">මෙම IP ලිපිනය දැනටමත් \"%1$s\" වෙත ලබා දී ඇත</string>
@@ -223,9 +221,12 @@
     <string name="no_containers_running">කිසිඳු කන්ටේනරයක් ධාවනය නොවේ</string>
     <string name="start_container_first">මෙතන බලන්න මුලින්ම කන්ටේනරයක් ආරම්භ කරන්න</string>
     <string name="systemd_services">Systemd සේවා</string>
+    <string name="openrc_services">OpenRC සේවා</string>
+    <string name="openrc">OpenRC</string>
+    <string name="init_system">Init පද්ධතිය</string>
+    <string name="init_system_not_available">Systemd/OpenRC නොමැත</string>
+    <string name="init_system_not_available_desc">මෙම කන්ටේනරයේ systemd හෝ OpenRC ස්ථාපනය වී නොමැත</string>
     <string name="fetching_services">සේවා විස්තර ලබා ගනිමින්...</string>
-    <string name="systemd_not_available">Systemd සොයාගත නොහැක</string>
-    <string name="systemd_not_available_message">මෙම කන්ටේනරයේ systemd ස්ථාපනය කර හෝ ක්‍රියාත්මක වී නොමැත</string>
     <string name="search_services">සේවා සොයන්න...</string>
     <string name="enabled_legend">සක්‍රීය කළ</string>
     <string name="disabled_legend">අක්‍රීය කළ</string>
@@ -318,7 +319,7 @@
     <string name="starting_migration">Migrate ක්‍රියාවලිය ආරම්භ කරමින්...</string>
     <string name="starting_resizing">ප්‍රමාණය වෙනස් කිරීමේ ක්‍රියාවලිය ආරම්භ කරමින්...</string>
     <string name="help_card_title">Droidspaces වලට අලුත් ද?</string>
-    <string name="help_card_message">ඔබේ පළමු Android කන්ටේනරය සකසන්නේ කෙසේදැයි ඉගෙන ගැනීමට මෙතන ක්ලික් කරන්න !</string>
+    <string name="help_card_message">ඔබේ පළමු Linux කන්ටේනරය සකසන්නේ කෙසේදැයි ඉගෙන ගැනීමට මෙතන ක්ලික් කරන්න!</string>
     <string name="help_card_url">https://github.com/ravindu644/Droidspaces-OSS/blob/main/Documentation/Installation-Android.md</string>
     <string name="reboot_recommended">SELinux නීති ක්රියාත්මක කිරීම සහ boot වීමේදී daemon ආරම්භ කිරීම සඳහා ඔබගේ උපාංගය restart කිරීම නිර්දේශ කෙරේ.</string>
     <string name="app_name" translatable="false">Droidspaces</string>

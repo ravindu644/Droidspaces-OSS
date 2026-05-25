@@ -98,7 +98,7 @@
     <string name="start">開始</string>
     <string name="stop">停止</string>
     <string name="restart">再始動</string>
-    <string name="ipv6_option">IPv6無効</string>
+    <string name="ipv6_option">IPv6無効化</string>
     <string name="storage_option">保存領域</string>
     <string name="hw_option">ハードウェア</string>
     <string name="x11_option">X11</string>
@@ -135,7 +135,7 @@
     <string name="cat_security">セキュリティと起動</string>
     <string name="cat_advanced">高度な設定</string>
     <string name="network_mode">ネットワークモード</string>
-    <string name="network_mode_host">ホスト (既定)</string>
+    <string name="network_mode_host">ホスト</string>
     <string name="port_forwarding">ポート転送</string>
     <string name="add_port_forward">ポート転送を追加</string>
     <string name="host_port_hint">ホスト側ポート (1-65535 あるいは 100-200 の範囲)</string>
@@ -178,8 +178,12 @@
     <string name="no_containers_running">実行中のコンテナはありません</string>
     <string name="start_container_first">コンテナを先に始動すると、ここに表示されます</string>
     <string name="systemd_services">Systemdサービス</string>
+    <string name="openrc_services">OpenRC サービス</string>
+    <string name="openrc">OpenRC</string>
+    <string name="init_system">Init システム</string>
+    <string name="init_system_not_available">Systemd/OpenRC は利用できません</string>
+    <string name="init_system_not_available_desc">このコンテナには systemd も OpenRC もインストールされていません</string>
     <string name="fetching_services">サービスを取得中...</string>
-    <string name="systemd_not_available_message">このコンテナには、systemdがインストールされていないか、実行されていません</string>
     <string name="enabled_legend">有効</string>
     <string name="disabled_legend">無効</string>
     <string name="static_legend">静的</string>
@@ -220,7 +224,7 @@
     <string name="uninstall">アンインストール</string>
     <string name="disable_ipv6_description">このコンテナでIPv6を無効にします。IPv6を無効にするとホストで実行中のVPNアプリが壊れるかもしれません。</string>
     <string name="cat_networking">ネットワーク設定</string>
-    <string name="network_mode_nat">ネットワークアドレス変換 (分離)</string>
+    <string name="network_mode_nat">ネットワークアドレス変換 (既定)</string>
     <string name="nat_settings">ネットワークアドレス変換設定</string>
     <string name="symmetric_label">(対称)</string>
     <string name="reboot_recommended">SELinuxのルールを適用し、起動時にデーモンを開始する為に再起動が推奨されます。</string>
@@ -238,8 +242,6 @@
     <string name="terminal_card_desc">このコンテナ内で対話可能なシェルを開く</string>
     <string name="select_user_to_enter">コンテナにどのユーザとして入るか選択する:</string>
     <string name="developer_ravindu644_role">バックエンドとユーザーインタフェース</string>
-    <string name="developer_thesithumsandaruwan" translatable="false">thesithumsandaruwan</string>
-    <string name="developer_thesithumsandaruwan_role">ユーザーインタフェース</string>
     <string name="failure_in_operation">%2$sコンテナを%1$sできませんでした</string>
     <string name="uninstall_container_message">これより「%1$s」コンテナとそのデータの恒久的削除を実施します。この操作は取り消せませんぞ。\n\nもしコンテナが実行中だった場合には、先に停止されます。</string>
     <string name="termux_x11">Termux X11を構成する</string>
@@ -267,7 +269,7 @@
     <string name="error_port_overlap">既存のポート転送ルールと重なっています</string>
     <string name="symlink_integration_description">/system/bin にシンボリックリンクを作成し、Androidのルート権限シェルからドロイドスペースのコマンドを利用可能にする。警告: OVERLAYFSメタ・モジュールであるマウント・システムでこの機能を有効にすると、ブートループが発生します。この選択肢はマジック・マウント系のマウント・システムを使っている場合にのみ使ってください。(再起動が必要です)</string>
     <string name="about_section">このアプリについて</string>
-    <string name="static_ip_description">172.28.x.x サブネット内で、このコンテナに対して静的IPv4を設定する。</string>
+    <string name="static_ip_description">172.28.x.x サブネット内で、このコンテナに対して静的IPv4を設定する。最初の起動時に自動割り当てするには空欄のままにしてください。</string>
     <string name="octet_label">オクテット %1$d</string>
     <string name="error_octet_range">範囲: 1-254</string>
     <string name="error_ip_collision">このIPアドレスは既に「%1$s」に割当られています</string>
@@ -289,7 +291,6 @@
     <string name="hostname_hint">空欄の場合は、コンテナ名がホスト名として流用される</string>
     <string name="next_configuration">次へ: 構築</string>
     <string name="next_storage">次へ: 保存領域</string>
-    <string name="systemd_not_available">Systemdは利用できません</string>
     <string name="search_services">サービスを検索…</string>
     <string name="action_successful">%1$sの%2$sに成功せり</string>
     <string name="no_local_users_found">ローカル・ユーザーは見つかりませんでした</string>
@@ -311,7 +312,7 @@
     <string name="starting_migration">移行作業を開始しています…</string>
     <string name="starting_resizing">容量変更作業を開始しています…</string>
     <string name="help_card_title">ドロイドスペースは初めてですか？</string>
-    <string name="help_card_message">初めてのAndroidコンテナをセットアップする方法を学ぶには、こちらをタップしてくだされ！</string>
+    <string name="help_card_message">初めてのLinuxコンテナをセットアップする方法を学ぶには、こちらをタップしてくだされ！</string>
     <string name="help_card_url">https://github.com/ravindu644/Droidspaces-OSS/blob/main/Documentation/Installation-Android.md</string>
     <string name="volatile_mode">⚠️危ないモード</string>
     <string name="masked_legend">隠匿中</string>
@@ -333,4 +334,21 @@
     <string name="copy_login">ログインをコピー</string>
     <string name="manual_deadlock_shield_description">名前空間が入れ子で生成される事を阻止する事で旧式な(例えば4.14系)カーネルにおいてカーネルレベルの仮想ファイルシステムのデッドロックを予防します。\n\n警告: これを有効化するとコンテナ内でDocker、Podman、LXCや Systemd のサンドボックス化が使えなくなります。</string>
     <string name="notification_permission_rationale">ドロイドスペースはターミナルのセッションをバックグラウンドで維持するため、永続通知の表示が必要です。これが無いと(特にサムスン電子製の機器では)Androidが予期せずターミナル・サービスを強制終了するかもしれません。</string>
+    <string name="welcome_tagline">Linuxコンテナ。ネイティブ。付加処理無し。</string>
+    <string name="feat_containers_title">本物のLinuxコンテナ</string>
+    <string name="feat_containers_desc">LXC、Podman、Docker同様のカーネル名前空間技術を採用しています。エミュレーションでもchrootでもありません。</string>
+    <string name="feat_overhead_title">付加処理無し</string>
+    <string name="feat_unkillable_title">勝手に強制終了されない設計</string>
+    <string name="feat_init_title">systemd / OpenRC は PID 1 として作動します</string>
+    <string name="feat_isolation_title">完璧な隔離環境</string>
+    <string name="install">インストール</string>
+    <string name="gpu_option">画像処理装置</string>
+    <string name="uptime_label">%1$s: %2$s</string>
+    <string name="ip_address_label">%1$s: %2$s</string>
+    <string name="env_hint_row">KEY=VALUE は各行に一対です</string>
+    <string name="key_label">キー</string>
+    <string name="value_label">値</string>
+    <string name="add_variable">変数を追加</string>
+    <string name="installing_container">コンテナをインストールしています</string>
+    <string name="done">完了</string>
 </resources>

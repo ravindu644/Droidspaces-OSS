@@ -17,11 +17,13 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.droidspaces.app.ui.component.ToggleCard
-import com.droidspaces.app.ui.component.NetworkModeSelector
+import com.droidspaces.app.ui.component.DsDropdown
+import androidx.compose.material.icons.filled.Public
 import com.droidspaces.app.ui.component.UpstreamInterfaceList
 import com.droidspaces.app.ui.component.PortForwardingList
 import androidx.compose.ui.platform.LocalContext
 import com.droidspaces.app.R
+import com.droidspaces.app.ui.util.ClearFocusOnClickOutside
 
 import androidx.compose.ui.text.style.TextOverflow
 import com.droidspaces.app.util.BindMount
@@ -32,6 +34,7 @@ import com.droidspaces.app.ui.component.FilePickerDialog
 import com.droidspaces.app.ui.component.SettingsRowCard
 import com.droidspaces.app.ui.component.EnvironmentVariablesDialog
 import com.droidspaces.app.ui.component.PrivilegedModeDialog
+import com.droidspaces.app.ui.component.HardwareAccessDialog
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.compose.foundation.lazy.LazyColumn
@@ -49,7 +52,7 @@ import androidx.compose.foundation.layout.ExperimentalLayoutApi
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun ContainerConfigScreen(
-    initialNetMode: String = "host",
+    initialNetMode: String = "nat",
     initialDisableIPv6: Boolean = false,
     initialEnableAndroidStorage: Boolean = false,
     initialEnableHwAccess: Boolean = false,
@@ -60,6 +63,8 @@ fun ContainerConfigScreen(
     initialBindMounts: List<BindMount> = emptyList(),
     initialDnsServers: String = "",
     initialRunAtBoot: Boolean = false,
+    initialCustomInit: String = "",
+    initialStaticNatIp: String = "",
     initialForceCgroupv1: Boolean = false,
     initialBlockNestedNs: Boolean = false,
     initialPrivileged: String = "",
@@ -78,6 +83,8 @@ fun ContainerConfigScreen(
         bindMounts: List<BindMount>,
         dnsServers: String,
         runAtBoot: Boolean,
+        customInit: String,
+        staticNatIp: String,
         forceCgroupv1: Boolean,
         blockNestedNs: Boolean,
         privileged: String,
@@ -98,6 +105,8 @@ fun ContainerConfigScreen(
     var bindMounts by remember { mutableStateOf(initialBindMounts) }
     var dnsServers by remember { mutableStateOf(initialDnsServers) }
     var runAtBoot by remember { mutableStateOf(initialRunAtBoot) }
+    var customInit by remember { mutableStateOf(initialCustomInit) }
+    var staticNatIp by remember { mutableStateOf(initialStaticNatIp) }
     var forceCgroupv1 by remember { mutableStateOf(initialForceCgroupv1) }
     var blockNestedNs by remember { mutableStateOf(initialBlockNestedNs) }
     var envFileContent by remember { mutableStateOf(initialEnvFileContent) }
@@ -132,9 +141,10 @@ fun ContainerConfigScreen(
             Surface(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 24.dp),
+                    .padding(horizontal = 24.dp)
+                    .imePadding(),
                 shape = RoundedCornerShape(24.dp),
-                color = MaterialTheme.colorScheme.surfaceVariant,
+                color = MaterialTheme.colorScheme.surfaceContainer,
                 border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)),
                 tonalElevation = 0.dp
             ) {
@@ -198,6 +208,7 @@ fun ContainerConfigScreen(
 
     var showEnvDialog by remember { mutableStateOf(false) }
     var showPrivilegedDialog by remember { mutableStateOf(false) }
+    var showHwAccessDialog by remember { mutableStateOf(false) }
 
     if (showPrivilegedDialog) {
         PrivilegedModeDialog(
@@ -207,6 +218,16 @@ fun ContainerConfigScreen(
                 showPrivilegedDialog = false
             },
             onDismiss = { showPrivilegedDialog = false }
+        )
+    }
+
+    if (showHwAccessDialog) {
+        HardwareAccessDialog(
+            onConfirm = {
+                enableHwAccess = true
+                showHwAccessDialog = false
+            },
+            onDismiss = { showHwAccessDialog = false }
         )
     }
 
@@ -254,7 +275,7 @@ fun ContainerConfigScreen(
                             .clickable(
                                 enabled = isUpstreamValid,
                                 onClick = {
-                                    onNext(netMode, disableIPv6, enableAndroidStorage, enableHwAccess, enableGpuMode, enableTermuxX11, selinuxPermissive, volatileMode, bindMounts, dnsServers, runAtBoot, forceCgroupv1, blockNestedNs, privileged, if (envFileContent.isBlank()) null else envFileContent, upstreamInterfaces, portForwards)
+                                    onNext(netMode, disableIPv6, enableAndroidStorage, enableHwAccess, enableGpuMode, enableTermuxX11, selinuxPermissive, volatileMode, bindMounts, dnsServers, runAtBoot, customInit, staticNatIp, forceCgroupv1, blockNestedNs, privileged, if (envFileContent.isBlank()) null else envFileContent, upstreamInterfaces, portForwards)
                                 },
                                 indication = androidx.compose.material.ripple.rememberRipple(bounded = true),
                                 interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
@@ -284,15 +305,20 @@ fun ContainerConfigScreen(
             }
         }
     ) { innerPadding ->
-        Column(
+        ClearFocusOnClickOutside(
             modifier = Modifier
-                .fillMaxSize()
                 .padding(innerPadding)
-                .padding(horizontal = 24.dp)
-                .padding(top = 24.dp)
-                .verticalScroll(rememberScrollState()),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+                .consumeWindowInsets(innerPadding)
+                .imePadding()
         ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = 24.dp)
+                    .padding(top = 24.dp)
+                    .verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
             Text(
                 text = context.getString(R.string.container_options),
                 style = MaterialTheme.typography.headlineSmall,
@@ -308,12 +334,13 @@ fun ContainerConfigScreen(
                 modifier = Modifier.padding(top = 8.dp)
             )
 
-            NetworkModeSelector(
-                netMode = netMode,
-                onModeChange = { mode ->
-                    netMode = mode
-                    if (mode != "host") disableIPv6 = false
-                }
+            DsDropdown(
+                label = context.getString(R.string.network_mode),
+                selected = netMode,
+                options = listOf("nat", "host", "none"),
+                displayName = { context.getString(when (it) { "nat" -> R.string.network_mode_nat; "none" -> R.string.network_mode_none; else -> R.string.network_mode_host }) },
+                onSelect = { mode -> netMode = mode; if (mode != "host") disableIPv6 = false },
+                leadingIcon = Icons.Default.Public
             )
 
             androidx.compose.animation.AnimatedVisibility(
@@ -336,6 +363,111 @@ fun ContainerConfigScreen(
                         style = MaterialTheme.typography.titleMedium,
                         color = MaterialTheme.colorScheme.primary
                     )
+
+                    // Static IP Address Configuration
+                    Text(
+                        text = context.getString(R.string.static_ip_address),
+                        style = MaterialTheme.typography.bodyLarge,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(top = 16.dp)
+                    )
+                    Text(
+                        text = context.getString(R.string.static_ip_description),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.secondary,
+                        modifier = Modifier.padding(bottom = 8.dp)
+                    )
+
+                    val octets = remember(staticNatIp) {
+                        val parts = staticNatIp.split(".")
+                        if (parts.size == 4) {
+                            Pair(parts[2], parts[3])
+                        } else {
+                            Pair("", "")
+                        }
+                    }
+
+                    var octet3 by remember(octets) { mutableStateOf(octets.first) }
+                    var octet4 by remember(octets) { mutableStateOf(octets.second) }
+
+                    val updateIp = { o3: String, o4: String ->
+                        staticNatIp = if (o3.isBlank() && o4.isBlank()) {
+                            ""
+                        } else {
+                            "${com.droidspaces.app.util.Constants.NAT_IP_PREFIX}.$o3.$o4"
+                        }
+                    }
+
+                    val isOctet3Valid = remember(octet3) {
+                        octet3.isEmpty() || (octet3.toIntOrNull()?.let { it in com.droidspaces.app.util.Constants.NAT_OCTET_MIN..com.droidspaces.app.util.Constants.NAT_OCTET_MAX } ?: false)
+                    }
+                    val isOctet4Valid = remember(octet4) {
+                        octet4.isEmpty() || (octet4.toIntOrNull()?.let { it in com.droidspaces.app.util.Constants.NAT_OCTET_MIN..com.droidspaces.app.util.Constants.NAT_OCTET_MAX } ?: false)
+                    }
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "${com.droidspaces.app.util.Constants.NAT_IP_PREFIX}.",
+                            style = MaterialTheme.typography.bodyLarge,
+                            modifier = Modifier.padding(top = 8.dp)
+                        )
+
+                        OutlinedTextField(
+                            value = octet3,
+                            onValueChange = {
+                                if (it.length <= 3 && it.all { c -> c.isDigit() }) {
+                                    octet3 = it
+                                    updateIp(it, octet4)
+                                }
+                            },
+                            label = { Text(context.getString(R.string.octet_label, 3)) },
+                            modifier = Modifier.weight(1f),
+                            singleLine = true,
+                            shape = RoundedCornerShape(16.dp),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
+                                focusedBorderColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.8f),
+                                unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+                                focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                            ),
+                            isError = !isOctet3Valid,
+                            supportingText = { if (!isOctet3Valid) Text(context.getString(R.string.error_octet_range)) },
+                            keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Number)
+                        )
+
+                        Text(
+                            text = ".",
+                            style = MaterialTheme.typography.bodyLarge,
+                            modifier = Modifier.padding(top = 8.dp)
+                        )
+
+                        OutlinedTextField(
+                            value = octet4,
+                            onValueChange = {
+                                if (it.length <= 3 && it.all { c -> c.isDigit() }) {
+                                    octet4 = it
+                                    updateIp(octet3, it)
+                                }
+                            },
+                            label = { Text(context.getString(R.string.octet_label, 4)) },
+                            modifier = Modifier.weight(1f),
+                            singleLine = true,
+                            shape = RoundedCornerShape(16.dp),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
+                                focusedBorderColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.8f),
+                                unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+                                focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                            ),
+                            isError = !isOctet4Valid,
+                            supportingText = { if (!isOctet4Valid) Text(context.getString(R.string.error_octet_range)) },
+                            keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Number)
+                        )
+                    }
 
                     // Upstream Interfaces
                     val isUpstreamValid = upstreamInterfaces.isNotEmpty()
@@ -438,7 +570,13 @@ fun ContainerConfigScreen(
                 title = context.getString(R.string.hardware_access),
                 description = context.getString(R.string.hardware_access_description),
                 checked = enableHwAccess,
-                onCheckedChange = { enableHwAccess = it }
+                onCheckedChange = { newValue ->
+                    if (newValue) {
+                        showHwAccessDialog = true
+                    } else {
+                        enableHwAccess = false
+                    }
+                }
             )
 
             ToggleCard(
@@ -514,6 +652,14 @@ fun ContainerConfigScreen(
                 }
             )
 
+            ToggleCard(
+                icon = Icons.Default.PowerSettingsNew,
+                title = context.getString(R.string.run_at_boot),
+                description = context.getString(R.string.run_at_boot_description),
+                checked = runAtBoot,
+                onCheckedChange = { runAtBoot = it }
+            )
+
             Text(
                 text = context.getString(R.string.cat_advanced),
                 style = MaterialTheme.typography.titleMedium,
@@ -541,6 +687,62 @@ fun ContainerConfigScreen(
                 icon = Icons.Default.Code,
                 onClick = {
                     showEnvDialog = true
+                }
+            )
+
+            // Custom Init Binary
+            if (customInit.isNotEmpty()) {
+                Surface(
+                    color = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.15f),
+                    shape = RoundedCornerShape(16.dp),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.error.copy(alpha = 0.3f)),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Row(
+                        modifier = Modifier.padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Warning,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.error,
+                            modifier = Modifier.size(20.dp)
+                        )
+                        Text(
+                            text = context.getString(R.string.custom_init_warning),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.error
+                        )
+                    }
+                }
+            }
+
+            OutlinedTextField(
+                value = customInit,
+                onValueChange = { customInit = it.filter { !it.isWhitespace() } },
+                label = { Text(context.getString(R.string.custom_init_label)) },
+                placeholder = { Text(context.getString(R.string.custom_init_placeholder)) },
+                supportingText = {
+                    if (customInit.isNotEmpty() && !customInit.startsWith("/")) {
+                        Text(context.getString(R.string.custom_init_error_absolute),
+                             color = MaterialTheme.colorScheme.error)
+                    } else {
+                        Text(context.getString(R.string.custom_init_hint))
+                    }
+                },
+                isError = customInit.isNotEmpty() && !customInit.startsWith("/"),
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true,
+                shape = RoundedCornerShape(16.dp),
+                colors = OutlinedTextFieldDefaults.colors(
+                    unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
+                    focusedBorderColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.8f),
+                    unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+                    focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                ),
+                leadingIcon = {
+                    Icon(Icons.Default.Terminal, contentDescription = null)
                 }
             )
 
@@ -602,16 +804,9 @@ fun ContainerConfigScreen(
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(context.getString(R.string.add_bind_mount))
             }
-            ToggleCard(
-                icon = Icons.Default.PowerSettingsNew,
-                title = context.getString(R.string.run_at_boot),
-                description = context.getString(R.string.run_at_boot_description),
-                checked = runAtBoot,
-                onCheckedChange = { runAtBoot = it }
-            )
 
             Spacer(modifier = Modifier.height(16.dp))
-
         }
     }
+}
 }

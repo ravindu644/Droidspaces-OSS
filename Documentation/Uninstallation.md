@@ -1,3 +1,11 @@
+<!--
+title: Uninstallation Guide
+section: Reference
+order: 5
+desc: Safely uninstall Droidspaces from Android and Linux. Remove containers, backend data, APK, and system files completely.
+keywords: uninstall, droidspaces, remove, android, delete, rootfs, cleanup, container, runtime, backend, data
+-->
+
 # Uninstallation Guide
 
 This guide explains how to safely and completely remove Droidspaces from your system.

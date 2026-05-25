@@ -59,13 +59,6 @@ object ContainerCommandBuilder {
     }
 
     /**
-     * Build status command for a container.
-     */
-    fun buildStatusCommand(container: ContainerInfo): String {
-        return "$DROIDSPACES_BINARY_PATH --name=${quote(container.name)} status"
-    }
-
-    /**
      * Build uptime command for a container.
      */
     @Deprecated("Use buildUsageCommand instead for synchronized metrics", ReplaceWith("buildUsageCommand(containerName)"))
@@ -78,6 +71,13 @@ object ContainerCommandBuilder {
      */
     fun buildUsageCommand(containerName: String): String {
         return "$DROIDSPACES_BINARY_PATH --name=${quote(containerName)} usage"
+    }
+
+    /**
+     * Build command to get IP addresses of a container.
+     */
+    fun buildGetIpCommand(containerName: String): String {
+        return "$DROIDSPACES_BINARY_PATH --name=${quote(containerName)} run 'ip -4 addr show 2>/dev/null | awk \"/inet / && \\\$2 !~ /^127/ {split(\\\$2,a,\\\"/\\\"); print a[1]}\" | tr \"\\n\" \" \" || echo'"
     }
 }
 

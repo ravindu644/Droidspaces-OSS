@@ -187,16 +187,9 @@ int internal_boot(struct ds_config *cfg) {
     return -1;
   }
 
-  /* Detect init system once - used for seccomp and cgroup setup */
-  int is_systemd = is_systemd_rootfs(cfg->rootfs_path);
-
-  /* Apply Seccomp filters early for host protection.
-   * Minimal blocks kexec/module loading for all kernels/modes.
-   * Android setup handles keyring compat and manual deadlock shield. */
-  ds_seccomp_apply_minimal(cfg->hw_access, cfg->privileged_mask);
-  android_seccomp_setup(is_systemd,
-                        cfg->block_nested_ns &&
-                            !(cfg->privileged_mask & DS_PRIV_NOSEC));
+  /* Init family was classified before fork in start_rootfs().
+   * Boot-time setup only needs to know whether that family is systemd. */
+  int is_systemd = (cfg->init_type == DS_INIT_SYSTEMD);
 
   /* 3. Setup volatile overlay INSIDE the container's mount namespace.
    * This MUST happen here (not in parent) so the overlay's connection to
@@ -436,6 +429,17 @@ int internal_boot(struct ds_config *cfg) {
   /* Apply jail mask after pivot_root for correct path resolution */
   ds_apply_jail_mask(cfg->hw_access, cfg->privileged_mask);
 
+  /* 18b. Resource Visibility Virtualization
+   * Always runs: uptime/loadavg are fundamental container features.
+   * CPU/RAM spoofing is selectively enabled only when cgroup limits are set. */
+  if (is_mountpoint("/proc")) {
+    if (ds_virtualize_init(cfg) < 0)
+      ds_warn(
+          "[VIRT] Initialization failed, continuing without virtualization.");
+  } else {
+    ds_warn("[VIRT] /proc not mounted, skipping virtualization.");
+  }
+
   /* 19. Configure rootfs networking (hostname, resolv.conf, etc) */
   fix_networking_rootfs(cfg);
 
@@ -446,15 +450,18 @@ int internal_boot(struct ds_config *cfg) {
   if (!cfg->reboot_cycle) {
     if (cfg->bind_count > 0)
       ds_log("Setting up %d custom bind mount(s)...", cfg->bind_count);
-    ds_log("Booting '%s' (init: /sbin/init)...", cfg->container_name);
+    ds_log("Booting '%s' (init: %s)...", cfg->container_name,
+           cfg->custom_init[0] ? cfg->custom_init : DS_DEFAULT_INIT);
   }
 
   /* 20b. Write identity markers for PID discovery (AFTER logs to ensure CLI
    * parent sees them before exiting background mode). */
   mkdir("run/droidspaces", 0755);
-  char marker_path[PATH_MAX];
-  snprintf(marker_path, sizeof(marker_path), "run/droidspaces/%s", cfg->uuid);
-  write_file(marker_path, ""); /* empty UUID marker */
+  if (cfg->uuid[0] != '\0') {
+    char marker_path[PATH_MAX];
+    snprintf(marker_path, sizeof(marker_path), "run/droidspaces/%s", cfg->uuid);
+    write_file(marker_path, ""); /* empty UUID marker */
+  }
 
   /* Save a normalized copy of the config inside /run for metadata recovery. */
   if (ds_config_save("run/droidspaces/container.config", cfg) < 0) {
@@ -506,8 +513,14 @@ int internal_boot(struct ds_config *cfg) {
   }
 
   /* 23c. Apply security hardening (capabilities)
+   * Apply security hardening (capabilities and seccomp)
    * This is done at the very end to ensure all setup tasks that might need
-   * privileges (like chown/chmod) are finished. */
+   * privileges (like chown/chmod or mknod) are finished. */
+  ds_seccomp_apply_minimal(cfg->hw_access, cfg->privileged_mask);
+  android_seccomp_setup(is_systemd,
+                        cfg->block_nested_ns &&
+                            !(cfg->privileged_mask & DS_PRIV_NOSEC));
+
   ds_apply_capability_hardening(cfg->hw_access, cfg->privileged_mask);
 
   /* 24. Redirect standard I/O to /dev/console */
@@ -536,18 +549,18 @@ int internal_boot(struct ds_config *cfg) {
       /* Sticky permissions again just in case systemd's TTYReset stripped them
        */
       fchmod(console_fd, 0620);
-      if (fchown(console_fd, 0, DS_DEFAULT_TTY_GID) < 0) {
-        ds_warn("Failed to chown console: %s", strerror(errno));
-      }
+      fchown(console_fd, 0, DS_DEFAULT_TTY_GID); /* best-effort, ignore EPERM */
       if (console_fd > 2)
         close(console_fd);
     }
   }
 
   /* 25. EXEC INIT */
+  char *init_bin =
+      cfg->custom_init[0] ? cfg->custom_init : (char *)DS_DEFAULT_INIT;
   char *init_args[16];
   int argc = 0;
-  init_args[argc++] = (char *)"/sbin/init";
+  init_args[argc++] = init_bin;
 
   /* Tell systemd which cgroup hierarchy the container was actually set up
    * with.  We use statfs() on /sys/fs/cgroup (now the container root after
@@ -559,7 +572,7 @@ int internal_boot(struct ds_config *cfg) {
 #ifndef CGROUP2_SUPER_MAGIC
 #define CGROUP2_SUPER_MAGIC 0x63677270
 #endif
-  if (is_systemd) {
+  if (is_systemd && !cfg->custom_init[0]) {
     struct statfs _cgsfs;
     if (statfs("/sys/fs/cgroup", &_cgsfs) == 0) {
       if ((unsigned long)_cgsfs.f_type == (unsigned long)CGROUP2_SUPER_MAGIC) {
@@ -576,10 +589,11 @@ int internal_boot(struct ds_config *cfg) {
 
   init_args[argc] = NULL;
 
-  if (execve("/sbin/init", init_args, environ) < 0) {
-    ds_error("Failed to execute /sbin/init: %s", strerror(errno));
+  if (execve(init_bin, init_args, environ) < 0) {
+    ds_error("Failed to execute %s: %s", init_bin, strerror(errno));
     ds_die("Container boot failed. Please ensure the rootfs path is correct "
-           "and contains a valid /sbin/init binary.");
+           "and contains a valid %s binary.",
+           init_bin);
   }
 
   return -1;

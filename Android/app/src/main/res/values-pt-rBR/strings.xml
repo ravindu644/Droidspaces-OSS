@@ -64,8 +64,6 @@
     <string name="developers">Desenvolvedor(es)</string>
     <string name="developer_ravindu644" translatable="false">ravindu644</string>
     <string name="developer_ravindu644_role">Backend, UI</string>
-    <string name="developer_thesithumsandaruwan" translatable="false">thesithumsandaruwan</string>
-    <string name="developer_thesithumsandaruwan_role">UI</string>
     <string name="telegram_channel">Canal no Telegram</string>
     <string name="contributors">Colaboradores</string>
     <string name="github">GitHub</string>
@@ -173,9 +171,12 @@
     <string name="start_container_first">Inicie um container primeiro para vê-lo aqui</string>
     <!-- Systemd Screen -->
     <string name="systemd_services">Serviços Systemd</string>
+    <string name="openrc_services">Serviços OpenRC</string>
+    <string name="openrc">OpenRC</string>
+    <string name="init_system">Sistema de Init</string>
+    <string name="init_system_not_available">Systemd/OpenRC indisponível</string>
+    <string name="init_system_not_available_desc">Este container não tem systemd ou OpenRC instalado</string>
     <string name="fetching_services">Buscando serviços...</string>
-    <string name="systemd_not_available">Systemd Não Disponível</string>
-    <string name="systemd_not_available_message">Este container não tem systemd instalado ou em execução</string>
     <string name="search_services">Pesquisar serviços...</string>
     <string name="enabled_legend">Habilitado</string>
     <string name="disabled_legend">Desabilitado</string>

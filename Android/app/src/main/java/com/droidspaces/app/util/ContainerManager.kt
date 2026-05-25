@@ -28,7 +28,7 @@ data class ContainerInfo(
     val name: String,
     val hostname: String,
     val rootfsPath: String,
-    val netMode: String = "host",
+    val netMode: String = "nat",
     val disableIPv6: Boolean = false,
     val enableAndroidStorage: Boolean = false,
     val enableHwAccess: Boolean = false,
@@ -49,7 +49,9 @@ data class ContainerInfo(
     val forceCgroupv1: Boolean = false,
     val blockNestedNs: Boolean = false,
     val staticNatIp: String = "",
-    val privileged: String = ""
+    val privileged: String = "",
+    val customInit: String = "",
+    val uuid: String = ""
 ) {
     val isRunning: Boolean
         get() = status == ContainerStatus.RUNNING
@@ -99,6 +101,12 @@ data class ContainerInfo(
         }
         if (privileged.isNotEmpty()) {
             appendLine("privileged=$privileged")
+        }
+        if (customInit.isNotEmpty()) {
+            appendLine("custom_init=$customInit")
+        }
+        if (uuid.isNotEmpty()) {
+            appendLine("uuid=$uuid")
         }
     }
 }
@@ -209,6 +217,17 @@ object ContainerManager {
             }
 
             val configContent = readResult.out.joinToString("\n")
+            return parseConfig(configContent, defaultName)
+        } catch (e: Exception) {
+            return null
+        }
+    }
+
+    /**
+     * Parse container configuration from string content.
+     */
+    fun parseConfig(configContent: String, defaultName: String): ContainerInfo? {
+        try {
             val configMap = mutableMapOf<String, String>()
 
             // Parse config file (key=value format)
@@ -282,7 +301,9 @@ object ContainerManager {
                 forceCgroupv1 = configMap["force_cgroupv1"] == "1",
                 blockNestedNs = configMap["block_nested_ns"] == "1",
                 staticNatIp = configMap["static_nat_ip"] ?: "",
-                privileged = configMap["privileged"] ?: ""
+                privileged = configMap["privileged"] ?: "",
+                customInit = configMap["custom_init"] ?: "",
+                uuid = configMap["uuid"] ?: ""
             )
         } catch (e: Exception) {
             return null
@@ -401,7 +422,18 @@ object ContainerManager {
             val configPath = "$CONTAINERS_BASE_PATH/$sanitizedName/${Constants.CONTAINER_CONFIG_FILE}"
 
             // Build new config content using the shared method
-            val configContent = newConfig.toConfigContent()
+            // Preserve the existing UUID -- never overwrite it with an empty value
+            val configToWrite = if (newConfig.uuid.isNotEmpty()) {
+                newConfig
+            } else {
+                val existingContent = Shell.cmd("cat \"$configPath\" 2>/dev/null").exec()
+                    .out.joinToString("\n")
+                val existingUuid = existingContent.lines()
+                    .firstOrNull { it.startsWith("uuid=") }
+                    ?.removePrefix("uuid=")?.trim() ?: ""
+                newConfig.copy(uuid = existingUuid)
+            }
+            val configContent = configToWrite.toConfigContent()
 
             // Handle .env file
             val envFilePath = "${getContainerDirectory(containerName)}/.env"

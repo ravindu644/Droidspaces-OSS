@@ -1,0 +1,26 @@
+name: Dispatch Docs Update
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'Documentation/**'
+
+jobs:
+  dispatch:
+    name: Create dispatch event
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.WEBPAT }}
+          script: |
+            await github.rest.repos.createDispatchEvent({
+              owner: 'droidspaces',
+              repo: 'droidspaces.github.io',
+              event_type: 'docs-updated',
+              client_payload: {
+                ref: context.ref,
+                sha: context.sha
+              }
+            });

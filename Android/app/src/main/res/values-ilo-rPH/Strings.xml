@@ -63,8 +63,6 @@
     <string name="developers">(Dagiti) Developer</string>
     <string name="developer_ravindu644">ravindu644</string>
     <string name="developer_ravindu644_role">Backend, UI</string>
-    <string name="developer_thesithumsandaruwan">thesithumsandaruwan</string>
-    <string name="developer_thesithumsandaruwan_role">UI</string>
     <string name="telegram_channel">Telegram Channel</string>
     <string name="contributors">Dagiti Contributor</string>
     <string name="github">GitHub</string>
@@ -172,9 +170,12 @@
     <string name="start_container_first">Mangirugi nga umuna ti container tapno makitam ditoy</string>
 
     <string name="systemd_services">Dagiti Serbisyo ti Systemd</string>
+    <string name="openrc_services">Dagiti Serbisyo ti OpenRC</string>
+    <string name="openrc">OpenRC</string>
+    <string name="init_system">Init System</string>
+    <string name="init_system_not_available">Saan nga Available ti Systemd/OpenRC</string>
+    <string name="init_system_not_available_desc">Daytoy a container ket awan ti naka-install wenno agtartaray a systemd wenno OpenRC</string>
     <string name="fetching_services">Kukuaen dagiti serbisyo...</string>
-    <string name="systemd_not_available">Saan nga Available ti Systemd</string>
-    <string name="systemd_not_available_message">Daytoy a container ket awan ti naka-install wenno agtartaray a systemd</string>
     <string name="search_services">Sapulen dagiti serbisyo...</string>
     <string name="enabled_legend">Naka-enable</string>
     <string name="disabled_legend">Naka-disable</string>

@@ -3,4 +3,10 @@
     <plurals name="container_count">
         <item quantity="other">%d 個容器</item>
     </plurals>
+    <plurals name="commit_count">
+        <item quantity="other">%d 次提交</item>
+    </plurals>
+    <plurals name="notification_sessions_running">
+        <item quantity="other">%d 個會話正在執行</item>
+    </plurals>
 </resources>

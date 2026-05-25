@@ -58,8 +58,6 @@
     <string name="developers">Desarrolladores</string>
     <string name="developer_ravindu644" translatable="false">ravindu644</string>
     <string name="developer_ravindu644_role">Backend, IU</string>
-    <string name="developer_thesithumsandaruwan" translatable="false">thesithumsandaruwan</string>
-    <string name="developer_thesithumsandaruwan_role">IU</string>
     <string name="telegram_channel">Canal de Telegram</string>
     <string name="contributors">Colaboradores</string>
     <string name="github">GitHub</string>
@@ -158,9 +156,12 @@
     <string name="no_containers_running">No hay contenedores en ejecución</string>
     <string name="start_container_first">Inicia un contenedor primero para verlo aquí</string>
     <string name="systemd_services">Servicios Systemd</string>
+    <string name="openrc_services">Servicios OpenRC</string>
+    <string name="openrc">OpenRC</string>
+    <string name="init_system">Sistema de Inicio</string>
+    <string name="init_system_not_available">Systemd/OpenRC no disponible</string>
+    <string name="init_system_not_available_desc">Este contenedor no tiene systemd ni OpenRC instalado</string>
     <string name="fetching_services">Obteniendo servicios…</string>
-    <string name="systemd_not_available">Systemd no disponible</string>
-    <string name="systemd_not_available_message">Este contenedor no tiene Systemd instalado o en ejecución</string>
     <string name="search_services">Buscar servicios…</string>
     <string name="enabled_legend">Habilitado</string>
     <string name="disabled_legend">Deshabilitado</string>

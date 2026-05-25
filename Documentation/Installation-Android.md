@@ -1,3 +1,11 @@
+<!--
+title: Android Installation Guide
+section: Basics
+order: 1
+desc: Step-by-step Android installation guide for Droidspaces. Root your device, install the APK, set up the backend, and run Linux containers with zero terminal commands.
+keywords: install, droidspaces, android, rooted, container, apk, atomic, backend, sparse, image, linux
+-->
+
 # Android Installation Guide
 
 Droidspaces on Android is designed to be a "Zero Terminal" experience. From the first install to running a full Linux distribution, everything is handled through the intuitive Android app.

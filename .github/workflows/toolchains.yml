@@ -1,0 +1,98 @@
+name: Build Musl Toolchains
+run-name: "Toolchains Build"
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build ${{ matrix.arch }} toolchain
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: aarch64
+            target: aarch64-linux-musl
+            tarball: aarch64-linux-musl-cross.tar.zst
+          - arch: armhf
+            target: arm-linux-musleabihf
+            tarball: arm-linux-musleabihf-cross.tar.zst
+          - arch: x86
+            target: i686-linux-musl
+            tarball: i686-linux-musl-cross.tar.zst
+          - arch: x86_64
+            target: x86_64-linux-musl
+            tarball: x86_64-linux-musl-cross.tar.zst
+          - arch: riscv64
+            target: riscv64-linux-musl
+            tarball: riscv64-linux-musl-cross.tar.zst
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential git wget curl patch bzip2 xz-utils zstd
+
+      - name: Build ${{ matrix.arch }} toolchain
+        run: bash scripts/install-musl.sh ${{ matrix.arch }}
+
+      - name: Create tarball
+        run: |
+          cd $HOME/toolchains
+          echo "[*] Creating ${{ matrix.tarball }} with zstd max compression..."
+          ZSTD_CLEVEL=19 tar --zstd -cf ${{ matrix.tarball }} ${{ matrix.target }}-cross
+          ls -lh ${{ matrix.tarball }}
+
+      - name: Upload tarball artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.tarball }}
+          path: ~/toolchains/${{ matrix.tarball }}
+
+  release:
+    name: Upload to Release
+    needs: [build]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: tarballs
+          merge-multiple: true
+
+      - name: List tarballs
+        run: ls -lh tarballs/
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          tag_name: compilers-${{ github.run_id }}
+          name: "Musl Toolchains to compile Droidspaces"
+          target_commitish: ${{ github.sha }}
+          prerelease: true
+          body: |
+            ## Musl Cross-Compilation Toolchains
+
+            Pre-built static musl toolchains for Droidspaces CI.
+
+            ### Included Toolchains
+            | Architecture | Tarball |
+            |---|---|
+            | aarch64 | `aarch64-linux-musl-cross.tar.zst` |
+            | armhf | `arm-linux-musleabihf-cross.tar.zst` |
+            | x86 | `i686-linux-musl-cross.tar.zst` |
+            | x86_64 | `x86_64-linux-musl-cross.tar.zst` |
+            | riscv64 | `riscv64-linux-musl-cross.tar.zst` |
+
+            ---
+            **Automated build by Droidspaces CI**
+          files: |
+            tarballs/*.tar.zst

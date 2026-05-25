@@ -63,8 +63,6 @@
     <string name="developers">(Saray) Developer</string>
     <string name="developer_ravindu644">ravindu644</string>
     <string name="developer_ravindu644_role">Backend, UI</string>
-    <string name="developer_thesithumsandaruwan">thesithumsandaruwan</string>
-    <string name="developer_thesithumsandaruwan_role">UI</string>
     <string name="telegram_channel">Telegram Channel</string>
     <string name="contributors">Saray Contributor</string>
     <string name="github">GitHub</string>
@@ -172,9 +170,12 @@
     <string name="start_container_first">Igapo ni so container pian nanengneng diya</string>
 
     <string name="systemd_services">Saray Serbisyo na Systemd</string>
+    <string name="openrc_services">Saray Serbisyo na OpenRC</string>
+    <string name="openrc">OpenRC</string>
+    <string name="init_system">Init System</string>
+    <string name="init_system_not_available">Ag Available so Systemd/OpenRC</string>
+    <string name="init_system_not_available_desc">Sayan container et anggapoy aka-install o aandar ya systemd o OpenRC</string>
     <string name="fetching_services">Aalaen iray serbisyo...</string>
-    <string name="systemd_not_available">Ag Available so Systemd</string>
-    <string name="systemd_not_available_message">Sayan container et anggapoy aka-install o aandar ya systemd</string>
     <string name="search_services">Anapen iray serbisyo...</string>
     <string name="enabled_legend">Naka-enable</string>
     <string name="disabled_legend">Naka-disable</string>

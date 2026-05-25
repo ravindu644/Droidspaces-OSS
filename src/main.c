@@ -30,7 +30,6 @@ void print_usage(void) {
       "  restart                   Restart a container\n"
       "  enter [user]              Enter a running container\n"
       "  run <cmd> [args]          Run a command in a running container\n"
-      "  status                    Show container status\n"
       "  usage                     Show container uptime, CPU and RAM usage\n"
       "  info                      Show detailed container info\n"
       "  pid                       Show the live PID of the container init\n"
@@ -39,12 +38,14 @@ void print_usage(void) {
       "  check                     Check system requirements\n"
       "  docs                      Show interactive documentation\n"
       "  help                      Show this help message\n"
-      "  version                   Show version information\n\n"
+      "  version                   Show version information\n"
+      "  daemon                    Run daemon mode (use --foreground for "
+      "foreground execution)\n\n"
 
       C_BOLD "Options (Container Setup):" C_RESET "\n"
       "  -r, --rootfs=PATH         Path to rootfs directory\n"
       "  -i, --rootfs-img=PATH     Path to rootfs image (.img)\n"
-      "  -n, --name=NAME           Container name (auto-generated if omitted)\n"
+      "  -n, --name=NAME           Container name (mandatory)\n"
       "  -h, --hostname=NAME       Set container hostname\n"
       "  -C, --conf=PATH           Load configuration from file\n\n"
 
@@ -78,11 +79,15 @@ void print_usage(void) {
       "      --block-nested-namespaces\n"
       "                            Manual Deadlock Shield (no nested "
       "namespaces)\n"
+      "      --memory=LIMIT        Memory limit (e.g. 512M, 2G)\n"
+      "      --cpus=COUNT          CPU limit (e.g. 1.5, 2)\n"
+      "      --pids-limit=N        Max number of PIDs\n"
       "      --privileged=TAGS     Relax security: nomask, nocaps, noseccomp, "
       "shared, unfiltered-dev, full\n\n"
 
       C_BOLD "Options (Advanced):" C_RESET "\n"
       "  -f, --foreground          Run in foreground (attach console)\n"
+      "      --init=PATH           Custom init binary (default: /sbin/init)\n"
       "  -u, --user=USER           Run command as USER (for 'run' command "
       "only)\n"
       "  -E, --env=PATH            Load environment variables from file\n"
@@ -93,10 +98,11 @@ void print_usage(void) {
       "                            e.g. -B /data:/data,/tmp:/tmp\n"
       "      --reset               Reset config to defaults (keeps "
       "name/rootfs)\n"
+      "      --format              Machine-parseable output (KEY=VALUE)\n"
       "      --help                Show this help message\n\n"
 
       C_BOLD "Examples:" C_RESET "\n"
-      "  droidspaces --rootfs=/path/to/rootfs start\n"
+      "  droidspaces --name=mycontainer --rootfs=/path/to/rootfs start\n"
       "  droidspaces --name=mycontainer enter\n"
       "  droidspaces --name=mycontainer stop\n\n");
 }
@@ -178,6 +184,16 @@ static int validate_configuration_cli(struct ds_config *cfg) {
     errors++;
   }
 
+  if (cfg->custom_init[0]) {
+    if (cfg->custom_init[0] != '/') {
+      ds_error("Custom init path must be absolute: %s", cfg->custom_init);
+      errors++;
+    } else if (strchr(cfg->custom_init, ' ')) {
+      ds_error("Custom init path cannot contain spaces: %s", cfg->custom_init);
+      errors++;
+    }
+  }
+
   return (errors > 0) ? -1 : 0;
 }
 
@@ -206,7 +222,7 @@ static int auto_resolve_container_name(struct ds_config *cfg) {
   if (count > 1) {
     ds_error("Multiple containers running. Please specify " C_BOLD
              "--name" C_RESET ".");
-    show_containers();
+    show_containers(cfg);
     return -1;
   }
 
@@ -341,6 +357,11 @@ int main(int argc, char **argv) {
       {"nat-ip", required_argument, 0, 262},
       {"gpu", no_argument, 0, 263},
       {"reset", no_argument, 0, 256},
+      {"format", no_argument, 0, 265},
+      {"memory", required_argument, 0, 266},
+      {"cpus", required_argument, 0, 267},
+      {"pids-limit", required_argument, 0, 268},
+      {"init", required_argument, 0, 269},
       {"help", no_argument, 0, 'v'},
       {0, 0, 0, 0}};
 
@@ -454,7 +475,6 @@ int main(int argc, char **argv) {
   int is_stateful =
       (discovered_cmd && (strcmp(discovered_cmd, "stop") == 0 ||
                           strcmp(discovered_cmd, "restart") == 0 ||
-                          strcmp(discovered_cmd, "status") == 0 ||
                           strcmp(discovered_cmd, "pid") == 0 ||
                           strcmp(discovered_cmd, "info") == 0 ||
                           strcmp(discovered_cmd, "usage") == 0 ||
@@ -892,8 +912,66 @@ int main(int argc, char **argv) {
        * already does full GPU wiring). */
       cfg.gpu_mode = 1;
       break;
+    case 265:
+      /* --format: machine-parseable output */
+      cfg.format_output = 1;
+      break;
 
-    case '?':
+    case 266: {
+      long long v = ds_parse_size(optarg);
+      if (v < 4 * 1024 * 1024) {
+        ds_error("--memory: invalid or too small (min 4M): %s", optarg);
+        ret = 1;
+        goto cleanup;
+      }
+      cfg.memory_limit = v;
+      break;
+    }
+    case 267: {
+      char *end;
+      errno = 0;
+      double cpus = strtod(optarg, &end);
+      if (errno || end == optarg || *end != '\0' || cpus < 0.01) {
+        ds_error("--cpus: invalid value: %s", optarg);
+        ret = 1;
+        goto cleanup;
+      }
+      cfg.cpu_period = 100000;
+      cfg.cpu_quota = (long long)(cpus * cfg.cpu_period);
+      /* Enforce a strict minimum floor of 1000us (1ms) for the quota.
+       * Most kernels reject values smaller than this with EINVAL to prevent
+       * excessive scheduling overhead. */
+      if (cfg.cpu_quota < 1000) {
+        ds_error("--cpus: quota too small (min 0.01 cores / 1000us): %s",
+                 optarg);
+        ret = 1;
+        goto cleanup;
+      }
+      break;
+    }
+    case 268: {
+      char *end;
+      errno = 0;
+      long long p = strtoll(optarg, &end, 10);
+      /* Add a sane upper bound (4194304 = 2^22) matching the Linux kernel's
+       * default pid_max ceiling. Values above this are almost certainly
+       * user errors and would be rejected by the kernel with EINVAL. */
+      if (errno || end == optarg || *end != '\0' || p <= 0 || p > 4194304LL) {
+        ds_error("--pids-limit: invalid value (must be 1..4194304): %s",
+                 optarg);
+        ret = 1;
+        goto cleanup;
+      }
+      cfg.pids_limit = p;
+      break;
+    }
+    case 269:
+      if (strchr(optarg, ' ')) {
+        ds_error("--init: path cannot contain spaces: %s", optarg);
+        ret = 1;
+        goto cleanup;
+      }
+      safe_strncpy(cfg.custom_init, optarg, sizeof(cfg.custom_init));
       break;
     default:
       break;
@@ -970,7 +1048,7 @@ int main(int argc, char **argv) {
   ensure_workspace();
 
   if (strcmp(cmd, "show") == 0) {
-    ret = show_containers();
+    ret = show_containers(&cfg);
     goto cleanup;
   }
 
@@ -996,6 +1074,7 @@ int main(int argc, char **argv) {
     }
     enforce_nat_safety(&cfg, argc, argv);
 
+    print_ds_banner();
     print_privileged_warning(cfg.privileged_mask);
 
     if ((cfg.privileged_mask & DS_PRIV_NOSEC) && cfg.block_nested_ns) {
@@ -1003,7 +1082,6 @@ int main(int argc, char **argv) {
               "is now a NO-OP.");
     }
 
-    check_kernel_recommendation();
     ds_cgroup_host_bootstrap(cfg.force_cgroupv1);
     if (cfg.container_name[0] == '\0' && cfg.rootfs_path[0]) {
       generate_container_name(cfg.rootfs_path, cfg.container_name,
@@ -1032,22 +1110,8 @@ int main(int argc, char **argv) {
               "is now a NO-OP.");
     }
 
-    check_kernel_recommendation();
     ds_cgroup_host_bootstrap(cfg.force_cgroupv1);
     ret = restart_rootfs(&cfg);
-    goto cleanup;
-  }
-
-  if (strcmp(cmd, "status") == 0) {
-    if (is_container_running(&cfg, NULL)) {
-      printf("Container '%s' is " C_GREEN "Running" C_RESET "\n",
-             cfg.container_name);
-      ret = 0;
-    } else {
-      printf("Container '%s' is " C_RED "Stopped" C_RESET "\n",
-             cfg.container_name);
-      ret = 1;
-    }
     goto cleanup;
   }
 

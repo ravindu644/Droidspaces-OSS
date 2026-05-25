@@ -63,8 +63,6 @@
     <string name="developers">(Mga) Developer</string>
     <string name="developer_ravindu644">ravindu644</string>
     <string name="developer_ravindu644_role">Backend, UI</string>
-    <string name="developer_thesithumsandaruwan">thesithumsandaruwan</string>
-    <string name="developer_thesithumsandaruwan_role">UI</string>
     <string name="telegram_channel">Telegram Channel</string>
     <string name="contributors">Mga Contributor</string>
     <string name="github">GitHub</string>
@@ -172,9 +170,12 @@
     <string name="start_container_first">Pagsugod una og container aron makita kini dinhi</string>
 
     <string name="systemd_services">Mga Serbisyo sa Systemd</string>
+    <string name="openrc_services">Mga Serbisyo sa OpenRC</string>
+    <string name="openrc">OpenRC</string>
+    <string name="init_system">Init System</string>
+    <string name="init_system_not_available">Dili Magamit ang Systemd/OpenRC</string>
+    <string name="init_system_not_available_desc">Kini nga container walay na-install o nagdagan nga systemd o OpenRC</string>
     <string name="fetching_services">Gikuha ang mga serbisyo...</string>
-    <string name="systemd_not_available">Dili Magamit ang Systemd</string>
-    <string name="systemd_not_available_message">Kini nga container walay na-install o nagdagan nga systemd</string>
     <string name="search_services">Pangitaa ang mga serbisyo...</string>
     <string name="enabled_legend">Naka-enable</string>
     <string name="disabled_legend">Naka-disable</string>

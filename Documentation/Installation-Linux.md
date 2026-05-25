@@ -1,3 +1,11 @@
+<!--
+title: Linux Installation Guide
+section: Basics
+order: 2
+desc: Install Droidspaces on Linux desktop or server. Download the tarball, extract the binary, create a rootfs image, and boot your first container.
+keywords: install, droidspaces, linux, container, runtime, rootfs, tarball, ext, image, namespaces
+-->
+
 # Linux Installation Guide
 
 This guide covers how to install Droidspaces on a Linux desktop or server.

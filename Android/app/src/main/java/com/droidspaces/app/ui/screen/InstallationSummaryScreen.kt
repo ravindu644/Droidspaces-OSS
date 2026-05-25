@@ -9,6 +9,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material.ripple.rememberRipple
 import androidx.compose.material3.*
@@ -49,45 +50,51 @@ fun InstallationSummaryScreen(
         },
         bottomBar = {
             Surface(
-                color = MaterialTheme.colorScheme.surfaceContainerLowest,
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
+                modifier = Modifier.fillMaxWidth(),
+                color = MaterialTheme.colorScheme.surfaceContainer.copy(alpha = 0.98f),
                 tonalElevation = 0.dp
             ) {
-                Surface(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(24.dp)
-                        .navigationBarsPadding()
-                        .clip(btnShape)
-                        .clickable(
-                            onClick = onInstall,
-                            indication = rememberRipple(bounded = true),
-                            interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
-                        ),
-                    shape = btnShape,
-                    color = MaterialTheme.colorScheme.primary,
-                    tonalElevation = 0.dp
-                ) {
-                    Box(
-                        modifier = Modifier.padding(vertical = 16.dp),
-                        contentAlignment = Alignment.Center
+                Column(modifier = Modifier.fillMaxWidth()) {
+                    HorizontalDivider(
+                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.25f),
+                        thickness = 1.dp
+                    )
+                    Surface(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(24.dp)
+                            .navigationBarsPadding()
+                            .clip(btnShape)
+                            .clickable(
+                                onClick = onInstall,
+                                indication = rememberRipple(bounded = true),
+                                interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
+                            ),
+                        shape = btnShape,
+                        color = MaterialTheme.colorScheme.primary,
+                        tonalElevation = 0.dp
                     ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        Box(
+                            modifier = Modifier.padding(vertical = 16.dp),
+                            contentAlignment = Alignment.Center
                         ) {
-                            Icon(
-                                Icons.Default.InstallMobile,
-                                contentDescription = null,
-                                modifier = Modifier.size(18.dp),
-                                tint = MaterialTheme.colorScheme.onPrimary
-                            )
-                            Text(
-                                stringResource(R.string.install_container),
-                                style = MaterialTheme.typography.labelLarge,
-                                fontWeight = FontWeight.SemiBold,
-                                color = MaterialTheme.colorScheme.onPrimary
-                            )
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Icon(
+                                    Icons.Default.InstallMobile,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(18.dp),
+                                    tint = MaterialTheme.colorScheme.onPrimary
+                                )
+                                Text(
+                                    stringResource(R.string.install_container),
+                                    style = MaterialTheme.typography.labelLarge,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = MaterialTheme.colorScheme.onPrimary
+                                )
+                            }
                         }
                     }
                 }
@@ -127,6 +134,14 @@ fun InstallationSummaryScreen(
                     SummaryItem(stringResource(R.string.tarball_label), tarballName, Icons.Default.Archive)
                     SummaryItem(stringResource(R.string.container_singular), config.name, Icons.Default.Storage)
                     SummaryItem(stringResource(R.string.hostname), config.hostname, Icons.Default.Computer)
+                    SummaryItem(
+                        stringResource(R.string.network_mode),
+                        stringResource(when (config.netMode) { "nat" -> R.string.network_mode_nat; "none" -> R.string.network_mode_none; else -> R.string.network_mode_host }),
+                        Icons.Default.Public
+                    )
+                    if (config.netMode == "nat" && config.staticNatIp.isNotEmpty()) {
+                        SummaryItem(stringResource(R.string.static_ip_address), config.staticNatIp, Icons.Default.NetworkCheck)
+                    }
                     if (config.useSparseImage && config.sparseImageSizeGB != null) {
                         SummaryItem(stringResource(R.string.storage_configuration), "${stringResource(R.string.sparse_image_configuration)} (${config.sparseImageSizeGB}GB)", Icons.Default.Storage)
                     } else {
@@ -157,6 +172,7 @@ fun InstallationSummaryScreen(
                     if (config.runAtBoot) SummaryItem(stringResource(R.string.run_at_boot), stringResource(R.string.enabled_legend), Icons.Default.PowerSettingsNew)
                     if (config.forceCgroupv1) SummaryItem(stringResource(R.string.force_cgroupv1), stringResource(R.string.enabled_legend), Icons.Default.Layers)
                     if (config.blockNestedNs) SummaryItem(stringResource(R.string.manual_deadlock_shield), stringResource(R.string.enabled_legend), Icons.Default.GppBad)
+                    if (config.privileged.isNotEmpty()) SummaryItem(stringResource(R.string.privileged_mode), config.privileged, Icons.Default.GppMaybe)
 
                     fun countEnvVars(content: String?): Int {
                         if (content.isNullOrBlank()) return 0
@@ -176,11 +192,22 @@ fun InstallationSummaryScreen(
                         }
                     }
 
+                    if (config.upstreamInterfaces.isNotEmpty()) {
+                        SummaryItem(stringResource(R.string.upstream_interfaces_mandatory), config.upstreamInterfaces.joinToString(", "), Icons.Default.Public)
+                    }
+
+                    if (config.portForwards.isNotEmpty()) {
+                        config.portForwards.forEach { forward ->
+                            SummaryItem(stringResource(R.string.port_forwarding), "${forward.hostPort} → ${forward.containerPort ?: forward.hostPort} (${forward.proto})", Icons.AutoMirrored.Filled.ArrowForward)
+                        }
+                    }
+
                     if (!config.enableAndroidStorage &&
                         !config.enableHwAccess && !config.enableGpuMode && !config.selinuxPermissive &&
                         !config.volatileMode && config.bindMounts.isEmpty() &&
                         !config.runAtBoot && !config.disableIPv6 &&
                         !config.forceCgroupv1 && !config.blockNestedNs &&
+                        config.upstreamInterfaces.isEmpty() && config.portForwards.isEmpty() &&
                         config.envFileContent.isNullOrBlank()) {
                         Text(
                             text = stringResource(R.string.no_options_enabled),

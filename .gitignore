@@ -16,3 +16,10 @@ logs/
 # Keystores
 *.keystore
 local.properties
+
+# Nix stuff
+/result
+*.qcow2
+
+# Android stuff
+.gradle
