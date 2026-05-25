@@ -10,7 +10,7 @@
 
 # Droidspaces
 
-English | 简体中文(README_CN.md)
+English | [简体中文](https://github.com/404-GCross/Droidspaces-OSS/blob/main/README_CN.md)
 
 **Droidspaces** is a lightweight, portable Linux containerization tool that lets you run full Linux environments on top of Android, Linux, or even in **minimal environments like Android recovery/Ramdisks**, with complete init system support including **systemd**, **OpenRC**, and other init systems (runit, s6, etc.).
 
