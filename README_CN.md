@@ -90,7 +90,7 @@ Droidspaces 的独特之处在于其对 Android 和 Linux 本身**零依赖**、
     </td>
     <td align="center" width="33%">
       <b>终端界面</b><br>
-      <i>喜欢 fastfetch？这就是！</i><br>
+      <i>喜欢 fastfetch？有的兄弟，有的</i><br>
       <img src="Documentation/resources/gallery/11_terminal_fastfetch.png" width="95%">
     </td>
     <td align="center" width="33%">
