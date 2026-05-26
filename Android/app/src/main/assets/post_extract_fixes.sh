@@ -168,9 +168,9 @@ EOF
         $PRINTF "[Unit]\nConditionPathIsReadWrite=\n" > "$ROOTFS_PATH/etc/systemd/system/${unit}.d/99-readonly-fix.conf"
     done
 
-    # 05c. Limit udev services to only start if hardware access is enabled
-    log "Applying hardware access limits to udev services..."
-    for unit in systemd-udevd.service systemd-udev-trigger.service systemd-udev-settle.service; do
+    # 05c. Limit udev services/sockets to only start if hardware access is enabled
+    log "Applying hardware access limits to udev services and sockets..."
+    for unit in systemd-udevd.service systemd-udev-trigger.service systemd-udev-settle.service systemd-udevd-control.socket systemd-udevd-kernel.socket; do
         if $TEST -f "$ROOTFS_PATH/$GUEST_SYSTEMD_PATH/$unit" || $TEST -f "$ROOTFS_PATH/etc/systemd/system/multi-user.target.wants/$unit"; then
             $MKDIR -p "$ROOTFS_PATH/etc/systemd/system/${unit}.d"
             $CAT > "$ROOTFS_PATH/etc/systemd/system/${unit}.d/99-hwaccess-limit.conf" << 'EOF'
