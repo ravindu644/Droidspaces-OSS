@@ -5,12 +5,14 @@
   systems,
   ...
 }: {
-  perSystem = {pkgs, ...}: {
+  perSystem = {...}: {
     legacyPackages = {
-      finixDroidspacesTarballs = lib.genAttrs systems (system: {
+      finixDroidspacesTarballs = lib.genAttrs systems (system: let
+        pkgs = import inputs.nixpkgs {inherit system;};
+      in {
         experimental =
           (inputs.finix.lib.finixSystem {
-            inherit (pkgs) lib;
+            inherit (inputs.nixpkgs) lib;
             modules = [
               {
                 nixpkgs.pkgs = inputs.nixpkgs.lib.mkDefault pkgs;
@@ -101,9 +103,18 @@
                     '';
                     target = "/sbin/init";
                   }
+
+                  {
+                    source = config.environment.etc.os-release.source;
+                    target = "/etc/os-release";
+                  }
                 ];
 
-                extraCommands = "mkdir -p proc sys dev";
+                extraCommands = pkgs.writeShellScript "extra-commands" ''
+                  mkdir -p proc sys dev
+
+                  mkdir -p bin && ln -sf ${lib.getExe pkgs.bashInteractive} bin/sh
+                '';
               };
             };
           })
@@ -143,6 +154,7 @@
         environment.systemPackages = with pkgs; [
           nano
           htop
+          fastfetch
         ];
       };
     };
