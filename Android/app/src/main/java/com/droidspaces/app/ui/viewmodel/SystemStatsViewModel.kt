@@ -83,6 +83,7 @@ class SystemStatsViewModel(application: Application) : AndroidViewModel(applicat
                     try {
                         val osInfo = ContainerOSInfoManager.getOSInfo(
                             containerName = container.name,
+                            rootless = container.rootless,
                             useCache = false,
                             appContext = getApplication()
                         )

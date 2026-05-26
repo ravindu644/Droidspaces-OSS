@@ -42,8 +42,8 @@ object DroidspacesTerminalSession {
             val escapedName = containerName.replace("\"", "\\\"")
             val user = containerUser ?: "root"
 
-            // Equivalent to: sh -c "su -c 'droidspaces -n "Name" enter user'"
-            val shArg = "su -c 'droidspaces -n \"$escapedName\" enter $user'"
+            // Equivalent to: sh -c "su -c '/data/local/Droidspaces/bin/droidspaces-runner -n "Name" enter user'"
+            val shArg = "su -c '${Constants.RUNNER_BINARY_PATH} -n \"$escapedName\" enter $user'"
 
             TerminalSession(
                 /* shell      = */ "/system/bin/sh",

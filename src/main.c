@@ -75,10 +75,7 @@ void print_usage(void) {
       C_BOLD "Options (Security & Boot):" C_RESET "\n"
       "  -P, --selinux-permissive  Set host SELinux to permissive mode\n"
       "  -V, --volatile            Discard changes on exit (OverlayFS)\n"
-      "      --force-cgroupv1      Force legacy cgroup v1 hierarchy\n"
-      "      --block-nested-namespaces\n"
-      "                            Manual Deadlock Shield (no nested "
-      "namespaces)\n"
+      "      --rootless             Run without root privileges (user namespace)\n"
       "      --memory=LIMIT        Memory limit (e.g. 512M, 2G)\n"
       "      --cpus=COUNT          CPU limit (e.g. 1.5, 2)\n"
       "      --pids-limit=N        Max number of PIDs\n"
@@ -235,6 +232,12 @@ static int auto_resolve_container_name(struct ds_config *cfg) {
  * ---------------------------------------------------------------------------*/
 
 static void enforce_nat_safety(struct ds_config *cfg, int argc, char **argv) {
+  /* Rootless mode does not support NAT (iptables requires root / initial ns) */
+  if (cfg->rootless && cfg->net_mode == DS_NET_NAT) {
+    ds_error("--net=nat is not available in rootless mode. Use --net=host.");
+    exit(EXIT_FAILURE);
+  }
+
   int is_nat = (cfg->net_mode == DS_NET_NAT);
   int is_disable_ipv6 = cfg->disable_ipv6;
 
@@ -242,9 +245,10 @@ static void enforce_nat_safety(struct ds_config *cfg, int argc, char **argv) {
    * triggers regardless of what ds_config_load() wiped during restart. */
   if (argv != NULL) {
     for (int i = 1; i < argc; i++) {
+      if (!argv[i]) continue;
       if (strcmp(argv[i], "--net=nat") == 0)
         is_nat = 1;
-      if (strcmp(argv[i], "--net") == 0 && i + 1 < argc &&
+      if (strcmp(argv[i], "--net") == 0 && i + 1 < argc && argv[i + 1] &&
           strcmp(argv[i + 1], "nat") == 0)
         is_nat = 1;
       if (strcmp(argv[i], "-I") == 0 || strcmp(argv[i], "--disable-ipv6") == 0)
@@ -317,6 +321,33 @@ static void enforce_nat_safety(struct ds_config *cfg, int argc, char **argv) {
   }
 }
 
+/*
+ * Parse a port string "PORT" or "START-END" into (uint16_t) values.
+ * Returns 0 on success, -1 on error.  On success start <= end always holds.
+ */
+static int parse_port_str(const char *s, const char *label,
+                          uint16_t *out_start, uint16_t *out_end) {
+  char *dash = strchr(s, '-');
+  if (dash) {
+    int a = atoi(s), b = atoi(dash + 1);
+    if (a <= 0 || a > 65535 || b < a || b > 65535) {
+      ds_error("Invalid %s port range '%s' in --port", label, s);
+      return -1;
+    }
+    *out_start = (uint16_t)a;
+    *out_end = (uint16_t)b;
+  } else {
+    int p = atoi(s);
+    if (p <= 0 || p > 65535) {
+      ds_error("Invalid %s port '%s' in --port", label, s);
+      return -1;
+    }
+    *out_start = (uint16_t)p;
+    *out_end = 0;
+  }
+  return 0;
+}
+
 int main(int argc, char **argv) {
   int ret = 0;
   struct ds_config cfg;
@@ -351,8 +382,6 @@ int main(int argc, char **argv) {
       {"net", required_argument, 0, 257},
       {"port", required_argument, 0, 258},
       {"upstream", required_argument, 0, 259},
-      {"force-cgroupv1", no_argument, 0, 260},
-      {"block-nested-namespaces", no_argument, 0, 261},
       {"privileged", required_argument, 0, 264},
       {"nat-ip", required_argument, 0, 262},
       {"gpu", no_argument, 0, 263},
@@ -362,6 +391,7 @@ int main(int argc, char **argv) {
       {"cpus", required_argument, 0, 267},
       {"pids-limit", required_argument, 0, 268},
       {"init", required_argument, 0, 269},
+      {"rootless", no_argument, 0, 270},
       {"help", no_argument, 0, 'v'},
       {0, 0, 0, 0}};
 
@@ -703,54 +733,13 @@ int main(int argc, char **argv) {
         }
 
         int valid = 1;
-        /* Host side parsing */
-        {
-          char *dash = strchr(host_side, '-');
-          if (dash) {
-            int a = atoi(host_side), b = atoi(dash + 1);
-            if (a <= 0 || a > 65535 || b < a || b > 65535) {
-              ds_error("Invalid host port range '%s' in --port", host_side);
-              valid = 0;
-            } else {
-              pf->host_port = (uint16_t)a;
-              pf->host_port_end = (uint16_t)b;
-            }
-          } else {
-            int p = atoi(host_side);
-            if (p <= 0 || p > 65535) {
-              ds_error("Invalid host port '%s' in --port", host_side);
-              valid = 0;
-            } else {
-              pf->host_port = (uint16_t)p;
-              pf->host_port_end = 0;
-            }
-          }
-        }
-
-        /* Container side parsing */
-        if (valid) {
-          char *dash = strchr(cont_side, '-');
-          if (dash) {
-            int a = atoi(cont_side), b = atoi(dash + 1);
-            if (a <= 0 || a > 65535 || b < a || b > 65535) {
-              ds_error("Invalid container port range '%s' in --port",
-                       cont_side);
-              valid = 0;
-            } else {
-              pf->container_port = (uint16_t)a;
-              pf->container_port_end = (uint16_t)b;
-            }
-          } else {
-            int p = atoi(cont_side);
-            if (p <= 0 || p > 65535) {
-              ds_error("Invalid container port '%s' in --port", cont_side);
-              valid = 0;
-            } else {
-              pf->container_port = (uint16_t)p;
-              pf->container_port_end = 0;
-            }
-          }
-        }
+        if (parse_port_str(host_side, "host",
+                            &pf->host_port, &pf->host_port_end) < 0)
+          valid = 0;
+        if (valid && parse_port_str(cont_side, "container",
+                                     &pf->container_port,
+                                     &pf->container_port_end) < 0)
+          valid = 0;
 
         if (!valid) {
           ret = 1;
@@ -882,15 +871,6 @@ int main(int argc, char **argv) {
       }
       break;
     }
-    case 260:
-      /* --force-cgroupv1: escape hatch to legacy hierarchy */
-      cfg.force_cgroupv1 = 1;
-      break;
-    case 261:
-      /* --block-nested-namespaces: fix VFS deadlock manually */
-      cfg.block_nested_ns = 1;
-      break;
-
     case 262: {
       /* --nat-ip: static container IP inside the NAT subnet.
        * Only a basic format check here - subnet + uniqueness validation
@@ -973,6 +953,9 @@ int main(int argc, char **argv) {
       }
       safe_strncpy(cfg.custom_init, optarg, sizeof(cfg.custom_init));
       break;
+    case 270:
+      cfg.rootless = 1;
+      break;
     default:
       break;
     }
@@ -1039,8 +1022,8 @@ int main(int argc, char **argv) {
     goto cleanup;
   }
 
-  /* Root required commands */
-  if (getuid() != 0) {
+  /* Root required commands (rootless mode uses user namespaces) */
+  if (getuid() != 0 && !cfg.rootless) {
     ds_error("Root privileges required for '%s'", cmd);
     ret = 1;
     goto cleanup;
@@ -1077,12 +1060,7 @@ int main(int argc, char **argv) {
     print_ds_banner();
     print_privileged_warning(cfg.privileged_mask);
 
-    if ((cfg.privileged_mask & DS_PRIV_NOSEC) && cfg.block_nested_ns) {
-      ds_warn("--privileged=noseccomp is active: --block-nested-namespaces "
-              "is now a NO-OP.");
-    }
-
-    ds_cgroup_host_bootstrap(cfg.force_cgroupv1);
+    ds_cgroup_host_bootstrap(cfg.rootless);
     if (cfg.container_name[0] == '\0' && cfg.rootfs_path[0]) {
       generate_container_name(cfg.rootfs_path, cfg.container_name,
                               sizeof(cfg.container_name));
@@ -1105,12 +1083,7 @@ int main(int argc, char **argv) {
 
     print_privileged_warning(cfg.privileged_mask);
 
-    if ((cfg.privileged_mask & DS_PRIV_NOSEC) && cfg.block_nested_ns) {
-      ds_warn("--privileged=noseccomp is active: --block-nested-namespaces "
-              "is now a NO-OP.");
-    }
-
-    ds_cgroup_host_bootstrap(cfg.force_cgroupv1);
+    ds_cgroup_host_bootstrap(cfg.rootless);
     ret = restart_rootfs(&cfg);
     goto cleanup;
   }

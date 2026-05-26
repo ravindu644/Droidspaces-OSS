@@ -24,7 +24,6 @@ import androidx.compose.ui.text.font.FontWeight
 import com.droidspaces.app.ui.util.rememberClearFocus
 import androidx.compose.ui.unit.dp
 import com.droidspaces.app.util.Constants
-import com.droidspaces.app.util.ContainerCommandBuilder
 import com.droidspaces.app.util.ContainerUsersManager
 import com.droidspaces.app.ui.util.LoadingIndicator
 import com.droidspaces.app.ui.util.LoadingSize
@@ -39,6 +38,7 @@ import com.droidspaces.app.R
 @Composable
 fun ContainerUsersCard(
     containerName: String,
+    rootless: Boolean = false,
     refreshTrigger: Int = 0,
     snackbarHostState: SnackbarHostState? = null,
     modifier: Modifier = Modifier
@@ -86,7 +86,7 @@ fun ContainerUsersCard(
             if (shouldShowLoading) {
                 isLoading = true
             }
-            users = ContainerUsersManager.getUsers(containerName, useCache = refreshTrigger == 0)
+            users = ContainerUsersManager.getUsers(containerName, rootless, useCache = refreshTrigger == 0)
             isLoading = false
             isManuallyRefreshing = false
         }
@@ -102,7 +102,7 @@ fun ContainerUsersCard(
                 val startTime = System.currentTimeMillis()
 
                 // Fetch fresh data
-                users = ContainerUsersManager.getUsers(containerName, useCache = false)
+                users = ContainerUsersManager.getUsers(containerName, rootless, useCache = false)
 
                 // Premium UX: Ensure icon completes exactly 1 full rotation (600ms)
                 val elapsed = System.currentTimeMillis() - startTime
@@ -262,17 +262,14 @@ fun ContainerUsersCard(
                     onClick = {
                         clearFocus()
                         scope.launch {
-                            // Check if droidspaces is in PATH, otherwise use full path
-                            val droidspacesCmd = withContext(Dispatchers.IO) {
-                                Constants.getDroidspacesCommand()
-                            }
+                            val droidspacesCmd = com.droidspaces.app.util.Constants.RUNNER_BINARY_PATH
 
                             // Quote container name with double quotes
                             val quotedContainerName = "\"${containerName.replace("\"", "\\\"")}\""
                             val loginCommand = if (selectedUser == "root") {
-                                "$droidspacesCmd --name=$quotedContainerName enter"
+                                "$droidspacesCmd -n $quotedContainerName enter"
                             } else {
-                                "$droidspacesCmd --name=$quotedContainerName enter $selectedUser"
+                                "$droidspacesCmd -n $quotedContainerName enter $selectedUser"
                             }
                             // Wrap entire command in single quotes for su -c
                             val suCommand = "su -c '$loginCommand'"

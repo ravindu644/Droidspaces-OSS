@@ -1,7 +1,7 @@
 package com.droidspaces.app.util
 
 import android.content.Context
-import com.topjohnwu.superuser.Shell
+import com.droidspaces.app.util.SuExec
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
@@ -41,7 +41,7 @@ object SparseImageInstaller {
             runRootCommand(truncateCmd, logger) ?: throw Exception("Failed to create sparse image file")
 
             // Wait for filesystem to settle
-            Shell.cmd("${Constants.BUSYBOX_BINARY_PATH} sync").exec()
+            SuExec.cmd("${Constants.BUSYBOX_BINARY_PATH} sync").exec()
             delay(1000)
 
             // 2. Format as ext4
@@ -55,7 +55,7 @@ object SparseImageInstaller {
 
             // 2c. Verify with e2fsck
             logger.i("[SPARSE] Verifying filesystem integrity (e2fsck)...")
-            val checkResult = Shell.cmd("e2fsck -fy \"$imgPath\"").exec()
+            val checkResult = SuExec.cmd("e2fsck -fy \"$imgPath\"").exec()
             // e2fsck exit codes: 0 (No Errors), 1 (Corrected), 2 (Reboot suggested - safe for us), 4 (Uncorrected)
             if (checkResult.code >= 4) {
                 logger.e("[SPARSE] e2fsck failed with exit code ${checkResult.code}")
@@ -65,7 +65,7 @@ object SparseImageInstaller {
 
             // 2d. Settle Delay (Samsung/Kernel 3.18 stability)
             logger.i("[SPARSE] Waiting for filesystem to settle (2.5s)...")
-            Shell.cmd("${Constants.BUSYBOX_BINARY_PATH} sync").exec()
+            SuExec.cmd("${Constants.BUSYBOX_BINARY_PATH} sync").exec()
             delay(2500)
 
             // 3. Create Mount Point
@@ -95,7 +95,7 @@ object SparseImageInstaller {
                 }
 
                 // For extraction, we stream the output to the logger's debug level
-                val extractResult = Shell.cmd(extractCmd).exec()
+                val extractResult = SuExec.cmd(extractCmd).exec()
                 if (!extractResult.isSuccess) {
                     throw Exception("Tarball extraction failed: ${extractResult.err.joinToString("\n")}")
                 }
@@ -107,20 +107,20 @@ object SparseImageInstaller {
             } finally {
                 // 7. Unmount (Always attempt)
                 logger.i("[SPARSE] Unmounting sparse image...")
-                Shell.cmd("${Constants.BUSYBOX_BINARY_PATH} sync").exec()
+                SuExec.cmd("${Constants.BUSYBOX_BINARY_PATH} sync").exec()
                 delay(1000)
 
                 val umountCmd = "${Constants.BUSYBOX_BINARY_PATH} umount -l \"$mountPoint\" || umount -l \"$mountPoint\""
-                Shell.cmd(umountCmd).exec()
+                SuExec.cmd(umountCmd).exec()
 
                 // Cleanup mount point directory
-                Shell.cmd("rmdir \"$mountPoint\"").exec()
+                SuExec.cmd("rmdir \"$mountPoint\"").exec()
             }
 
         } catch (e: Exception) {
             logger.e("[SPARSE] Error: ${e.message}")
             // Cleanup incomplete image on failure
-            Shell.cmd("rm -f \"$imgPath\"").exec()
+            SuExec.cmd("rm -f \"$imgPath\"").exec()
             throw e
         }
     }
@@ -128,8 +128,8 @@ object SparseImageInstaller {
     /**
      * Runs a root command and logs output. Returns result if successful, null otherwise.
      */
-    private suspend fun runRootCommand(cmd: String, logger: ContainerLogger): Shell.Result? {
-        val result = Shell.cmd(cmd).exec()
+    private suspend fun runRootCommand(cmd: String, logger: ContainerLogger): ShellResult? {
+        val result = SuExec.cmd(cmd).exec()
         result.out.forEach { line -> if (line.isNotBlank()) logger.d(line) }
         result.err.forEach { line -> if (line.isNotBlank()) logger.w(line) }
         return if (result.isSuccess) result else null
@@ -147,9 +147,9 @@ object SparseImageInstaller {
                     inputStream.copyTo(outputStream)
                 }
             }
-            Shell.cmd("chmod 755 \"${postFixScriptFile.absolutePath}\"").exec()
+            SuExec.cmd("chmod 755 \"${postFixScriptFile.absolutePath}\"").exec()
 
-            val result = Shell.cmd("BUSYBOX_PATH=${Constants.BUSYBOX_BINARY_PATH} \"${postFixScriptFile.absolutePath}\" \"$rootfs\" 2>&1").exec()
+            val result = SuExec.cmd("BUSYBOX_PATH=${Constants.BUSYBOX_BINARY_PATH} \"${postFixScriptFile.absolutePath}\" \"$rootfs\" 2>&1").exec()
 
             result.out.forEach { line ->
                 val trimmed = line.trim()

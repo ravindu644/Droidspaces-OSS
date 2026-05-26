@@ -1,25 +1,28 @@
 package com.droidspaces.app.util
 
+import android.content.Context
+import java.io.File
+
 /**
  * Centralized constants for the entire application.
  * Single source of truth for all paths, keys, and configuration values.
  */
 object Constants {
-    // Installation paths
+    // Root-mode installation paths
     const val INSTALL_PATH = "/data/local/Droidspaces/bin"
-    const val DROIDSPACES_BINARY_NAME = "droidspaces"
+    const val RUNNER_LIB_PATH = "/data/local/Droidspaces/lib"
+    const val RUNNER_BINARY_NAME = "droidspaces-runner"
     const val BUSYBOX_BINARY_NAME = "busybox"
     const val MAGISKPOLICY_BINARY_NAME = "magiskpolicy"
-    const val DROIDSPACES_BINARY_PATH = "$INSTALL_PATH/$DROIDSPACES_BINARY_NAME"
     const val BUSYBOX_BINARY_PATH = "$INSTALL_PATH/$BUSYBOX_BINARY_NAME"
     const val MAGISKPOLICY_BINARY_PATH = "$INSTALL_PATH/$MAGISKPOLICY_BINARY_NAME"
+    const val RUNNER_BINARY_PATH = "$INSTALL_PATH/$RUNNER_BINARY_NAME"
     const val MAGISK_MODULE_PATH = "/data/adb/modules/droidspaces"
     const val DROIDSPACES_TE_PATH = MAGISK_MODULE_PATH + "/etc/droidspaces.te"
 
-    // Container paths
+    // Root-mode container paths
     const val CONTAINERS_BASE_PATH = "/data/local/Droidspaces/Containers"
     const val MODULE_SYSTEM_BIN_PATH = "$MAGISK_MODULE_PATH/system/bin"
-    const val SYSTEM_BIN_SYMLINK_PATH = "$MODULE_SYSTEM_BIN_PATH/$DROIDSPACES_BINARY_NAME"
     const val KEY_SYMLINK_ENABLED = "symlink_enabled"
 
     const val DAEMON_MODE_FILE = "/data/local/Droidspaces/.daemon_mode"
@@ -70,19 +73,4 @@ object Constants {
 
     // Pull-to-refresh animation delay (ms) - smooth refresh indicator animation
     const val PULL_TO_REFRESH_ANIMATION_DELAY = 200L
-
-    /**
-     * Check if droidspaces binary is available in system PATH
-     * Returns the command to use (either "droidspaces" if in PATH, or full path otherwise)
-     */
-    fun getDroidspacesCommand(): String {
-        val result = com.topjohnwu.superuser.Shell.cmd("command -v droidspaces 2>&1").exec()
-        return if (result.isSuccess && result.out.isNotEmpty() && result.out[0].isNotBlank()) {
-            // droidspaces is in PATH, use just the command name
-            "droidspaces"
-        } else {
-            // droidspaces is not in PATH, use full path
-            DROIDSPACES_BINARY_PATH
-        }
-    }
 }

@@ -26,7 +26,7 @@ import com.droidspaces.app.util.ModuleInstallationStep
 import com.droidspaces.app.util.DroidspacesChecker
 import com.droidspaces.app.util.DroidspacesBackendStatus
 import com.droidspaces.app.util.PreferencesManager
-import com.topjohnwu.superuser.Shell
+import com.droidspaces.app.util.SuExec
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import com.droidspaces.app.R
@@ -52,16 +52,23 @@ fun InstallationScreen(
     // Check backend status and determine what to install
     LaunchedEffect(Unit) {
         if (!isInstalling && !isSuccess) {
+            isInstalling = true
+
+            // Detect if root (su) is available — if not, skip binary/module install
+            val hasRoot = withContext(Dispatchers.IO) { SuExec.check("id") }
+
+            if (!hasRoot) {
+                // No root available — rootless mode: JNI is already in APK
+                isSuccess = true
+                isInstalling = false
+                appStateViewModel.resetForPostInstallation()
+                appStateViewModel.forceRefresh()
+                return@LaunchedEffect
+            }
+
             val backendStatus = withContext(Dispatchers.IO) {
                 DroidspacesChecker.checkBackendStatus()
             }
-
-            isInstalling = true
-
-            val whichBackendMode = withContext(Dispatchers.IO) {
-                com.droidspaces.app.util.SystemInfoManager.getBackendMode(context)
-            }
-            val wasDaemon = whichBackendMode == "DAEMON"
 
             val isAtomicUpdate = backendStatus is DroidspacesBackendStatus.UpdateAvailable
 
@@ -70,7 +77,7 @@ fun InstallationScreen(
             // Check if SELinux policy exists anywhere BEFORE we start nuking things
             // We check both the module path and the backend backup path
             val sepolicyExists = withContext(Dispatchers.IO) {
-                Shell.cmd("test -f ${Constants.DROIDSPACES_TE_PATH}").exec().isSuccess
+                SuExec.cmd("test -f ${Constants.DROIDSPACES_TE_PATH}").exec().isSuccess
             }
             if (!sepolicyExists) {
                 rebootRecommended = true
@@ -87,7 +94,7 @@ fun InstallationScreen(
                 //  until the daemon is restarted, and the new binary is already
                 //  atomically in place at the canonical path).
                 currentStep = InstallationStep.CreatingDirectories("Nuking existing module...")
-                Shell.cmd("rm -rf '/data/adb/modules/droidspaces' 2>&1").exec()
+                SuExec.cmd("rm -rf '/data/adb/modules/droidspaces' 2>&1").exec()
             }
 
 
@@ -97,10 +104,6 @@ fun InstallationScreen(
             }
             binaryResult.fold(
                 onSuccess = {
-                    // Signal the running daemon (if any) that the binary was swapped
-                    if (wasDaemon) {
-                        BinaryInstaller.signalDaemon()
-                    }
                     // Step 3: Install module
                     isInstallingModule = true
                     val moduleResult = ModuleInstaller.install(context) { step ->
@@ -113,7 +116,7 @@ fun InstallationScreen(
                             // On reinstalls/updates the file already exists (value 0 or 1),
                             // meaning the user has an established preference — leave it alone.
                             val daemonFileExists = withContext(Dispatchers.IO) {
-                                Shell.cmd("test -f '${Constants.DAEMON_MODE_FILE}'").exec().isSuccess
+                                SuExec.cmd("test -f '${Constants.DAEMON_MODE_FILE}'").exec().isSuccess
                             }
                             if (!daemonFileExists) {
                                 PreferencesManager.getInstance(context).isDaemonModeEnabled = true

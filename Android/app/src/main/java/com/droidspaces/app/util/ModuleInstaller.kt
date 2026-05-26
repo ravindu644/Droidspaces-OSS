@@ -1,11 +1,10 @@
 package com.droidspaces.app.util
 
 import android.content.Context
-import com.topjohnwu.superuser.Shell
+import com.droidspaces.app.util.SuExec
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
-import java.io.FileOutputStream
 
 sealed class ModuleInstallationStep {
     data class RemovingOldModule(val path: String) : ModuleInstallationStep()
@@ -38,7 +37,7 @@ object ModuleInstaller {
 
             // Step 1: Remove old module directory
             onProgress(ModuleInstallationStep.RemovingOldModule(MAGISK_MODULE_PATH))
-            Shell.cmd("rm -rf '$MAGISK_MODULE_PATH' 2>&1").exec()
+            SuExec.cmd("rm -rf '$MAGISK_MODULE_PATH' 2>&1").exec()
 
             // Step 2: Extract all assets from boot-module to temp directory
             onProgress(ModuleInstallationStep.ExtractingAssets(tempDir.absolutePath))
@@ -84,7 +83,7 @@ object ModuleInstaller {
 
             // Step 3: Create module directory and copy everything
             onProgress(ModuleInstallationStep.CopyingModule(MAGISK_MODULE_PATH))
-            val mkdirResult = Shell.cmd("mkdir -p '$MAGISK_MODULE_PATH' 2>&1").exec()
+            val mkdirResult = SuExec.cmd("mkdir -p '$MAGISK_MODULE_PATH' 2>&1").exec()
             if (!mkdirResult.isSuccess) {
                 tempDir.deleteRecursively()
                 return@withContext Result.failure(
@@ -92,7 +91,7 @@ object ModuleInstaller {
                 )
             }
 
-            val copyResult = Shell.cmd("cp -arf '${tempDir.absolutePath}'/* '$MAGISK_MODULE_PATH/' 2>&1").exec()
+            val copyResult = SuExec.cmd("cp -arf '${tempDir.absolutePath}'/* '$MAGISK_MODULE_PATH/' 2>&1").exec()
             tempDir.deleteRecursively()
             if (!copyResult.isSuccess) {
                 return@withContext Result.failure(
@@ -102,7 +101,7 @@ object ModuleInstaller {
 
             // Step 4: Set permissions
             onProgress(ModuleInstallationStep.SettingPermissions(MAGISK_MODULE_PATH))
-            val chmodScriptsResult = Shell.cmd("chmod 755 '$MAGISK_MODULE_PATH'/*.sh 2>&1 && chmod 644 '$MAGISK_MODULE_PATH'/*.prop 2>&1 && mkdir -p '$MAGISK_MODULE_PATH/etc' && chmod 644 '$MAGISK_MODULE_PATH'/etc/*.te 2>&1").exec()
+            val chmodScriptsResult = SuExec.cmd("chmod 755 '$MAGISK_MODULE_PATH'/*.sh 2>&1 && chmod 644 '$MAGISK_MODULE_PATH'/*.prop 2>&1 && mkdir -p '$MAGISK_MODULE_PATH/etc' && chmod 644 '$MAGISK_MODULE_PATH'/etc/*.te 2>&1").exec()
             if (!chmodScriptsResult.isSuccess) {
                 return@withContext Result.failure(
                     Exception("Failed to set permissions: ${chmodScriptsResult.err.joinToString()}")
@@ -111,8 +110,8 @@ object ModuleInstaller {
 
             // Step 5: Verify installation
             onProgress(ModuleInstallationStep.Verifying(MAGISK_MODULE_PATH))
-            val verifyDirResult = Shell.cmd("test -d '$MAGISK_MODULE_PATH' 2>&1").exec()
-            val verifyPropResult = Shell.cmd("test -f '$MODULE_PROP_PATH' 2>&1").exec()
+            val verifyDirResult = SuExec.cmd("test -d '$MAGISK_MODULE_PATH' 2>&1").exec()
+            val verifyPropResult = SuExec.cmd("test -f '$MODULE_PROP_PATH' 2>&1").exec()
 
             if (!verifyDirResult.isSuccess) {
                 return@withContext Result.failure(
@@ -126,7 +125,7 @@ object ModuleInstaller {
                 )
             }
 
-            val verifyTeResult = Shell.cmd("test -f '$MAGISK_MODULE_PATH/etc/droidspaces.te' 2>&1").exec()
+            val verifyTeResult = SuExec.cmd("test -f '$MAGISK_MODULE_PATH/etc/droidspaces.te' 2>&1").exec()
             if (!verifyTeResult.isSuccess) {
                 return@withContext Result.failure(
                     Exception("droidspaces.te verification failed")

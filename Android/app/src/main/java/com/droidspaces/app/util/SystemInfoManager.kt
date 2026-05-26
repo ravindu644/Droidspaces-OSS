@@ -3,7 +3,7 @@ package com.droidspaces.app.util
 import android.content.Context
 import android.os.Build
 import android.system.Os
-import com.topjohnwu.superuser.Shell
+import com.droidspaces.app.util.SuExec
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -93,14 +93,11 @@ object SystemInfoManager {
             val newDroidspacesVersion = droidspacesVersionDeferred.await()
             droidspacesVersionCache = newDroidspacesVersion
 
-            // Fetch backend mode securely in background
+            // Fetch backend mode via JNI
             val newBackendMode = withContext(Dispatchers.IO) {
                 try {
-                    val cmd = Constants.getDroidspacesCommand()
-                    val result = Shell.cmd("$cmd mode 2>/dev/null").exec()
-                    if (result.isSuccess && result.out.isNotEmpty()) {
-                        result.out[0].trim().uppercase()
-                    } else null
+                    com.droidspaces.app.nativebridge.NativeBridge.getBackendMode()
+                        .takeIf { it.isNotBlank() }?.uppercase()
                 } catch (e: Exception) { null }
             }
             backendModeCache = newBackendMode
@@ -223,7 +220,7 @@ object SystemInfoManager {
      */
     private suspend fun loadRootProviderVersion(): String = withContext(Dispatchers.IO) {
         return@withContext try {
-            val result = Shell.cmd("su -v").exec()
+            val result = SuExec.cmd("su -v").exec()
             if (result.isSuccess && result.out.isNotEmpty()) {
                 result.out[0].trim()
             } else {
@@ -333,11 +330,8 @@ object SystemInfoManager {
         }
 
         val result = try {
-            val cmd = Constants.getDroidspacesCommand()
-            val shellResult = Shell.cmd("$cmd mode 2>/dev/null").exec()
-            if (shellResult.isSuccess && shellResult.out.isNotEmpty()) {
-                shellResult.out[0].trim().uppercase()
-            } else null
+            com.droidspaces.app.nativebridge.NativeBridge.getBackendMode()
+                .takeIf { it.isNotBlank() }?.uppercase()
         } catch (e: Exception) { null }
 
         if (result != null) {
@@ -354,11 +348,8 @@ object SystemInfoManager {
      */
     suspend fun refreshBackendMode(context: Context? = null): String? = withContext(Dispatchers.IO) {
         val result = try {
-            val cmd = Constants.getDroidspacesCommand()
-            val shellResult = Shell.cmd("$cmd mode 2>/dev/null").exec()
-            if (shellResult.isSuccess && shellResult.out.isNotEmpty()) {
-                shellResult.out[0].trim().uppercase()
-            } else null
+            com.droidspaces.app.nativebridge.NativeBridge.getBackendMode()
+                .takeIf { it.isNotBlank() }?.uppercase()
         } catch (e: Exception) { null }
 
         if (result != null) {

@@ -2,11 +2,12 @@ package com.droidspaces.app.util
 
 import android.content.Context
 import android.os.Build
-import com.topjohnwu.superuser.Shell
+import com.droidspaces.app.util.SuExec
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.FileOutputStream
+import java.util.zip.ZipFile
 
 sealed class InstallationStep {
     data class DetectingArchitecture(val arch: String) : InstallationStep()
@@ -20,44 +21,42 @@ sealed class InstallationStep {
 
 object BinaryInstaller {
     private const val INSTALL_PATH = Constants.INSTALL_PATH
-    private const val DROIDSPACES_BINARY_NAME = Constants.DROIDSPACES_BINARY_NAME
+    private const val RUNNER_LIB_PATH = Constants.RUNNER_LIB_PATH
     private const val BUSYBOX_BINARY_NAME = Constants.BUSYBOX_BINARY_NAME
     private const val MAGISKPOLICY_BINARY_NAME = Constants.MAGISKPOLICY_BINARY_NAME
+    private const val RUNNER_BINARY_NAME = Constants.RUNNER_BINARY_NAME
 
     /**
      * Map Android architecture to binary name suffix
      */
     private fun getArchitectureSuffix(): String {
-        val arch = Build.SUPPORTED_ABIS[0] // Primary ABI
+        val arch = Build.SUPPORTED_ABIS[0]
         return when {
             arch.contains("arm64") || arch.contains("aarch64") -> "aarch64"
             arch.contains("armeabi") || arch.contains("arm") -> "armhf"
             arch.contains("x86_64") -> "x86_64"
             arch.contains("x86") -> "x86"
-            else -> "aarch64" // Default to aarch64
+            else -> "aarch64"
         }
     }
 
     /**
-     * Get droidspaces binary name for architecture
+     * Map Android ABI to APK lib directory subfolder
      */
-    private fun getDroidspacesBinaryName(): String {
-        return "droidspaces-${getArchitectureSuffix()}"
+    private fun getAbiFolder(): String {
+        val arch = Build.SUPPORTED_ABIS[0]
+        return when {
+            arch.contains("arm64") || arch.contains("aarch64") -> "arm64-v8a"
+            arch.contains("armeabi") || arch.contains("arm") -> "armeabi-v7a"
+            arch.contains("x86_64") -> "x86_64"
+            arch.contains("x86") -> "x86"
+            else -> "arm64-v8a"
+        }
     }
 
-    /**
-     * Get busybox binary name for architecture
-     */
-    private fun getBusyboxBinaryName(): String {
-        return "busybox-${getArchitectureSuffix()}"
-    }
-
-    /**
-     * Get magiskpolicy binary name for architecture
-     */
-    private fun getMagiskpolicyBinaryName(): String {
-        return "magiskpolicy-${getArchitectureSuffix()}"
-    }
+    private fun getBusyboxBinaryName(): String = "busybox-${getArchitectureSuffix()}"
+    private fun getMagiskpolicyBinaryName(): String = "magiskpolicy-${getArchitectureSuffix()}"
+    private fun getRunnerBinaryName(): String = "runner-${getArchitectureSuffix()}"
 
     /**
      * Get human-readable architecture name
@@ -74,135 +73,111 @@ object BinaryInstaller {
     }
 
     /**
-     * Install droidspaces binary with progress updates
+     * Install binaries: busybox, magiskpolicy, droidspaces-runner, libdroidspaces.so
      */
     suspend fun install(
         context: Context,
         onProgress: (InstallationStep) -> Unit
     ): Result<Unit> = withContext(Dispatchers.IO) {
         try {
-            // Step 1: Detect architecture
             val arch = getArchitectureName()
             onProgress(InstallationStep.DetectingArchitecture(arch))
 
-            val droidspacesBinaryName = getDroidspacesBinaryName()
-            val busyboxBinaryName = getBusyboxBinaryName()
-
-            // Always install to the canonical path. The daemon's g_self_path fix
-            // means this is safe even while the daemon is running - the mv is
-            // atomic and the daemon automatically re-execs the new binary.
-            val droidspacesTargetPath = Constants.DROIDSPACES_BINARY_PATH
-            val busyboxTargetPath = Constants.BUSYBOX_BINARY_PATH
-            val magiskpolicyTargetPath = Constants.MAGISKPOLICY_BINARY_PATH
+            val installPaths = listOf(INSTALL_PATH, RUNNER_LIB_PATH)
 
             // Step 2: Create directories
             onProgress(InstallationStep.CreatingDirectories(INSTALL_PATH))
-            val mkdirResult = Shell.cmd("mkdir -p $INSTALL_PATH").exec()
+            val mkdirResult = SuExec.cmd("mkdir -p ${installPaths.joinToString(" ")}").exec()
             if (!mkdirResult.isSuccess) {
                 return@withContext Result.failure(
-                    Exception("Failed to create directory: ${mkdirResult.err.joinToString()}")
+                    Exception("Failed to create directories: ${mkdirResult.err.joinToString()}")
                 )
             }
 
-            // Helper function to install a binary
-            // Uses atomic move operation to avoid "text file busy" error when binary is running.
-            // Strategy: Copy to temp file in same directory, then use mv (atomic on same filesystem).
-            // This works even if the target binary is currently executing.
+            // Helper function to install a binary from assets
+            // Uses atomic move to avoid "text file busy" when replacing running binaries.
             fun installBinary(assetName: String, targetPath: String, displayName: String): Result<Unit> {
                 onProgress(InstallationStep.CopyingBinary(displayName))
                 val assetManager = context.assets
                 val inputStream = assetManager.open("binaries/$assetName")
 
-                // Write to a temp file in app cache first (we can write here without root)
                 val tempFile = File("${context.cacheDir}/$assetName")
                 FileOutputStream(tempFile).use { output ->
                     inputStream.copyTo(output)
                 }
                 inputStream.close()
 
-                // Create temp file path in the same directory as target (same filesystem for atomic move)
-                // Using .tmp suffix - the move is atomic so no race condition
                 val tempTargetPath = "$targetPath.tmp"
 
-                // Step 1: Copy from app cache to temp location in target directory (requires root)
-                val copyResult = Shell.cmd("cp ${tempFile.absolutePath} $tempTargetPath 2>&1").exec()
+                val copyResult = SuExec.cmd("cp ${tempFile.absolutePath} $tempTargetPath 2>&1").exec()
                 if (!copyResult.isSuccess) {
                     tempFile.delete()
                     return Result.failure(
                         Exception("Failed to copy $displayName to temp location: ${copyResult.err.joinToString()}")
                     )
                 }
-                tempFile.delete() // Clean up app cache temp file
+                tempFile.delete()
 
-                // Step 2: Set permissions on temp file (must be done before move)
-                val chmodResult = Shell.cmd("chmod 755 $tempTargetPath 2>&1").exec()
+                val chmodResult = SuExec.cmd("chmod 755 $tempTargetPath 2>&1").exec()
                 if (!chmodResult.isSuccess) {
-                    Shell.cmd("rm -f $tempTargetPath 2>&1").exec() // Clean up temp file
+                    SuExec.cmd("rm -f $tempTargetPath 2>&1").exec()
                     return Result.failure(
                         Exception("Failed to set permissions for $displayName: ${chmodResult.err.joinToString()}")
                     )
                 }
 
-                // Step 3: Use atomic move (mv -f) to replace target file
-                // mv is atomic on the same filesystem - it just renames the inode
-                // This works even if the target binary is currently executing (no "text file busy" error)
                 onProgress(InstallationStep.SettingPermissions(targetPath))
-                val moveResult = Shell.cmd("mv -f $tempTargetPath $targetPath 2>&1").exec()
+                val moveResult = SuExec.cmd("mv -f $tempTargetPath $targetPath 2>&1").exec()
                 if (!moveResult.isSuccess) {
-                    Shell.cmd("rm -f $tempTargetPath 2>&1").exec() // Clean up temp file on failure
+                    SuExec.cmd("rm -f $tempTargetPath 2>&1").exec()
                     return Result.failure(
                         Exception("Failed to install $displayName: ${moveResult.err.joinToString()}")
                     )
                 }
 
-                // Step 4: Final permission check (mv preserves permissions, but ensure they're correct)
-                val verifyChmodResult = Shell.cmd("chmod 755 $targetPath 2>&1").exec()
-                if (!verifyChmodResult.isSuccess) {
-                    // Non-fatal warning - permissions might already be correct
-                    // Continue as the move succeeded
-                }
+                SuExec.cmd("chmod 755 $targetPath 2>&1").exec() // non-fatal
 
                 return Result.success(Unit)
             }
 
-            // Step 3: Install droidspaces binary
-            installBinary(droidspacesBinaryName, droidspacesTargetPath, "droidspaces")
+            // Install busybox
+            installBinary(getBusyboxBinaryName(), Constants.BUSYBOX_BINARY_PATH, "busybox")
                 .getOrElse { error -> return@withContext Result.failure(error) }
 
-            // Step 4: Install busybox binary
-            installBinary(busyboxBinaryName, busyboxTargetPath, "busybox")
+            // Install magiskpolicy
+            installBinary(getMagiskpolicyBinaryName(), Constants.MAGISKPOLICY_BINARY_PATH, "magiskpolicy")
                 .getOrElse { error -> return@withContext Result.failure(error) }
 
-            // Step 5: Install magiskpolicy binary
-            installBinary(getMagiskpolicyBinaryName(), magiskpolicyTargetPath, "magiskpolicy")
+            // Install droidspaces-runner
+            installBinary(getRunnerBinaryName(), Constants.RUNNER_BINARY_PATH, "droidspaces-runner")
                 .getOrElse { error -> return@withContext Result.failure(error) }
 
-            // Step 5: Verification (scripts are handled by ModuleInstaller)
-
-            onProgress(InstallationStep.Verifying("droidspaces, busybox and magiskpolicy"))
-            val verifyDroidspaces = Shell.cmd("test -x $droidspacesTargetPath && echo 'verified' || echo 'verification_failed'").exec()
-            val verifyBusybox = Shell.cmd("test -x $busyboxTargetPath && echo 'verified' || echo 'verification_failed'").exec()
-            val verifyMagiskpolicy = Shell.cmd("test -x $magiskpolicyTargetPath && echo 'verified' || echo 'verification_failed'").exec()
-
-            if (!verifyDroidspaces.isSuccess || !verifyDroidspaces.out.any { it.contains("verified") }) {
+            // Install libdroidspaces.so for the runner (dlopen runtime dependency)
+            onProgress(InstallationStep.CopyingBinary("libdroidspaces.so"))
+            val libInstallResult = installNativeLib(context)
+            if (!libInstallResult.isSuccess) {
                 return@withContext Result.failure(
-                    Exception("Droidspaces binary verification failed: file is not executable")
+                    Exception("Failed to install libdroidspaces.so: ${libInstallResult.exceptionOrNull()?.message}")
                 )
             }
 
-            if (!verifyBusybox.isSuccess || !verifyBusybox.out.any { it.contains("verified") }) {
-                return@withContext Result.failure(
-                    Exception("Busybox binary verification failed: file is not executable")
-                )
+            // Verification
+            val verifyPaths = listOf(
+                Constants.BUSYBOX_BINARY_PATH to "busybox",
+                Constants.MAGISKPOLICY_BINARY_PATH to "magiskpolicy",
+                Constants.RUNNER_BINARY_PATH to "droidspaces-runner",
+                "$RUNNER_LIB_PATH/libdroidspaces.so" to "libdroidspaces.so",
+            )
+            for ((path, name) in verifyPaths) {
+                onProgress(InstallationStep.Verifying(name))
+                val verify = SuExec.cmd("test -x '$path' && echo 'verified' || echo 'verification_failed'").exec()
+                if (!verify.isSuccess || !verify.out.any { it.contains("verified") }) {
+                    return@withContext Result.failure(
+                        Exception("$name verification failed at $path")
+                    )
+                }
             }
 
-            if (!verifyMagiskpolicy.isSuccess || !verifyMagiskpolicy.out.any { it.contains("verified") }) {
-                return@withContext Result.failure(
-                    Exception("Magiskpolicy binary verification failed: file is not executable")
-                )
-            }
-
-            // Success
             onProgress(InstallationStep.Success)
             Result.success(Unit)
 
@@ -213,31 +188,71 @@ object BinaryInstaller {
     }
 
     /**
-     * After a live binary swap, send SIGUSR2 to the running daemon
-     * so it acknowledges the update (used for logging).
+     * Extract libdroidspaces.so from the APK and install it to /data/local/Droidspaces/lib/.
+     *
+     * The APK is a ZIP file; the native .so is inside at lib/<abi>/libdroidspaces.so.
+     * We extract it to a temp file, then copy via su to the target location.
      */
-    suspend fun signalDaemon(): Unit = withContext(Dispatchers.IO) {
-        val pidResult = Shell.cmd("cat ${Constants.DAEMON_PID_FILE} 2>/dev/null").exec()
-        if (pidResult.isSuccess && pidResult.out.isNotEmpty()) {
-            val pid = pidResult.out[0].trim()
-            if (pid.isNotEmpty()) {
-                Shell.cmd("kill -USR2 $pid 2>/dev/null").exec()
+    private fun installNativeLib(context: Context): Result<Unit> {
+        try {
+            val apkPath = context.applicationInfo.sourceDir
+            val abiFolder = getAbiFolder()
+            val entryPath = "lib/$abiFolder/libdroidspaces.so"
+
+            val zipFile = ZipFile(apkPath)
+            val entry = zipFile.getEntry(entryPath)
+                ?: zipFile.getEntry("lib/${Build.SUPPORTED_ABIS[0]}/libdroidspaces.so")
+                ?: return Result.failure(Exception("libdroidspaces.so not found in APK at $entryPath"))
+
+            val tempLib = File("${context.cacheDir}/libdroidspaces.so")
+            zipFile.getInputStream(entry).use { input ->
+                FileOutputStream(tempLib).use { output ->
+                    input.copyTo(output)
+                }
             }
+            zipFile.close()
+
+            val targetPath = "$RUNNER_LIB_PATH/libdroidspaces.so"
+            val tempTargetPath = "$targetPath.tmp"
+
+            val copyResult = SuExec.cmd("cp ${tempLib.absolutePath} $tempTargetPath 2>&1").exec()
+            if (!copyResult.isSuccess) {
+                tempLib.delete()
+                return Result.failure(Exception("Failed to copy libdroidspaces.so: ${copyResult.err.joinToString()}"))
+            }
+            tempLib.delete()
+
+            val chmodResult = SuExec.cmd("chmod 755 $tempTargetPath 2>&1").exec()
+            if (!chmodResult.isSuccess) {
+                SuExec.cmd("rm -f $tempTargetPath 2>&1").exec()
+                return Result.failure(Exception("Failed to set permissions on libdroidspaces.so"))
+            }
+
+            val moveResult = SuExec.cmd("mv -f $tempTargetPath $targetPath 2>&1").exec()
+            if (!moveResult.isSuccess) {
+                SuExec.cmd("rm -f $tempTargetPath 2>&1").exec()
+                return Result.failure(Exception("Failed to install libdroidspaces.so: ${moveResult.err.joinToString()}"))
+            }
+
+            return Result.success(Unit)
+        } catch (e: Exception) {
+            return Result.failure(e)
         }
     }
 
     /**
-     * Check if binaries are already installed
+     * Check if all binaries are already installed.
      */
     suspend fun isInstalled(): Boolean = withContext(Dispatchers.IO) {
-        val droidspacesResult = Shell.cmd("test -x $INSTALL_PATH/$DROIDSPACES_BINARY_NAME && echo 'installed' || echo 'not_installed'").exec()
-        val busyboxResult = Shell.cmd("test -x $INSTALL_PATH/$BUSYBOX_BINARY_NAME && echo 'installed' || echo 'not_installed'").exec()
-        val magiskpolicyResult = Shell.cmd("test -x $INSTALL_PATH/$MAGISKPOLICY_BINARY_NAME && echo 'installed' || echo 'not_installed'").exec()
-        val droidspacesOk = droidspacesResult.isSuccess && droidspacesResult.out.any { it.contains("installed") }
-        val busyboxOk = busyboxResult.isSuccess && busyboxResult.out.any { it.contains("installed") }
-        val magiskpolicyOk = magiskpolicyResult.isSuccess && magiskpolicyResult.out.any { it.contains("installed") }
-
-        droidspacesOk && busyboxOk && magiskpolicyOk
+        val checks = listOf(
+            "$INSTALL_PATH/$BUSYBOX_BINARY_NAME" to "busybox",
+            "$INSTALL_PATH/$MAGISKPOLICY_BINARY_NAME" to "magiskpolicy",
+            "$INSTALL_PATH/$RUNNER_BINARY_NAME" to "droidspaces-runner",
+            "$RUNNER_LIB_PATH/libdroidspaces.so" to "libdroidspaces.so",
+        )
+        checks.all { (path, _) ->
+            val result = SuExec.cmd("test -x '$path' && echo 'installed' || echo 'not_installed'").exec()
+            result.isSuccess && result.out.any { it.contains("installed") }
+        }
     }
 }
-

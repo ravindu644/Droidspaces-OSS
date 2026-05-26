@@ -3,7 +3,6 @@ package com.droidspaces.app.util
 import android.content.Context
 import android.util.Log
 import androidx.compose.runtime.mutableIntStateOf
-import com.topjohnwu.superuser.Shell
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -47,14 +46,13 @@ object ContainerOSInfoManager {
      * Skips fetch if prettyName is already cached (forever cache).
      * On every start we re-fetch to catch distro upgrades.
      */
-    suspend fun prefetchDistroIcon(containerName: String, appContext: Context) = withContext(Dispatchers.IO) {
+    suspend fun prefetchDistroIcon(containerName: String, rootless: Boolean = false, appContext: Context) = withContext(Dispatchers.IO) {
         context = appContext.applicationContext
         try {
-            val result = Shell.cmd(
-                "${Constants.DROIDSPACES_BINARY_PATH} --name=${ContainerCommandBuilder.quote(containerName)} run 'cat /etc/os-release 2>/dev/null || echo'"
-            ).exec()
-            if (!result.isSuccess || result.out.isEmpty()) return@withContext
-            val osInfo = parseOSRelease(result.out)
+            val output = ContainerRuntime.runInContainer(containerName, rootless, "cat /etc/os-release 2>/dev/null || echo")
+            if (output.isEmpty() || output.startsWith("ERROR:")) return@withContext
+            val lines = output.lines()
+            val osInfo = parseOSRelease(lines)
             val existing = cache[containerName]
             if (existing != null) {
                 // Merge into existing full entry — preserve hostname + all live data
@@ -81,7 +79,7 @@ object ContainerOSInfoManager {
      * Returns cached value if available for instant access.
      * Uses both in-memory and persistent cache.
      */
-    suspend fun getOSInfo(containerName: String, useCache: Boolean = true, appContext: Context? = null): OSInfo = withContext(Dispatchers.IO) {
+    suspend fun getOSInfo(containerName: String, rootless: Boolean = false, useCache: Boolean = true, appContext: Context? = null): OSInfo = withContext(Dispatchers.IO) {
         // Update context if provided
         if (appContext != null) {
             context = appContext.applicationContext
@@ -106,35 +104,27 @@ object ContainerOSInfoManager {
 
         try {
             // Get OS release info
-            val osReleaseResult = Shell.cmd(
-                "${Constants.DROIDSPACES_BINARY_PATH} --name=${ContainerCommandBuilder.quote(containerName)} run 'cat /etc/os-release 2>/dev/null || echo'"
-            ).exec()
+            val osReleaseOutput = ContainerRuntime.runInContainer(containerName, rootless, "cat /etc/os-release 2>/dev/null || echo")
+            val osReleaseLines = osReleaseOutput.lines()
 
-            val osInfo = if (!osReleaseResult.isSuccess || osReleaseResult.out.isEmpty()) {
+            val osInfo = if (osReleaseOutput.isEmpty() || osReleaseOutput.startsWith("ERROR:")) {
                 OSInfo(null, null, null, null, null, null, null)
             } else {
-                parseOSRelease(osReleaseResult.out)
+                parseOSRelease(osReleaseLines)
             }
 
             // Get hostname
-            val hostnameResult = Shell.cmd(
-                "${Constants.DROIDSPACES_BINARY_PATH} --name=${ContainerCommandBuilder.quote(containerName)} run 'cat /etc/hostname 2>/dev/null || hostname 2>/dev/null || echo'"
-            ).exec()
-
-            val hostname = if (hostnameResult.isSuccess && hostnameResult.out.isNotEmpty()) {
-                hostnameResult.out.firstOrNull()?.trim()?.takeIf { it.isNotEmpty() }
+            val hostnameOutput = ContainerRuntime.runInContainer(containerName, rootless, "cat /etc/hostname 2>/dev/null || hostname 2>/dev/null || echo")
+            val hostname = if (hostnameOutput.isNotBlank() && !hostnameOutput.startsWith("ERROR:")) {
+                hostnameOutput.lines().firstOrNull()?.trim()?.takeIf { it.isNotEmpty() }
             } else {
                 null
             }
 
             // Get IP addresses (IPv4 only, excluding localhost)
-            // Filter out 127.x.x.x addresses and get all other IPv4 addresses
-            val ipResult = Shell.cmd(ContainerCommandBuilder.buildGetIpCommand(containerName)).exec()
-
-            val ipAddress = if (ipResult.isSuccess && ipResult.out.isNotEmpty()) {
-                // Get all lines, filter valid IPv4 addresses (excluding localhost), join with comma
-                val allIps = ipResult.out
-                    .flatMap { it.trim().split("\\s+".toRegex()) }
+            val ipOutput = ContainerRuntime.runInContainer(containerName, rootless, "ip -4 addr show 2>/dev/null | awk \"/inet / && \\$2 !~ /^127/ {split(\\$2,a,\\\"/\\\"); print a[1]}\" | tr \"\\n\" \" \" || echo")
+            val ipAddress = if (ipOutput.isNotBlank() && !ipOutput.startsWith("ERROR:")) {
+                val allIps = ipOutput.trim().split("\\s+".toRegex())
                     .filter {
                         it.isNotEmpty() &&
                         it.matches(Regex("^\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}$")) &&
@@ -152,19 +142,18 @@ object ContainerOSInfoManager {
             }
 
             // Get live metrics via unified usage command
-            val usageCommand = ContainerCommandBuilder.buildUsageCommand(containerName)
-            val usageResult = Shell.cmd(usageCommand).exec()
+            val usageOutput = ContainerRuntime.getContainerUsage(containerName, rootless)
 
             var uptimeValue: String? = null
             var cpuUsage: Double? = null
             var ramUsageMb: Long? = null
             var ramPercent: Double? = null
 
-            if (usageResult.isSuccess && usageResult.out.isNotEmpty()) {
+            if (usageOutput.isNotEmpty() && !usageOutput.startsWith("ERROR:")) {
                 var ramUsedKb = 0L
                 var ramTotalKb = 0L
 
-                usageResult.out.forEach { line ->
+                usageOutput.lines().forEach { line ->
                     val parts = line.trim().split("=", limit = 2)
                     if (parts.size == 2) {
                         val key = parts[0].trim()

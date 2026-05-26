@@ -43,7 +43,7 @@ import androidx.compose.ui.window.DialogProperties
 import com.droidspaces.app.ui.util.ClearFocusOnClickOutside
 import com.droidspaces.app.ui.util.FocusUtils
 import com.droidspaces.app.ui.util.rememberClearFocus
-import com.topjohnwu.superuser.Shell
+import com.droidspaces.app.util.SuExec
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -127,7 +127,7 @@ fun FilePickerDialog(
             }
             if (targetDir != currentPath && targetDir.isNotEmpty()) {
                 val exists = withContext(Dispatchers.IO) {
-                    val result = Shell.cmd("[ -d \"$targetDir\" ] && echo yes").exec()
+                    val result = SuExec.cmd("[ -d \"$targetDir\" ] && echo yes").exec()
                     result.isSuccess && result.out.firstOrNull() == "yes"
                 }
                 if (exists) {
@@ -373,7 +373,7 @@ private fun FileItemRow(
 }
 
 private suspend fun fetchItems(path: String, showFiles: Boolean): List<FileItem> = withContext(Dispatchers.IO) {
-    val result = Shell.cmd("ls -F \"$path\" 2>/dev/null").exec()
+    val result = SuExec.cmd("ls -F \"$path\" 2>/dev/null").exec()
     if (!result.isSuccess) return@withContext emptyList()
 
     result.out.mapNotNull { line ->

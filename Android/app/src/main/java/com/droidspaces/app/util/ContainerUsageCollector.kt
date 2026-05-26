@@ -1,13 +1,12 @@
 package com.droidspaces.app.util
 
 import android.util.Log
-import com.topjohnwu.superuser.Shell
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
 /**
  * Collects real-time usage statistics from running containers.
- * Executes commands inside containers via `droidspaces --name <name> run`.
+ * Uses JNI-based getContainerUsage and runInContainer.
  */
 object ContainerUsageCollector {
     private const val TAG = "ContainerUsageCollector"
@@ -21,26 +20,21 @@ object ContainerUsageCollector {
         val ipAddress: String? = null
     )
 
-    // Per-container CPU delta state - Not needed with the new usage command
-    // as the backend handles the delta logic and returns permill
-    // private val cpuPrevState = mutableMapOf<String, Pair<Long, Long>>()
-
     /**
-     * Collect CPU, RAM, and Uptime stats for a running container.
-     * Uses the unified `usage` command for synchronized data.
+     * Collect CPU, RAM, Uptime, and IP stats for a running container.
+     * Uses JNI getContainerUsage for resource metrics and runInContainer for IP.
      */
-    suspend fun collectUsage(containerName: String): ContainerUsage = withContext(Dispatchers.IO) {
+    suspend fun collectUsage(containerName: String, rootless: Boolean = false): ContainerUsage = withContext(Dispatchers.IO) {
         try {
-            val cmd = ContainerCommandBuilder.buildUsageCommand(containerName)
-            val result = Shell.cmd(cmd).exec()
+            val usageOutput = ContainerRuntime.getContainerUsage(containerName, rootless)
 
-            if (result.isSuccess && result.out.isNotEmpty()) {
+            if (usageOutput.isNotEmpty() && !usageOutput.startsWith("ERROR:")) {
                 var uptime: String? = null
                 var cpuPercent = 0.0
                 var ramUsed = 0L
                 var ramTotal = 0L
 
-                result.out.forEach { line ->
+                usageOutput.lines().forEach { line ->
                     val parts = line.trim().split("=", limit = 2)
                     if (parts.size == 2) {
                         val key = parts[0].trim()
@@ -57,12 +51,13 @@ object ContainerUsageCollector {
                     }
                 }
 
-                // Fetch IP address in real-time
-                val ipResult = Shell.cmd(ContainerCommandBuilder.buildGetIpCommand(containerName)).exec()
+                // Fetch IP address in real-time via JNI runInContainer
+                val ipOutput = ContainerRuntime.runInContainer(containerName, rootless,
+                    "ip -4 addr show 2>/dev/null | awk \"/inet / && \\$2 !~ /^127/ {split(\\$2,a,\\\"/\\\"); print a[1]}\" | tr \"\\n\" \" \" || echo"
+                )
 
-                val ipAddress = if (ipResult.isSuccess && ipResult.out.isNotEmpty()) {
-                    val allIps = ipResult.out
-                        .flatMap { it.trim().split("\\s+".toRegex()) }
+                val ipAddress = if (ipOutput.isNotEmpty() && !ipOutput.startsWith("ERROR:")) {
+                    val allIps = ipOutput.trim().split("\\s+".toRegex())
                         .filter {
                             it.isNotEmpty() &&
                             it.matches(Regex("^\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}$")) &&

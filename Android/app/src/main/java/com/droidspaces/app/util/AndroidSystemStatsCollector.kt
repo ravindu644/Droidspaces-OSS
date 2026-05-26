@@ -1,7 +1,7 @@
 package com.droidspaces.app.util
 
 import android.util.Log
-import com.topjohnwu.superuser.Shell
+import com.droidspaces.app.util.SuExec
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -34,7 +34,7 @@ object AndroidSystemStatsCollector {
 
     private suspend fun getCpuUsage(): Double = withContext(Dispatchers.IO) {
         try {
-            val result = Shell.cmd("cat /proc/stat | head -1").exec()
+            val result = SuExec.cmd("cat /proc/stat | head -1").exec()
             if (result.isSuccess && result.out.isNotEmpty()) {
                 val parts = result.out[0].trim().split("\\s+".toRegex())
                 if (parts.size >= 8) {
@@ -61,7 +61,7 @@ object AndroidSystemStatsCollector {
 
     private suspend fun getDetailedRamUsage(): Triple<Double, Long, Long> = withContext(Dispatchers.IO) {
         try {
-            val result = Shell.cmd("cat /proc/meminfo | grep -E 'MemTotal|MemAvailable'").exec()
+            val result = SuExec.cmd("cat /proc/meminfo | grep -E 'MemTotal|MemAvailable'").exec()
             if (result.isSuccess && result.out.size >= 2) {
                 var memTotal = 0L; var memAvailable = 0L
                 result.out.forEach { line ->
@@ -89,7 +89,7 @@ object AndroidSystemStatsCollector {
         )
         for (path in paths) {
             try {
-                val result = Shell.cmd("cat $path 2>/dev/null").exec()
+                val result = SuExec.cmd("cat $path 2>/dev/null").exec()
                 if (result.isSuccess && result.out.isNotEmpty()) {
                     val mC = result.out[0].trim().toLongOrNull()
                     if (mC != null && mC > 0) return@withContext String.format("%.1f°C", mC / 1000.0)

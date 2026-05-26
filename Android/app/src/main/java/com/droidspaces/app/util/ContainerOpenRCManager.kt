@@ -3,14 +3,10 @@ package com.droidspaces.app.util
 import android.content.Context
 import android.util.Base64
 import android.util.Log
-import com.topjohnwu.superuser.Shell
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.withContext
-import java.util.concurrent.Executors
-import java.util.concurrent.TimeUnit
-import java.util.concurrent.TimeoutException
 
 /**
  * OpenRC service manager for containers.
@@ -68,13 +64,13 @@ object ContainerOpenRCManager {
         }
     }
 
-    private suspend fun runScript(containerName: String, flag: String): Pair<Boolean, List<String>> =
+    private suspend fun runScript(containerName: String, rootless: Boolean, flag: String): Pair<Boolean, List<String>> =
         withContext(Dispatchers.IO) {
             val b64 = scriptBase64 ?: return@withContext Pair(false, emptyList())
             try {
-                val cmd = "${Constants.DROIDSPACES_BINARY_PATH} --name=${ContainerCommandBuilder.quote(containerName)} run 'echo $b64 | base64 -d | sh -s -- $flag'"
-                val result = Shell.cmd(cmd).exec()
-                Pair(result.isSuccess, result.out)
+                val output = ContainerRuntime.runInContainer(containerName, rootless, "echo $b64 | base64 -d | sh -s -- $flag")
+                if (output.startsWith("ERROR:")) return@withContext Pair(false, emptyList())
+                Pair(true, output.lines().filter { it.isNotBlank() })
             } catch (e: Exception) {
                 Log.e(TAG, "Error running script", e)
                 Pair(false, emptyList())
@@ -83,51 +79,40 @@ object ContainerOpenRCManager {
 
     suspend fun executeRCCommand(
         containerName: String,
-        command: String
+        command: String,
+        rootless: Boolean = false
     ): CommandResult = withContext(Dispatchers.IO) {
-        val fullCmd = "${Constants.DROIDSPACES_BINARY_PATH} --name=${ContainerCommandBuilder.quote(containerName)} run '$command 2>&1'"
-        val executor = Executors.newSingleThreadExecutor()
         try {
-            val future = executor.submit<Shell.Result> { Shell.cmd(fullCmd).exec() }
-            try {
-                val result = future.get(COMMAND_TIMEOUT_MS, TimeUnit.MILLISECONDS)
-                CommandResult(exitCode = result.code, output = result.out, error = result.err)
-            } catch (e: TimeoutException) {
-                future.cancel(true)
-                Log.e(TAG, "Command timed out: $command")
-                CommandResult(
-                    exitCode = 124,
-                    output = listOf("Command timed out after ${COMMAND_TIMEOUT_MS / 1000} seconds"),
-                    error = emptyList()
-                )
+            val output = ContainerRuntime.runInContainer(containerName, rootless, "$command 2>&1")
+            if (output.startsWith("ERROR:")) {
+                CommandResult(exitCode = 1, output = emptyList(), error = listOf(output))
+            } else {
+                val lines = output.lines().filter { it.isNotBlank() }
+                CommandResult(exitCode = 0, output = lines, error = emptyList())
             }
         } catch (e: Exception) {
             Log.e(TAG, "Error executing: $command", e)
             CommandResult(exitCode = 1, output = emptyList(), error = listOf(e.message ?: "Unknown error"))
-        } finally {
-            executor.shutdownNow()
         }
     }
 
     /**
      * Check if OpenRC is available in the container.
      */
-    suspend fun isOpenRCAvailable(containerName: String): Boolean = withContext(Dispatchers.IO) {
+    suspend fun isOpenRCAvailable(containerName: String, rootless: Boolean = false): Boolean = withContext(Dispatchers.IO) {
         try {
-            val result = Shell.cmd(
-                "${Constants.DROIDSPACES_BINARY_PATH} --name=${ContainerCommandBuilder.quote(containerName)} run 'command -v rc-service'"
-            ).exec()
-            result.isSuccess && result.out.any { it.trim().isNotEmpty() }
+            val output = ContainerRuntime.runInContainer(containerName, rootless, "command -v rc-service")
+            output.isNotBlank() && !output.startsWith("ERROR:")
         } catch (e: Exception) {
             false
         }
     }
 
-    suspend fun getAllServices(containerName: String): List<ServiceInfo> = coroutineScope {
+    suspend fun getAllServices(containerName: String, rootless: Boolean = false): List<ServiceInfo> = coroutineScope {
         try {
-            val runningDeferred = async { runScript(containerName, "--running") }
-            val enabledDeferred = async { runScript(containerName, "--enabled") }
-            val disabledDeferred = async { runScript(containerName, "--disabled") }
+            val runningDeferred = async { runScript(containerName, rootless, "--running") }
+            val enabledDeferred = async { runScript(containerName, rootless, "--enabled") }
+            val disabledDeferred = async { runScript(containerName, rootless, "--disabled") }
 
             val (runningSuccess, runningLines) = runningDeferred.await()
             val (enabledSuccess, enabledLines) = enabledDeferred.await()

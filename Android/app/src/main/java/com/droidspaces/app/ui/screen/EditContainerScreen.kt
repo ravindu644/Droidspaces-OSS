@@ -108,6 +108,7 @@ fun EditContainerScreen(
     var staticNatIp by remember { mutableStateOf(container.staticNatIp) }
     var privileged by remember { mutableStateOf(container.privileged) }
     var customInit by remember { mutableStateOf(container.customInit) }
+    var rootless by remember { mutableStateOf(container.rootless) }
 
     // Track the "saved" baseline values - updated after each successful save
     var savedHostname by remember { mutableStateOf(container.hostname) }
@@ -130,6 +131,7 @@ fun EditContainerScreen(
     var savedStaticNatIp by remember { mutableStateOf(container.staticNatIp) }
     var savedPrivileged by remember { mutableStateOf(container.privileged) }
     var savedCustomInit by remember { mutableStateOf(container.customInit) }
+    var savedRootless by remember { mutableStateOf(container.rootless) }
 
     // Navigation and internal UI states
     var showFilePicker by remember { mutableStateOf(false) }
@@ -163,7 +165,8 @@ fun EditContainerScreen(
             blockNestedNs != savedBlockNestedNs ||
             staticNatIp != savedStaticNatIp ||
             privileged != savedPrivileged ||
-            customInit != savedCustomInit
+            customInit != savedCustomInit ||
+            rootless != savedRootless
         }
     }
 
@@ -203,7 +206,8 @@ fun EditContainerScreen(
                     blockNestedNs = blockNestedNs,
                     staticNatIp = staticNatIp,
                     privileged = privileged,
-                    customInit = customInit
+                    customInit = customInit,
+                    rootless = rootless
                 )
 
                 // Update config file
@@ -235,6 +239,7 @@ fun EditContainerScreen(
                         savedStaticNatIp = staticNatIp
                         savedPrivileged = privileged
                         savedCustomInit = customInit
+                        savedRootless = rootless
 
                         // Refresh container list and SELinux status using ViewModel
                         containerViewModel.refresh()
@@ -853,6 +858,17 @@ fun EditContainerScreen(
                 style = MaterialTheme.typography.titleMedium,
                 color = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.padding(top = 16.dp)
+            )
+
+            ToggleCard(
+                icon = Icons.Default.SupervisorAccount,
+                title = "Rootless mode",
+                description = "Run without root access using user namespaces. Container lives in app-private storage.",
+                checked = rootless,
+                onCheckedChange = {
+                    clearFocus()
+                    rootless = it
+                }
             )
 
             ToggleCard(

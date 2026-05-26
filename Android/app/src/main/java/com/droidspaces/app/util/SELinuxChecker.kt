@@ -1,6 +1,6 @@
 package com.droidspaces.app.util
 
-import com.topjohnwu.superuser.io.SuFile
+import java.io.File
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -16,7 +16,7 @@ object SELinuxChecker {
      * Uses cached string constants and direct file I/O.
      */
     suspend fun getSELinuxStatus(): String = withContext(Dispatchers.IO) {
-        val enforceFile = SuFile("/sys/fs/selinux/enforce")
+        val enforceFile = File("/sys/fs/selinux/enforce")
 
         return@withContext when {
             !enforceFile.exists() -> STATUS_DISABLED
@@ -24,7 +24,7 @@ object SELinuxChecker {
             !enforceFile.canRead() -> STATUS_ENFORCING
             else -> {
                 runCatching {
-                    enforceFile.newInputStream().bufferedReader().use { reader ->
+                    enforceFile.inputStream().bufferedReader().use { reader ->
                         reader.readLine()?.trim()?.toIntOrNull()
                     }
                 }.getOrNull()?.let { value ->

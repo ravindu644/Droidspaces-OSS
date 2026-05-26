@@ -3,14 +3,10 @@ package com.droidspaces.app.util
 import android.content.Context
 import android.util.Base64
 import android.util.Log
-import com.topjohnwu.superuser.Shell
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.withContext
-import java.util.concurrent.Executors
-import java.util.concurrent.TimeUnit
-import java.util.concurrent.TimeoutException
 
 /**
  * Feature-rich systemd manager for containers.
@@ -89,73 +85,42 @@ object ContainerSystemdManager {
     /**
      * Run the chksystemd.sh script with given flag.
      */
-    private suspend fun runScript(containerName: String, flag: String): Pair<Boolean, List<String>> =
+    private suspend fun runScript(containerName: String, rootless: Boolean, flag: String): Pair<Boolean, List<String>> =
         withContext(Dispatchers.IO) {
             val b64 = scriptBase64 ?: return@withContext Pair(false, emptyList())
-
             try {
-                val cmd = "${Constants.DROIDSPACES_BINARY_PATH} --name=${ContainerCommandBuilder.quote(containerName)} run 'echo $b64 | base64 -d | sh -s -- $flag'"
-                val result = Shell.cmd(cmd).exec()
-                Pair(result.isSuccess, result.out)
+                val output = ContainerRuntime.runInContainer(containerName, rootless, "echo $b64 | base64 -d | sh -s -- $flag")
+                if (output.startsWith("ERROR:")) return@withContext Pair(false, emptyList())
+                Pair(true, output.lines().filter { it.isNotBlank() })
             } catch (e: Exception) {
                 Log.e(TAG, "Error running script", e)
                 Pair(false, emptyList())
             }
         }
 
-    /**
-     * Execute a systemctl command and return result with exit code.
-     * Times out after 10 seconds if command hangs.
-     */
     suspend fun executeSystemctlCommand(
         containerName: String,
-        command: String
+        command: String,
+        rootless: Boolean = false
     ): CommandResult = withContext(Dispatchers.IO) {
-        val fullCmd = "${Constants.DROIDSPACES_BINARY_PATH} --name=${ContainerCommandBuilder.quote(containerName)} run 'systemctl $command 2>&1'"
-        val executor = Executors.newSingleThreadExecutor()
-
         try {
-            val future = executor.submit<Shell.Result> {
-                Shell.cmd(fullCmd).exec()
-            }
-
-            try {
-                val result = future.get(COMMAND_TIMEOUT_MS, TimeUnit.MILLISECONDS)
-                CommandResult(
-                    exitCode = result.code,
-                    output = result.out,
-                    error = result.err
-                )
-            } catch (e: TimeoutException) {
-                future.cancel(true)
-                Log.e(TAG, "Command timed out: systemctl $command")
-                CommandResult(
-                    exitCode = 124, // Standard timeout exit code
-                    output = listOf("Command timed out after ${COMMAND_TIMEOUT_MS / 1000} seconds"),
-                    error = emptyList()
-                )
+            val output = ContainerRuntime.runInContainer(containerName, rootless, "systemctl $command 2>&1")
+            if (output.startsWith("ERROR:")) {
+                CommandResult(exitCode = 1, output = emptyList(), error = listOf(output))
+            } else {
+                val lines = output.lines().filter { it.isNotBlank() }
+                CommandResult(exitCode = 0, output = lines, error = emptyList())
             }
         } catch (e: Exception) {
             Log.e(TAG, "Error executing systemctl $command", e)
-            CommandResult(
-                exitCode = 1,
-                output = emptyList(),
-                error = listOf(e.message ?: "Unknown error")
-            )
-        } finally {
-            executor.shutdownNow()
+            CommandResult(exitCode = 1, output = emptyList(), error = listOf(e.message ?: "Unknown error"))
         }
     }
 
-    /**
-     * Check if systemd is available.
-     */
-    suspend fun isSystemdAvailable(containerName: String): Boolean = withContext(Dispatchers.IO) {
+    suspend fun isSystemdAvailable(containerName: String, rootless: Boolean = false): Boolean = withContext(Dispatchers.IO) {
         try {
-            val result = Shell.cmd(
-                "${Constants.DROIDSPACES_BINARY_PATH} --name=${ContainerCommandBuilder.quote(containerName)} run 'command -v systemctl'"
-            ).exec()
-            result.isSuccess && result.out.any { it.trim().isNotEmpty() }
+            val output = ContainerRuntime.runInContainer(containerName, rootless, "command -v systemctl")
+            output.isNotBlank() && !output.startsWith("ERROR:")
         } catch (e: Exception) {
             false
         }
@@ -164,14 +129,14 @@ object ContainerSystemdManager {
     /**
      * Get all services with complete status.
      */
-    suspend fun getAllServices(containerName: String): List<ServiceInfo> = coroutineScope {
+    suspend fun getAllServices(containerName: String, rootless: Boolean = false): List<ServiceInfo> = coroutineScope {
         try {
             // Fetch in parallel
-            val runningDeferred = async { runScript(containerName, "--running") }
-            val enabledDeferred = async { runScript(containerName, "--enabled") }
-            val disabledDeferred = async { runScript(containerName, "--disabled") }
-            val maskedDeferred = async { runScript(containerName, "--masked") }
-            val staticDeferred = async { runScript(containerName, "--static") }
+            val runningDeferred = async { runScript(containerName, rootless, "--running") }
+            val enabledDeferred = async { runScript(containerName, rootless, "--enabled") }
+            val disabledDeferred = async { runScript(containerName, rootless, "--disabled") }
+            val maskedDeferred = async { runScript(containerName, rootless, "--masked") }
+            val staticDeferred = async { runScript(containerName, rootless, "--static") }
 
             val (runningSuccess, runningLines) = runningDeferred.await()
             val (enabledSuccess, enabledLines) = enabledDeferred.await()
@@ -291,25 +256,24 @@ object ContainerSystemdManager {
         }.sortedWith(compareByDescending<ServiceInfo> { it.isRunning }.thenBy { it.name })
     }
 
-    // Systemctl commands
-    suspend fun startService(containerName: String, serviceName: String) =
-        executeSystemctlCommand(containerName, "start --no-block $serviceName")
+    suspend fun startService(containerName: String, serviceName: String, rootless: Boolean = false) =
+        executeSystemctlCommand(containerName, "start --no-block $serviceName", rootless)
 
-    suspend fun stopService(containerName: String, serviceName: String) =
-        executeSystemctlCommand(containerName, "stop $serviceName")
+    suspend fun stopService(containerName: String, serviceName: String, rootless: Boolean = false) =
+        executeSystemctlCommand(containerName, "stop $serviceName", rootless)
 
-    suspend fun restartService(containerName: String, serviceName: String) =
-        executeSystemctlCommand(containerName, "restart $serviceName")
+    suspend fun restartService(containerName: String, serviceName: String, rootless: Boolean = false) =
+        executeSystemctlCommand(containerName, "restart $serviceName", rootless)
 
-    suspend fun enableService(containerName: String, serviceName: String) =
-        executeSystemctlCommand(containerName, "enable $serviceName")
+    suspend fun enableService(containerName: String, serviceName: String, rootless: Boolean = false) =
+        executeSystemctlCommand(containerName, "enable $serviceName", rootless)
 
-    suspend fun disableService(containerName: String, serviceName: String) =
-        executeSystemctlCommand(containerName, "disable $serviceName")
+    suspend fun disableService(containerName: String, serviceName: String, rootless: Boolean = false) =
+        executeSystemctlCommand(containerName, "disable $serviceName", rootless)
 
-    suspend fun maskService(containerName: String, serviceName: String) =
-        executeSystemctlCommand(containerName, "mask $serviceName")
+    suspend fun maskService(containerName: String, serviceName: String, rootless: Boolean = false) =
+        executeSystemctlCommand(containerName, "mask $serviceName", rootless)
 
-    suspend fun unmaskService(containerName: String, serviceName: String) =
-        executeSystemctlCommand(containerName, "unmask $serviceName")
+    suspend fun unmaskService(containerName: String, serviceName: String, rootless: Boolean = false) =
+        executeSystemctlCommand(containerName, "unmask $serviceName", rootless)
 }

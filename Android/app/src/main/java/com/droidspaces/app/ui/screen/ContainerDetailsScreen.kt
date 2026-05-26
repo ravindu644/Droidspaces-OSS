@@ -92,7 +92,7 @@ fun ContainerDetailsScreen(
         lifecycleOwner.lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
             while (true) {
                 try {
-                    val newOSInfo = ContainerOSInfoManager.getOSInfo(container.name, useCache = false, appContext = context)
+                    val newOSInfo = ContainerOSInfoManager.getOSInfo(container.name, rootless = container.rootless, useCache = false, appContext = context)
                     val currentInfo = osInfo
                     if (currentInfo == null || hasOSInfoChanged(currentInfo, newOSInfo)) {
                         osInfo = newOSInfo
@@ -203,6 +203,7 @@ fun ContainerDetailsScreen(
             item(key = "users_${container.name}") {
                 ContainerUsersCard(
                     containerName = container.name,
+                    rootless = container.rootless,
                     refreshTrigger = refreshTrigger,
                     snackbarHostState = snackbarHostState
                 )

@@ -1,7 +1,6 @@
 package com.droidspaces.app.util
 
 import android.util.Log
-import com.topjohnwu.superuser.Shell
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -28,21 +27,20 @@ object ContainerProcessManager {
      * Uses 'ps -aux' or 'ps w' (for busybox).
      * Filters out our own ps command to avoid showing it in the list.
      */
-    suspend fun getProcessList(containerName: String): List<ProcessInfo> = withContext(Dispatchers.IO) {
+    suspend fun getProcessList(containerName: String, rootless: Boolean = false): List<ProcessInfo> = withContext(Dispatchers.IO) {
         try {
-            // Try ps -aux first, fallback to ps w for busybox
-            // Use ps -eo to exclude our own command from the output
-            val result = Shell.cmd(
-                "${Constants.DROIDSPACES_BINARY_PATH} --name=${ContainerCommandBuilder.quote(containerName)} run 'ps -eo pid,user,%cpu,%mem,comm,args 2>/dev/null | grep -v \"ps -eo\" | grep -v \"grep\" || ps -aux 2>/dev/null | grep -v \"ps -aux\" | grep -v \"grep\" || ps w 2>/dev/null | grep -v \"ps w\" | grep -v \"grep\"'"
-            ).exec()
+            val output = ContainerRuntime.runInContainer(containerName, rootless,
+                "ps -eo pid,user,%cpu,%mem,comm,args 2>/dev/null | grep -v \"ps -eo\" | grep -v \"grep\" || ps -aux 2>/dev/null | grep -v \"ps -aux\" | grep -v \"grep\" || ps w 2>/dev/null | grep -v \"ps w\" | grep -v \"grep\""
+            )
 
-            if (!result.isSuccess || result.out.isEmpty()) {
+            if (output.isEmpty() || output.startsWith("ERROR:")) {
                 Log.w(TAG, "Failed to get process list for $containerName")
                 return@withContext emptyList()
             }
 
+            val lines = output.lines()
             // Filter out processes that are our own ps/grep commands
-            val filteredOutput = result.out.filter { line ->
+            val filteredOutput = lines.filter { line ->
                 val trimmed = line.trim().lowercase()
                 !trimmed.contains("ps -eo") &&
                 !trimmed.contains("ps -aux") &&
@@ -61,13 +59,10 @@ object ContainerProcessManager {
     /**
      * Kill a process in container.
      */
-    suspend fun killProcess(containerName: String, pid: Int): Boolean = withContext(Dispatchers.IO) {
+    suspend fun killProcess(containerName: String, pid: Int, rootless: Boolean = false): Boolean = withContext(Dispatchers.IO) {
         try {
-            val result = Shell.cmd(
-                "${Constants.DROIDSPACES_BINARY_PATH} --name=${ContainerCommandBuilder.quote(containerName)} run kill $pid"
-            ).exec()
-
-            result.isSuccess
+            val output = ContainerRuntime.runInContainer(containerName, rootless, "kill $pid")
+            !output.startsWith("ERROR:")
         } catch (e: Exception) {
             Log.e(TAG, "Error killing process $pid in $containerName", e)
             false

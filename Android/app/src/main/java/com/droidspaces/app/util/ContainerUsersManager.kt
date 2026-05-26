@@ -1,7 +1,6 @@
 package com.droidspaces.app.util
 
 import android.util.Log
-import com.topjohnwu.superuser.Shell
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -20,22 +19,22 @@ object ContainerUsersManager {
      * Returns users with UID between 1000 and 65534 (regular users).
      * Returns cached value if available for instant access.
      */
-    suspend fun getUsers(containerName: String, useCache: Boolean = true): List<String> = withContext(Dispatchers.IO) {
+    suspend fun getUsers(containerName: String, rootless: Boolean = false, useCache: Boolean = true): List<String> = withContext(Dispatchers.IO) {
         // Return cached value if available and caching is enabled
         if (useCache) {
             cache[containerName]?.let { return@withContext it }
         }
 
         try {
-            val result = Shell.cmd(
-                "${Constants.DROIDSPACES_BINARY_PATH} --name=${ContainerCommandBuilder.quote(containerName)} run 'awk -F: \"\\\$3 >= 1000 && \\\$3 < 65534 && \\\$1 !~ /^(nixbld)/ {print \\\$1}\" /etc/passwd 2>/dev/null | tr \"\\n\" \",\" | sed \"s/,\\$//\"'"
-            ).exec()
+            val output = ContainerRuntime.runInContainer(containerName, rootless,
+                "awk -F: '\$3 >= 1000 && \$3 < 65534 && \$1 !~ /^(nixbld)/ {print \$1}' /etc/passwd 2>/dev/null | tr \"\\n\" \",\" | sed \"s/,\\$//\""
+            )
 
-            if (!result.isSuccess || result.out.isEmpty()) {
+            if (output.isEmpty() || output.startsWith("ERROR:")) {
                 return@withContext emptyList()
             }
 
-            val usersString = result.out.joinToString("").trim()
+            val usersString = output.trim()
             if (usersString.isEmpty()) {
                 return@withContext emptyList()
             }

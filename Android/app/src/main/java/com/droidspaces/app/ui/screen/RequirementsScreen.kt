@@ -40,7 +40,6 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.droidspaces.app.R
 import com.droidspaces.app.ui.component.TerminalDialog
 import com.droidspaces.app.ui.viewmodel.AppStateViewModel
-import com.droidspaces.app.util.Constants
 import com.droidspaces.app.util.ContainerOperationExecutor
 import com.droidspaces.app.util.ViewModelLogger
 import kotlinx.coroutines.Dispatchers
@@ -236,13 +235,8 @@ CONFIG_TMPFS_XATTR=y""",
                         }
 
                         try {
-                            // Get droidspaces command
-                            val droidspacesCmd = withContext(Dispatchers.IO) {
-                                Constants.getDroidspacesCommand()
-                            }
-
-                            // Execute check command
-                            val command = "$droidspacesCmd check"
+                            // Execute check command via runner
+                            val command = "${com.droidspaces.app.util.Constants.RUNNER_BINARY_PATH} check"
                             val success = ContainerOperationExecutor.executeCommand(
                                 command = command,
                                 operation = "check",

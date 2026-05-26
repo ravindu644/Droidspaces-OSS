@@ -153,7 +153,7 @@ class PreferencesManager private constructor(context: Context) {
         val value = if (enabled) "1" else "0"
         val path = Constants.DAEMON_MODE_FILE
         // Use non-blocking shell command to write the file
-        com.topjohnwu.superuser.Shell.cmd("echo '$value' > '$path'").submit()
+        SuExec.cmd("echo '$value' > '$path'").submit()
     }
 
     /**
@@ -163,7 +163,7 @@ class PreferencesManager private constructor(context: Context) {
     fun syncDaemonModeFromDisk() {
         val path = Constants.DAEMON_MODE_FILE
         // Use blocking shell command to read the file state accurately
-        val result = com.topjohnwu.superuser.Shell.cmd("cat '$path' 2>/dev/null").exec()
+        val result = SuExec.cmd("cat '$path' 2>/dev/null").exec()
         if (result.isSuccess && result.out.isNotEmpty()) {
             val diskValue = result.out[0].trim()
             val enabled = diskValue == "1"

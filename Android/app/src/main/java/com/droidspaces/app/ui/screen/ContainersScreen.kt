@@ -32,10 +32,10 @@ import kotlinx.coroutines.launch
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.droidspaces.app.ui.viewmodel.SystemStatsViewModel
-import com.topjohnwu.superuser.Shell
+import com.droidspaces.app.util.SuExec
 import com.droidspaces.app.util.ContainerManager
 import com.droidspaces.app.util.ContainerInfo
-import com.droidspaces.app.util.ContainerCommandBuilder
+import com.droidspaces.app.util.ContainerRuntime
 import com.droidspaces.app.util.ContainerOSInfoManager
 import com.droidspaces.app.util.ContainerOperationExecutor
 import com.droidspaces.app.util.ContainerLogger
@@ -139,8 +139,7 @@ fun ContainersScreen(
                 // Show progress dialog - stopping (using UninstallState for consistent UI)
                 uninstallState = UninstallState.InProgress(container.name, context.getString(R.string.stopping_container))
 
-                val stopCommand = ContainerCommandBuilder.buildStopCommand(container)
-                val stopResult = ContainerOperationExecutor.executeCommand(stopCommand, "stop", logger)
+                val stopResult = ContainerRuntime.stopContainer(container, logger = logger)
 
                 // Dismiss progress dialog
                 uninstallState = UninstallState.Idle
@@ -165,7 +164,7 @@ fun ContainersScreen(
             context.assets.open("export_container.sh").use { input ->
                 deployed.outputStream().use { out: java.io.OutputStream -> input.copyTo(out) }
             }
-            Shell.cmd("chmod 755 \"${deployed.absolutePath}\"").exec()
+            SuExec.cmd("chmod 755 \"${deployed.absolutePath}\"").exec()
 
             // Write archive to a temp file first, then copy to the URI
             tempArchive = File("${context.cacheDir}/${container.name}_export_tmp.tar.gz")
@@ -273,8 +272,7 @@ fun ContainersScreen(
                 uninstallState = UninstallState.InProgress(container.name, context.getString(R.string.stopping_container))
 
                 // Stop the container first
-                val stopCommand = ContainerCommandBuilder.buildStopCommand(container)
-                val stopResult = ContainerOperationExecutor.executeCommand(stopCommand, "stop", logger)
+                val stopResult = ContainerRuntime.stopContainer(container, logger = logger)
 
                 if (!stopResult) {
                     // Failed to stop - dismiss progress and show error
@@ -385,28 +383,28 @@ fun ContainersScreen(
                 systemStatsViewModel.clearContainerUsage(container.name)
             }
 
-            // Build command
-            val command = when (operation) {
-                "start" -> ContainerCommandBuilder.buildStartCommand(container)
-                "stop" -> ContainerCommandBuilder.buildStopCommand(container)
-                "restart" -> ContainerCommandBuilder.buildRestartCommand(container)
+            // Execute operation via ContainerRuntime (JNI for rootless, runner+su for root)
+            val success = when (operation) {
+                "start" -> ContainerRuntime.startContainer(container, logger)
+                "stop" -> ContainerRuntime.stopContainer(container, logger = logger)
+                "restart" -> {
+                    logger.i("Starting restart operation...")
+                    val stopped = ContainerRuntime.stopContainer(container, logger = logger)
+                    if (stopped) {
+                        kotlinx.coroutines.delay(1000)
+                        ContainerRuntime.startContainer(container, logger)
+                    } else false
+                }
                 else -> {
                     runningOperationContainer = null
                     return
                 }
             }
 
-            // Execute command using logger callback pattern (same as installation).
-            // Pass operationCompletedMessage so the success line is logged inside executeCommand
-            // in guaranteed order on Main.immediate - before this coroutine resumes.
-            // This eliminates the race where logger.i() calls posted from here could
-            // interleave with the exit-code line logged inside executeCommand.
-            val success = ContainerOperationExecutor.executeCommand(
-                command = command,
-                operation = operation,
-                logger = logger,
-                operationCompletedMessage = context.getString(R.string.operation_completed_success)
-            )
+            if (success) {
+                logger.i("")
+                logger.i(context.getString(R.string.operation_completed_success))
+            }
 
             if (!success) {
                 lastErrorContainer = container.name
@@ -497,8 +495,7 @@ fun ContainersScreen(
                 // Show progress dialog - stopping (using UninstallState for consistent UI)
                 uninstallState = UninstallState.InProgress(container.name, context.getString(R.string.stopping_container))
 
-                val stopCommand = ContainerCommandBuilder.buildStopCommand(container)
-                val stopResult = ContainerOperationExecutor.executeCommand(stopCommand, "stop", logger)
+                val stopResult = ContainerRuntime.stopContainer(container, logger = logger)
 
                 // Dismiss progress dialog
                 uninstallState = UninstallState.Idle
@@ -525,7 +522,7 @@ fun ContainersScreen(
                     input.copyTo(output)
                 }
             }
-            Shell.cmd("chmod 755 \"${deployedFile.absolutePath}\"").exec()
+            SuExec.cmd("chmod 755 \"${deployedFile.absolutePath}\"").exec()
 
             // 4. Build and execute command
             val baseDir = ContainerManager.getContainerDirectory(container.name)

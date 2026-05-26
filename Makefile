@@ -211,15 +211,9 @@ debug-hardened: $(OUT_DIR)
 ANDROID_ASSETS_DIR = Android/app/src/main/assets/binaries
 
 sync-android:
-	@if [ -d "$(ANDROID_ASSETS_DIR)" ]; then \
-		mkdir -p $(ANDROID_ASSETS_DIR); \
-		rm -f $(ANDROID_ASSETS_DIR)/$(BINARY_NAME)-*; \
-		cp $(OUT_DIR)/$(BINARY_NAME)-x86_64 $(ANDROID_ASSETS_DIR)/ 2>/dev/null || true; \
-		cp $(OUT_DIR)/$(BINARY_NAME)-aarch64 $(ANDROID_ASSETS_DIR)/ 2>/dev/null || true; \
-		cp $(OUT_DIR)/$(BINARY_NAME)-armhf $(ANDROID_ASSETS_DIR)/ 2>/dev/null || true; \
-		cp $(OUT_DIR)/$(BINARY_NAME)-x86 $(ANDROID_ASSETS_DIR)/ 2>/dev/null || true; \
-		echo "[+] Synced binaries to Android assets"; \
-	fi
+	@echo "[+] Building droidspaces-runner for all architectures..."
+	@cd Android && ./build-runner.sh
+	@echo "[+] Runner binaries synced to assets/binaries/."
 
 # all-build: fail immediately if any architecture fails - no || fallback
 all-build:

@@ -63,6 +63,10 @@ android {
         vectorDrawables {
             useSupportLibrary = true
         }
+
+        ndk {
+            abiFilters += listOf("arm64-v8a")
+        }
     }
 
     signingConfigs {
@@ -185,6 +189,15 @@ android {
         compose = true
     }
 
+    externalNativeBuild {
+        cmake {
+            path = file("src/main/cpp/CMakeLists.txt")
+            version = "3.22.1+"
+        }
+    }
+
+    ndkVersion = "26.1.10909125"
+
     composeOptions {
         kotlinCompilerExtensionVersion = "1.5.8"
     }
@@ -299,10 +312,6 @@ dependencies {
     // ViewModel
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.7.0")
 
-    // Root execution - libsu
-    implementation("com.github.topjohnwu.libsu:core:5.2.1")
-    implementation("com.github.topjohnwu.libsu:service:5.2.1")
-    implementation("com.github.topjohnwu.libsu:io:5.2.1")
 
     // Coroutines - latest version for better performance
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")

@@ -12,7 +12,6 @@ import com.droidspaces.app.util.ContainerInfo
 import com.droidspaces.app.util.ContainerOSInfoManager
 import com.droidspaces.app.util.ContainerManager
 import com.droidspaces.app.util.PreferencesManager
-import com.droidspaces.app.util.Constants
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
@@ -95,7 +94,7 @@ class ContainerViewModel(application: Application) : AndroidViewModel(applicatio
                 // Prefetch distro icons for running containers (updates persistent cache)
                 result.filter { it.isRunning }.forEach { container ->
                     launch(Dispatchers.IO) {
-                        ContainerOSInfoManager.prefetchDistroIcon(container.name, getApplication())
+                        ContainerOSInfoManager.prefetchDistroIcon(container.name, container.rootless, getApplication())
                     }
                 }
 
@@ -103,7 +102,7 @@ class ContainerViewModel(application: Application) : AndroidViewModel(applicatio
                 result.filter { it.isRunning }.forEach { container ->
                     launch(Dispatchers.IO) {
                         try {
-                            com.droidspaces.app.util.ContainerUsersManager.getUsers(container.name)
+                            com.droidspaces.app.util.ContainerUsersManager.getUsers(container.name, container.rootless)
                         } catch (e: Exception) {
                             Log.w(TAG, "Failed to prime user cache for ${container.name}")
                         }
@@ -146,7 +145,7 @@ class ContainerViewModel(application: Application) : AndroidViewModel(applicatio
         // Prefetch distro icons for running containers (updates persistent cache)
         result.filter { it.isRunning }.forEach { container ->
             viewModelScope.launch(Dispatchers.IO) {
-                ContainerOSInfoManager.prefetchDistroIcon(container.name, getApplication())
+                ContainerOSInfoManager.prefetchDistroIcon(container.name, container.rootless, getApplication())
             }
         }
 
@@ -154,7 +153,7 @@ class ContainerViewModel(application: Application) : AndroidViewModel(applicatio
         result.filter { it.isRunning }.forEach { container ->
             viewModelScope.launch(Dispatchers.IO) {
                 try {
-                    com.droidspaces.app.util.ContainerUsersManager.getUsers(container.name)
+                    com.droidspaces.app.util.ContainerUsersManager.getUsers(container.name, container.rootless)
                 } catch (e: Exception) {
                     Log.w(TAG, "Failed to prime user cache for ${container.name}")
                 }
@@ -163,49 +162,37 @@ class ContainerViewModel(application: Application) : AndroidViewModel(applicatio
     }
 
     /**
-     * Runs the 'scan' command and updates the container list.
+     * Scans for containers and updates the container list.
      * Intended to be called manually during UI refresh flows.
      */
     suspend fun runScan() {
         isRefreshing = true
         try {
-            withContext(Dispatchers.IO) {
-                Log.i(TAG, "Executing manual scan...")
-                val command = "${Constants.getDroidspacesCommand()} scan"
-                com.topjohnwu.superuser.Shell.cmd(command).exec()
-
-                // Fetch new list after scan
-                val result = ContainerManager.listContainers()
-                withContext(Dispatchers.Main) {
-                    updateState(result)
-                }
+            Log.i(TAG, "Executing manual scan...")
+            val result = ContainerManager.listContainers()
+            withContext(Dispatchers.Main) {
+                updateState(result)
             }
         } catch (e: Exception) {
-            Log.e(TAG, "Scan command failed", e)
+            Log.e(TAG, "Scan failed", e)
         } finally {
             isRefreshing = false
         }
     }
 
     /**
-     * Runs the 'scan' command silently in the background.
+     * Silent background scan.
      * Updates state if new containers are found, but doesn't show UI indicators.
      */
     suspend fun silentScan() {
-        withContext(Dispatchers.IO) {
-            try {
-                Log.i(TAG, "Executing silent background scan...")
-                val command = "${Constants.getDroidspacesCommand()} scan"
-                com.topjohnwu.superuser.Shell.cmd(command).exec()
-
-                // Fetch new list and update state
-                val result = ContainerManager.listContainers()
-                withContext(Dispatchers.Main) {
-                    updateState(result)
-                }
-            } catch (e: Exception) {
-                Log.e(TAG, "Silent scan failed", e)
+        try {
+            Log.i(TAG, "Executing silent background scan...")
+            val result = ContainerManager.listContainers()
+            withContext(Dispatchers.Main) {
+                updateState(result)
             }
+        } catch (e: Exception) {
+            Log.e(TAG, "Silent scan failed", e)
         }
     }
 
