@@ -251,7 +251,7 @@ docker run --rm hello-world
 
 ### Host 模式或旧版内核的"最后手段"（仅限旧内核）
 
-如果你无论如何都想在**主机网络模式**下运行 Docker，或者你的内核太旧而不支持 `iptables-legacy` 和 NAT 网络，你可以禁用 Docker 的内部网络管理，作为最后手段。
+如果你无论如何都想在**Host模式**下运行 Docker，或者你的内核太旧而不支持 `iptables-legacy` 和 NAT 网络，你可以禁用 Docker 的内部网络管理，作为最后手段。
 
 运行以下命令来配置守护进程：
 
