@@ -36,7 +36,7 @@ droidspaces.url = "github:ravindu644/Droidspaces-OSS";
 }
 ```
 
-**注意：** 如前所述，内核 5.4 及以下版本将无法运行来自较新 nixpkgs 的 NixOS 系统，因此请使用固定版本的 nixpkgs：
+**注意：** 如前面所述，内核 5.4 及以下版本将无法运行来自较新 nixpkgs 的 NixOS 系统，因此请使用固定版本的 nixpkgs：
 ```nix
 nixpkgs-with-systemd-v259.url = "github:NixOS/nixpkgs/b86751bc4085f48661017fa226dee99fab6c651b";
 ```
@@ -47,7 +47,7 @@ nix build .#<hostname>.config.system.build.tarball
 ```
 
 
-# 旧内核上的 systemd 问题
+# 老内核上的 systemd 问题
 
 较新的 systemd 版本可能在旧内核上运行遇到问题。你可能需要寻找并使用仍支持你内核的较旧 nixpkgs 版本。
 

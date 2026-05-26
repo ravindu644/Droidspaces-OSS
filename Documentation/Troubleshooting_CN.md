@@ -210,18 +210,18 @@ chcon u:object_r:vold_data_file:s0 /path/to/rootfs.img
 
 **症状：** 在容器启动或停止过程中，宿主设备的 WiFi 或移动数据永久停止工作。不重启设备可能无法重新开启。
 
-**原因：** 容器的 `systemd-networkd` 服务可能与 Android 的网络管理冲突，或尝试覆盖宿主端的网络配置。
+**原因：** 容器的 `systemd-networkd` 服务可能与Android的网络管理冲突，或尝试覆盖宿主端的网络配置。
 
 **解决方案：**
 
 - 如果您使用宿主网络模式：在容器内屏蔽 `systemd-networkd` 服务以阻止其启动：
 
-   1. **通过 Android 应用**：前往 **面板** -> **容器名称** -> **管理** (Systemd 菜单)，找到 `systemd-networkd`，然后点击 `systemd-networkd` 卡片旁边的三点图标并选择 **屏蔽**。
+   1. **通过Android应用**：前往 **面板** -> **容器名称** -> **管理** (Systemd 菜单)，找到 `systemd-networkd`，然后点击 `systemd-networkd` 卡片旁边的三点图标并选择 **屏蔽**。
    2. **通过终端**：
       ```bash
       sudo systemctl mask systemd-networkd
       ```
-- 使用隔离 NAT 模式以获得最大的网络自由度，避免与宿主网络产生任何冲突。
+- 使用 NAT 模式以获得最大的网络自由度，避免与宿主网络产生任何冲突。
 
 ---
 
@@ -240,7 +240,7 @@ chcon u:object_r:vold_data_file:s0 /path/to/rootfs.img
 > SELinux 强制策略仍然在进程级别适用——容器进程的域以及对 loop 设备或挂载点的访问仍受宿主策略的约束。`.img` 模式不会创建一个完全对 SELinux 透明的环境，但它确实消除了宿主端对内部文件系统结构和扩展属性的干扰。
 
 > [!WARNING]
-> 虽然切换到 `permissive` 模式似乎可以解决此问题，但**不建议**将其作为永久解决方案。如果 rootfs 已因 SELinux 拒绝操作而损坏，通常这种损坏是永久性的，无法仅通过更改模式来撤消。
+> 虽然切换到 `permissive` （宽容）模式似乎可以解决此问题，但**不建议**将其作为永久解决方案。如果 rootfs 已因 SELinux 拒绝操作而损坏，通常这种损坏是永久性的，无法仅通过更改模式来撤消。
 
 ---
 
@@ -281,7 +281,7 @@ chcon u:object_r:vold_data_file:s0 /path/to/rootfs.img
 <a id="reclaim-storage"></a>
 ## 回收存储空间（稀疏镜像）
 
-**症状：** 您在**稀疏镜像模式**（`rootfs.img`）下的容器内删除了大文件或卸载了大量软件包，但 Android 内部存储上的 `rootfs.img` 文件仍然占用相同大小的空间（不会"缩小"）。
+**症状：** 您在**稀疏镜像模式**（`rootfs.img`）下的容器内删除了大文件或卸载了大量软件包，但Android内部存储上的 `rootfs.img` 文件仍然占用相同大小的空间（不会"缩小"）。
 
 **原因：** Ext4 稀疏镜像会在写入数据时扩展，但宿主文件系统无法自动检测到镜像内部块何时被释放。这在旧内核（例如 4.14）上尤为常见。
 
@@ -292,13 +292,13 @@ chcon u:object_r:vold_data_file:s0 /path/to/rootfs.img
    ```bash
    sudo fstrim -av
    ```
-3. 该命令将报告已修剪的字节数。您会发现 Android 存储上 `rootfs.img` 的大小现已减少到与实际数据使用量相符。
+3. 该命令将报告已修剪的字节数。您会发现Android存储空间内 `rootfs.img` 的大小现已减少到与实际数据使用量相符。
 
 ---
 
 <a id="nuke-wifi-powersave"></a>
 
-## Wi-Fi `Power save: on` 导致 Android 网络体验卡顿
+## Wi-Fi `Power save: on` 导致Android网络体验卡顿
 
 **症状：** 当设备屏幕关闭时，Android 会自动将 Wi-Fi 硬件置于省电模式。这可能导致容器内网络卡顿或连接中断。由于 Android 用户空间没有通用开关来禁用此行为，您必须使用后台服务显式强制将省电状态设为"关闭"。
 
@@ -311,7 +311,7 @@ chcon u:object_r:vold_data_file:s0 /path/to/rootfs.img
 - **Alpine：** `apk add iw`
 - **Ubuntu/Debian：** `apt install iw`
 
-### 2. 创建看门狗脚本
+### 2. 创建 Watchdog 脚本
 在 `/usr/local/bin/wifi-watchdog.sh` 路径下创建包含以下内容的新文件：
 
 ```shell
