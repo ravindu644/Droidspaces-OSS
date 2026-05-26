@@ -423,7 +423,7 @@ Android 的文件级加密将文件系统密钥存储在内核会话密钥环中
 
 标准 Linux 发行版在启动期间运行 `udevadm trigger` 来冷插拔硬件设备。在 Android 设备上同时触发所有子系统可能导致内核恐慌。
 
-- **硬件访问守卫**：由于 udev 服务仅在显式启用硬件访问时才有用，Droidspaces 注入了一个 drop-in `ExecCondition` 覆盖，阻止 `systemd-udevd.service`、`systemd-udev-trigger.service` 和 `systemd-udev-settle.service` 启动，除非容器配置了硬件访问 (`enable_hw_access=1`)：
+- **硬件访问防护**：由于 udev 服务仅在显式启用硬件访问时才有用，Droidspaces 注入了一个 drop-in `ExecCondition` 覆盖，阻止 `systemd-udevd.service`、`systemd-udev-trigger.service` 和 `systemd-udev-settle.service` 启动，除非容器配置了硬件访问 (`enable_hw_access=1`)：
   ```ini
   [Service]
   ExecCondition=
@@ -447,9 +447,9 @@ Android 内核以极其冗长而闻名。如果不进行调优，标准的 `jour
 - **服务屏蔽**：屏蔽 `systemd-networkd-wait-online.service` 以防止启动延迟，屏蔽 `systemd-journald-audit.socket` 以防止在 4.9 等旧内核中发生 systemd 死锁。
 - **电源键处理**：指示 `systemd-logind` 忽略宿主机电源和挂起键事件，使容器不会尝试处理宿主机的电源状态转换。
 
-### 4. NAT 模式网络守卫
+### 4. NAT 模式网络防护
 
-在 Host 网络模式下，容器内运行 `NetworkManager` 或 `systemd-networkd` 等网络管理器可能会与 Android 宿主机的路由表冲突，导致蜂窝/Wi-Fi 连接中断。
+在 Host 网络模式下，容器内运行 `NetworkManager` 或 `systemd-networkd` 等网络管理器可能会与 Android 宿主机的路由表冲突，导致移动数据/Wi-Fi 连接中断。
 
 Droidspaces 为标准网络服务（如 `NetworkManager.service`、`systemd-networkd.service`、`dhcpcd.service` 和 `systemd-resolved.service`）注入 drop-in `ExecCondition` 覆盖。这确保这些服务仅在容器显式配置为 NAT 模式时执行：
 ```ini
