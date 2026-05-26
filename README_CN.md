@@ -9,6 +9,8 @@
 
 # Droidspaces
 
+[English](./README.md) | 简体中文
+
 **Droidspaces** 是一款轻量级、容器可移植的 Linux 容器化工具，能让你在 Android、Linux 甚至**Android Recovery/Ramdisk 等最小化环境**中运行完整的 Linux 系统，支持完整的初始化系统，包括 **systemd**、**OpenRC** 以及其他初始化系统（runit、s6 等）。
 
 Droidspaces 的独特之处在于其对 Android 和 Linux 本身**零依赖**、具备**原生执行**能力。它基于 musl libc 进行静态编译。只要你的设备运行 Linux 内核，Droidspaces 就能在上面运行。无需 Termux，无需中介程序，没有繁琐的安装配置。
