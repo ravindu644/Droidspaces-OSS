@@ -270,7 +270,7 @@ Droidspaces 支持运行 Linux 内核 **3.10 及以上**版本的 Android 设备
 | 内核版本 | 支持级别 | 说明 |
 |----------------|---------------|-------|
 | 3.10 | 已支持 | **旧版。** 最低要求。基本的命名空间支持。基于 systemd 的发行版可能不稳定；推荐使用 **Alpine**。 |
-| 4.4 - 4.19 | 稳定 | **加固。** [完整支持 systemd 版本低于 v258 的现代发行版](./Documentation/Troubleshooting.md#modern-distros)。原生支持嵌套容器（Docker/Podman）。如果在特定内核（如 4.14.113）上遇到因 VFS 死锁 bug 导致的 systemd 挂起，请手动启用**死锁护盾** [[更多信息](./Documentation/Features.md#vfs-deadlock)]。 |
+| 4.4 - 4.19 | 稳定 | **加固。** [完整支持 systemd 版本低于 v258 的现代发行版](./Documentation/Troubleshooting_CN.md#modern-distros)。原生支持嵌套容器（Docker/Podman）。如果在特定内核（如 4.14.113）上遇到因 VFS 死锁 bug 导致的 systemd 挂起，请手动启用**死锁护盾** [[更多信息](./Documentation/Features_CN.md#vfs-deadlock)]。 |
 | 5.4 - 5.10 | 推荐 | **主线。** 完整功能支持，包括嵌套容器和 Cgroup v2。 |
 | 5.15+ | 旗舰 | **完全。** 最佳性能和与现代发行版的最大兼容性。 |
 
