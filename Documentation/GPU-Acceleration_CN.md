@@ -24,7 +24,7 @@ keywords: gpu, acceleration, droidspaces, termux, virgl, turnip, adreno, contain
 
 ## Android
 
-在 Android 上实现硬件加速是通过将容器的图形栈与宿主端 X 服务器（Termux-X11）桥接来实现的。Droidspaces 处理了实现此无缝衔接所需的复杂挂载管理和安全上下文。
+在 Android 上的硬件加速是通过将容器的图形栈与宿主端 X 服务器（Termux-X11）桥接来实现的。Droidspaces 处理了实现此无缝衔接所需的复杂挂载管理和安全上下文。
 
 > [!TIP]
 >
@@ -79,7 +79,7 @@ keywords: gpu, acceleration, droidspaces, termux, virgl, turnip, adreno, contain
 
 ### 02. Termux-X11 + VirGL
 
-此方法通过 `virglrenderer` 桥接为**非 Qualcomm 设备（Mali/PowerVR）** 提供 **GPU 加速**。它将容器中的 OpenGL 调用转换为宿主 Android 操作系统可以执行的命令。
+此方法通过 `virglrenderer` 桥接为**非高通设备（Mali/PowerVR）** 提供 **GPU 加速**。它将容器中的 OpenGL 调用转换为宿主 Android 操作系统可以执行的命令。
 
 #### 设置要求
 
@@ -124,9 +124,9 @@ keywords: gpu, acceleration, droidspaces, termux, virgl, turnip, adreno, contain
 
 <a id="turnip"></a>
 
-### 03. Turnip（原生 Qualcomm/Adreno）
+### 03. Turnip（原生高通/Adreno）
 
-对于 Qualcomm Adreno GPU，Droidspaces 支持使用 Turnip 驱动实现**原生硬件加速**。这绕过了对 `virgl` 的需求，并提供接近原生的性能。
+对于高通 Adreno GPU，Droidspaces 支持使用 Turnip 驱动实现**原生硬件加速**。这绕过了对 `virgl` 的需求，并提供接近原生的性能。
 
 #### 要求
 
@@ -167,7 +167,7 @@ keywords: gpu, acceleration, droidspaces, termux, virgl, turnip, adreno, contain
 
 <a id="linux"></a>
 
-## Linux 桌面（AMD/Intel）
+## Linux 桌面端（AMD/Intel）
 
 在基于 Linux 的主机上，GPU 加速在 Droidspaces 中原生运行，无需额外配置。
 

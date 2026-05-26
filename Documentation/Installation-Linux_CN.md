@@ -66,7 +66,7 @@ sudo droidspaces check
 
 ## 第四步：获取 Rootfs
 
-你需要一个 Linux 根文件系统来创建你的第一个容器。我们推荐使用官方的 **Linux Containers 镜像仓库**，它为数十种发行版提供了干净、预构建的 rootfs tarball。
+你需要一个 Linux 根文件系统来创建你的第一个容器。我们推荐使用Linux官方的 **Linux Containers 镜像仓库**，它为数十种发行版提供了干净、预构建的 rootfs tarball。
 
 **下载地址**：[images.linuxcontainers.org/images/](https://images.linuxcontainers.org/images/)
 
