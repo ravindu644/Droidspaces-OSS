@@ -264,7 +264,7 @@ docker run --rm hello-world
 > **Docker 故障排除**：如果 Docker 守护进程未能自动启动或 `docker run` 命令失败，请在你的终端中手动运行 `sudo dockerd`。这将输出实时日志，帮助你识别是否存在缺失的内核模块、文件系统冲突或网桥问题。
 
 <a id="last-resort-for-host-mode-or-legacy-kernels-old-kernels-only"></a>
-### Host 模式或旧版内核的"最后手段"（仅限旧内核）
+### Host 模式或旧版内核的"最后手段"（仅限老内核）
 
 如果你无论如何都想在**Host模式**下运行 Docker，或者你的内核太旧而不支持 `iptables-legacy` 和 NAT 网络，你可以禁用 Docker 的内部网络管理，作为最后手段。
 
