@@ -8,11 +8,11 @@ keywords: droidspaces, supported, devices, android, device, compatibility, kerne
 
 # 社区支持的 Android 设备
 
-> [!NOTE]
+> [!提示]
 >
 > 如果你想将自己的 Droidspaces 内核添加到此表格，请查看[贡献指南](#contribution-guidelines)部分。
 
-> [!WARNING]
+> [!警告]
 >
 > 刷写自定义内核需要解锁引导加载程序（bootloader）。Droidspaces 开发者不对任何设备变砖、数据丢失或因内核安装导致的硬件损坏负责。
 >
