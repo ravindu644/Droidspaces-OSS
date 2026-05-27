@@ -1,5 +1,5 @@
 <!--
-title: Kernel Configuration Guide
+title: Kernel Configuration
 section: Guides
 order: 3
 desc: Complete guide to compiling a custom Android kernel with Droidspaces support, including non-GKI and GKI patches and compatibility fixes.

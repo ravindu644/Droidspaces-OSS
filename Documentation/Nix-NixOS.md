@@ -1,5 +1,5 @@
 <!--
-title: Getting started with NixOS on Droidspaces
+title: NixOS on Droidspaces
 section: Reference
 order: 4
 desc: Run NixOS inside Droidspaces containers. Build tarballs, configure compatibility, and try the experimental Finix system.

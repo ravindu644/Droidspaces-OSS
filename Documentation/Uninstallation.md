@@ -1,5 +1,5 @@
 <!--
-title: Uninstallation Guide
+title: Uninstallation
 section: Reference
 order: 5
 desc: Safely uninstall Droidspaces from Android and Linux. Remove containers, backend data, APK, and system files completely.

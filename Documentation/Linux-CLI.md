@@ -1,5 +1,5 @@
 <!--
-title: Linux CLI Guide
+title: Linux CLI
 section: Guides
 order: 5
 desc: Full Droidspaces Linux CLI reference. Every command, flag, and config option explained.

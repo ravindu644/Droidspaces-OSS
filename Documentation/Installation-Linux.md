@@ -1,5 +1,5 @@
 <!--
-title: Linux Installation Guide
+title: Linux Installation
 section: Basics
 order: 2
 desc: Install Droidspaces on Linux desktop or server. Download the tarball, extract the binary, create a rootfs image, and boot your first container.

@@ -1,5 +1,5 @@
 <!--
-title: Android App Usage Guide
+title: Android App Usage
 section: Guides
 order: 4
 desc: Complete guide to the Droidspaces Android app. Manage containers, configure networking, stats, terminal, and kernel settings.

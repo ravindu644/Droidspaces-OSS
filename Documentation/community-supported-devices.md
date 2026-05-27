@@ -1,5 +1,5 @@
 <!--
-title: Community-supported Android devices
+title: Community-Supported Android Devices
 section: Reference
 order: 3
 desc: Community-maintained compatibility list of Android devices verified to run Droidspaces.

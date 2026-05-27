@@ -1,5 +1,5 @@
 <!--
-title: Droidspaces GPU Acceleration Guide
+title: GPU Acceleration
 section: Guides
 order: 2
 desc: Enable GPU acceleration in Droidspaces containers on Android and Linux. Covers Termux X11, VirGL, Turnip for native Adreno, and desktop GPU passthrough.
