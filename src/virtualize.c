@@ -619,6 +619,16 @@ void ds_virtualize_update(struct ds_config *cfg) {
     }
   }
 
+  /* Pre-check: if the virtualization tmpfs directory is not yet mounted/created,
+   * skip the update silently to avoid startup race logs and redundant generation overhead. */
+  char vproc_dir[PATH_MAX];
+  snprintf(vproc_dir, sizeof(vproc_dir), "/proc/%d/root" VPROC_PATH,
+           (int)cfg->container_pid);
+  struct stat st_dir;
+  if (stat(vproc_dir, &st_dir) != 0 || !S_ISDIR(st_dir.st_mode)) {
+    return;
+  }
+
   int has_mem = (cfg->memory_limit > 0);
   int has_cpu = (cfg->cpu_quota > 0);
 
