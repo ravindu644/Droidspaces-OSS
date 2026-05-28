@@ -55,6 +55,19 @@
                 android:value="Terminal sessions for Droidspaces containers" />
         </service>
 
+
+        <!-- Boot receiver: required to pair with RECEIVE_BOOT_COMPLETED permission.
+             Marked exported=false so only the system can send the boot broadcast.
+             Without this declaration, scanners flag the permission as a dropper pattern. -->
+        <receiver
+            android:name=".receiver.BootReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.LOCKED_BOOT_COMPLETED" />
+            </intent-filter>
+        </receiver>
+
     </application>
 
 </manifest>
