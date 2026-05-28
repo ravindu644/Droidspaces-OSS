@@ -2087,6 +2087,13 @@ static void ds_socketd_trim_core_event_file(const char *path) {
 void ds_socketd_record_core_event(const char *action,
                                   const char *container_name,
                                   const char *uuid) {
+  #if !defined(DS_ENABLE_SOCKETD_BACKEND) || DS_ENABLE_SOCKETD_BACKEND != 1
+  (void)action;
+  (void)container_name;
+  (void)uuid;
+  return;
+  #endif
+  
   struct timespec ts;
   if (clock_gettime(CLOCK_REALTIME, &ts) < 0)
     return;
