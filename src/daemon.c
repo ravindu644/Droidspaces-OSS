@@ -53,6 +53,39 @@
 #define EXIT_PENDING (-1)
 
 static FILE *g_daemon_log_fp = NULL;
+static char g_daemon_log_path[PATH_MAX] = "";
+
+/* Rotate droidspacesd.log mid-run when it exceeds the size limit.
+ * Renames current log to .old, reopens fresh file, and redirects
+ * stdout/stderr (background mode) or g_daemon_log_fp (foreground). */
+static void rotate_daemon_log_if_needed(void) {
+  if (g_daemon_log_path[0] == '\0')
+    return;
+
+  struct stat st;
+  if (stat(g_daemon_log_path, &st) < 0 || st.st_size < 4 * 1024 * 1024)
+    return;
+
+  char old_path[sizeof(g_daemon_log_path) + 32];
+  snprintf(old_path, sizeof(old_path), "%s.old", g_daemon_log_path);
+  rename(g_daemon_log_path, old_path);
+
+  if (g_daemon_log_fp) {
+    /* foreground: reopen tee file */
+    fclose(g_daemon_log_fp);
+    g_daemon_log_fp = fopen(g_daemon_log_path, "ae");
+  } else {
+    /* background: reopen and re-dup2 stdout/stderr */
+    int lfd = open(g_daemon_log_path, O_WRONLY | O_CREAT | O_APPEND | O_CLOEXEC,
+                   0644);
+    if (lfd >= 0) {
+      dup2(lfd, STDOUT_FILENO);
+      dup2(lfd, STDERR_FILENO);
+      if (lfd > STDERR_FILENO)
+        close(lfd);
+    }
+  }
+}
 
 /*
  * Tee helper: writes a plain (no ANSI) line to g_daemon_log_fp.
@@ -663,6 +696,7 @@ static void daemonize(int foreground) {
   {
     char log_path[PATH_MAX];
     snprintf(log_path, sizeof(log_path), "%s/droidspacesd.log", get_logs_dir());
+    safe_strncpy(g_daemon_log_path, log_path, sizeof(g_daemon_log_path));
     rotate_log(log_path, 2 * 1024 * 1024);
 
     if (!foreground) {
@@ -771,14 +805,18 @@ static void ds_selinux_transition(char **argv) {
   {
     int sfd = open("/proc/self/attr/current", O_WRONLY);
     if (sfd >= 0) {
-      write(sfd, DS_SELINUX_CTX, strlen(DS_SELINUX_CTX));
+      if (write(sfd, DS_SELINUX_CTX, strlen(DS_SELINUX_CTX)) < 0) {
+        /* ignore */
+      }
       close(sfd);
     }
   }
   /* Clear the stale exec context regardless of whether setcon worked */
   fd = open("/proc/self/attr/exec", O_WRONLY);
   if (fd >= 0) {
-    write(fd, "\0", 1);
+    if (write(fd, "\0", 1) < 0) {
+      /* ignore */
+    }
     close(fd);
   }
 }
@@ -821,7 +859,8 @@ int ds_daemon_run(int foreground, char **argv) {
 
 #ifdef DS_ENABLE_SOCKETD_BACKEND
   if (ds_socketd_bridge_start() < 0)
-    ds_warn("Failed to start droidspaces-socketd backend bridge: %s", strerror(errno));
+    ds_warn("Failed to start droidspaces-socketd backend bridge: %s",
+            strerror(errno));
 #endif
 
   /* Write PID file so the Android app can signal us */
@@ -867,6 +906,9 @@ int ds_daemon_run(int foreground, char **argv) {
   ds_log("Listening on @" DS_SOCK_NAME " (PID %d)", getpid());
 
   for (;;) {
+    /* Rotate log if it exceeds 4MB */
+    rotate_daemon_log_if_needed();
+
     /* Acknowledge a live binary swap signalled by the Android app. */
     if (g_sigusr2_received) {
       g_sigusr2_received = 0;

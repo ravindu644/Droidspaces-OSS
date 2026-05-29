@@ -105,12 +105,28 @@ if $TEST -f "$ROOTFS_PATH/usr/bin/systemctl" || $TEST -f "$ROOTFS_PATH/bin/syste
 
     log "Systemd detected (at $GUEST_SYSTEMD_PATH), applying fixes..."
 
+    # 00. Pre-commit machine-id to prevent first-boot deadlock in Fedora 44
+    log "Generating machine-id..."
+    $CAT /proc/sys/kernel/random/uuid | $BB tr -d '-' | $BB tr -d '\n' > "$ROOTFS_PATH/etc/machine-id"
+    $ECHO "" >> "$ROOTFS_PATH/etc/machine-id"
+    $CHMOD 444 "$ROOTFS_PATH/etc/machine-id"
+
     # 01. Mask problematic services for Android kernels
     log "Masking problematic systemd services..."
     # Mask systemd-networkd-wait-online.service
     $LN -sf /dev/null "$ROOTFS_PATH/etc/systemd/system/systemd-networkd-wait-online.service"
     # Mask systemd-journald-audit.socket to prevent deadlocks on Android kernels
     $LN -sf /dev/null "$ROOTFS_PATH/etc/systemd/system/systemd-journald-audit.socket"
+
+    # Nuke problematic iptables service
+    for f in \
+        "$ROOTFS_PATH/etc/systemd/system/iptables.service" \
+        "$ROOTFS_PATH/etc/systemd/scripts/iptables" \
+        "$ROOTFS_PATH/etc/systemd/scripts/iptables.stop" \
+        "$ROOTFS_PATH/etc/systemd/system/multi-user.target.wants/iptables.service"
+    do
+        $TEST -f "$f" && $RM -f "$f"
+    done
 
     # 02. Journald configuration (skip Audit, KMsg, etc)
     log "Optimizing journald for Android and applying hardening..."

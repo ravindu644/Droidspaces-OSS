@@ -4,8 +4,8 @@
  * ds_dhcp.c - Embedded single-lease DHCP server for NAT containers.
  *
  * Runs as a joinable thread inside the monitor process. Bound exclusively to
- * the container's veth_host interface via SO_BINDTODEVICE so it never
- * interferes with any DHCP server already running on the host.
+ * the container's veth_host interface via SO_BINDTODEVICE + sll_ifindex so it
+ * never interferes with sibling containers sharing the same bridge.
  *
  * Serves a single static lease (the deterministic IP from veth_peer_ip()) in
  * response to DHCPDISCOVER and DHCPREQUEST. Handles lease renewals for the
@@ -332,9 +332,7 @@ static void *dhcp_server_loop(void *arg) {
   struct dhcp_pkt reply;
   uint8_t rx_buf[2048];
 
-  /* 0. Create the AF_PACKET socket for SNIFFING EVERYTHING.
-   * We use SOCK_RAW + ETH_P_ALL to ensure NO kernel filtering hidden from us.
-   */
+  /* 0. Create the AF_PACKET socket. */
   packet_sock = socket(AF_PACKET, SOCK_RAW, htons(ETH_P_ALL));
   if (packet_sock < 0) {
     ds_warn("[DHCP] packet socket: %s", strerror(errno));
@@ -343,6 +341,17 @@ static void *dhcp_server_loop(void *arg) {
     pthread_cond_signal(&ctx->ready_cond);
     pthread_mutex_unlock(&g_dhcp_lock);
     goto out;
+  }
+
+  /* In bridge mode, the kernel floods L2 broadcasts to all slave ports.
+   * SO_BINDTODEVICE is best-effort: some Android kernels ignore it for
+   * AF_PACKET. The real guard is recvfrom() + sll_ifindex check below. */
+  if (setsockopt(packet_sock, SOL_SOCKET, SO_BINDTODEVICE, ctx->iface,
+                 (socklen_t)(strlen(ctx->iface) + 1)) < 0) {
+    ds_warn("[DHCP] SO_BINDTODEVICE(%s): %s - cross-container DHCP leakage "
+            "possible",
+            ctx->iface, strerror(errno));
+    /* non-fatal: fall through, sll_ifindex still provides partial isolation */
   }
 
   struct sockaddr_ll sll;
@@ -394,8 +403,16 @@ static void *dhcp_server_loop(void *arg) {
     if (!(fds[0].revents & POLLIN))
       continue;
 
-    /* Receive */
-    ssize_t len = recv(packet_sock, rx_buf, sizeof(rx_buf), 0);
+    /* Receive - use recvfrom to get the ingress ifindex.
+     * SO_BINDTODEVICE is unreliable on Android kernels for AF_PACKET; the
+     * bridge can still deliver sibling-veth frames to our socket.
+     * sll_ifindex in the returned sockaddr_ll is the ground truth: it reflects
+     * which interface the frame physically arrived on, so we drop anything
+     * that didn't come from our own veth. */
+    struct sockaddr_ll rx_sll;
+    socklen_t rx_sll_len = sizeof(rx_sll);
+    ssize_t len = recvfrom(packet_sock, rx_buf, sizeof(rx_buf), 0,
+                           (struct sockaddr *)&rx_sll, &rx_sll_len);
     if (len < 0) {
       if (errno == EINTR || errno == EAGAIN)
         continue;
@@ -404,6 +421,18 @@ static void *dhcp_server_loop(void *arg) {
       ds_warn("[DHCP] packet recv: %s", strerror(errno));
       break;
     }
+
+    /* Drop frames from sibling bridge ports */
+    if (rx_sll.sll_ifindex != sll.sll_ifindex)
+      continue;
+
+    /* Ignore packets sent by the host (e.g., bridge floods from sibling
+     * containers). The bridge forwards sibling broadcasts *out* of our veth
+     * interface. AF_PACKET intercepts these transmit events and flags them as
+     * PACKET_OUTGOING. We only want incoming frames transmitted BY the
+     * container. */
+    if (rx_sll.sll_pkttype == PACKET_OUTGOING)
+      continue;
 
     /* 1. Ethernet Header (14 bytes) */
     if (len < (ssize_t)(sizeof(struct ethhdr) + sizeof(struct iphdr) +
@@ -452,16 +481,9 @@ static void *dhcp_server_loop(void *arg) {
 
     int opts_len = (int)(req_len - (int)offsetof(struct dhcp_pkt, options));
 
-    /* No MAC filter: this socket is bound exclusively to the per-container
-     * veth host side (AF_PACKET + sll_ifindex).  Only one peer (the container)
-     * can ever send frames through that veth, so any DHCP DISCOVER/REQUEST
-     * arriving here legitimately belongs to our container.  A MAC-based filter
-     * is both unnecessary on a point-to-point link and actively harmful: Ubuntu
-     * 24.04+ / systemd-networkd uses a DUID as ClientIdentifier, causing the
-     * chaddr in the packet to differ from the MAC we read at veth-creation time
-     * (the interface is renamed to eth0 inside the netns after our snapshot).
-     * Filtering by ifindex (already enforced by AF_PACKET bind) is sufficient
-     * and collision-free across any number of parallel containers. */
+    /* chaddr is NOT used for filtering (Ubuntu 24.04+ / systemd-networkd
+     * sets it to all-zeros in DUID mode). We filter on eth->h_source instead,
+     * which is the kernel-set L2 MAC and always correct. */
     uint8_t type_byte = 0;
     if (opt_get(req.options, opts_len, OPT_MSG_TYPE, &type_byte, 1) < 0)
       continue;

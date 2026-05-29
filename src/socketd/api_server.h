@@ -20,21 +20,20 @@ struct TcpListenConfig {
  *
  * This first revision intentionally accepts IPv4 only.
  */
-bool parse_tcp_listen_endpoint(const std::string& value,
-                               TcpListenConfig& out,
-                               std::string& error);
+bool parse_tcp_listen_endpoint(const std::string &value, TcpListenConfig &out,
+                               std::string &error);
 
 class ApiServer {
- public:
+public:
   explicit ApiServer(TcpListenConfig config);
 
-  bool run(std::string& error);
+  bool run(std::string &error);
 
- private:
-  bool create_listener(int& fd_out, std::string& error) const;
-  bool handle_client(int client_fd, std::string& error) const;
+private:
+  bool create_listener(int &fd_out, std::string &error) const;
+  bool handle_client(int client_fd, std::string &error) const;
 
   TcpListenConfig config_;
 };
 
-}  // namespace droidspaces::socketd
+} // namespace droidspaces::socketd

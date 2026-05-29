@@ -1,3 +1,7 @@
+[English](./README.md) | 简体中文
+
+---
+
 [![Latest release](https://img.shields.io/github/v/release/ravindu644/Droidspaces-OSS?label=Latest%20Release&style=for-the-badge)](https://github.com/ravindu644/Droidspaces-OSS/releases/latest)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg?style=for-the-badge)](./LICENSE)
 [![Telegram channel](https://img.shields.io/badge/Telegram-Channel-2CA5E0?style=for-the-badge&logo=telegram&logoColor=white)](https://t.me/Droidspaces)
@@ -8,8 +12,6 @@
 ---
 
 # Droidspaces
-
-[English](./README.md) | 简体中文
 
 **Droidspaces** 是一款轻量级、容器可移植的 Linux 容器化工具，能让你在 Android、Linux 甚至**Android Recovery/Ramdisk 等最小化环境**中运行完整的 Linux 系统，支持完整的初始化系统，包括 **systemd**、**OpenRC** 以及其他初始化系统（runit、s6 等）。
 

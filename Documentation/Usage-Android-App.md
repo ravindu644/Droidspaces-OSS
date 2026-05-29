@@ -30,7 +30,39 @@ This tab allows you to install containers using the "+" icon, and lists all your
 
 > [!TIP]
 >
-> You can **edit container configuration** or **uninstall** existing installed containers by **pressing and holding** the container's card. Also gives you the ability to migrate to a `rootfs.img`-based container or resize your existing `rootfs.img`..!
+> You can **edit container configuration** or **uninstall** existing installed containers by **pressing and holding** the container’s card. Also gives you the ability to migrate to a `rootfs.img`-based container or resize your existing `rootfs.img`..!
+
+---
+
+## Rootfs Repository
+
+The **cloud icon** above the "+" button opens the Rootfs Repository - a built-in distro browser that lets you download and install Linux rootfs images without leaving the app.
+
+### How it works
+
+1. Tap the **cloud icon** in the Containers tab.
+2. The sheet opens and loads available distros from the [Droidspaces official repository](https://github.com/Droidspaces/Droidspaces-rootfs-builder). Only images matching your device’s architecture are shown.
+3. **Search** the list by name, description, or author using the search bar.
+4. Tap **Download** on a distro card. A progress bar tracks the download; the file is saved to your Downloads folder.
+5. Once done, the button switches to **Install**. Tap it to go straight into the container setup wizard.
+
+> [!NOTE]
+>
+> If a download fails, the card shows a **Retry** button. Previously downloaded files are detected automatically on relaunch - the Install button will already be available.
+
+### Adding Custom Repositories
+
+The repository supports third-party rootfs sources in the same JSON format.
+
+1. Tap the **settings icon** (left of the refresh icon) in the sheet header.
+2. Enter a **name** and a **URL** pointing to a valid `rootfs.json`.
+3. Tap **Add**, then **Save**. The sheet refreshes and merges results from all sources.
+
+> [!TIP]
+>
+> To get a much wider selection of distros, add the official LXC images mirror as a custom repository:
+> - **Name**: anything you like (e.g. `LXC Mirror`)
+> - **URL**: `https://raw.githubusercontent.com/Droidspaces/linuxcontainers-mirror/refs/heads/main/rootfs.json`
 
 ---
 

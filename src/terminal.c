@@ -60,7 +60,9 @@ int ds_terminal_create(struct ds_tty_info *tty) {
   }
 
   /* tty group ownership + permissions */
-  fchown(tty->slave, 0, 5);
+  if (fchown(tty->slave, 0, 5) < 0) {
+    /* best-effort, ignore */
+  }
   fchmod(tty->slave, 0620);
 
   return 0;

@@ -451,4 +451,5 @@
     <string name="repo_custom_url_empty">URL不可為空</string>
     <string name="repo_custom_url_invalid">網址必須以 https:// 開頭</string>
     <string name="repo_no_custom">目前還沒有訂閱任何自訂儲存庫。</string>
+    <string name="read_only">唯讀</string>
 </resources>

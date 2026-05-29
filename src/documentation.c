@@ -371,7 +371,8 @@ static void print_page(int page, const char *bin) {
            bin);
 
     printf("%sBind Mounts & Environment:%s\n", bold, reset);
-    printf("  --bind /host:/cont[:ro]  Bind mount host path (append :ro for read-only)\n");
+    printf("  --bind /host:/cont[:ro]  Bind mount host path (append :ro for "
+           "read-only)\n");
     printf("  --env /path/to/env.list  Load environment variables\n\n");
 
     printf("%sConfig Management:%s\n", bold, reset);
@@ -425,8 +426,10 @@ static void handle_sigint(int sig) {
   (void)sig;
   if (g_old_tios_ptr)
     tcsetattr(STDIN_FILENO, TCSAFLUSH, g_old_tios_ptr);
-  printf("\033[?25h");                      /* SHOW_CURSOR */
-  write(STDOUT_FILENO, "\033[2J\033[H", 7); /* clear screen */
+  printf("\033[?25h"); /* SHOW_CURSOR */
+  if (write(STDOUT_FILENO, "\033[2J\033[H", 7) < 0) {
+    /* ignore */
+  }
   _exit(0);
 }
 

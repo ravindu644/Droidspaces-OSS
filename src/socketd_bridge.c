@@ -5,8 +5,8 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
-#include "droidspace.h"
 #include "socketd_bridge.h"
+#include "droidspace.h"
 #include "socketd_protocol.h"
 
 /*
@@ -122,7 +122,8 @@ static uint64_t socketd_hton64(uint64_t value) {
 #endif
 }
 static uint64_t socketd_ntoh64(uint64_t value) {
-  return socketd_hton64(value); //The byte swap is symmetric. Could be an alias via __attribute__
+  return socketd_hton64(
+      value); // The byte swap is symmetric. Could be an alias via __attribute__
 }
 
 static int socketd_read_proc_start_ticks(pid_t pid,
@@ -160,8 +161,7 @@ static int socketd_read_proc_start_ticks(pid_t pid,
   char *saveptr = NULL;
   int field_no = 3;
 
-  for (char *tok = strtok_r(cursor, " \t\r\n", &saveptr);
-       tok != NULL;
+  for (char *tok = strtok_r(cursor, " \t\r\n", &saveptr); tok != NULL;
        tok = strtok_r(NULL, " \t\r\n", &saveptr), field_no++) {
     if (field_no == 22) {
       char *end = NULL;
@@ -215,8 +215,7 @@ static int64_t socketd_container_started_at_epoch(pid_t pid) {
   if (clock_gettime(CLOCK_REALTIME, &now) < 0)
     return 0;
 
-  double started_since_boot =
-      (double)start_ticks / (double)ticks_per_second;
+  double started_since_boot = (double)start_ticks / (double)ticks_per_second;
   double boot_epoch = (double)now.tv_sec - uptime_seconds;
   double started_epoch = boot_epoch + started_since_boot;
 
@@ -227,8 +226,7 @@ static int64_t socketd_container_started_at_epoch(pid_t pid) {
 }
 
 static int socketd_pidfile_to_container_name(const char *filename,
-                                              char *name_out,
-                                              size_t name_size) {
+                                             char *name_out, size_t name_size) {
   if (!filename || !name_out || name_size == 0)
     return -1;
 
@@ -257,10 +255,9 @@ static void socketd_free_loaded_config(struct ds_config *cfg) {
   free_config_unknown_lines(cfg);
 }
 
-static void socketd_pack_container_record(
-    struct ds_socketd_container_record *record,
-    const struct ds_config *cfg,
-    pid_t pid) {
+static void
+socketd_pack_container_record(struct ds_socketd_container_record *record,
+                              const struct ds_config *cfg, pid_t pid) {
   memset(record, 0, sizeof(*record));
 
   safe_strncpy(record->name, cfg->container_name, sizeof(record->name));
@@ -276,8 +273,7 @@ static void socketd_pack_container_record(
   const char *rootfs_ref =
       cfg->rootfs_img_path[0] ? cfg->rootfs_img_path : cfg->rootfs_path;
 
-  safe_strncpy(record->rootfs_path, rootfs_ref,
-               sizeof(record->rootfs_path));
+  safe_strncpy(record->rootfs_path, rootfs_ref, sizeof(record->rootfs_path));
 
   safe_strncpy(record->hostname, cfg->hostname, sizeof(record->hostname));
 
@@ -313,15 +309,12 @@ static void socketd_pack_container_record(
   }
 
   int64_t started_at = pid > 0 ? socketd_container_started_at_epoch(pid) : 0;
-  record->started_at_be =
-      (int64_t)socketd_hton64((uint64_t)started_at);
+  record->started_at_be = (int64_t)socketd_hton64((uint64_t)started_at);
 }
 
 static int socketd_append_container_record(
-    struct ds_socketd_container_record **records_inout,
-    size_t *count_inout,
-    size_t *capacity_inout,
-    const struct ds_socketd_container_record *record) {
+    struct ds_socketd_container_record **records_inout, size_t *count_inout,
+    size_t *capacity_inout, const struct ds_socketd_container_record *record) {
   if (!records_inout || !count_inout || !capacity_inout || !record)
     return -1;
 
@@ -333,8 +326,7 @@ static int socketd_append_container_record(
       return -1;
 
     if (new_capacity >
-        DS_SOCKETD_MAX_PAYLOAD /
-            sizeof(struct ds_socketd_container_record)) {
+        DS_SOCKETD_MAX_PAYLOAD / sizeof(struct ds_socketd_container_record)) {
       return -1;
     }
 
@@ -355,10 +347,9 @@ static int socketd_append_container_record(
   return 0;
 }
 
-static void socketd_pack_image_record(
-    struct ds_socketd_image_record *record,
-    const struct ds_config *cfg,
-    int is_running) {
+static void socketd_pack_image_record(struct ds_socketd_image_record *record,
+                                      const struct ds_config *cfg,
+                                      int is_running) {
   memset(record, 0, sizeof(*record));
 
   safe_strncpy(record->name, cfg->container_name, sizeof(record->name));
@@ -388,11 +379,10 @@ static void socketd_pack_image_record(
   record->created_at_be = (int64_t)socketd_hton64(0);
 }
 
-static int socketd_append_image_record(
-    struct ds_socketd_image_record **records_inout,
-    size_t *count_inout,
-    size_t *capacity_inout,
-    const struct ds_socketd_image_record *record) {
+static int
+socketd_append_image_record(struct ds_socketd_image_record **records_inout,
+                            size_t *count_inout, size_t *capacity_inout,
+                            const struct ds_socketd_image_record *record) {
   if (!records_inout || !count_inout || !capacity_inout || !record)
     return -1;
 
@@ -404,8 +394,7 @@ static int socketd_append_image_record(
       return -1;
 
     if (new_capacity >
-        DS_SOCKETD_MAX_PAYLOAD /
-            sizeof(struct ds_socketd_image_record)) {
+        DS_SOCKETD_MAX_PAYLOAD / sizeof(struct ds_socketd_image_record)) {
       return -1;
     }
 
@@ -427,10 +416,8 @@ static int socketd_append_image_record(
 }
 
 static int socketd_append_core_event_record(
-    struct ds_socketd_core_event_record **records_inout,
-    size_t *count_inout,
-    size_t *capacity_inout,
-    const struct ds_socketd_core_event_record *record) {
+    struct ds_socketd_core_event_record **records_inout, size_t *count_inout,
+    size_t *capacity_inout, const struct ds_socketd_core_event_record *record) {
   if (!records_inout || !count_inout || !capacity_inout || !record)
     return -1;
 
@@ -442,8 +429,7 @@ static int socketd_append_core_event_record(
       return -1;
 
     if (new_capacity >
-        DS_SOCKETD_MAX_PAYLOAD /
-            sizeof(struct ds_socketd_core_event_record)) {
+        DS_SOCKETD_MAX_PAYLOAD / sizeof(struct ds_socketd_core_event_record)) {
       return -1;
     }
 
@@ -519,8 +505,8 @@ static int socketd_build_core_event_path(char *path, size_t path_size) {
   if (!path || path_size == 0)
     return -1;
 
-  int r = snprintf(path, path_size, "%.4076s/socketd-events.bin",
-                   get_logs_dir());
+  int r =
+      snprintf(path, path_size, "%.4076s/socketd-events.bin", get_logs_dir());
   return (r > 0 && (size_t)r < path_size) ? 0 : -1;
 }
 
@@ -562,12 +548,11 @@ static void socketd_handle_conn(int conn) {
     socketd_send_response(conn, DS_SOCKETD_STATUS_BAD_REQUEST, NULL, 0);
     return;
   }
-#endif //deprecated
+#endif // deprecated
 
   switch ((enum ds_socketd_opcode)opcode) {
   case DS_SOCKETD_OP_PING: {
-    if (payload_len > 0 &&
-        socketd_discard_payload(conn, payload_len) < 0) {
+    if (payload_len > 0 && socketd_discard_payload(conn, payload_len) < 0) {
       socketd_send_response(conn, DS_SOCKETD_STATUS_BAD_REQUEST, NULL, 0);
       return;
     }
@@ -579,27 +564,23 @@ static void socketd_handle_conn(int conn) {
   }
 
   case DS_SOCKETD_OP_CAPABILITIES: {
-    if (payload_len > 0 &&
-        socketd_discard_payload(conn, payload_len) < 0) {
+    if (payload_len > 0 && socketd_discard_payload(conn, payload_len) < 0) {
       socketd_send_response(conn, DS_SOCKETD_STATUS_BAD_REQUEST, NULL, 0);
       return;
     }
 
-    uint32_t caps_be = htonl(DS_SOCKETD_CAP_PROTOCOL_V1 |
-                             DS_SOCKETD_CAP_PING |
-                             DS_SOCKETD_CAP_CAPABILITIES |
-                             DS_SOCKETD_CAP_INFO |
-                             DS_SOCKETD_CAP_LIST_CONTAINERS |
-                             DS_SOCKETD_CAP_LIST_IMAGES |
-                             DS_SOCKETD_CAP_POLL_EVENTS);
+    uint32_t caps_be =
+        htonl(DS_SOCKETD_CAP_PROTOCOL_V1 | DS_SOCKETD_CAP_PING |
+              DS_SOCKETD_CAP_CAPABILITIES | DS_SOCKETD_CAP_INFO |
+              DS_SOCKETD_CAP_LIST_CONTAINERS | DS_SOCKETD_CAP_LIST_IMAGES |
+              DS_SOCKETD_CAP_POLL_EVENTS);
     socketd_send_response(conn, DS_SOCKETD_STATUS_OK, &caps_be,
                           (uint32_t)sizeof(caps_be));
     return;
   }
-  
-    case DS_SOCKETD_OP_INFO: {
-    if (payload_len > 0 &&
-        socketd_discard_payload(conn, payload_len) < 0) {
+
+  case DS_SOCKETD_OP_INFO: {
+    if (payload_len > 0 && socketd_discard_payload(conn, payload_len) < 0) {
       socketd_send_response(conn, DS_SOCKETD_STATUS_BAD_REQUEST, NULL, 0);
       return;
     }
@@ -611,8 +592,7 @@ static void socketd_handle_conn(int conn) {
     }
 
     int running_i = count_running_containers(NULL, 0);
-    uint32_t running_count =
-        running_i > 0 ? (uint32_t)running_i : 0u;
+    uint32_t running_count = running_i > 0 ? (uint32_t)running_i : 0u;
 
     /*
      * CONCERN(socketd-info):
@@ -622,9 +602,7 @@ static void socketd_handle_conn(int conn) {
      * counter.
      */
     uint32_t stopped_count =
-        installed_count > running_count
-            ? installed_count - running_count
-            : 0u;
+        installed_count > running_count ? installed_count - running_count : 0u;
 
     struct ds_socketd_info_payload info;
     memset(&info, 0, sizeof(info));
@@ -647,8 +625,7 @@ static void socketd_handle_conn(int conn) {
      * running containers only.
      */
     if (payload_len != 0 &&
-        socketd_read_payload(conn, &list_req,
-                             (uint32_t)sizeof(list_req),
+        socketd_read_payload(conn, &list_req, (uint32_t)sizeof(list_req),
                              payload_len) < 0) {
       socketd_send_response(conn, DS_SOCKETD_STATUS_BAD_REQUEST, NULL, 0);
       return;
@@ -661,8 +638,7 @@ static void socketd_handle_conn(int conn) {
       capacity = (size_t)running_hint;
 
     if (capacity >
-        DS_SOCKETD_MAX_PAYLOAD /
-            sizeof(struct ds_socketd_container_record)) {
+        DS_SOCKETD_MAX_PAYLOAD / sizeof(struct ds_socketd_container_record)) {
       socketd_send_response(conn, DS_SOCKETD_STATUS_INTERNAL_ERROR, NULL, 0);
       return;
     }
@@ -688,8 +664,8 @@ static void socketd_handle_conn(int conn) {
 
       while ((ent = readdir(pids_dir)) != NULL) {
         char name[256];
-        if (socketd_pidfile_to_container_name(ent->d_name, name,
-                                              sizeof(name)) < 0) {
+        if (socketd_pidfile_to_container_name(ent->d_name, name, sizeof(name)) <
+            0) {
           continue;
         }
 
@@ -711,13 +687,13 @@ static void socketd_handle_conn(int conn) {
         struct ds_socketd_container_record record;
         socketd_pack_container_record(&record, &cfg, pid);
 
-        if (socketd_append_container_record(&records, &record_count,
-                                            &capacity, &record) < 0) {
+        if (socketd_append_container_record(&records, &record_count, &capacity,
+                                            &record) < 0) {
           socketd_free_loaded_config(&cfg);
           closedir(pids_dir);
           free(records);
-          socketd_send_response(conn, DS_SOCKETD_STATUS_INTERNAL_ERROR,
-                                NULL, 0);
+          socketd_send_response(conn, DS_SOCKETD_STATUS_INTERNAL_ERROR, NULL,
+                                0);
           return;
         }
 
@@ -775,8 +751,8 @@ static void socketd_handle_conn(int conn) {
             socketd_free_loaded_config(&cfg);
             closedir(containers_dir);
             free(records);
-            socketd_send_response(conn, DS_SOCKETD_STATUS_INTERNAL_ERROR,
-                                  NULL, 0);
+            socketd_send_response(conn, DS_SOCKETD_STATUS_INTERNAL_ERROR, NULL,
+                                  0);
             return;
           }
 
@@ -786,24 +762,20 @@ static void socketd_handle_conn(int conn) {
         closedir(containers_dir);
       } else if (errno != ENOENT) {
         free(records);
-        socketd_send_response(conn, DS_SOCKETD_STATUS_INTERNAL_ERROR,
-                              NULL, 0);
+        socketd_send_response(conn, DS_SOCKETD_STATUS_INTERNAL_ERROR, NULL, 0);
         return;
       }
     }
 
-    uint32_t payload_bytes =
-        (uint32_t)(record_count * sizeof(*records));
+    uint32_t payload_bytes = (uint32_t)(record_count * sizeof(*records));
 
-    socketd_send_response(conn, DS_SOCKETD_STATUS_OK, records,
-                          payload_bytes);
+    socketd_send_response(conn, DS_SOCKETD_STATUS_OK, records, payload_bytes);
     free(records);
     return;
   }
-  
-    case DS_SOCKETD_OP_LIST_IMAGES: {
-    if (payload_len > 0 &&
-        socketd_discard_payload(conn, payload_len) < 0) {
+
+  case DS_SOCKETD_OP_LIST_IMAGES: {
+    if (payload_len > 0 && socketd_discard_payload(conn, payload_len) < 0) {
       socketd_send_response(conn, DS_SOCKETD_STATUS_BAD_REQUEST, NULL, 0);
       return;
     }
@@ -848,19 +820,18 @@ static void socketd_handle_conn(int conn) {
         }
 
         pid_t pid = 0;
-        int is_running =
-            is_container_running(&cfg, &pid) && pid > 0;
+        int is_running = is_container_running(&cfg, &pid) && pid > 0;
 
         struct ds_socketd_image_record record;
         socketd_pack_image_record(&record, &cfg, is_running);
 
-        if (socketd_append_image_record(&records, &record_count,
-                                        &capacity, &record) < 0) {
+        if (socketd_append_image_record(&records, &record_count, &capacity,
+                                        &record) < 0) {
           socketd_free_loaded_config(&cfg);
           closedir(containers_dir);
           free(records);
-          socketd_send_response(conn, DS_SOCKETD_STATUS_INTERNAL_ERROR,
-                                NULL, 0);
+          socketd_send_response(conn, DS_SOCKETD_STATUS_INTERNAL_ERROR, NULL,
+                                0);
           return;
         }
 
@@ -874,16 +845,14 @@ static void socketd_handle_conn(int conn) {
       return;
     }
 
-    uint32_t payload_bytes =
-        (uint32_t)(record_count * sizeof(*records));
+    uint32_t payload_bytes = (uint32_t)(record_count * sizeof(*records));
 
-    socketd_send_response(conn, DS_SOCKETD_STATUS_OK, records,
-                          payload_bytes);
+    socketd_send_response(conn, DS_SOCKETD_STATUS_OK, records, payload_bytes);
     free(records);
     return;
   }
-  
-    case DS_SOCKETD_OP_POLL_EVENTS: {
+
+  case DS_SOCKETD_OP_POLL_EVENTS: {
     struct ds_socketd_poll_events_req poll_req;
     memset(&poll_req, 0, sizeof(poll_req));
 
@@ -891,15 +860,13 @@ static void socketd_handle_conn(int conn) {
      * A zero-length request means "all events currently retained".
      */
     if (payload_len != 0 &&
-        socketd_read_payload(conn, &poll_req,
-                             (uint32_t)sizeof(poll_req),
+        socketd_read_payload(conn, &poll_req, (uint32_t)sizeof(poll_req),
                              payload_len) < 0) {
       socketd_send_response(conn, DS_SOCKETD_STATUS_BAD_REQUEST, NULL, 0);
       return;
     }
 
-    int64_t since =
-        (int64_t)socketd_ntoh64((uint64_t)poll_req.since_be);
+    int64_t since = (int64_t)socketd_ntoh64((uint64_t)poll_req.since_be);
 
     char event_path[PATH_MAX];
     if (socketd_build_core_event_path(event_path, sizeof(event_path)) < 0) {
@@ -931,18 +898,16 @@ static void socketd_handle_conn(int conn) {
     struct ds_socketd_core_event_record record;
 
     while (fread(&record, sizeof(record), 1, f) == 1) {
-      int64_t record_time =
-          (int64_t)socketd_ntoh64((uint64_t)record.time_be);
+      int64_t record_time = (int64_t)socketd_ntoh64((uint64_t)record.time_be);
 
       if (record_time < since)
         continue;
 
-      if (socketd_append_core_event_record(&records, &record_count,
-                                           &capacity, &record) < 0) {
+      if (socketd_append_core_event_record(&records, &record_count, &capacity,
+                                           &record) < 0) {
         fclose(f);
         free(records);
-        socketd_send_response(conn, DS_SOCKETD_STATUS_INTERNAL_ERROR,
-                              NULL, 0);
+        socketd_send_response(conn, DS_SOCKETD_STATUS_INTERNAL_ERROR, NULL, 0);
         return;
       }
     }
@@ -956,11 +921,9 @@ static void socketd_handle_conn(int conn) {
 
     fclose(f);
 
-    uint32_t payload_bytes =
-        (uint32_t)(record_count * sizeof(*records));
+    uint32_t payload_bytes = (uint32_t)(record_count * sizeof(*records));
 
-    socketd_send_response(conn, DS_SOCKETD_STATUS_OK, records,
-                          payload_bytes);
+    socketd_send_response(conn, DS_SOCKETD_STATUS_OK, records, payload_bytes);
     free(records);
     return;
   }
@@ -1023,7 +986,8 @@ int ds_socketd_bridge_start(void) {
     return -1;
 
   if (child > 0) {
-    ds_log("droidspaces-socketd backend bridge process started (PID %d)", child);
+    ds_log("droidspaces-socketd backend bridge process started (PID %d)",
+           child);
     return 0;
   }
 

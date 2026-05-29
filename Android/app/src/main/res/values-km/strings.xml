@@ -415,4 +415,8 @@
     <string name="i_understand_caps">I WON\'T REPORT ANY BUGS</string>
     <string name="reboot_recommended">ណែនាំឱ្យចាប់ផ្តើមឧបករណ៍ឡើងវិញ (Reboot) ដើម្បីអនុវត្តច្បាប់ SELinux និងចាប់ផ្តើមដំណើរការ Daemon រៀងរាល់ពេលបើកឧបករណ៍។</string>
     <string name="hw_access_disclaimer">ចាប់ផ្តើមពី Droidspaces v6.1.0 ទៅ udevd មានសិទ្ធិចូលប្រើប្រាស់ពិតប្រាកដទៅលើ Subsystems របស់ USB, Block, Input, TTY, និង Network។ កុងតឺន័រ (Container) របស់អ្នកអាចកាន់កាប់ Hardware ដែល Android កំពុងប្រើប្រាស់នាពេលបច្ចុប្បន្នបាន។\n\nប្រសិនបើក្តារចុច (Keyboard) កាត SD ឬឧបករណ៍ USB របស់អ្នកឈប់ដំណើរការនៅក្នុង Android បន្ទាប់ពីបើកដំណើរការកុងតឺន័រ — នោះមិនមែនជាបញ្ហាបច្ចេកទេស (Bug) ឡើយ។ គឺកុងតឺន័របានយកវាទៅប្រើ។ អ្នកបានស្នើសុំសិទ្ធិចូលប្រើប្រាស់ Hardware ពេញលេញដោយខ្លួនឯង។\n\nសូមកុំរាយការណ៍ពីបញ្ហាដែលបង្កឡើងដោយការជម្លោះ Hardware (Hardware Conflicts) ឬ Kernel Panics អំឡុងពេលកំពុងប្រើប្រាស់របៀប (Mode) នេះ។</string>
+    <string name="read_only">មិនអាចកែបាន</string>
+    <string name="repo_not_found_in_repo">រកមិនឃើញទិន្នន័យ %1$s</string>
+    <string name="repo_title">Rootfs Repository</string>
+    <string name="repo_fab_label">Repository</string>
 </resources>

@@ -22,9 +22,8 @@ struct ContainerListRequest {
  * this layer requests typed core records through BackendClient and renders the
  * public JSON shape expected by Docker-compatible consumers.
  */
-bool request_container_list_json_from_core(
-    const ContainerListRequest& request,
-    std::string& json_out,
-    std::string& error);
+bool request_container_list_json_from_core(const ContainerListRequest &request,
+                                           std::string &json_out,
+                                           std::string &error);
 
-}  // namespace droidspaces::socketd
+} // namespace droidspaces::socketd

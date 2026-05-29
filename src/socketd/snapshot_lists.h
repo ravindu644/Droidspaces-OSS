@@ -13,13 +13,13 @@ namespace droidspaces::socketd {
  * facade over Droidspaces networking modes.
  */
 
-bool request_image_list_json_from_core(std::string& json_out,
-                                       std::string& error);
+bool request_image_list_json_from_core(std::string &json_out,
+                                       std::string &error);
 
-bool request_volume_list_json_from_core(std::string& json_out,
-                                        std::string& error);
+bool request_volume_list_json_from_core(std::string &json_out,
+                                        std::string &error);
 
-bool request_network_list_json_from_core(std::string& json_out,
-                                         std::string& error);
+bool request_network_list_json_from_core(std::string &json_out,
+                                         std::string &error);
 
-}  // namespace droidspaces::socketd
+} // namespace droidspaces::socketd

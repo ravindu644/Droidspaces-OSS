@@ -87,6 +87,11 @@ int internal_boot(struct ds_config *cfg) {
     return -1;
   }
 
+  /* Pre-open the container log file before namespace isolation / pivot_root.
+   * The FD survives mount namespace changes, ensuring all post-pivot logs
+   * (X11 bridge, bind mounts, init exec) are captured in the host log. */
+  ds_open_container_log(cfg);
+
   /* NAT child-side handshake
    *
    * This block runs BEFORE any mount operations, while /proc still points to
@@ -157,7 +162,7 @@ int internal_boot(struct ds_config *cfg) {
    * containers from booting, even if the CLI checks were bypassed. */
   if (!cfg->container_name[0]) {
     ds_error("CRITICAL: Boot aborted — container name is empty.");
-    return -1;
+    goto boot_fail;
   }
 
   pid_t existing_pid = 0;
@@ -168,14 +173,14 @@ int internal_boot(struct ds_config *cfg) {
       ds_error(
           "CRITICAL: Boot aborted — name '%s' is already in use by PID %d.",
           cfg->container_name, existing_pid);
-      return -1;
+      goto boot_fail;
     }
   }
 
   /* 1. Isolated mount namespace */
   if (unshare(CLONE_NEWNS) < 0) {
     ds_error("Failed to unshare mount namespace: %s", strerror(errno));
-    return -1;
+    goto boot_fail;
   }
 
   /* 2. Make all mounts private to avoid leaking to host.
@@ -184,7 +189,7 @@ int internal_boot(struct ds_config *cfg) {
    * MS_SHARED after the rootfs relocation if requested. */
   if (mount(NULL, "/", NULL, MS_REC | MS_PRIVATE, NULL) < 0) {
     ds_error("Failed to make / private: %s", strerror(errno));
-    return -1;
+    goto boot_fail;
   }
 
   /* Init family was classified before fork in start_rootfs().
@@ -197,7 +202,7 @@ int internal_boot(struct ds_config *cfg) {
   if (cfg->volatile_mode) {
     if (setup_volatile_overlay(cfg) < 0) {
       ds_error("Failed to setup volatile overlay.");
-      return -1;
+      goto boot_fail;
     }
   }
 
@@ -205,13 +210,13 @@ int internal_boot(struct ds_config *cfg) {
   if (mount(cfg->rootfs_path, cfg->rootfs_path, NULL, MS_BIND | MS_REC, NULL) <
       0) {
     ds_error("Failed to bind mount rootfs: %s", strerror(errno));
-    return -1;
+    goto boot_fail;
   }
 
   /* 5. Set working directory to rootfs (required before pivot_root) */
   if (chdir(cfg->rootfs_path) < 0) {
     ds_error("Failed to chdir to '%s': %s", cfg->rootfs_path, strerror(errno));
-    return -1;
+    goto boot_fail;
   }
 
   /* 6. Read UUID from sync file if not already provided (parity with v2) */
@@ -240,13 +245,13 @@ int internal_boot(struct ds_config *cfg) {
   }
   if (dir_creation_failed) {
     ds_error("Failed to create critical directory .old_root");
-    return -1;
+    goto boot_fail;
   }
 
   /* 8. Setup /dev (device nodes, devtmpfs) */
   if (setup_dev(".", cfg->hw_access, cfg->gpu_mode, cfg->privileged_mask) < 0) {
     ds_error("Failed to setup /dev.");
-    return -1;
+    goto boot_fail;
   }
 
   /* 9. Log hardware access mode (BEFORE pivot_root) */
@@ -263,14 +268,14 @@ int internal_boot(struct ds_config *cfg) {
   if (domount("proc", "proc", "proc", MS_NOSUID | MS_NODEV | MS_NOEXEC, NULL) <
       0) {
     ds_error("Failed to mount procfs: %s", strerror(errno));
-    return -1;
+    goto boot_fail;
   }
 
   /* Mount /sys */
   if (domount("sysfs", "sys", "sysfs", MS_NOSUID | MS_NODEV | MS_NOEXEC, NULL) <
       0) {
     ds_error("Failed to mount sysfs: %s", strerror(errno));
-    return -1;
+    goto boot_fail;
   }
 
   /* 10. Pre-create the cgroup mountpoint while /sys is still RW.
@@ -342,18 +347,12 @@ int internal_boot(struct ds_config *cfg) {
    * ensures the sub-mount (tmpfs) is RW and independent of the parent's RO. */
   if (setup_cgroups(is_systemd, cfg->force_cgroupv1) < 0) {
     ds_error("Failed to setup container cgroups.");
-    return -1;
-  }
-
-  /* 12. Mask the console discovery file to prevent resolution back to host */
-  if (mount("/dev/null", "sys/class/tty/console/active", NULL, MS_BIND, NULL) <
-      0) {
-    /* File might not exist yet if sysfs is partially populated */
+    goto boot_fail;
   }
 
   if (domount("tmpfs", "run", "tmpfs", MS_NOSUID | MS_NODEV, "mode=755") < 0) {
     ds_error("Failed to mount tmpfs at /run: %s", strerror(errno));
-    return -1;
+    goto boot_fail;
   }
 
   /* 13. Setup /tmp */
@@ -396,20 +395,20 @@ int internal_boot(struct ds_config *cfg) {
     used_ms_move = 1;
     if (mount(".", "/", NULL, MS_MOVE, NULL) < 0) {
       ds_error("MS_MOVE fallback failed: %s", strerror(errno));
-      return -1;
+      goto boot_fail;
     }
     if (chroot(".") < 0) {
       ds_error("chroot(\".\") after MS_MOVE failed: %s", strerror(errno));
-      return -1;
+      goto boot_fail;
     }
   } else if (syscall(SYS_pivot_root, ".", ".old_root") < 0) {
     ds_error("pivot_root failed: %s", strerror(errno));
-    return -1;
+    goto boot_fail;
   }
 
   if (chdir("/") < 0) {
     ds_error("chdir(\"/\") after pivot_root failed: %s", strerror(errno));
-    return -1;
+    goto boot_fail;
   }
 
   /* 17b. Apply deferred mount propagation settings.
@@ -516,7 +515,7 @@ int internal_boot(struct ds_config *cfg) {
    * Apply security hardening (capabilities and seccomp)
    * This is done at the very end to ensure all setup tasks that might need
    * privileges (like chown/chmod or mknod) are finished. */
-  ds_seccomp_apply_minimal(cfg->hw_access, cfg->privileged_mask);
+  ds_seccomp_apply_minimal(cfg->privileged_mask);
   android_seccomp_setup(is_systemd,
                         cfg->block_nested_ns &&
                             !(cfg->privileged_mask & DS_PRIV_NOSEC),
@@ -550,7 +549,9 @@ int internal_boot(struct ds_config *cfg) {
       /* Sticky permissions again just in case systemd's TTYReset stripped them
        */
       fchmod(console_fd, 0620);
-      fchown(console_fd, 0, DS_DEFAULT_TTY_GID); /* best-effort, ignore EPERM */
+      if (fchown(console_fd, 0, DS_DEFAULT_TTY_GID) < 0) {
+        /* best-effort, ignore EPERM */
+      }
       if (console_fd > 2)
         close(console_fd);
     }
@@ -597,5 +598,7 @@ int internal_boot(struct ds_config *cfg) {
            init_bin);
   }
 
+boot_fail:
+  ds_close_container_log();
   return -1;
 }

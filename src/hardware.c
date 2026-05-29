@@ -855,7 +855,9 @@ int setup_unified_tmpfs(void) {
     if (fchownat(tmp_fd, "", st.st_uid, st.st_gid, AT_EMPTY_PATH) < 0) {
       ds_warn("Failed to chown %s: %s", termux_tmp, strerror(errno));
     }
-    fchmodat(AT_FDCWD, proc_path, 01777, 0);
+    if (fchmodat(AT_FDCWD, proc_path, 01777, 0) < 0) {
+      /* ignore */
+    }
     close(tmp_fd);
     return 0;
   }

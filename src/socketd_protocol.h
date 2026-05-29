@@ -69,9 +69,9 @@ enum ds_socketd_capability {
   DS_SOCKETD_CAP_POLL_EVENTS = 1u << 8,
 };
 
-#define DS_SOCKETD_RECORD_NAME_MAX   256
-#define DS_SOCKETD_RECORD_PATH_MAX  1024
-#define DS_SOCKETD_RECORD_PORTS_MAX   16
+#define DS_SOCKETD_RECORD_NAME_MAX 256
+#define DS_SOCKETD_RECORD_PATH_MAX 1024
+#define DS_SOCKETD_RECORD_PORTS_MAX 16
 
 /*
  * CONCERN(socketd-wire):
@@ -87,7 +87,7 @@ struct DS_SOCKETD_PACKED ds_socketd_list_containers_req {
 
 struct DS_SOCKETD_PACKED ds_socketd_port_record {
   uint16_t host_port_be;
-  uint16_t host_port_end_be;      /* 0 if not a range */
+  uint16_t host_port_end_be; /* 0 if not a range */
   uint16_t container_port_be;
   uint16_t container_port_end_be; /* 0 if not a range */
   uint8_t proto;                  /* 0 = tcp, 1 = udp */
@@ -101,8 +101,8 @@ struct DS_SOCKETD_PACKED ds_socketd_container_record {
   char hostname[DS_SOCKETD_RECORD_NAME_MAX];
   char nat_ip[INET_ADDRSTRLEN]; /* empty string if not NAT mode */
   char custom_init[DS_SOCKETD_RECORD_PATH_MAX]; /* empty = /sbin/init */
-  int32_t pid_be; /* host-view PID 1; 0 = stopped */
-  uint8_t net_mode; /* 0=host 1=nat 2=none */
+  int32_t pid_be;     /* host-view PID 1; 0 = stopped */
+  uint8_t net_mode;   /* 0=host 1=nat 2=none */
   uint8_t port_count; /* entries used in ports[] */
   uint8_t _pad[2];
   struct ds_socketd_port_record ports[DS_SOCKETD_RECORD_PORTS_MAX];
@@ -120,15 +120,15 @@ struct DS_SOCKETD_PACKED ds_socketd_poll_events_req {
                        0 = return all events in the file */
 };
 
-#define DS_SOCKETD_EVENT_TYPE_MAX    32
-#define DS_SOCKETD_EVENT_ACTION_MAX  32
+#define DS_SOCKETD_EVENT_TYPE_MAX 32
+#define DS_SOCKETD_EVENT_ACTION_MAX 32
 
 struct DS_SOCKETD_PACKED ds_socketd_core_event_record {
-  int64_t time_be; /* unix seconds */
-  int64_t time_nano_be; /* unix nanoseconds */
-  char type[DS_SOCKETD_EVENT_TYPE_MAX]; /* e.g. "container" */
+  int64_t time_be;                          /* unix seconds */
+  int64_t time_nano_be;                     /* unix nanoseconds */
+  char type[DS_SOCKETD_EVENT_TYPE_MAX];     /* e.g. "container" */
   char action[DS_SOCKETD_EVENT_ACTION_MAX]; /* "start","stop","restart","die" */
-  char actor_id[DS_UUID_LEN + 1]; /* container UUID */
+  char actor_id[DS_UUID_LEN + 1];           /* container UUID */
   char actor_name[DS_SOCKETD_RECORD_NAME_MAX];
 };
 

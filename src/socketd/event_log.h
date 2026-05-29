@@ -20,10 +20,9 @@ struct SocketdEventAttributes {
  * These local daemon events are merged with backend core lifecycle events by
  * request_event_log_stream_from_core().
  */
-void record_socketd_event(const std::string& type,
-                          const std::string& action,
-                          const std::string& actor_id,
-                          const SocketdEventAttributes* attributes,
+void record_socketd_event(const std::string &type, const std::string &action,
+                          const std::string &actor_id,
+                          const SocketdEventAttributes *attributes,
                           std::size_t attribute_count);
 
 /*
@@ -33,9 +32,8 @@ void record_socketd_event(const std::string& type,
  *   - socketd-owned local events recorded in this process, and
  *   - core lifecycle events fetched from the privileged backend bridge.
  */
-bool request_event_log_stream_from_core(
-    const EventsRequest& request,
-    std::string& stream_out,
-    std::string& error);
+bool request_event_log_stream_from_core(const EventsRequest &request,
+                                        std::string &stream_out,
+                                        std::string &error);
 
-}  // namespace droidspaces::socketd
+} // namespace droidspaces::socketd

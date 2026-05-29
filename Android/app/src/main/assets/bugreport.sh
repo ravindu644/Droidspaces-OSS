@@ -48,10 +48,10 @@ fi
 
 # Grab last_kmsg
 echo "Collecting last_kmsg..."
-"${BUSYBOX}" tr -d '\0' < /proc/last_kmsg > "${BUGREPORT_DIR}/clean_kmsg.txt" 2>/dev/null
+"${BUSYBOX}" tr -d '\0' < /proc/last_kmsg > "${BUGREPORT_DIR}/last_kmsg.txt" 2>/dev/null
 if [ $? -ne 0 ]; then
     echo "WARNING: last_kmsg collection failed, continuing without it"
-    rm -f "${BUGREPORT_DIR}/clean_kmsg.txt" 2>/dev/null
+    rm -f "${BUGREPORT_DIR}/last_kmsg.txt" 2>/dev/null
 fi
 
 # Grab pstore (persistent kernel logs from previous crashes)
@@ -119,9 +119,9 @@ else
     generate_denials "${BUGREPORT_DIR}/avc_denials.txt" "${BUGREPORT_DIR}"/*.log
 fi
 
-if [ -f "${BUGREPORT_DIR}/clean_kmsg.txt" ]; then
+if [ -f "${BUGREPORT_DIR}/last_kmsg.txt" ]; then
     > "${BUGREPORT_DIR}/avc_denials_last_kmsg.txt"
-    generate_denials "${BUGREPORT_DIR}/avc_denials_last_kmsg.txt" "${BUGREPORT_DIR}/clean_kmsg.txt"
+    generate_denials "${BUGREPORT_DIR}/avc_denials_last_kmsg.txt" "${BUGREPORT_DIR}/last_kmsg.txt"
 fi
 
 if [ -d "${BUGREPORT_DIR}/pstore" ] && [ "$("${BUSYBOX}" ls -A "${BUGREPORT_DIR}/pstore" 2>/dev/null)" ]; then

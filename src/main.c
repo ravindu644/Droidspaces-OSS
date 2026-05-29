@@ -9,6 +9,7 @@
 
 int ds_log_silent = 0;
 char ds_log_container_name[256] = "";
+int ds_log_container_fd = -1;
 
 /* ---------------------------------------------------------------------------
  * Usage / Help

@@ -28,7 +28,7 @@ Hardware acceleration on Android is achieved by bridging the container's graphic
 
 > [!TIP]
 >
-> If you want to enjoy an out-of-the-box XFCE desktop environment experience, you can download our pre-configured XFCE tarballs from the official [Droidspaces Rootfs Builder Releases](https://github.com/Droidspaces/Droidspaces-rootfs-builder/releases).
+> If you want to enjoy an out-of-the-box XFCE desktop environment experience, you can download our pre-configured XFCE tarballs from the [Rootfs repository](Usage-Android-App.md#rootfs-repository) or from the official [Droidspaces Rootfs Builder Releases](https://github.com/Droidspaces/Droidspaces-rootfs-builder/releases).
 
 <a id="termux-x11"></a>
 
@@ -159,6 +159,7 @@ For Qualcomm Adreno GPUs, Droidspaces supports **native hardware acceleration** 
    ```
 
 > [!TIP]
+>
 > **If you encounter any problems related to DRI3,** try editing `/data/adb/modules/droidspaces/etc/droidspaces.te` and uncommenting the line:
 >
 > `allow untrusted_app_27 droidspacesd fd use`

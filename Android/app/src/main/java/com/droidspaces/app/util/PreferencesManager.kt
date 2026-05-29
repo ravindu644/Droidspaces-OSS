@@ -231,7 +231,8 @@ class PreferencesManager private constructor(context: Context) {
             osInfo.ipAddress ?: "",
             osInfo.uptime ?: ""
         ).joinToString("|")
-        prefs.edit().putString("${KEY_CONTAINER_OS_INFO_PREFIX}$containerName", data).apply()
+        // commit() not apply() - called from IO thread; sync write survives force-close/pkill
+        prefs.edit().putString("${KEY_CONTAINER_OS_INFO_PREFIX}$containerName", data).commit()
     }
 
     /**
@@ -306,7 +307,7 @@ class PreferencesManager private constructor(context: Context) {
      * Clear cached container OS info.
      */
     fun clearContainerOSInfo(containerName: String) {
-        prefs.edit().remove("${KEY_CONTAINER_OS_INFO_PREFIX}$containerName").apply()
+        prefs.edit().remove("${KEY_CONTAINER_OS_INFO_PREFIX}$containerName").commit()
     }
 
     /**

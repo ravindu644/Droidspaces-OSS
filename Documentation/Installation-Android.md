@@ -31,17 +31,38 @@ On the first launch, Droidspaces performs an **Atomic Installation** of the back
 
 ## Step 3: Setting Up Your First Container
 
-You don't need to manually extract rootfs files. The app handles it:
+You don't need to manually extract rootfs files. The app handles it all.
 
-1. **Download a rootfs tarball**: We recommend using our [official rootfs tarballs](https://github.com/ravindu644/Droidspaces-rootfs-builder/releases/latest) - which are **specifically optimized for Android** - or the official [Linux Containers images](https://images.linuxcontainers.org/images/).
-2. **Open the Containers Tab**: Tap the middle icon in the bottom navigation bar.
-3. **Add a Container**: Tap the **"+"** button at the bottom right.
-4. **Choose your Tarball**: Select the downloaded `.tar.xz` or `.tar.gz` file.
-5. **Configuration Wizard**:
+### Option A: Install from the Rootfs Repository (Recommended)
+
+The easiest way to get started. The app can browse, download, and install distros directly - no manual downloading required.
+
+1. **Open the Containers Tab**: Tap the middle icon in the bottom navigation bar.
+2. **Open the Repository**: Tap the **cloud icon** (above the "+" button). This opens the Rootfs Repository sheet, which automatically fetches all available distros optimized for Android from our [official repository](https://github.com/Droidspaces/Droidspaces-rootfs-builder).
+3. **Pick a distro**: Browse or search the list. Each card shows the distro name, size, architecture, and build date.
+4. **Download**: Tap **Download** on the distro you want. A progress bar appears on the card. The file saves to your Downloads folder.
+5. **Install**: Once complete, the button changes to **Install**. Tap it to launch the container setup wizard.
+6. **Configuration Wizard**:
    - **Name**: Give your container a friendly name.
    - **Features**: Toggle Hardware Access, IPv6, Network Isolation, Android storage integration, etc., according to your needs.
    - **Container Type**: We recommend **Sparse Image** for better performance and stability on Android’s f2fs storage, as well as to prevent weird SELinux/Keyring issues.
-6. **Installation**: The app will extract the tarball and apply **Post-Extraction Fixes** automatically (DNS, Masking useless/dangerous services, and Safe Udev).
+7. **Done**: The app extracts the tarball and automatically applies **Post-Extraction Fixes** (DNS, masking useless/dangerous services, and Safe Udev).
+
+> [!TIP]
+>
+> The official repository includes distros pre-configured for Android. For a wider selection, you can add the LXC images mirror as a custom repository - see the [Rootfs Repository](Usage-Android-App.md#rootfs-repository) section of the Usage Guide.
+
+### Option B: Install from a Local Tarball
+
+If you already have a `.tar.xz` or `.tar.gz` rootfs file on your device:
+
+1. **Open the Containers Tab** and tap the **"+"** button.
+2. **Select your tarball** from storage.
+3. Follow the same **Configuration Wizard** steps above.
+
+> [!NOTE]
+>
+> Both methods lead to the same wizard - the only difference is where the tarball comes from.
 
 ## Verification & Settings
 

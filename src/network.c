@@ -720,9 +720,9 @@ int setup_veth_host_side(struct ds_config *cfg, pid_t child_pid) {
               cfg->static_nat_ip);
     }
 
-    /* Always bind to veth_host for DHCP sniffing.
-     * Even if bridged, AF_PACKET on the slave sees traffic before the bridge.
-     */
+    /* Bind to veth_host. In bridge mode the kernel also floods L2 broadcasts
+     * to sibling veth ports; isolation is enforced by peer_mac filter in
+     * the DHCP server loop, not by the socket bind alone. */
     const char *dhcp_iface = veth_host;
     ds_dhcp_server_start(cfg, dhcp_iface, offer_ip, inet_addr(DS_NAT_GW_IP));
 

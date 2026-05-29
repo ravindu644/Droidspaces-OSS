@@ -67,7 +67,7 @@
  * ---------------------------------------------------------------------------*/
 
 #define DS_PROJECT_NAME "Droidspaces"
-#define DS_VERSION "6.2.0"
+#define DS_VERSION "6.2.5"
 #define DS_MIN_KERNEL_MAJOR 3
 #define DS_MIN_KERNEL_MINOR 10
 #define DS_RECOMMENDED_KERNEL_MAJOR 4
@@ -153,6 +153,7 @@
 
 extern int ds_log_silent;
 extern char ds_log_container_name[256];
+extern int ds_log_container_fd;
 
 void ds_log_internal(const char *prefix, const char *color, int is_err,
                      const char *fmt, ...);
@@ -434,6 +435,8 @@ ds_init_type_t detect_container_init(const char *path);
 int get_user_shell(const char *user, char *shell_buf, size_t size);
 void check_kernel_recommendation(void);
 void write_monitor_debug_log(const char *name, const char *fmt, ...);
+void ds_open_container_log(struct ds_config *cfg);
+void ds_close_container_log(void);
 void ds_socketd_record_core_event(const char *action,
                                   const char *container_name, const char *uuid);
 int copy_file(const char *src, const char *dst);
@@ -475,7 +478,7 @@ void android_remount_data_suid(void);
 int android_setup_storage(const char *rootfs_path);
 int android_seccomp_setup(int is_systemd, int block_nested_ns,
                           int privileged_mask);
-int ds_seccomp_apply_minimal(int hw_access, int privileged_mask);
+int ds_seccomp_apply_minimal(int privileged_mask);
 
 /* ---------------------------------------------------------------------------
  * mount.c

@@ -316,20 +316,22 @@ int ds_cgroup_attach(pid_t target_pid) {
 
     /* 2. Create leaf and move self - same logic as before but uses local sysfs
      */
-    char leaf_dir[PATH_MAX];
+    char leaf_dir[PATH_MAX * 2 + 512];
     snprintf(leaf_dir, sizeof(leaf_dir), "%s%s/ds-enter-%d", cg_root, subpath,
              (int)getpid());
 
     if (mkdir_p(leaf_dir, 0755) < 0 && errno != EEXIST)
       continue;
 
-    char procs_path[PATH_MAX];
+    char procs_path[sizeof(leaf_dir) + 32];
     snprintf(procs_path, sizeof(procs_path), "%s/cgroup.procs", leaf_dir);
     int pfd = open(procs_path, O_WRONLY | O_CLOEXEC);
     if (pfd >= 0) {
       char pid_s[32];
       int len = snprintf(pid_s, sizeof(pid_s), "%d", (int)getpid());
-      write(pfd, pid_s, len);
+      if (write(pfd, pid_s, len) < 0) {
+        /* best-effort, ignore */
+      }
       close(pfd);
     }
 
@@ -356,7 +358,7 @@ int ds_cgroup_attach(pid_t target_pid) {
  * or tasks file empty (cgroupv1), before rmdir. */
 static void wait_cgroup_empty(const char *leaf_path) {
   /* cgroupv2: poll cgroup.events */
-  char events[PATH_MAX];
+  char events[PATH_MAX + 32];
   snprintf(events, sizeof(events), "%s/cgroup.events", leaf_path);
   if (access(events, R_OK) == 0) {
     for (int i = 0; i < 50; i++) {
@@ -369,7 +371,7 @@ static void wait_cgroup_empty(const char *leaf_path) {
   }
 
   /* cgroupv1: poll tasks file */
-  char tasks[PATH_MAX];
+  char tasks[PATH_MAX + 32];
   snprintf(tasks, sizeof(tasks), "%s/tasks", leaf_path);
   for (int i = 0; i < 50; i++) {
     char buf[64] = {0};

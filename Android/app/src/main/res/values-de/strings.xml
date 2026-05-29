@@ -12,7 +12,7 @@
     <string name="root_required_message">Root-Zugriff wird benötigt, um Container zu verwalten.</string>
     <string name="check_root_access">Root-Zugriff prüfen</string>
     <string name="check_root_access_click">Unten klicken, um Root-Zugriff zu prüfen</string>
-    <string name="root_available_message">Sie können jetzt Droidspaces verwenden</string>
+    <string name="root_available_message">Droidspaces kann jetzt verwendet werden</string>
     <string name="skip">Überspringen</string>
     <string name="continue_button">Weiter</string>
     <!-- Navigation -->
@@ -35,7 +35,7 @@
     <string name="backend_not_installed">Backend: Nicht installiert</string>
     <string name="backend_corrupted">Backend: Beschädigt</string>
     <string name="root_unavailable">Root-Zugriff ist nicht verfügbar.</string>
-    <string name="grant_root_message">Gewähren Sie Root-Zugriff, um Droidspaces weiter zu verwenden!</string>
+    <string name="grant_root_message">Root-Zugriff gewähren, um Droidspaces weiter zu verwenden!</string>
     <string name="unknown">Unbekannt</string>
     <string name="update_available_message">Backend-Update verfügbar - zum Aktualisieren hier tippen</string>
     <!-- Settings Screen -->
@@ -70,8 +70,8 @@
     <string name="no_containers_installed">Keine Container installiert</string>
     <string name="install_container_description">Installiere einen Container mit dem Button unten</string>
     <string name="install_container">Container installieren</string>
-    <string name="file_picker_error">Bitte wählen Sie eine .tar.xz- oder .tar.gz-Datei. Ausgewählt: %1$s</string>
-    <string name="file_picker_error_unknown">Bitte wählen Sie eine .tar.xz- oder .tar.gz-Datei. Dateityp konnte nicht bestimmt werden.</string>
+    <string name="file_picker_error">Bitte eine .tar.xz- oder .tar.gz-Datei auswählen. Ausgewählt: %1$s</string>
+    <string name="file_picker_error_unknown">Bitte eine .tar.xz- oder .tar.gz-Datei auswählen. Dateityp konnte nicht erkannt werden.</string>
     <string name="stopping_container">Container wird gestoppt...</string>
     <string name="uninstalling_container">Deinstallation...</string>
     <string name="failed_to_stop_container">Fehler beim Stoppen des Containers %1$s</string>
@@ -88,7 +88,7 @@
     <string name="edit_container_configuration">Container-Konfiguration bearbeiten</string>
     <string name="uninstall_container_menu">Container deinstallieren</string>
     <!-- Container Card -->
-    <string name="status_running">LÄUFT</string>
+    <string name="status_running">LAUFEND</string>
     <string name="status_restarting">WIRD NEU GESTARTET</string>
     <string name="status_stopped">GESTOPPT</string>
     <string name="pid_label">PID: %1$d</string>
@@ -166,7 +166,7 @@
     <string name="preparing_installation">Vorbereitung der Installation...</string>
     <!-- Control Panel Screen -->
     <string name="no_containers_running">Keine laufenden Container</string>
-    <string name="start_container_first">Starten Sie zuerst einen Container, um ihn hier zu sehen</string>
+    <string name="start_container_first">Zuerst einen Container starten, um ihn hier zu sehen</string>
     <!-- Systemd Screen -->
     <string name="systemd_services">Systemd-Dienste</string>
     <string name="openrc_services">OpenRC-Dienste</string>
@@ -207,7 +207,7 @@
     <string name="loading">Wird geladen...</string>
     <!-- Empty State -->
     <string name="backend_not_available">Backend nicht verfügbar</string>
-    <string name="backend_not_available_description">Droidspaces-Backend ist nicht installiert oder beschädigt. Bitte installieren Sie es zuerst.</string>
+    <string name="backend_not_available_description">Droidspaces-Backend ist nicht installiert oder beschädigt. Bitte zuerst installieren.</string>
     <string name="root_access_not_available">Root-Zugriff nicht verfügbar</string>
     <string name="root_access_not_available_description">Diese Seite ist deaktiviert, da Root-Zugriff nicht verfügbar ist</string>
     <!-- Dialog Utils -->
@@ -240,7 +240,7 @@
     <string name="minimum_size_4gb">Mindestgröße ist 4 GB</string>
     <string name="maximum_size_512gb">Maximale Größe ist 512 GB</string>
     <string name="size_gb">Größe (GB)</string>
-    <string name="enter_size_between_4_512_gb">Geben Sie eine Größe zwischen 4 und 512 GB ein</string>
+    <string name="enter_size_between_4_512_gb">Größe zwischen 4 und 512 GB eingeben</string>
     <!-- Container Log Viewer -->
     <string name="logs_title">Logs: %1$s</string>
     <string name="clear_logs">Logs löschen</string>
@@ -396,19 +396,19 @@
     <string name="ram_usage_label">RAM-Auslastung</string>
     <string name="cpu_percent_label">%1$.1f%%</string>
     <string name="ram_percent_label">%1$d MB (%2$.1f%%)</string>
-    <string name="sessions_running_plural">%1$d Sitzungen laufen · Zum Wiederherstellen antippen</string>
-    <string name="session_running_singular">1 Sitzung läuft · Zum Zurücksetzen antippen</string>
+    <string name="sessions_running_plural">%1$d Sitzungen laufen · Zur Rückkehr antippen</string>
+    <string name="session_running_singular">1 Sitzung läuft · Zur Rückkehr antippen</string>
     <string name="please_wait_hint">Bitte warten, während wir Ihre Anfrage bearbeiten...</string>
     <string name="error_container_name_too_long">Name zu lang – maximal 17 Zeichen (Begrenzung des Kernel-Loop-Gerätepfads)</string>
     <string name="logs_copied">Logs in die Zwischenablage kopiert</string>
     <string name="terminal">Terminal</string>
-    <string name="restore">Wiederherstellen</string>
-    <string name="terminal_card_desc">Interaktive Shell innerhalb dieses Containers öffnen</string>
+    <string name="restore">Zurückkehren</string>
+    <string name="terminal_card_desc">Interaktive Shell innerhalb des Containers öffnen</string>
     <string name="open">Öffnen</string>
     <string name="open_terminal">Terminal öffnen</string>
     <string name="select_user_to_enter">Benutzer auswählen, mit welcher der Container aufgerufen werden soll:</string>
     <string name="notification_permission_title">Benachrichtigungsberechtigung</string>
-    <string name="notification_permission_rationale">Droidspaces muss eine permanente Benachrichtigung anzeigen, damit Ihre Terminalsitzungen im Hintergrund weiterlaufen kann. Ohne diese Benachrichtigung könnte Android (insbesondere auf Samsung-Geräten) den Terminaldienst unerwartet beenden.</string>
+    <string name="notification_permission_rationale">Droidspaces muss eine permanente Benachrichtigung anzeigen, damit die Terminalsitzungen im Hintergrund weiterlaufen können. Ohne diese Benachrichtigung könnte Android (insbesondere auf Samsung-Geräten) den Terminaldienst unerwartet beenden.</string>
     <string name="grant_permission">Berechtigung erteilen</string>
     <string name="i_understand">Verstanden</string>
     <string name="notification_title">Droidspaces Terminal</string>
@@ -474,7 +474,7 @@
     <string name="repo_banner_text">Die Rootfs-Tarballs unter \"Droidspaces developers“ sind Open Source und transparent. Du kannst unsere Änderungen manuell herunterladen oder einsehen, indem du auf diese Karte tippst.</string>
     <string name="repo_add_custom">Benutzerdefiniertes Repository hinzufügen</string>
     <string name="repo_manage_custom">Repositories verwalten</string>
-    <string name="repo_manager_subtitle">Abonnieren Sie benutzerdefinierte rootfs.json-Feeds.</string>
+    <string name="repo_manager_subtitle">Benutzerdefinierte rootfs.json-Feeds abonnieren.</string>
     <string name="repo_custom_name_hint">Name des Repositorys</string>
     <string name="repo_custom_url_hint">rootfs.json URL</string>
     <string name="repo_custom_add">Abonnieren</string>
@@ -483,4 +483,5 @@
     <string name="repo_custom_url_empty">URL darf nicht leer sein</string>
     <string name="repo_custom_url_invalid">URL muss mit https:// anfangen</string>
     <string name="repo_no_custom">Keine benutzerdefinierten Repositories abonniert.</string>
+    <string name="read_only">Schreibgeschützt</string>
 </resources>

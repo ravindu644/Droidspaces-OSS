@@ -118,87 +118,15 @@ int domount_silent(const char *src, const char *tgt, const char *fstype,
   return 0;
 }
 
-/* ---------------------------------------------------------------------------
- * Shared empty-dir masker
- *
- * Instead of mounting a fresh tmpfs per masked directory (N tmpfs entries in
- * /proc/mounts), we mount ONE minimal tmpfs once and bind-mount it over every
- * subsequent directory target.  Kernel memory is charged once; the mount table
- * shows 1 tmpfs + N cheap bind entries instead of N independent tmpfs mounts.
- *
- * Falls back to per-dir tmpfs automatically if the shared mount fails (e.g.
- * on kernels that reject O_PATH-based bind sources).
- * ---------------------------------------------------------------------------*/
-typedef struct {
-  int fd;             /* O_PATH fd to the empty tmpfs root */
-  char proc_path[32]; /* "/proc/self/fd/<n>" - used as mount(2) source */
-  int ready;          /* 1 once initialised successfully */
-} ds_mask_dir_t;
-
-static ds_mask_dir_t g_mask_dir = {.fd = -1, .ready = 0};
-
-/* Call once before the first ds_mask_path() invocation. */
-static void ds_mask_dir_init(void) {
-  if (g_mask_dir.ready)
-    return;
-
-  /* /run is guaranteed to exist at this point (created in boot.c step 5).
-   * Mode 0000: the directory itself must be inaccessible. */
-  const char *backing = "/run/.ds-maskdir";
-  mkdir(backing, 0000);
-
-  /* nr_inodes=2  → only . and ..  (absolute minimum)
-   * size=0       → no data pages at all
-   * mode=000     → directory inaccessible even if somehow reached */
-  if (mount("none", backing, "tmpfs",
-            MS_RDONLY | MS_NOSUID | MS_NOEXEC | MS_NODEV,
-            "size=0,nr_inodes=2,mode=000") < 0) {
-    ds_warn("[SEC] mask-dir tmpfs failed (%s), using per-dir tmpfs fallback",
-            strerror(errno));
-    rmdir(backing);
-    return;
-  }
-
-  int fd = open(backing, O_PATH | O_DIRECTORY | O_CLOEXEC);
-  if (fd < 0) {
-    ds_warn("[SEC] mask-dir open failed: %s", strerror(errno));
-    umount2(backing, MNT_DETACH);
-    rmdir(backing);
-    return;
-  }
-
-  g_mask_dir.fd = fd;
-  snprintf(g_mask_dir.proc_path, sizeof(g_mask_dir.proc_path),
-           "/proc/self/fd/%d", fd);
-  g_mask_dir.ready = 1;
-  ds_log(
-      "[SEC] Shared mask-dir ready (fd %d) - directory masks use bind mounts.",
-      fd);
-}
-
-/* Helper to mask a path: bind-mounts /dev/null over files, and uses the
- * shared empty dir (or a fresh tmpfs fallback) for directories.
- * Silently skips if the path doesn't exist. */
+/* Mask a sensitive path by self-binding and remounting read-only.
+ * Silently skips if the path doesn't exist.  The resulting mount entry
+ * preserves the parent filesystem type (e.g. "proc on /proc/kcore type
+ * proc (ro)") - matching LXC's clean approach. */
 static void ds_mask_path(const char *path) {
-  struct stat st;
-  if (stat(path, &st) < 0)
+  if (access(path, F_OK) != 0)
     return;
-
-  if (S_ISDIR(st.st_mode)) {
-    /* Prefer: bind from shared empty tmpfs (1 superblock, N bind entries) */
-    if (g_mask_dir.ready) {
-      if (mount(g_mask_dir.proc_path, path, NULL, MS_BIND | MS_RDONLY, NULL) ==
-          0)
-        return;
-      ds_warn("[SEC] shared bind failed for %s (%s), falling back to tmpfs",
-              path, strerror(errno));
-    }
-    /* Fallback: independent per-dir tmpfs */
-    mount("none", path, "tmpfs", MS_RDONLY, NULL);
-  } else {
-    /* File: bind /dev/null */
-    mount("/dev/null", path, NULL, MS_BIND, NULL);
-  }
+  mount(path, path, NULL, MS_BIND, NULL);
+  mount(path, path, NULL, MS_BIND | MS_REMOUNT | MS_RDONLY, NULL);
 }
 
 int bind_mount(const char *src, const char *tgt) {
@@ -249,11 +177,9 @@ int bind_mount(const char *src, const char *tgt) {
 /*
  * ds_apply_jail_mask()
  *
- * Secure sensitive kernel interfaces by masking (bind-mounting /dev/null)
- * or remounting as read-only.
- *
- * This reduces the container's attack surface and prevents it from manipulating
- * the host kernel via /proc and /sys.
+ * Secure sensitive kernel interfaces by self-binding and remounting them
+ * read-only.  This reduces the container's attack surface and prevents it
+ * from manipulating the host kernel via /proc and /sys.
  *
  * In Standard Mode (hw_access=0), we are very strict.
  * In Hardware Mode (hw_access=1), we preserve most paths to fulfill the
@@ -265,50 +191,20 @@ int ds_apply_jail_mask(int hw_access, int privileged_mask) {
         "[SEC] --privileged=nomask: skipping jail masks for /proc and /sys.");
     return 0;
   }
-  /* Initialize the shared mask-dir before anything uses it */
-  ds_mask_dir_init();
 
   /* Universal masks - dangerous for ANY container regardless of HW mode */
-  const char *universal_masks[] = {"/proc/sysrq-trigger",
-                                   "/proc/kcore",
-                                   "/proc/latency_stats",
-                                   "/proc/timer_list",
-                                   "/proc/timer_stats",
-                                   "/proc/sched_debug",
-                                   NULL};
+  const char *universal_masks[] = {"/proc/sysrq-trigger", "/proc/kcore",
+                                   "/proc/timer_list", NULL};
 
-  /* Standard mode masks - restricted to protect host kernel surface */
-  const char *standard_masks[] = {"/proc/keys",
-                                  "/proc/partitions",
-                                  "/proc/diskstats",
-                                  "/sys/devices/virtual/powercap",
-                                  "/sys/kernel/debug",
-                                  "/sys/kernel/tracing",
-                                  "/sys/block",
-                                  "/sys/dev/block",
-                                  "/sys/class/block",
-                                  "/proc/mtk_mali",
-                                  "/proc/gpufreqv2",
-                                  "/proc/mmdvfs",
-                                  "/proc/mmqos",
-                                  "/proc/displowpower",
-                                  "/proc/mtkfb_debug",
-                                  "/proc/mtk_mdp_debug",
-                                  "/proc/touch_boost",
-                                  "/proc/perfmgr",
-                                  "/proc/perfmgr_touch_boost",
-                                  "/proc/mtk_scheduler",
-                                  NULL};
-
-  /* Standard mode read-only remounts.
-   * /sys/kernel/security is intentionally here (not in masks): distro init
-   * scripts (runit, openrc, systemd) try to mount securityfs onto it and
-   * emit confusing errors if the path has been replaced with a tmpfs.
-   * A RO remount preserves the directory while blocking writes. */
-  const char *standard_ro[] = {
-      "/proc/bus",  "/proc/fs",   "/proc/irq",     "/proc/asound",
-      "/proc/acpi", "/proc/scsi", "/sys/firmware", "/sys/kernel/security",
-      NULL};
+  /* Standard mode read-only remounts - preserves paths, blocks writes.
+   * Covers both sensitive proc subtrees and dangerous sys interfaces. */
+  const char *standard_ro[] = {"/proc/irq",
+                               "/sys/firmware",
+                               "/sys/kernel/security",
+                               "/sys/kernel/debug",
+                               "/sys/kernel/tracing",
+                               "/sys/block",
+                               NULL};
 
   /* Apply universal masks */
   for (int i = 0; universal_masks[i]; i++) {
@@ -323,9 +219,8 @@ int ds_apply_jail_mask(int hw_access, int privileged_mask) {
    * last process leaves a cgroup (notify_on_release=1). This is the
    * CVE-2022-0492 class of escape - confirmed exploitable in testing.
    *
-   * We mask them universally (not hw_access-gated). Bind-mounting /dev/null
-   * over each release_agent file makes them unwritable while leaving the
-   * rest of the cgroup hierarchy fully functional. */
+   * Self-bind + RO remount makes them unwritable while leaving the rest of
+   * the cgroup hierarchy fully functional. */
   {
     DIR *cgdir = opendir("/sys/fs/cgroup");
     if (cgdir) {
@@ -336,14 +231,7 @@ int ds_apply_jail_mask(int hw_access, int privileged_mask) {
         char agent_path[PATH_MAX];
         snprintf(agent_path, sizeof(agent_path),
                  "/sys/fs/cgroup/%s/release_agent", de->d_name);
-        if (access(agent_path, F_OK) == 0) {
-          if (mount("/dev/null", agent_path, NULL, MS_BIND, NULL) == 0) {
-            ds_log("[SEC] Masked release_agent: %s", agent_path);
-          } else {
-            ds_warn("[SEC] Failed to mask release_agent %s: %s", agent_path,
-                    strerror(errno));
-          }
-        }
+        ds_mask_path(agent_path);
       }
       closedir(cgdir);
     }
@@ -371,32 +259,35 @@ int ds_apply_jail_mask(int hw_access, int privileged_mask) {
    * playing whack-a-mole with individual paths.
    */
   {
-    /* Step 1: Pin the namespace-scoped subtrees as independent mounts BEFORE
-     * the parent is locked.  A self-bind creates a new mount entry whose RW
-     * status is not inherited from the parent remount below. */
+    /* Step 1: Lock all of /proc/sys RO via self-bind + remount.
+     * Must happen BEFORE pinning RW holes - once the parent is RO, new
+     * bind mounts stacked on top of it can be independently RW. */
+    if (access("/proc/sys", F_OK) == 0) {
+      mount("/proc/sys", "/proc/sys", NULL, MS_BIND, NULL);
+      mount("/proc/sys", "/proc/sys", NULL, MS_BIND | MS_REMOUNT | MS_RDONLY,
+            NULL);
+      ds_log("[SEC] /proc/sys locked RO.");
+    }
+
+    /* Step 2: Stack RW bind mounts on top of the now-RO /proc/sys.
+     * Bind inherits RO from parent, so explicitly remount RW after. */
     const char *rw_holes[] = {"/proc/sys/net", "/proc/sys/kernel/hostname",
                               "/proc/sys/kernel/domainname", NULL};
     for (int i = 0; rw_holes[i]; i++) {
       if (access(rw_holes[i], F_OK) != 0)
         continue;
-      if (mount(rw_holes[i], rw_holes[i], NULL, MS_BIND | MS_REC, NULL) < 0) {
-        ds_warn("[SEC] Failed to pin RW hole %s: %s", rw_holes[i],
+      if (mount(rw_holes[i], rw_holes[i], NULL, MS_BIND, NULL) < 0) {
+        ds_warn("[SEC] Failed to bind RW hole %s: %s", rw_holes[i],
                 strerror(errno));
+        continue;
       }
+      if (mount(rw_holes[i], rw_holes[i], NULL,
+                MS_BIND | MS_REMOUNT | MS_NOSUID | MS_NODEV | MS_NOEXEC,
+                NULL) < 0)
+        ds_warn("[SEC] Failed to remount RW hole %s: %s", rw_holes[i],
+                strerror(errno));
     }
-
-    /* Step 2: Lock all of /proc/sys in one remount. */
-    if (access("/proc/sys", F_OK) == 0) {
-      if (mount("/proc/sys", "/proc/sys", NULL,
-                MS_BIND | MS_REMOUNT | MS_RDONLY, NULL) < 0) {
-        /* Kernel < 3.5 fallback: bind first, then remount RO */
-        mount("/proc/sys", "/proc/sys", NULL, MS_BIND | MS_REC, NULL);
-        mount("/proc/sys", "/proc/sys", NULL, MS_BIND | MS_REMOUNT | MS_RDONLY,
-              NULL);
-      }
-      ds_log("[SEC] /proc/sys locked RO (net/hostname/domainname holes "
-             "preserved).");
-    }
+    ds_log("[SEC] /proc/sys RW holes preserved (net/hostname/domainname).");
   }
 
   if (hw_access) {
@@ -404,21 +295,9 @@ int ds_apply_jail_mask(int hw_access, int privileged_mask) {
     return 0;
   }
 
-  /* Apply standard mode masks */
-  for (int i = 0; standard_masks[i]; i++) {
-    ds_mask_path(standard_masks[i]);
-  }
-
   /* Apply standard mode read-only remounts */
   for (int i = 0; standard_ro[i]; i++) {
-    if (access(standard_ro[i], F_OK) == 0) {
-      if (mount(standard_ro[i], standard_ro[i], NULL,
-                MS_BIND | MS_REMOUNT | MS_RDONLY, NULL) < 0) {
-        mount(standard_ro[i], standard_ro[i], NULL, MS_BIND | MS_REC, NULL);
-        mount(standard_ro[i], standard_ro[i], NULL,
-              MS_BIND | MS_REMOUNT | MS_RDONLY, NULL);
-      }
-    }
+    ds_mask_path(standard_ro[i]);
   }
 
   ds_log("[SEC] Jail mask applied (hardened /proc and /sys).");
@@ -638,7 +517,9 @@ int create_devices(const char *rootfs, int hw_access, int privileged_mask) {
     for (int i = 1; i <= DS_MAX_TTYS; i++) {
       snprintf(path, sizeof(path), "%s/dev/tty%d", rootfs, i);
       force_unlink(path);
-      symlink("/dev/null", path);
+      if (symlink("/dev/null", path) < 0) {
+        /* best-effort, ignore */
+      }
     }
   }
   /* Standard symlinks */

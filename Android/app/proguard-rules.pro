@@ -11,11 +11,10 @@
 -dontwarn androidx.compose.**
 
 # Aggressive performance optimizations
--optimizationpasses 5
+-optimizationpasses 2
 -dontusemixedcaseclassnames
 -dontskipnonpubliclibraryclasses
 -allowaccessmodification
--repackageclasses ''
 -optimizations !code/simplification/arithmetic,!code/simplification/cast,!field/*,!class/merging/*
 -verbose
 
