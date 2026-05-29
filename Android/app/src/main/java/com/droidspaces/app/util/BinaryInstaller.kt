@@ -22,7 +22,6 @@ object BinaryInstaller {
     private const val INSTALL_PATH = Constants.INSTALL_PATH
     private const val DROIDSPACES_BINARY_NAME = Constants.DROIDSPACES_BINARY_NAME
     private const val BUSYBOX_BINARY_NAME = Constants.BUSYBOX_BINARY_NAME
-    private const val MAGISKPOLICY_BINARY_NAME = Constants.MAGISKPOLICY_BINARY_NAME
 
     /**
      * Map Android architecture to binary name suffix
@@ -93,7 +92,6 @@ object BinaryInstaller {
             // atomic and the daemon automatically re-execs the new binary.
             val droidspacesTargetPath = Constants.DROIDSPACES_BINARY_PATH
             val busyboxTargetPath = Constants.BUSYBOX_BINARY_PATH
-            val magiskpolicyTargetPath = Constants.MAGISKPOLICY_BINARY_PATH
 
             // Step 2: Create directories
             onProgress(InstallationStep.CreatingDirectories(INSTALL_PATH))
@@ -173,16 +171,11 @@ object BinaryInstaller {
             installBinary(busyboxBinaryName, busyboxTargetPath, "busybox")
                 .getOrElse { error -> return@withContext Result.failure(error) }
 
-            // Step 5: Install magiskpolicy binary
-            installBinary(getMagiskpolicyBinaryName(), magiskpolicyTargetPath, "magiskpolicy")
-                .getOrElse { error -> return@withContext Result.failure(error) }
-
             // Step 5: Verification (scripts are handled by ModuleInstaller)
 
             onProgress(InstallationStep.Verifying("droidspaces, busybox and magiskpolicy"))
             val verifyDroidspaces = Shell.cmd("test -x $droidspacesTargetPath && echo 'verified' || echo 'verification_failed'").exec()
             val verifyBusybox = Shell.cmd("test -x $busyboxTargetPath && echo 'verified' || echo 'verification_failed'").exec()
-            val verifyMagiskpolicy = Shell.cmd("test -x $magiskpolicyTargetPath && echo 'verified' || echo 'verification_failed'").exec()
 
             if (!verifyDroidspaces.isSuccess || !verifyDroidspaces.out.any { it.contains("verified") }) {
                 return@withContext Result.failure(
@@ -193,12 +186,6 @@ object BinaryInstaller {
             if (!verifyBusybox.isSuccess || !verifyBusybox.out.any { it.contains("verified") }) {
                 return@withContext Result.failure(
                     Exception("Busybox binary verification failed: file is not executable")
-                )
-            }
-
-            if (!verifyMagiskpolicy.isSuccess || !verifyMagiskpolicy.out.any { it.contains("verified") }) {
-                return@withContext Result.failure(
-                    Exception("Magiskpolicy binary verification failed: file is not executable")
                 )
             }
 
@@ -232,12 +219,10 @@ object BinaryInstaller {
     suspend fun isInstalled(): Boolean = withContext(Dispatchers.IO) {
         val droidspacesResult = Shell.cmd("test -x $INSTALL_PATH/$DROIDSPACES_BINARY_NAME && echo 'installed' || echo 'not_installed'").exec()
         val busyboxResult = Shell.cmd("test -x $INSTALL_PATH/$BUSYBOX_BINARY_NAME && echo 'installed' || echo 'not_installed'").exec()
-        val magiskpolicyResult = Shell.cmd("test -x $INSTALL_PATH/$MAGISKPOLICY_BINARY_NAME && echo 'installed' || echo 'not_installed'").exec()
         val droidspacesOk = droidspacesResult.isSuccess && droidspacesResult.out.any { it.contains("installed") }
         val busyboxOk = busyboxResult.isSuccess && busyboxResult.out.any { it.contains("installed") }
-        val magiskpolicyOk = magiskpolicyResult.isSuccess && magiskpolicyResult.out.any { it.contains("installed") }
 
-        droidspacesOk && busyboxOk && magiskpolicyOk
+        droidspacesOk && busyboxOk
     }
 }
 

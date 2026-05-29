@@ -20,7 +20,6 @@ sealed class DroidspacesBackendStatus {
 object DroidspacesChecker {
     private const val DROIDSPACES_BINARY_PATH = Constants.DROIDSPACES_BINARY_PATH
     private const val BUSYBOX_BINARY_PATH = Constants.BUSYBOX_BINARY_PATH
-    private const val MAGISKPOLICY_BINARY_PATH = Constants.MAGISKPOLICY_BINARY_PATH
     private const val MAGISK_MODULE_PATH = "/data/adb/modules/droidspaces"
     private const val MODULE_PROP_PATH = "$MAGISK_MODULE_PATH/module.prop"
 
@@ -69,12 +68,10 @@ object DroidspacesChecker {
 
             val droidspacesOk = checkBinary(DROIDSPACES_BINARY_PATH)
             val busyboxOk = checkBinary(BUSYBOX_BINARY_PATH)
-            val magiskpolicyOk = checkBinary(MAGISKPOLICY_BINARY_PATH)
-            val teOk = Shell.cmd("test -f ${Constants.DROIDSPACES_TE_PATH}").exec().isSuccess
 
             when {
-                droidspacesOk && busyboxOk && magiskpolicyOk && teOk -> DroidspacesBackendStatus.Available
-                !droidspacesOk || !busyboxOk || !magiskpolicyOk || !teOk -> DroidspacesBackendStatus.NotInstalled
+                droidspacesOk && busyboxOk -> DroidspacesBackendStatus.Available
+                !droidspacesOk || !busyboxOk -> DroidspacesBackendStatus.NotInstalled
                 else -> DroidspacesBackendStatus.Corrupted
             }
         } catch (e: Exception) {
