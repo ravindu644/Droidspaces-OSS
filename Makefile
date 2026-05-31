@@ -172,7 +172,7 @@ endif
 
 native:
 	@if [ -n "$(NATIVE_CC)" ]; then \
-		$(MAKE) -j$(NPROC) $(BINARY_NAME) CC=$("NATIVE_CC"); \
+		$(MAKE) -j$(NPROC) $(BINARY_NAME) CC="$(NATIVE_CC)"; \
 	else \
 		echo "Error: Musl toolchain for $(NATIVE_TARGET) not found."; \
 		echo "Please run: ./install-musl.sh $(shell echo $(NATIVE_TARGET) | cut -d'-' -f1 | sed 's/i686/x86/')"; \
