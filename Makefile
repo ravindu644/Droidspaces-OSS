@@ -57,6 +57,7 @@ SRCS = $(SRC_DIR)/main.c \
        $(SRC_DIR)/daemon.c \
        $(SRC_DIR)/check.c \
        $(SRC_DIR)/x11.c \
+       $(SRC_DIR)/virgl-android.c \
        $(SRC_DIR)/virtualize.c
 
 # Compiler flags - hardened warning set, all warnings are errors

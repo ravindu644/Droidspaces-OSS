@@ -1189,6 +1189,7 @@ void ds_log_internal(const char *prefix, const char *color, int is_err,
         strncmp(raw_msg, "[SEC]", 5) == 0 ||
         strncmp(raw_msg, "[GPU]", 5) == 0 || strncmp(raw_msg, "[FW]", 4) == 0 ||
         strncmp(raw_msg, "[DHCP]", 6) == 0 ||
+        strncmp(raw_msg, "[VirGL]", 7) == 0 ||
         strncmp(raw_msg, "[X11]", 5) == 0) {
       return;
     }

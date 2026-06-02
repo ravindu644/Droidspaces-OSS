@@ -106,20 +106,43 @@ static void x11_remove_pid(void) {
 
 /*
  * Set up the forked child and exec app_process as the Termux-X11 server.
+ * ready_fd: write-end of a pipe; closed by execv (O_CLOEXEC) on success,
+ * written + closed on failure so the parent knows exec failed.
  * This function never returns on success.
  */
-static void __attribute__((noreturn)) xserver_child(int uid,
-                                                    const char *display) {
+static void __attribute__((noreturn))
+xserver_child(int uid, const char *display, int ready_fd) {
+  /* Ignore hangups, keyboard interrupts, and broken pipes to make the server
+   * process robust and persistent (except for SIGTERM which we use to stop it).
+   */
+  signal(SIGHUP, SIG_IGN);
+  signal(SIGINT, SIG_IGN);
+  signal(SIGQUIT, SIG_IGN);
+  signal(SIGPIPE, SIG_IGN);
+
+  /* Make Termux-X11 server unkillable.
+   * This must be done while we are still running as root (before dropping
+   * privileges). */
+  FILE *oom_f = fopen("/proc/self/oom_score_adj", "w");
+  if (oom_f) {
+    fprintf(oom_f, "-1000\n");
+    fclose(oom_f);
+  }
+
   char ctx[256];
   if (get_selinux_context(TX11_DATA_DIR, ctx, sizeof(ctx)) < 0 &&
       get_selinux_context(TX11_DATA_ALT, ctx, sizeof(ctx)) < 0) {
     fprintf(stderr, "[X11] cannot read Termux SELinux context\n");
+    if (write(ready_fd, "\x01", 1) < 0) { /* ignore */
+    }
     _exit(1);
   }
 
   const char *mls = extract_mls(ctx);
   if (!mls) {
     fprintf(stderr, "[X11] malformed SELinux context: %s\n", ctx);
+    if (write(ready_fd, "\x01", 1) < 0) { /* ignore */
+    }
     _exit(1);
   }
 
@@ -148,6 +171,8 @@ static void __attribute__((noreturn)) xserver_child(int uid,
   if (setgroups(sizeof(groups) / sizeof(groups[0]), groups) < 0 ||
       setresgid(uid, uid, uid) < 0 || setresuid(uid, uid, uid) < 0) {
     perror("[X11] privilege drop failed");
+    if (write(ready_fd, "\x01", 1) < 0) { /* ignore */
+    }
     _exit(1);
   }
 
@@ -186,6 +211,8 @@ static void __attribute__((noreturn)) xserver_child(int uid,
   };
   execv(argv[0], argv);
   perror("[X11] execv");
+  if (write(ready_fd, "\x01", 1) < 0) { /* ignore */
+  }
   _exit(1);
 }
 
@@ -202,25 +229,65 @@ static pid_t spawn_xserver(int uid, const char *display) {
     return -1;
   }
 
+  /* ready pipe: EOF = execv succeeded (O_CLOEXEC), byte = execv failed */
+  int readyfd[2];
+  if (pipe2(readyfd, O_CLOEXEC) < 0) {
+    ds_warn("[X11] pipe2: %s", strerror(errno));
+    close(pipefd[0]);
+    close(pipefd[1]);
+    return -1;
+  }
+
   pid_t child = fork();
   if (child < 0) {
     ds_warn("[X11] fork: %s", strerror(errno));
     close(pipefd[0]);
     close(pipefd[1]);
+    close(readyfd[0]);
+    close(readyfd[1]);
     return -1;
   }
   if (child == 0) {
     close(pipefd[0]);
+    close(readyfd[0]);
     dup2(pipefd[1], STDOUT_FILENO);
     dup2(pipefd[1], STDERR_FILENO);
     close(pipefd[1]);
-    xserver_child(uid, display);
+    xserver_child(uid, display, readyfd[1]);
+    /* unreachable; xserver_child never returns */
   }
 
   close(pipefd[1]);
+  close(readyfd[1]);
+
+  /* EOF = exec succeeded; byte = exec failed */
+  char rdy;
+  if (read(readyfd[0], &rdy, 1) > 0) {
+    ds_error("[X11] execv failed -- xserver did not start");
+    waitpid(child, NULL, 0);
+    close(readyfd[0]);
+    close(pipefd[0]);
+    return -1;
+  }
+  close(readyfd[0]);
 
   pid_t relay = fork();
   if (relay == 0) {
+    /* Ignore hangups, keyboard interrupts, broken pipes, and SIGTERM.
+     * The relay should only exit when the child process closes the pipe. */
+    signal(SIGHUP, SIG_IGN);
+    signal(SIGINT, SIG_IGN);
+    signal(SIGQUIT, SIG_IGN);
+    signal(SIGPIPE, SIG_IGN);
+    signal(SIGTERM, SIG_IGN);
+
+    /* Make log relay unkillable */
+    FILE *oom_f = fopen("/proc/self/oom_score_adj", "w");
+    if (oom_f) {
+      fprintf(oom_f, "-1000\n");
+      fclose(oom_f);
+    }
+
     int devnull = open("/dev/null", O_RDWR);
     if (devnull >= 0) {
       dup2(devnull, STDIN_FILENO);
@@ -272,12 +339,12 @@ static pid_t spawn_xserver(int uid, const char *display) {
 
 /* ---- public API ------------------------------------------------------- */
 
-void ds_x11_daemon_start(struct ds_config *cfg) {
+int ds_x11_daemon_start(struct ds_config *cfg) {
   if (!cfg || !cfg->termux_x11 || !is_android())
-    return;
+    return -1;
   if (getuid() != 0) {
     ds_error("[X11] not running as root");
-    return;
+    return -1;
   }
 
   /* Reuse existing global server if still alive */
@@ -285,19 +352,21 @@ void ds_x11_daemon_start(struct ds_config *cfg) {
   if (existing > 0) {
     ds_log("Termux:X11: xserver already running (PID %d)", (int)existing);
     cfg->x11_pid = existing;
-    return;
+    return 1;
   }
 
   int uid = resolve_termux_uid();
   if (uid < 0)
-    return;
+    return -1;
 
   ds_log("[X11] launching Termux-X11 server (uid=%d)", uid);
   pid_t child = spawn_xserver(uid, TX11_DISPLAY_STR);
   if (child > 0) {
     cfg->x11_pid = child;
     x11_write_pid(child);
+    return 0;
   }
+  return -1;
 }
 
 void ds_x11_daemon_stop(struct ds_config *cfg) {

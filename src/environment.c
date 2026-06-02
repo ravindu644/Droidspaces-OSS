@@ -83,6 +83,8 @@ void ds_env_boot_setup(struct ds_config *cfg) {
    * and sourced by /etc/profile.d/droidspaces_env.sh) */
   if (is_android() && cfg->termux_x11)
     setenv("DISPLAY", TX11_DISPLAY_STR, 1);
+  if (is_android() && cfg->virgl)
+    setenv("GALLIUM_DRIVER", "virpipe", 1);
 }
 
 void ds_env_save(const char *path, struct ds_config *cfg) {
@@ -114,6 +116,8 @@ void ds_env_save(const char *path, struct ds_config *cfg) {
   /* Write DISPLAY for Termux-X11 containers so /etc/profile.d picks it up */
   if (is_android() && cfg->termux_x11)
     fprintf(f, "export DISPLAY='" TX11_DISPLAY_STR "'\n");
+  if (is_android() && cfg->virgl)
+    fprintf(f, "export GALLIUM_DRIVER='virpipe'\n");
 
   fclose(f);
   chmod(path, 0755);

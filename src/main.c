@@ -71,7 +71,8 @@ void print_usage(void) {
       "                            Mount Android internal storage (/sdcard)\n"
       "  -H, --hw-access           Enable direct hardware access (/dev nodes)\n"
       "      --gpu                 Enable GPU acceleration nodes\n"
-      "  -X, --termux-x11          Configure Termux-X11 display support\n\n"
+      "  -X, --termux-x11          Configure Termux-X11 display support\n"
+      "      --virgl               Configure VirGL 3D acceleration support\n\n"
 
       C_BOLD "Options (Security & Boot):" C_RESET "\n"
       "  -P, --selinux-permissive  Set host SELinux to permissive mode\n"
@@ -358,6 +359,7 @@ int main(int argc, char **argv) {
       {"privileged", required_argument, 0, 264},
       {"nat-ip", required_argument, 0, 262},
       {"gpu", no_argument, 0, 263},
+      {"virgl", no_argument, 0, 270},
       {"reset", no_argument, 0, 256},
       {"format", no_argument, 0, 265},
       {"memory", required_argument, 0, 266},
@@ -589,6 +591,9 @@ int main(int argc, char **argv) {
       break;
     case 'X':
       cfg.termux_x11 = 1;
+      break;
+    case 270:
+      cfg.virgl = 1;
       break;
     case 'I':
       cfg.disable_ipv6 = 1;

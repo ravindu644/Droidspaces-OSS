@@ -281,6 +281,8 @@ int ds_config_load(const char *config_path, struct ds_config *cfg) {
       cfg->gpu_mode = parse_bool(val);
     } else if (strcmp(key, "enable_termux_x11") == 0) {
       cfg->termux_x11 = parse_bool(val);
+    } else if (strcmp(key, "enable_virgl") == 0) {
+      cfg->virgl = parse_bool(val);
     } else if (strcmp(key, "selinux_permissive") == 0) {
       cfg->selinux_permissive = parse_bool(val);
     } else if (strcmp(key, "volatile_mode") == 0) {
@@ -614,6 +616,7 @@ static void ds_config_serialize_known(FILE *f, struct ds_config *cfg) {
   if (is_android()) {
     fprintf(f, "enable_android_storage=%d\n", cfg->android_storage);
     fprintf(f, "enable_termux_x11=%d\n", cfg->termux_x11);
+    fprintf(f, "enable_virgl=%d\n", cfg->virgl);
   }
   fprintf(f, "enable_hw_access=%d\n", cfg->hw_access);
   fprintf(f, "enable_gpu_mode=%d\n", cfg->gpu_mode);

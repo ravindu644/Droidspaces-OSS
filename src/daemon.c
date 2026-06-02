@@ -711,13 +711,11 @@ static void daemonize(int foreground) {
     }
   }
 
-  /* android OOM hardening: try to make us unkillable (-1000) */
-  if (is_android()) {
-    FILE *f = fopen("/proc/self/oom_score_adj", "w");
-    if (f) {
-      fprintf(f, "-1000\n");
-      fclose(f);
-    }
+  /* Make daemon unkillable */
+  FILE *f = fopen("/proc/self/oom_score_adj", "w");
+  if (f) {
+    fprintf(f, "-1000\n");
+    fclose(f);
   }
 }
 

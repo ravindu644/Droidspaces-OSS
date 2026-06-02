@@ -146,6 +146,33 @@ int is_external_lock_active(const char *name) {
  * Cleanup
  * ---------------------------------------------------------------------------*/
 
+/* Poll for a socket path to appear, bailing early if the server process dies.
+ * Returns 0 on socket ready, -1 on server death or timeout. */
+static int wait_for_socket_or_death(pid_t pid, const char *path, int timeout_ms,
+                                    int interval_us) {
+  int iters = timeout_ms * 1000 / interval_us;
+  struct timespec t0, t1;
+  clock_gettime(CLOCK_MONOTONIC, &t0);
+  for (int i = 0; i < iters; i++) {
+    if (access(path, F_OK) == 0) {
+      clock_gettime(CLOCK_MONOTONIC, &t1);
+      long ms =
+          (t1.tv_sec - t0.tv_sec) * 1000 + (t1.tv_nsec - t0.tv_nsec) / 1000000;
+      ds_log("[DEBUG] socket ready: %s (+%ldms)", path, ms);
+      return 0;
+    }
+    int st;
+    if (waitpid(pid, &st, WNOHANG) > 0) {
+      ds_error("server pid=%d exited (status=%d) before socket appeared",
+               (int)pid, WIFEXITED(st) ? WEXITSTATUS(st) : -1);
+      return -1;
+    }
+    usleep((unsigned int)interval_us);
+  }
+  ds_warn("timed out waiting for socket: %s", path);
+  return -1;
+}
+
 static void cleanup_container_resources(struct ds_config *cfg, pid_t pid,
                                         int skip_unmount, int force_cleanup) {
   /* Flush filesystem buffers (skip if force cleanup - sync can hang on
@@ -155,6 +182,7 @@ static void cleanup_container_resources(struct ds_config *cfg, pid_t pid,
 
   if (is_android() && !skip_unmount) {
     ds_x11_daemon_stop(cfg);
+    ds_virgl_daemon_stop(cfg);
     if (count_running_containers(NULL, 0) == 0) {
       android_optimizations(0);
     }
@@ -447,17 +475,17 @@ int start_rootfs(struct ds_config *cfg) {
     cfg->init_type = detect_container_init(rootfs_norm);
   }
 
-  /* 2b. Android: start Termux-X11 server before fork so the socket exists
-   * when setup_x11_and_virgl_sockets() bind-mounts the socket later */
+  /* 2b. Android: start Termux-X11 and VirGL servers before fork so the sockets
+   * exist when bind-mounted later */
   if (is_android() && cfg->termux_x11) {
-    ds_x11_daemon_start(cfg);
+    if (ds_x11_daemon_start(cfg) == 0)
+      wait_for_socket_or_death(
+          cfg->x11_pid, TX11_SOCK_DIR "/" TX11_DISPLAY_SOCK, 5000, 50000);
+  }
 
-    /* Wait up to 10s for the X socket */
-    for (int _i = 0; _i < 100; _i++) {
-      if (access("/data/data/com.termux/files/usr/tmp/.X11-unix/" TX11_DISPLAY_SOCK, F_OK) == 0)
-        break;
-      usleep(100000);
-    }
+  if (is_android() && cfg->virgl) {
+    if (ds_virgl_daemon_start(cfg) == 0)
+      wait_for_socket_or_death(cfg->virgl_pid, TX11_VIRGL_SOCKET, 2000, 20000);
   }
 
   /* 3. Early pre-flight for volatile mode (before any host changes) */
@@ -635,6 +663,13 @@ int start_rootfs(struct ds_config *cfg) {
     signal(SIGPIPE, SIG_IGN);
     signal(SIGUSR1, SIG_IGN);
     signal(SIGUSR2, SIG_IGN);
+
+    /* Make monitor unkillable */
+    FILE *oom_f = fopen("/proc/self/oom_score_adj", "w");
+    if (oom_f) {
+      fprintf(oom_f, "-1000\n");
+      fclose(oom_f);
+    }
 
     prctl(PR_SET_NAME, "[ds-monitor]", 0, 0, 0);
 
@@ -1172,15 +1207,20 @@ int start_rootfs(struct ds_config *cfg) {
       cfg->reboot_cycle = 1;
       clock_gettime(CLOCK_BOOTTIME, &cfg->start_time);
 
-      /* Mirror restart behavior: ensure X server is up before next boot */
+      /* Mirror restart behavior: ensure X and VirGL servers are up before next
+       * boot */
       if (is_android() && cfg->termux_x11) {
-        ds_x11_daemon_start(cfg);
-        for (int _i = 0; _i < 100; _i++) {
-          if (access(TX11_SOCK_DIR "/" TX11_DISPLAY_SOCK, F_OK) == 0)
-            break;
-          usleep(100000);
-        }
+        if (ds_x11_daemon_start(cfg) == 0)
+          wait_for_socket_or_death(
+              cfg->x11_pid, TX11_SOCK_DIR "/" TX11_DISPLAY_SOCK, 5000, 50000);
       }
+
+      if (is_android() && cfg->virgl) {
+        if (ds_virgl_daemon_start(cfg) == 0)
+          wait_for_socket_or_death(cfg->virgl_pid, TX11_VIRGL_SOCKET, 2000,
+                                   20000);
+      }
+
       /* Refresh ns_inode: new container has a new PID namespace inode.
        * Without this, ds_virtualize_update's PID-recycling guard rejects
        * all writes after the first reboot cycle (stale inode != new pid ns). */
@@ -1393,12 +1433,6 @@ int stop_rootfs(struct ds_config *cfg, int skip_unmount) {
   }
 
   ds_log("Stopping container '%s' (PID %d)...", cfg->container_name, pid);
-
-  /* Stop X11 server only on real stop, not restart (cleanup_container_resources
-   * handles it with the same skip_unmount guard, avoiding a double-stop) */
-  if (is_android() && !skip_unmount) {
-    ds_x11_daemon_stop(cfg);
-  }
 
   /* Safe Metadata Capture: Read the mount path from the tracking file (.mount)
    * into memory before we start the shutdown wait loop. This ensures we have

@@ -42,6 +42,9 @@ class ContainerInstallationViewModel : ViewModel() {
     var enableTermuxX11: Boolean by mutableStateOf(false)
         private set
 
+    var enableVirgl: Boolean by mutableStateOf(false)
+        private set
+
     var selinuxPermissive: Boolean by mutableStateOf(false)
         private set
 
@@ -108,6 +111,7 @@ class ContainerInstallationViewModel : ViewModel() {
         enableHwAccess: Boolean,
         enableGpuMode: Boolean,
         enableTermuxX11: Boolean,
+        enableVirgl: Boolean,
         selinuxPermissive: Boolean,
         volatileMode: Boolean,
         bindMounts: List<BindMount>,
@@ -128,6 +132,7 @@ class ContainerInstallationViewModel : ViewModel() {
         this.enableHwAccess = enableHwAccess
         this.enableGpuMode = enableGpuMode
         this.enableTermuxX11 = enableTermuxX11
+        this.enableVirgl = enableVirgl
         this.selinuxPermissive = selinuxPermissive
         this.volatileMode = volatileMode
         this.bindMounts = bindMounts
@@ -161,6 +166,7 @@ class ContainerInstallationViewModel : ViewModel() {
             enableHwAccess = enableHwAccess,
             enableGpuMode = enableGpuMode,
             enableTermuxX11 = enableTermuxX11,
+            enableVirgl = enableVirgl,
             selinuxPermissive = selinuxPermissive,
             volatileMode = volatileMode,
             bindMounts = bindMounts,
@@ -190,6 +196,7 @@ class ContainerInstallationViewModel : ViewModel() {
         enableHwAccess = false
         enableGpuMode = false
         enableTermuxX11 = false
+        enableVirgl = false
         selinuxPermissive = false
         volatileMode = false
         bindMounts = emptyList()

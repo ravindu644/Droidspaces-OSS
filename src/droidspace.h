@@ -141,9 +141,15 @@
 #define TX11_SOCK_DIR TX11_PREFIX "/tmp/.X11-unix"
 #define TX11_PACKAGES "/data/system/packages.list"
 
+/* VirGL Paths (Android only) */
+#define DS_VIRGL_SOCKET "/tmp/.virgl_test"
+#define TX11_VIRGL_SOCKET TX11_PREFIX "/tmp/.virgl_test"
+#define TX11_VIRGL_BIN TX11_PREFIX "/bin/virgl_test_server_android"
+
 /* File Extensions */
 #define DS_EXT_PID ".pid"
 #define DS_EXT_XPID ".xpid"
+#define DS_EXT_VPID ".vpid"
 #define DS_EXT_MOUNT ".mount"
 #define DS_EXT_LOCK ".lock"
 #define DS_EXT_INIT ".init"
@@ -322,6 +328,7 @@ struct ds_config {
   int hw_access;          /* --hw-access */
   int gpu_mode;           /* --gpu: mirror GPU nodes into isolated tmpfs /dev */
   int termux_x11;         /* --termux-x11 (Android only) */
+  int virgl;              /* --virgl (Android only) */
   int volatile_mode;      /* --volatile */
   int disable_ipv6;       /* --disable-ipv6 */
   int android_storage;    /* --enable-android-storage */
@@ -340,6 +347,7 @@ struct ds_config {
   pid_t container_pid;            /* PID 1 of the container (host view) */
   pid_t intermediate_pid;         /* intermediate fork pid */
   pid_t x11_pid;                  /* PID of the Termux-X11 server process */
+  pid_t virgl_pid;                /* PID of the VirGL server process */
   int is_img_mount;               /* 1 if rootfs was loop-mounted from .img */
   char img_mount_point[PATH_MAX]; /* where the .img was mounted */
   ds_init_type_t init_type;       /* detected container PID 1 init family */
@@ -566,9 +574,18 @@ int setup_hardware_access(struct ds_config *cfg);
  * x11.c
  * ---------------------------------------------------------------------------*/
 
-void ds_x11_daemon_start(struct ds_config *cfg);
+int ds_x11_daemon_start(struct ds_config *cfg);
 void ds_x11_daemon_stop(struct ds_config *cfg);
 int ds_setup_x11_socket(struct ds_config *cfg);
+
+/* ---------------------------------------------------------------------------
+ * virgl-android.c
+ * ---------------------------------------------------------------------------*/
+
+int ds_virgl_daemon_start(struct ds_config *cfg);
+void ds_virgl_daemon_stop(struct ds_config *cfg);
+int ds_setup_virgl_socket(struct ds_config *cfg);
+int check_virgl_needs(void);
 
 /* ---------------------------------------------------------------------------
  * network.c

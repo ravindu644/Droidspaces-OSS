@@ -800,5 +800,8 @@ int setup_hardware_access(struct ds_config *cfg) {
    * flag on Android) */
   ds_setup_x11_socket(cfg);
 
+  /* 3. Setup VirGL socket (Android only) */
+  ds_setup_virgl_socket(cfg);
+
   return 0;
 }

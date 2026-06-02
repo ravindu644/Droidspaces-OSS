@@ -35,6 +35,7 @@ data class ContainerInfo(
     val enableHwAccess: Boolean = false,
     val enableGpuMode: Boolean = false,
     val enableTermuxX11: Boolean = false,
+    val enableVirgl: Boolean = false,
     val selinuxPermissive: Boolean = false,
     val volatileMode: Boolean = false,
     val bindMounts: List<BindMount> = emptyList(),
@@ -70,6 +71,7 @@ data class ContainerInfo(
         appendLine("enable_hw_access=${if (enableHwAccess) "1" else "0"}")
         appendLine("enable_gpu_mode=${if (enableGpuMode) "1" else "0"}")
         appendLine("enable_termux_x11=${if (enableTermuxX11) "1" else "0"}")
+        appendLine("enable_virgl=${if (enableVirgl) "1" else "0"}")
         appendLine("selinux_permissive=${if (selinuxPermissive) "1" else "0"}")
         appendLine("volatile_mode=${if (volatileMode) "1" else "0"}")
         if (bindMounts.isNotEmpty()) {
@@ -292,6 +294,7 @@ object ContainerManager {
                 enableHwAccess = configMap["enable_hw_access"] == "1",
                 enableGpuMode = configMap["enable_gpu_mode"] == "1",
                 enableTermuxX11 = configMap["enable_termux_x11"] == "1",
+                enableVirgl = configMap["enable_virgl"] == "1",
                 selinuxPermissive = configMap["selinux_permissive"] == "1",
                 volatileMode = configMap["volatile_mode"] == "1",
                 bindMounts = bindMounts,

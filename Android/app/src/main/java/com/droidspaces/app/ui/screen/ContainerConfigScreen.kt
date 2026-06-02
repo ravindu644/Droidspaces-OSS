@@ -58,6 +58,7 @@ fun ContainerConfigScreen(
     initialEnableHwAccess: Boolean = false,
     initialEnableGpuMode: Boolean = false,
     initialEnableTermuxX11: Boolean = false,
+    initialEnableVirgl: Boolean = false,
     initialSelinuxPermissive: Boolean = false,
     initialVolatileMode: Boolean = false,
     initialBindMounts: List<BindMount> = emptyList(),
@@ -78,6 +79,7 @@ fun ContainerConfigScreen(
         enableHwAccess: Boolean,
         enableGpuMode: Boolean,
         enableTermuxX11: Boolean,
+        enableVirgl: Boolean,
         selinuxPermissive: Boolean,
         volatileMode: Boolean,
         bindMounts: List<BindMount>,
@@ -100,6 +102,7 @@ fun ContainerConfigScreen(
     var enableHwAccess by remember { mutableStateOf(initialEnableHwAccess) }
     var enableGpuMode by remember { mutableStateOf(initialEnableGpuMode) }
     var enableTermuxX11 by remember { mutableStateOf(initialEnableTermuxX11) }
+    var enableVirgl by remember { mutableStateOf(initialEnableVirgl) }
     var selinuxPermissive by remember { mutableStateOf(initialSelinuxPermissive) }
     var volatileMode by remember { mutableStateOf(initialVolatileMode) }
     var bindMounts by remember { mutableStateOf(initialBindMounts) }
@@ -284,7 +287,7 @@ fun ContainerConfigScreen(
                             .clickable(
                                 enabled = isUpstreamValid,
                                 onClick = {
-                                    onNext(netMode, disableIPv6, enableAndroidStorage, enableHwAccess, enableGpuMode, enableTermuxX11, selinuxPermissive, volatileMode, bindMounts, dnsServers, runAtBoot, customInit, staticNatIp, forceCgroupv1, blockNestedNs, privileged, if (envFileContent.isBlank()) null else envFileContent, upstreamInterfaces, portForwards)
+                                    onNext(netMode, disableIPv6, enableAndroidStorage, enableHwAccess, enableGpuMode, enableTermuxX11, enableVirgl, selinuxPermissive, volatileMode, bindMounts, dnsServers, runAtBoot, customInit, staticNatIp, forceCgroupv1, blockNestedNs, privileged, if (envFileContent.isBlank()) null else envFileContent, upstreamInterfaces, portForwards)
                                 },
                                 indication = androidx.compose.material.ripple.rememberRipple(bounded = true),
                                 interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
@@ -603,6 +606,15 @@ fun ContainerConfigScreen(
                 description = context.getString(R.string.termux_x11_description),
                 checked = enableTermuxX11,
                 onCheckedChange = { enableTermuxX11 = it },
+                enabled = true
+            )
+
+            ToggleCard(
+                icon = Icons.Default.Layers,
+                title = context.getString(R.string.enable_virgl),
+                description = context.getString(R.string.enable_virgl_description),
+                checked = enableVirgl,
+                onCheckedChange = { enableVirgl = it },
                 enabled = true
             )
 
