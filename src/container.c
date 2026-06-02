@@ -555,10 +555,6 @@ int start_rootfs(struct ds_config *cfg) {
     goto cleanup;
   }
 
-  /* Chown the console pts slave from the host namespace so root detectors
-   * don't flag it. On Android su is root->root, so hardcode AID_SHELL. */
-  ds_pty_chown_host(cfg->console.master);
-
   /* Propagate the host terminal's window size to the console PTY master
    * so the slave (which becomes /dev/console) has correct dimensions
    * from the very start of boot. This prevents misaligned output during
@@ -1807,12 +1803,6 @@ int enter_rootfs(struct ds_config *cfg, const char *user) {
     ds_cgroup_detach(child, cfg->container_name);
     return -1;
   }
-
-  /* Chown the host-side pts entry from the host namespace.
-   * The child allocates the PTY after setns, but if ptmx fell back to the
-   * singleton c 5,2 node, the slave lands on the host devpts as root-owned.
-   * We fix it here where we are guaranteed to be in the host namespace. */
-  ds_pty_chown_host(master_fd);
 
   /* Synchronize window size BEFORE starting setup to avoid race with child
    * exec. This ensures htop/nano see the correct size immediately upon startup.

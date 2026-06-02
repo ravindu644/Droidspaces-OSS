@@ -304,9 +304,6 @@ static void handle_session(int conn, ds_req_t *r) {
     struct winsize ws = {r->rows, r->cols, 0, 0};
     ioctl(master, TIOCSWINSZ, &ws);
     fcntl(master, F_SETFD, FD_CLOEXEC);
-    /* Daemon runs in host namespace as root - chown slave so the pts entry
-     * doesn't appear root-owned to root detection tools. */
-    ds_pty_chown_host(master);
   } else {
     /*
      * Create pipes with O_CLOEXEC only - NOT O_NONBLOCK.

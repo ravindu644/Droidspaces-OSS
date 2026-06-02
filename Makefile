@@ -1,10 +1,13 @@
-# Droidspaces v5 - Build system
+# Droidspaces v6 - Build system
 # Copyright (C) 2026 ravindu644 <droidcasts@protonmail.com>
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 BINARY_NAME = droidspaces
 SRC_DIR     = src
 OUT_DIR     = output
+
+# Default compiler. Do not allow recursive builds to accidentally get empty CC.
+CC ?= cc
 
 # Get version from header
 VERSION := $(shell grep "DS_VERSION" $(SRC_DIR)/droidspace.h | awk '{print $$3}' | tr -d '"')
@@ -71,7 +74,7 @@ endif
 
 # Auto-detect architecture from compiler
 ARCH := $(shell $(CC) -dumpmachine 2>/dev/null | cut -d'-' -f1 | \
-        sed 's/x86_64/x86_64/; s/aarch64/aarch64/; s/i686/x86/; \
+        sed 's/x86_64/x86_64/; s/aarch64/aarch64/; s/i.86/x86/; \
              s/armv7l/armhf/; s/^arm/armhf/; s/unknown/x86_64/' || echo "x86_64")
 
 # Per-arch object directory - prevents collisions when building multiple archs
@@ -147,7 +150,8 @@ $(BINARY_NAME): $(OBJS) | $(OUT_DIR)
 	@echo "[+] Built: $(OUT_DIR)/$(BINARY_NAME)"
 
 # Build targets
-NATIVE_ARCH_RAW := $(shell $(CC) -dumpmachine 2>/dev/null | cut -d'-' -f1 | sed 's/i.86/i686/')
+NATIVE_TRIPLET := $(shell $(CC) -dumpmachine 2>/dev/null)
+NATIVE_ARCH_RAW := $(shell echo "$(NATIVE_TRIPLET)" | cut -d'-' -f1 | sed 's/i.86/i686/')
 ifeq ($(NATIVE_ARCH_RAW),x86_64)
   NATIVE_TARGET := x86_64-linux-musl
 else ifeq ($(NATIVE_ARCH_RAW),aarch64)
@@ -160,11 +164,15 @@ else
   NATIVE_TARGET := x86_64-linux-musl
 endif
 
-NATIVE_CC := $(call find-cc,$(NATIVE_TARGET))
+ifneq ($(findstring musl,$(NATIVE_TRIPLET)),)
+  NATIVE_CC := $(CC)
+else
+  NATIVE_CC := $(call find-cc,$(NATIVE_TARGET))
+endif
 
 native:
 	@if [ -n "$(NATIVE_CC)" ]; then \
-		$(MAKE) -j$(NPROC) $(BINARY_NAME) CC=$(NATIVE_CC); \
+		$(MAKE) -j$(NPROC) $(BINARY_NAME) CC="$(NATIVE_CC)"; \
 	else \
 		echo "Error: Musl toolchain for $(NATIVE_TARGET) not found."; \
 		echo "Please run: ./install-musl.sh $(shell echo $(NATIVE_TARGET) | cut -d'-' -f1 | sed 's/i686/x86/')"; \

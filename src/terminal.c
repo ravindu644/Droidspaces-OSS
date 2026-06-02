@@ -59,6 +59,10 @@ int ds_terminal_create(struct ds_tty_info *tty) {
     return -1;
   }
 
+  /* tty group ownership + permissions */
+  if (fchown(tty->slave, 0, 5) < 0) {
+    /* best-effort, ignore */
+  }
   fchmod(tty->slave, 0620);
 
   return 0;
@@ -147,26 +151,6 @@ static void update_terminal_size(int master_fd) {
   if (ioctl(STDIN_FILENO, TIOCGWINSZ, &ws) == 0) {
     ioctl(master_fd, TIOCSWINSZ, &ws);
   }
-}
-
-/* Chown the host-side pts slave entry for a PTY we own the master of.
- * Must be called from the HOST namespace (parent process).
- * Uses TIOCGPTN on master_fd to get the pts index, then chowns
- * /dev/pts/N directly - the path the host and root detectors see.
- *
- * On Android: hardcoded to AID_SHELL (2000) since su is root->root.
- * On Linux: left as root - detectors there don't flag pts ownership. */
-void ds_pty_chown_host(int master_fd) {
-  if (!is_android())
-    return;
-
-  unsigned int ptyno;
-  if (ioctl(master_fd, TIOCGPTN, &ptyno) < 0)
-    return;
-
-  char path[64];
-  snprintf(path, sizeof(path), "/dev/pts/%u", ptyno);
-  chown(path, DS_AID_SHELL, DS_AID_SHELL); /* best-effort */
 }
 
 int ds_terminal_proxy(int master_fd) {

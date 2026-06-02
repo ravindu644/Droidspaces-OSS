@@ -117,7 +117,6 @@
 
 /* Hardening constants */
 #define DS_DEFAULT_TTY_GID 5
-#define DS_AID_SHELL 2000 /* Android shell UID/GID */
 #define DS_DEFAULT_SUBNET "172.28.0.0/16"
 #define DS_MAX_TRACKED_ENTRIES 512
 
@@ -665,7 +664,6 @@ int ds_terminal_create(struct ds_tty_info *tty);
 int ds_terminal_set_stdfds(int fd);
 int ds_terminal_make_controlling(int fd);
 int ds_setup_tios(int fd, struct termios *old);
-void ds_pty_chown_host(int master_fd);
 int ds_terminal_proxy(int master_fd);
 
 /* ---------------------------------------------------------------------------
