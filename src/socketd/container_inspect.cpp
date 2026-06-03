@@ -103,11 +103,11 @@ const char* docker_network_mode(std::uint8_t mode) {
   }
 }
 
-std::string container_command(const ContainerRecordResult& record) {
+std::string container_command(const ContainerInspectResult& record) {
   return record.custom_init.empty() ? "/sbin/init" : record.custom_init;
 }
 
-const char* container_state_status(const ContainerRecordResult& record) {
+const char* container_state_status(const ContainerInspectResult& record) {
   return record.pid > 0 ? "running" : "exited";
 }
 
@@ -122,7 +122,7 @@ void append_string_field(std::string& out,
 }
 
 void append_port_map_json(std::string& out,
-                          const ContainerRecordResult& record,
+                          const ContainerInspectResult& record,
                           bool include_host_bindings) {
   out += '{';
 
@@ -151,7 +151,7 @@ void append_port_map_json(std::string& out,
 }
 
 void append_config_json(std::string& out,
-                        const ContainerRecordResult& record,
+                        const ContainerInspectResult& record,
                         const std::string& command) {
   out += "\"Config\":{";
   append_string_field(out, "Hostname", record.hostname);
@@ -170,7 +170,7 @@ void append_config_json(std::string& out,
   out += "\"Cmd\":[\"";
   out += json_escape(command);
   out += "\"],";
-  append_string_field(out, "Image", record.rootfs_path);
+  append_string_field(out, "Image", record.image_ref.empty() ? record.rootfs_path : record.image_ref);
   out += ",\"Volumes\":{},";
   out += "\"WorkingDir\":\"\",";
   out += "\"Entrypoint\":[],";
@@ -180,7 +180,7 @@ void append_config_json(std::string& out,
 }
 
 void append_host_config_json(std::string& out,
-                             const ContainerRecordResult& record) {
+                             const ContainerInspectResult& record) {
   out += "\"HostConfig\":{";
   out += "\"Binds\":[],";
   out += "\"ContainerIDFile\":\"\",";
@@ -255,7 +255,7 @@ void append_host_config_json(std::string& out,
 }
 
 void append_state_json(std::string& out,
-                       const ContainerRecordResult& record,
+                       const ContainerInspectResult& record,
                        const std::string& started_at) {
   out += "\"State\":{";
   out += "\"Status\":\"";
@@ -283,7 +283,7 @@ void append_state_json(std::string& out,
 }
 
 void append_networks_json(std::string& out,
-                          const ContainerRecordResult& record) {
+                          const ContainerInspectResult& record) {
   out += "\"Networks\":{";
 
   if (record.net_mode == 1u) {
@@ -310,7 +310,7 @@ void append_networks_json(std::string& out,
 }
 
 void append_network_settings_json(std::string& out,
-                                  const ContainerRecordResult& record) {
+                                  const ContainerInspectResult& record) {
   out += "\"NetworkSettings\":{";
   out += "\"Bridge\":\"\",";
   out += "\"SandboxID\":\"\",";
@@ -340,7 +340,7 @@ void append_network_settings_json(std::string& out,
 }
 
 void append_inspect_json(std::string& out,
-                         const ContainerRecordResult& record) {
+                         const ContainerInspectResult& record) {
   const std::string command = container_command(record);
   const std::string started_at = rfc3339_utc(record.started_at);
   const std::string created = started_at;
@@ -363,7 +363,7 @@ void append_inspect_json(std::string& out,
   out += "\"LogPath\":\"\",";
   append_string_field(out, "Id", record.uuid);
   out += ',';
-  append_string_field(out, "Image", record.rootfs_path);
+  append_string_field(out, "Image", record.image_ref.empty() ? record.rootfs_path : record.image_ref);
   out += ',';
   out += "\"MountLabel\":\"\",";
   out += "\"Name\":\"/";
@@ -393,7 +393,7 @@ bool request_container_inspect_json_from_core(const std::string& ref,
   not_found = false;
 
   BackendClient backend;
-  ContainerRecordResult record;
+  ContainerInspectResult record;
 
   if (!backend.inspect_container(ref, record, not_found, error)) {
     return false;

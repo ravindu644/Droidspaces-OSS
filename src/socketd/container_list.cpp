@@ -115,6 +115,39 @@ void append_network_settings_json(std::string& out,
   out += "}}";
 }
 
+
+/*
+ * Docker inspect field-mapping design note
+ * ----------------------------------------
+ * Keep the future GET /containers/{id}/json inspect renderer explicit about
+ * which fields are Droidspaces-native, compatibility-only, or deliberately not
+ * exposed. The /containers/json projection below should stay aligned with these
+ * identities so Docker-compatible clients see stable values across list and
+ * inspect responses.
+ *
+ * | Inspect field | Classification | Droidspaces source / compatibility value |
+ * | --- | --- | --- |
+ * | Id | Real Droidspaces-backed value | cfg.uuid / ContainerRecordResult::uuid. |
+ * | Name | Real Droidspaces-backed value | "/" + cfg.container_name / record.name. |
+ * | Config.Hostname | Real Droidspaces-backed value | cfg.hostname / record.hostname. |
+ * | Config.Image, Image | Real Droidspaces-backed value | rootfs image path when present, otherwise rootfs path or the pseudo-image UUID used by /images/json. |
+ * | Config.Env | Real Droidspaces-backed value | cfg.env_vars; include the default PATH when no environment is configured. |
+ * | Config.Cmd | Real Droidspaces-backed value | Single-element array containing cfg.custom_init, or /sbin/init when unset. |
+ * | Path | Real Droidspaces-backed value | First Config.Cmd element. |
+ * | Args | Stable compatibility placeholder | Remaining Config.Cmd elements; currently [] for the Droidspaces init model. |
+ * | HostConfig.NetworkMode | Real Droidspaces-backed value | "bridge" for NAT, "host" for host networking, "none" for no network. |
+ * | HostConfig.PortBindings | Real Droidspaces-backed value | cfg.port_forwards. |
+ * | HostConfig.Memory, CpuPeriod, CpuQuota, PidsLimit | Real Droidspaces-backed value | cfg.memory_limit, cfg.cpu_period, cfg.cpu_quota, cfg.pids_limit; 0 means unlimited/unset. |
+ * | HostConfig.Privileged | Real Droidspaces-backed value | cfg.privileged_mask != 0. |
+ * | Mounts | Real Droidspaces-backed value | cfg.binds. |
+ * | NetworkSettings.Networks | Real Droidspaces-backed value | Extend the current droidspaces-bridge NAT projection with address/attachment details as they become available. |
+ * | State.Running, State.Pid, State.StartedAt, State.Status | Real Droidspaces-backed value | PID and started_at; stopped containers use pid 0, zero time/empty time, and exited status. |
+ * | Docker-specific fields with no Droidspaces equivalent | Stable compatibility placeholder | Empty strings, false, zero, empty arrays, or empty objects, chosen consistently by field type. |
+ * | Fields that would imply unsupported Docker semantics | Intentionally omitted field | Omit rather than invent behavior, unless a Docker client requires a typed placeholder for compatibility. |
+ *
+ * Public-facing rationale lives in Documentation/socketd-inspect-field-mapping.md.
+ */
+
 void append_container_json(std::string& out,
                            const ContainerRecordResult& record) {
   const std::string command =

@@ -352,6 +352,9 @@ static int socketd_load_config_by_ref(const char *ref, struct ds_config *cfg) {
   closedir(containers_dir);
   return status;
 }
+static void socketd_pack_port_record(struct ds_socketd_port_record *dst,
+                                     const struct ds_port_forward *src);
+
 
 static void
 socketd_pack_container_record(struct ds_socketd_container_record *record,
@@ -395,19 +398,119 @@ socketd_pack_container_record(struct ds_socketd_container_record *record,
 
   record->port_count = (uint8_t)port_count;
 
-  for (int i = 0; i < port_count; i++) {
-    const struct ds_port_forward *src = &cfg->port_forwards[i];
-    struct ds_socketd_port_record *dst = &record->ports[i];
-
-    dst->host_port_be = htons(src->host_port);
-    dst->host_port_end_be = htons(src->host_port_end);
-    dst->container_port_be = htons(src->container_port);
-    dst->container_port_end_be = htons(src->container_port_end);
-    dst->proto = (strcmp(src->proto, "udp") == 0) ? 1u : 0u;
-  }
+  for (int i = 0; i < port_count; i++)
+    socketd_pack_port_record(&record->ports[i], &cfg->port_forwards[i]);
 
   int64_t started_at = pid > 0 ? socketd_container_started_at_epoch(pid) : 0;
   record->started_at_be = (int64_t)socketd_hton64((uint64_t)started_at);
+}
+
+
+static int socketd_u16_count(int count, int max_count) {
+  if (count < 0)
+    return 0;
+  if (count > max_count)
+    return max_count;
+  return count;
+}
+
+static void socketd_pack_port_record(struct ds_socketd_port_record *dst,
+                                     const struct ds_port_forward *src) {
+  memset(dst, 0, sizeof(*dst));
+  dst->host_port_be = htons(src->host_port);
+  dst->host_port_end_be = htons(src->host_port_end);
+  dst->container_port_be = htons(src->container_port);
+  dst->container_port_end_be = htons(src->container_port_end);
+  dst->proto = (strcmp(src->proto, "udp") == 0) ? 1u : 0u;
+}
+
+static void socketd_pack_inspect_record(
+    struct ds_socketd_inspect_container_record_v1 *record,
+    const struct ds_config *cfg, pid_t pid) {
+  memset(record, 0, sizeof(*record));
+
+  record->record_version_be = htons(1u);
+  record->record_size_be =
+      htonl((uint32_t)sizeof(struct ds_socketd_inspect_container_record_v1));
+
+  safe_strncpy(record->name, cfg->container_name, sizeof(record->name));
+  safe_strncpy(record->uuid, cfg->uuid, sizeof(record->uuid));
+  safe_strncpy(record->rootfs_path, cfg->rootfs_path,
+               sizeof(record->rootfs_path));
+
+  const char *image_ref = cfg->rootfs_img_path[0] ? cfg->rootfs_img_path
+                                                  : cfg->rootfs_path;
+  safe_strncpy(record->image_ref, image_ref, sizeof(record->image_ref));
+  safe_strncpy(record->hostname, cfg->hostname, sizeof(record->hostname));
+
+  if (cfg->net_mode == DS_NET_NAT) {
+    const char *nat_ip =
+        cfg->static_nat_ip[0] ? cfg->static_nat_ip : cfg->nat_container_ip;
+    safe_strncpy(record->nat_ip, nat_ip, sizeof(record->nat_ip));
+  }
+
+  safe_strncpy(record->custom_init, cfg->custom_init,
+               sizeof(record->custom_init));
+  safe_strncpy(record->dns_servers, cfg->dns_servers,
+               sizeof(record->dns_servers));
+
+  record->pid_be = (int32_t)htonl((uint32_t)(pid > 0 ? pid : 0));
+  int64_t started_at = pid > 0 ? socketd_container_started_at_epoch(pid) : 0;
+  record->started_at_be = (int64_t)socketd_hton64((uint64_t)started_at);
+
+  record->memory_limit_be = (int64_t)socketd_hton64((uint64_t)cfg->memory_limit);
+  record->cpu_quota_be = (int64_t)socketd_hton64((uint64_t)cfg->cpu_quota);
+  record->cpu_period_be = (int64_t)socketd_hton64((uint64_t)cfg->cpu_period);
+  record->pids_limit_be = (int64_t)socketd_hton64((uint64_t)cfg->pids_limit);
+  record->privileged_mask_be = (int32_t)htonl((uint32_t)cfg->privileged_mask);
+
+  record->net_mode = (uint8_t)cfg->net_mode;
+  record->foreground = cfg->foreground ? 1u : 0u;
+  record->volatile_mode = cfg->volatile_mode ? 1u : 0u;
+  record->force_cgroupv1 = cfg->force_cgroupv1 ? 1u : 0u;
+  record->disable_ipv6 = cfg->disable_ipv6 ? 1u : 0u;
+  record->android_storage = cfg->android_storage ? 1u : 0u;
+  record->selinux_permissive = cfg->selinux_permissive ? 1u : 0u;
+  record->hw_access = cfg->hw_access ? 1u : 0u;
+  record->gpu_mode = cfg->gpu_mode ? 1u : 0u;
+  record->termux_x11 = cfg->termux_x11 ? 1u : 0u;
+  record->block_nested_ns = cfg->block_nested_ns ? 1u : 0u;
+  record->is_img_mount = cfg->is_img_mount ? 1u : 0u;
+
+  int env_count = socketd_u16_count(cfg->env_var_count,
+                                    DS_SOCKETD_INSPECT_ENV_MAX);
+  record->env_count_be = htons((uint16_t)env_count);
+  record->env_total_count_be =
+      htons((uint16_t)socketd_u16_count(cfg->env_var_count, UINT16_MAX));
+  for (int i = 0; i < env_count; i++) {
+    if (cfg->env_vars[i].key)
+      safe_strncpy(record->env[i].key, cfg->env_vars[i].key,
+                   sizeof(record->env[i].key));
+    if (cfg->env_vars[i].value)
+      safe_strncpy(record->env[i].value, cfg->env_vars[i].value,
+                   sizeof(record->env[i].value));
+  }
+
+  int bind_count = socketd_u16_count(cfg->bind_count,
+                                     DS_SOCKETD_INSPECT_BINDS_MAX);
+  record->bind_count_be = htons((uint16_t)bind_count);
+  record->bind_total_count_be =
+      htons((uint16_t)socketd_u16_count(cfg->bind_count, UINT16_MAX));
+  for (int i = 0; i < bind_count; i++) {
+    safe_strncpy(record->binds[i].source, cfg->binds[i].src,
+                 sizeof(record->binds[i].source));
+    safe_strncpy(record->binds[i].destination, cfg->binds[i].dest,
+                 sizeof(record->binds[i].destination));
+    record->binds[i].read_only = cfg->binds[i].ro ? 1u : 0u;
+  }
+
+  int port_count = socketd_u16_count(cfg->port_forward_count,
+                                     DS_SOCKETD_RECORD_PORTS_MAX);
+  record->port_count_be = htons((uint16_t)port_count);
+  record->port_total_count_be =
+      htons((uint16_t)socketd_u16_count(cfg->port_forward_count, UINT16_MAX));
+  for (int i = 0; i < port_count; i++)
+    socketd_pack_port_record(&record->ports[i], &cfg->port_forwards[i]);
 }
 
 static int socketd_append_container_record(
@@ -670,8 +773,9 @@ static void socketd_handle_conn(int conn) {
     uint32_t caps_be =
         htonl(DS_SOCKETD_CAP_PROTOCOL_V1 | DS_SOCKETD_CAP_PING |
               DS_SOCKETD_CAP_CAPABILITIES | DS_SOCKETD_CAP_INFO |
-              DS_SOCKETD_CAP_LIST_CONTAINERS | DS_SOCKETD_CAP_LIST_IMAGES |
-              DS_SOCKETD_CAP_INSPECT_CONTAINER | DS_SOCKETD_CAP_POLL_EVENTS);
+              DS_SOCKETD_CAP_LIST_CONTAINERS | DS_SOCKETD_CAP_INSPECT_CONTAINER |
+              DS_SOCKETD_CAP_LIST_IMAGES | DS_SOCKETD_CAP_POLL_EVENTS);
+
     socketd_send_response(conn, DS_SOCKETD_STATUS_OK, &caps_be,
                           (uint32_t)sizeof(caps_be));
     return;
@@ -950,6 +1054,48 @@ static void socketd_handle_conn(int conn) {
     return;
   }
 
+
+  case DS_SOCKETD_OP_INSPECT_CONTAINER: {
+    struct ds_socketd_inspect_container_req inspect_req;
+    memset(&inspect_req, 0, sizeof(inspect_req));
+
+    if (socketd_read_payload(conn, &inspect_req,
+                             (uint32_t)sizeof(inspect_req),
+                             payload_len) < 0) {
+      socketd_send_response(conn, DS_SOCKETD_STATUS_BAD_REQUEST, NULL, 0);
+      return;
+    }
+
+    char target[DS_SOCKETD_RECORD_NAME_MAX];
+    safe_strncpy(target, inspect_req.target, sizeof(target));
+    if (!target[0]) {
+      socketd_send_response(conn, DS_SOCKETD_STATUS_BAD_REQUEST, NULL, 0);
+      return;
+    }
+
+    struct ds_config cfg;
+    memset(&cfg, 0, sizeof(cfg));
+
+    int status = socketd_load_config_by_ref(target, &cfg);
+    if (status != DS_SOCKETD_STATUS_OK) {
+      socketd_free_loaded_config(&cfg);
+      socketd_send_response(conn, (enum ds_socketd_status)status, NULL, 0);
+      return;
+    }
+
+    pid_t pid = 0;
+    if (!is_container_running(&cfg, &pid) || pid <= 0)
+      pid = 0;
+
+    struct ds_socketd_inspect_container_record_v1 record;
+    socketd_pack_inspect_record(&record, &cfg, pid);
+    socketd_free_loaded_config(&cfg);
+
+    socketd_send_response(conn, DS_SOCKETD_STATUS_OK, &record,
+                          (uint32_t)sizeof(record));
+    return;
+  }
+
   case DS_SOCKETD_OP_POLL_EVENTS: {
     struct ds_socketd_poll_events_req poll_req;
     memset(&poll_req, 0, sizeof(poll_req));
@@ -1026,46 +1172,7 @@ static void socketd_handle_conn(int conn) {
     return;
   }
 
-   case DS_SOCKETD_OP_INSPECT_CONTAINER: {
-    struct ds_socketd_container_ref_req inspect_req;
-    memset(&inspect_req, 0, sizeof(inspect_req));
 
-    if (socketd_read_payload(conn, &inspect_req,
-                             (uint32_t)sizeof(inspect_req),
-                             payload_len) < 0) {
-      socketd_send_response(conn, DS_SOCKETD_STATUS_BAD_REQUEST, NULL, 0);
-      return;
-    }
-
-    if (memchr(inspect_req.ref, '\0', sizeof(inspect_req.ref)) == NULL ||
-        inspect_req.ref[0] == '\0') {
-      socketd_send_response(conn, DS_SOCKETD_STATUS_BAD_REQUEST, NULL, 0);
-      return;
-    }
-
-    struct ds_config cfg;
-    memset(&cfg, 0, sizeof(cfg));
-
-    int status = socketd_load_config_by_ref(inspect_req.ref, &cfg);
-    if (status != DS_SOCKETD_STATUS_OK) {
-      socketd_free_loaded_config(&cfg);
-      socketd_send_response(conn, (enum ds_socketd_status)status, NULL, 0);
-      return;
-    }
-
-    pid_t pid = 0;
-    int running = is_container_running(&cfg, &pid) && pid > 0;
-
-    struct ds_socketd_container_record record;
-    socketd_pack_container_record(&record, &cfg, running ? pid : 0);
-
-    socketd_free_loaded_config(&cfg);
-
-    socketd_send_response(conn, DS_SOCKETD_STATUS_OK, &record,
-                          (uint32_t)sizeof(record));
-    return;
-  }
-  
   case DS_SOCKETD_OP_START_CONTAINER:
   case DS_SOCKETD_OP_STOP_CONTAINER:
   case DS_SOCKETD_OP_RESTART_CONTAINER:

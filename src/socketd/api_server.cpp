@@ -1,6 +1,7 @@
 #include "api_server.h"
 #include "backend_client.h"
 #include "container_list.h"
+#include "container_inspect.h"
 #include "snapshot_lists.h"
 #include "event_log.h"
 #include "../droidspace.h"
@@ -254,7 +255,7 @@ bool send_http_response(int fd,
   header += "\r\n";
 
   header += "Server: Droidspaces/6 (Container, like Docker)\r\n";
-  
+
   header += "Api-Version: ";
   header += kSocketApiVersion;
   header += "\r\n";
@@ -262,7 +263,7 @@ bool send_http_response(int fd,
   header += "Ostype: ";
   header += kSocketOsType;
   header += "\r\n";
-  
+
   header += "Connection: close\r\n";
   header += "\r\n";
 
@@ -391,6 +392,7 @@ bool is_versioned_api_path(const std::string& path,
   return i == prefix.size();
 }
 
+
 bool is_api_target(const std::string& target,
                    const char* endpoint_path) {
   const std::size_t query_pos = target.find('?');
@@ -399,6 +401,73 @@ bool is_api_target(const std::string& target,
 
   return path == endpoint_path ||
          is_versioned_api_path(path, endpoint_path);
+}
+
+
+bool strip_api_version_prefix(const std::string& path,
+                              std::string& unversioned_path) {
+  if (path.rfind("/v", 0) != 0) {
+    unversioned_path = path;
+    return true;
+  }
+
+  std::size_t i = 2;
+  const std::size_t major_start = i;
+
+  while (i < path.size() && is_ascii_digit(path[i])) {
+    ++i;
+  }
+
+  if (i == major_start || i >= path.size() || path[i] != '.') {
+    unversioned_path = path;
+    return true;
+  }
+
+  ++i;
+  const std::size_t minor_start = i;
+
+  while (i < path.size() && is_ascii_digit(path[i])) {
+    ++i;
+  }
+
+  if (i == minor_start || i >= path.size() || path[i] != '/') {
+    unversioned_path = path;
+    return true;
+  }
+
+  unversioned_path = path.substr(i);
+  return true;
+}
+
+bool parse_container_inspect_ref(const std::string& target,
+                                 std::string& ref_out) {
+  const std::size_t query_pos = target.find('?');
+  const std::string path =
+      query_pos == std::string::npos ? target : target.substr(0, query_pos);
+
+  std::string unversioned_path;
+  if (!strip_api_version_prefix(path, unversioned_path)) {
+    return false;
+  }
+
+  constexpr const char* kPrefix = "/containers/";
+  constexpr const char* kSuffix = "/json";
+  const std::size_t prefix_len = std::strlen(kPrefix);
+  const std::size_t suffix_len = std::strlen(kSuffix);
+
+  if (unversioned_path.size() <= prefix_len + suffix_len ||
+      unversioned_path.compare(0, prefix_len, kPrefix) != 0 ||
+      unversioned_path.compare(unversioned_path.size() - suffix_len,
+                               suffix_len,
+                               kSuffix) != 0) {
+    return false;
+  }
+
+  ref_out = unversioned_path.substr(
+      prefix_len,
+      unversioned_path.size() - prefix_len - suffix_len);
+
+  return !ref_out.empty() && ref_out.find('/') == std::string::npos;
 }
 
 bool is_truthy_query_value(const std::string& value) {
@@ -761,6 +830,31 @@ bool send_container_list_ok(int fd,
                             error);
 }
 
+
+bool send_container_inspect_ok(int fd,
+                               const std::string& ref,
+                               bool suppress_body,
+                               std::string& error) {
+  std::string body;
+  bool not_found = false;
+
+  if (!request_container_inspect_json_from_core(ref, body, not_found, error)) {
+    if (not_found) {
+      return send_not_found(fd, suppress_body, error);
+    }
+
+    return false;
+  }
+
+  return send_http_response(fd,
+                            200,
+                            "OK",
+                            "application/json",
+                            body,
+                            suppress_body,
+                            error);
+}
+
 bool send_image_list_ok(int fd,
                         bool suppress_body,
                         std::string& error) {
@@ -989,19 +1083,25 @@ bool ApiServer::handle_client(int client_fd, std::string& error) const {
   if ((is_get || is_head) && is_api_target(target, "/_ping")) {
     return send_ping_ok(client_fd, is_head, error);
   }
-  
+
   if (is_get && is_api_target(target, "/version")) {
     return send_version_ok(client_fd, false, error);
   }
-  
+
   if (is_get && is_api_target(target, "/info")) {
     return send_info_ok(client_fd, false, error);
   }
-  
+
+
   if (is_get && is_api_target(target, "/containers/json")) {
     return send_container_list_ok(client_fd, target, false, error);
   }
-  
+
+  std::string inspect_ref;
+  if (is_get && parse_container_inspect_ref(target, inspect_ref)) {
+    return send_container_inspect_ok(client_fd, inspect_ref, false, error);
+  }
+
   if (is_get && is_api_target(target, "/images/json")) {
     return send_image_list_ok(client_fd, false, error);
   }
@@ -1013,7 +1113,7 @@ bool ApiServer::handle_client(int client_fd, std::string& error) const {
   if (is_get && is_api_target(target, "/networks")) {
     return send_network_list_ok(client_fd, false, error);
   }
-  
+
   if (is_get && is_api_target(target, "/events")) {
     return send_events_ok(client_fd, target, false, error);
   }

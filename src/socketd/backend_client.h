@@ -18,6 +18,53 @@ struct ContainerPortResult {
   std::uint8_t proto = 0; /* 0 = tcp, 1 = udp */
 };
 
+struct InspectEnvResult {
+  std::string key;
+  std::string value;
+};
+
+struct InspectBindResult {
+  std::string source;
+  std::string destination;
+  bool read_only = false;
+};
+
+struct ContainerInspectResult {
+  std::string name;
+  std::string uuid;
+  std::string rootfs_path;
+  std::string image_ref;
+  std::string hostname;
+  std::string nat_ip;
+  std::string custom_init;
+  std::string dns_servers;
+  std::int32_t pid = 0;
+  std::uint8_t net_mode = 0; /* 0 = host, 1 = nat, 2 = none */
+  std::int64_t started_at = 0;
+  std::int64_t memory_limit = 0;
+  std::int64_t cpu_quota = 0;
+  std::int64_t cpu_period = 0;
+  std::int64_t pids_limit = 0;
+  std::int32_t privileged_mask = 0;
+  bool foreground = false;
+  bool volatile_mode = false;
+  bool force_cgroupv1 = false;
+  bool disable_ipv6 = false;
+  bool android_storage = false;
+  bool selinux_permissive = false;
+  bool hw_access = false;
+  bool gpu_mode = false;
+  bool termux_x11 = false;
+  bool block_nested_ns = false;
+  bool is_img_mount = false;
+  std::uint16_t env_total_count = 0;
+  std::uint16_t bind_total_count = 0;
+  std::uint16_t port_total_count = 0;
+  std::vector<InspectEnvResult> env;
+  std::vector<InspectBindResult> binds;
+  std::vector<ContainerPortResult> ports;
+};
+
 struct ContainerRecordResult {
   std::string name;
   std::string uuid;
@@ -64,6 +111,11 @@ public:
   bool list_containers(bool include_all,
                        std::vector<ContainerRecordResult> &out,
                        std::string &error) const;
+
+  bool inspect_container(const std::string &ref,
+                         ContainerInspectResult &out,
+                         bool &not_found,
+                         std::string &error) const;
 
   bool info(InfoResult &out, std::string &error) const;
 

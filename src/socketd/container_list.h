@@ -26,8 +26,4 @@ bool request_container_list_json_from_core(const ContainerListRequest &request,
                                            std::string &json_out,
                                            std::string &error);
 
-bool request_container_inspect_json_from_core(const std::string &target,
-                                              std::string &json_out,
-                                              std::string &error);
-
 } // namespace droidspaces::socketd

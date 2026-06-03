@@ -383,6 +383,153 @@ bool BackendClient::list_containers(
   return true;
 }
 
+
+bool BackendClient::inspect_container(const std::string& ref,
+                                      ContainerInspectResult& out,
+                                      bool& not_found,
+                                      std::string& error) const {
+  not_found = false;
+
+  if (ref.empty() || ref.size() >= DS_SOCKETD_RECORD_NAME_MAX) {
+    error = "container reference is empty or too long";
+    return false;
+  }
+
+  ds_socketd_inspect_container_req req {};
+  std::memcpy(req.target, ref.c_str(), ref.size());
+
+  std::uint16_t status = DS_SOCKETD_STATUS_INTERNAL_ERROR;
+  std::string payload;
+
+  if (!request(DS_SOCKETD_OP_INSPECT_CONTAINER,
+               &req,
+               static_cast<std::uint32_t>(sizeof(req)),
+               status,
+               payload,
+               error)) {
+    return false;
+  }
+
+  if (status == DS_SOCKETD_STATUS_NOT_FOUND) {
+    not_found = true;
+    error = "container not found";
+    return false;
+  }
+
+  if (!expect_ok_status(status, "INSPECT_CONTAINER", error)) {
+    return false;
+  }
+
+  if (payload.size() != sizeof(ds_socketd_inspect_container_record_v1)) {
+    error = "INSPECT_CONTAINER returned payload of unexpected size";
+    return false;
+  }
+
+  ds_socketd_inspect_container_record_v1 wire {};
+  std::memcpy(&wire, payload.data(), sizeof(wire));
+
+  const std::uint16_t record_version = ntohs(wire.record_version_be);
+  const std::uint32_t record_size = ntohl(wire.record_size_be);
+  if (record_version != 1u || record_size != sizeof(wire)) {
+    error = "INSPECT_CONTAINER returned unsupported inspect record version";
+    return false;
+  }
+
+  ContainerInspectResult result;
+  result.name = decode_fixed_string(wire.name, sizeof(wire.name));
+  result.uuid = decode_fixed_string(wire.uuid, sizeof(wire.uuid));
+  result.rootfs_path =
+      decode_fixed_string(wire.rootfs_path, sizeof(wire.rootfs_path));
+  result.image_ref =
+      decode_fixed_string(wire.image_ref, sizeof(wire.image_ref));
+  result.hostname = decode_fixed_string(wire.hostname, sizeof(wire.hostname));
+  result.nat_ip = decode_fixed_string(wire.nat_ip, sizeof(wire.nat_ip));
+  result.custom_init =
+      decode_fixed_string(wire.custom_init, sizeof(wire.custom_init));
+  result.dns_servers =
+      decode_fixed_string(wire.dns_servers, sizeof(wire.dns_servers));
+
+  result.pid = static_cast<std::int32_t>(
+      ntohl(static_cast<std::uint32_t>(wire.pid_be)));
+  result.started_at = static_cast<std::int64_t>(
+      ntoh64(static_cast<std::uint64_t>(wire.started_at_be)));
+  result.memory_limit = static_cast<std::int64_t>(
+      ntoh64(static_cast<std::uint64_t>(wire.memory_limit_be)));
+  result.cpu_quota = static_cast<std::int64_t>(
+      ntoh64(static_cast<std::uint64_t>(wire.cpu_quota_be)));
+  result.cpu_period = static_cast<std::int64_t>(
+      ntoh64(static_cast<std::uint64_t>(wire.cpu_period_be)));
+  result.pids_limit = static_cast<std::int64_t>(
+      ntoh64(static_cast<std::uint64_t>(wire.pids_limit_be)));
+  result.privileged_mask = static_cast<std::int32_t>(
+      ntohl(static_cast<std::uint32_t>(wire.privileged_mask_be)));
+
+  result.net_mode = wire.net_mode;
+  result.foreground = wire.foreground != 0;
+  result.volatile_mode = wire.volatile_mode != 0;
+  result.force_cgroupv1 = wire.force_cgroupv1 != 0;
+  result.disable_ipv6 = wire.disable_ipv6 != 0;
+  result.android_storage = wire.android_storage != 0;
+  result.selinux_permissive = wire.selinux_permissive != 0;
+  result.hw_access = wire.hw_access != 0;
+  result.gpu_mode = wire.gpu_mode != 0;
+  result.termux_x11 = wire.termux_x11 != 0;
+  result.block_nested_ns = wire.block_nested_ns != 0;
+  result.is_img_mount = wire.is_img_mount != 0;
+
+  std::size_t env_count = ntohs(wire.env_count_be);
+  if (env_count > DS_SOCKETD_INSPECT_ENV_MAX) {
+    env_count = DS_SOCKETD_INSPECT_ENV_MAX;
+  }
+  result.env_total_count = ntohs(wire.env_total_count_be);
+  result.env.reserve(env_count);
+  for (std::size_t i = 0; i < env_count; ++i) {
+    InspectEnvResult env;
+    env.key = decode_fixed_string(wire.env[i].key, sizeof(wire.env[i].key));
+    env.value =
+        decode_fixed_string(wire.env[i].value, sizeof(wire.env[i].value));
+    result.env.push_back(std::move(env));
+  }
+
+  std::size_t bind_count = ntohs(wire.bind_count_be);
+  if (bind_count > DS_SOCKETD_INSPECT_BINDS_MAX) {
+    bind_count = DS_SOCKETD_INSPECT_BINDS_MAX;
+  }
+  result.bind_total_count = ntohs(wire.bind_total_count_be);
+  result.binds.reserve(bind_count);
+  for (std::size_t i = 0; i < bind_count; ++i) {
+    InspectBindResult bind;
+    bind.source = decode_fixed_string(wire.binds[i].source,
+                                      sizeof(wire.binds[i].source));
+    bind.destination = decode_fixed_string(wire.binds[i].destination,
+                                           sizeof(wire.binds[i].destination));
+    bind.read_only = wire.binds[i].read_only != 0;
+    result.binds.push_back(std::move(bind));
+  }
+
+  std::size_t port_count = ntohs(wire.port_count_be);
+  if (port_count > DS_SOCKETD_RECORD_PORTS_MAX) {
+    port_count = DS_SOCKETD_RECORD_PORTS_MAX;
+  }
+  result.port_total_count = ntohs(wire.port_total_count_be);
+  result.ports.reserve(port_count);
+  for (std::size_t i = 0; i < port_count; ++i) {
+    const ds_socketd_port_record& port_wire = wire.ports[i];
+
+    ContainerPortResult port;
+    port.host_port = ntohs(port_wire.host_port_be);
+    port.host_port_end = ntohs(port_wire.host_port_end_be);
+    port.container_port = ntohs(port_wire.container_port_be);
+    port.container_port_end = ntohs(port_wire.container_port_end_be);
+    port.proto = port_wire.proto;
+    result.ports.push_back(std::move(port));
+  }
+
+  out = std::move(result);
+  return true;
+}
+
+
 bool BackendClient::info(InfoResult& out, std::string& error) const {
   std::uint16_t status = DS_SOCKETD_STATUS_INTERNAL_ERROR;
   std::string payload;
