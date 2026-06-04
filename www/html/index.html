@@ -1,89 +1,176 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Droidspaces socketd WebUI smoke test</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="description" content="Local Droidspaces WebUI for managing containers through the Docker-compatible socketd API.">
+  <title>Droidspaces WebUI</title>
   <link rel="stylesheet" href="/webui.css">
-  <link rel="icon" href="/assets/droidspaces-test.svg" type="image/svg+xml">
+  <link rel="icon" href="/favicon.ico">
+  <link rel="apple-touch-icon" href="/favicon.ico">
+  <script>
+    (function () {
+      const savedTheme = localStorage.getItem('theme');
+      if (savedTheme) {
+        document.documentElement.setAttribute('data-theme', savedTheme);
+      }
+    })();
+  </script>
 </head>
 <body>
-  <header class="topbar">
-    <div class="brand">
-      <img src="/assets/droidspaces-test.svg" alt="" width="40" height="40">
-      <div>
-        <h1>Droidspaces WebUI smoke test</h1>
-        <p>Served by <code>droidspaces-socketd</code> from <code>../www/html</code>.</p>
+  <nav aria-label="Main navigation">
+    <div class="container nav-inner">
+      <a href="/" class="nav-logo" aria-label="Droidspaces WebUI home">
+        <svg class="logo-icon" viewBox="8.25 10.35 31.5 27.3" fill="currentColor" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <path d="M36.85 30.16H11.15c-0.82 0-1.48 0.68-1.48 1.52v3.05c0 0.84 0.66 1.52 1.48 1.52h25.69c0.82 0 1.48-0.68 1.48-1.52v-3.05c0-0.84-0.66-1.52-1.48-1.52ZM12.58 34.97c-0.95 0-1.73-0.79-1.73-1.77s0.77-1.77 1.73-1.77 1.73 0.79 1.73 1.77-0.77 1.77-1.73 1.77Z"/>
+          <path d="M36.85 21.00H11.15c-0.82 0-1.48 0.68-1.48 1.52v3.05c0 0.84 0.66 1.52 1.48 1.52h25.69c0.82 0 1.48-0.68 1.48-1.52v-3.05c0-0.84-0.66-1.52-1.48-1.52ZM12.58 25.82c-0.95 0-1.73-0.79-1.73-1.77s0.77-1.77 1.73-1.77 1.73 0.79 1.73 1.77-0.77 1.77-1.73 1.77Z"/>
+          <path d="M36.84 11.74H11.15c-0.82 0-1.48 0.68-1.48 1.52v3.05c0 0.84 0.66 1.52 1.48 1.52h25.69c0.82 0 1.48-0.68 1.48-1.52v-3.05c0-0.84-0.66-1.52-1.48-1.52ZM12.58 16.57c-0.95 0-1.73-0.79-1.73-1.77s0.77-1.77 1.73-1.77 1.73 0.79 1.73 1.77-0.77 1.77-1.73 1.77Z"/>
+        </svg>
+        <span class="logo-text">Droidspaces</span>
+        <span class="nav-subtitle">WebUI</span>
+      </a>
+      <div class="nav-actions">
+        <a href="#containers" class="nav-link">Containers</a>
+        <a href="#diagnostics" class="nav-link nav-link-wide">Diagnostics</a>
+        <button class="theme-toggle" id="theme-toggle" title="Toggle theme" aria-label="Toggle theme">
+          <svg class="sun-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true" style="display:none">
+            <circle cx="12" cy="12" r="5"></circle>
+            <line x1="12" y1="1" x2="12" y2="3"></line>
+            <line x1="12" y1="21" x2="12" y2="23"></line>
+            <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+            <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+            <line x1="1" y1="12" x2="3" y2="12"></line>
+            <line x1="21" y1="12" x2="23" y2="12"></line>
+            <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+            <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+          </svg>
+          <svg class="moon-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+          </svg>
+        </button>
       </div>
     </div>
-    <button id="run-all" class="primary">Run smoke test</button>
-  </header>
+  </nav>
 
   <main>
-    <section class="grid">
-      <article class="card">
-        <h2>Static file checks</h2>
-        <p>This page, CSS, JS, SVG, JSON, and TXT files are loaded from the socketd document root.</p>
-        <div class="button-row">
-          <button data-static="/webui.css">GET CSS</button>
-          <button data-static="/webui.js">GET JS</button>
-          <button data-static="/assets/droidspaces-test.svg">GET SVG</button>
-          <button data-static="/assets/sample.json">GET JSON asset</button>
-          <button data-static="/assets/readme.txt">GET TXT asset</button>
-          <button id="head-index">HEAD /</button>
+    <section class="hero webui-hero">
+      <div class="hero-inner webui-hero-inner">
+        <div>
+          <div class="hero-badge" id="daemon-badge"><span></span><b id="daemon-badge-text">checking local daemon</b></div>
+          <h1>Droidspaces<br><em>WebUI</em>.</h1>
+          <p class="hero-desc">
+            A local browser control surface for the Docker-compatible Droidspaces socket API. Served by socketd, controlled by relative API paths, no CORS detour.
+          </p>
+          <div class="hero-cta">
+            <button class="btn btn-primary" id="refresh-button" type="button">Refresh dashboard</button>
+            <button class="btn btn-ghost" id="recheck-button" type="button">Recheck daemon</button>
+          </div>
+          <div class="hero-stats dashboard-stats" aria-label="Droidspaces status summary">
+            <div><div class="stat-val" id="stat-total">—</div><div class="stat-label">containers</div></div>
+            <div><div class="stat-val" id="stat-running">—</div><div class="stat-label">running</div></div>
+            <div><div class="stat-val" id="stat-stopped">—</div><div class="stat-label">stopped</div></div>
+          </div>
         </div>
-        <pre id="static-result" class="result">Not tested yet.</pre>
-      </article>
 
-      <article class="card">
-        <h2>Docker-compatible API checks</h2>
-        <p>All requests use relative paths, so this is same-origin when opened from socketd.</p>
-        <div class="button-row">
-          <button data-api="/_ping">GET /_ping</button>
-          <button data-api="/version">GET /version</button>
-          <button data-api="/info">GET /info</button>
-          <button data-api="/containers/json?all=1">GET /containers/json?all=1</button>
-          <button data-api="/images/json">GET /images/json</button>
-          <button data-api="/volumes">GET /volumes</button>
-          <button data-api="/networks">GET /networks</button>
+        <aside class="terminal webui-terminal" aria-label="API diagnostics terminal">
+          <div class="terminal-bar">
+            <div class="dot dot-r"></div>
+            <div class="dot dot-y"></div>
+            <div class="dot dot-g"></div>
+            <span class="terminal-title">socketd : local Docker-compatible API</span>
+          </div>
+          <div class="terminal-body" id="api-console" aria-live="polite">
+            <div><span class="t-prompt">$ </span><span class="t-white">GET /_ping</span></div>
+            <div><span class="t-dim" id="console-ping">pending</span></div>
+            <div><span class="t-prompt">$ </span><span class="t-white">GET /version</span></div>
+            <div><span class="t-dim" id="console-version">pending</span></div>
+            <div><span class="t-prompt">$ </span><span class="t-white">GET /containers/json?all=1</span></div>
+            <div><span class="t-dim" id="console-containers">pending</span></div>
+          </div>
+        </aside>
+      </div>
+    </section>
+
+    <div class="divider"></div>
+
+    <section class="section dashboard-section" id="containers">
+      <div class="container">
+        <div class="section-head">
+          <div>
+            <div class="section-label">Runtime</div>
+            <h2>Containers</h2>
+            <p class="section-desc">Start, stop, restart, and inspect Droidspaces containers through the local socketd API.</p>
+          </div>
+          <div class="section-tools">
+            <label class="toggle-line"><input id="show-all" type="checkbox" checked> show stopped</label>
+          </div>
         </div>
-        <pre id="api-result" class="result">Not tested yet.</pre>
-      </article>
-    </section>
 
-    <section class="card full">
-      <h2>Container list</h2>
-      <div class="button-row">
-        <button id="refresh-containers" class="primary">Refresh containers</button>
+        <div class="alert" id="global-alert" hidden></div>
+        <div class="containers-grid" id="containers-grid" aria-live="polite"></div>
+        <div class="empty-state" id="empty-state" hidden>
+          <div class="empty-icon">▣</div>
+          <h3>No containers reported</h3>
+          <p>The daemon responded, but <code>/containers/json?all=1</code> returned an empty list.</p>
+        </div>
       </div>
-      <div id="containers" class="containers">No container data yet.</div>
     </section>
 
-    <section class="card full">
-      <h2>Manual lifecycle call</h2>
-      <p>Enter a Droidspaces container name or ID and call the existing Docker-compatible lifecycle endpoints.</p>
-      <form id="lifecycle-form" class="lifecycle-form">
-        <input id="container-ref" name="container" placeholder="Container name, e.g. Ubuntu" autocomplete="off">
-        <button name="action" value="start">start</button>
-        <button name="action" value="stop">stop</button>
-        <button name="action" value="restart">restart</button>
-      </form>
-      <pre id="lifecycle-result" class="result">No lifecycle call made.</pre>
-    </section>
+    <div class="divider"></div>
 
-    <section class="card full">
-      <h2>Event log</h2>
-      <div class="button-row">
-        <button id="load-events">GET /events</button>
+    <section class="section details-section" id="details" hidden>
+      <div class="container">
+        <div class="section-label">Inspect</div>
+        <h2 id="details-title">Container details</h2>
+        <div class="details-grid">
+          <div class="req-card detail-card">
+            <h3>Summary</h3>
+            <dl class="detail-list" id="details-summary"></dl>
+          </div>
+          <div class="terminal detail-terminal">
+            <div class="terminal-bar">
+              <div class="dot dot-r"></div>
+              <div class="dot dot-y"></div>
+              <div class="dot dot-g"></div>
+              <span class="terminal-title">inspect JSON</span>
+            </div>
+            <pre class="json-view" id="details-json">{}</pre>
+          </div>
+        </div>
       </div>
-      <pre id="events-result" class="result">No events loaded.</pre>
+    </section>
+
+    <div class="divider"></div>
+
+    <section class="section diagnostics-section" id="diagnostics">
+      <div class="container">
+        <div class="section-label">Diagnostics</div>
+        <h2>API health</h2>
+        <p class="section-desc">These checks use only relative paths, so they exercise the same-origin WebUI model served directly by socketd.</p>
+        <div class="req-grid diagnostics-grid">
+          <div class="req-card">
+            <h3>Daemon</h3>
+            <ul id="daemon-diagnostics">
+              <li>Waiting for first check…</li>
+            </ul>
+          </div>
+          <div class="req-card">
+            <h3>Manual endpoint</h3>
+            <form id="manual-form" class="manual-form">
+              <input id="manual-path" value="/version" aria-label="API path">
+              <button class="btn btn-ghost" type="submit">GET</button>
+            </form>
+            <pre class="manual-output" id="manual-output">No manual request yet.</pre>
+          </div>
+        </div>
+      </div>
     </section>
   </main>
 
   <footer>
-    <span id="origin-label"></span>
+    <p>Droidspaces WebUI · served locally by <code>droidspaces-socketd</code></p>
   </footer>
 
-  <script src="/webui.js"></script>
+  <script src="/webui.js" defer></script>
 </body>
 </html>
