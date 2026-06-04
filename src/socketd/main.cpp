@@ -163,8 +163,14 @@ int main(int argc, char** argv) {
 
   std::string error;
   if (!check_backend(error)) {
-    std::cerr << "socketd: " << error << '\n';
-    return 1;
+    /*
+     * Keep the HTTP listener available even when the privileged backend is
+     * absent. This lets the socketd HTTP/static WebUI surface be tested in
+     * isolation. Backend-dependent Docker API routes still fail normally when
+     * they attempt their per-request BackendClient RPC.
+     */
+    std::cerr << "socketd: warning: " << error << '\n';
+    std::cerr << "socketd: warning: continuing without backend handshake\n";
   }
 
   ApiServer server(tcp_config);

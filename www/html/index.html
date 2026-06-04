@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Droidspaces socketd WebUI smoke test</title>
+  <link rel="stylesheet" href="/webui.css">
+  <link rel="icon" href="/assets/droidspaces-test.svg" type="image/svg+xml">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <img src="/assets/droidspaces-test.svg" alt="" width="40" height="40">
+      <div>
+        <h1>Droidspaces WebUI smoke test</h1>
+        <p>Served by <code>droidspaces-socketd</code> from <code>../www/html</code>.</p>
+      </div>
+    </div>
+    <button id="run-all" class="primary">Run smoke test</button>
+  </header>
+
+  <main>
+    <section class="grid">
+      <article class="card">
+        <h2>Static file checks</h2>
+        <p>This page, CSS, JS, SVG, JSON, and TXT files are loaded from the socketd document root.</p>
+        <div class="button-row">
+          <button data-static="/webui.css">GET CSS</button>
+          <button data-static="/webui.js">GET JS</button>
+          <button data-static="/assets/droidspaces-test.svg">GET SVG</button>
+          <button data-static="/assets/sample.json">GET JSON asset</button>
+          <button data-static="/assets/readme.txt">GET TXT asset</button>
+          <button id="head-index">HEAD /</button>
+        </div>
+        <pre id="static-result" class="result">Not tested yet.</pre>
+      </article>
+
+      <article class="card">
+        <h2>Docker-compatible API checks</h2>
+        <p>All requests use relative paths, so this is same-origin when opened from socketd.</p>
+        <div class="button-row">
+          <button data-api="/_ping">GET /_ping</button>
+          <button data-api="/version">GET /version</button>
+          <button data-api="/info">GET /info</button>
+          <button data-api="/containers/json?all=1">GET /containers/json?all=1</button>
+          <button data-api="/images/json">GET /images/json</button>
+          <button data-api="/volumes">GET /volumes</button>
+          <button data-api="/networks">GET /networks</button>
+        </div>
+        <pre id="api-result" class="result">Not tested yet.</pre>
+      </article>
+    </section>
+
+    <section class="card full">
+      <h2>Container list</h2>
+      <div class="button-row">
+        <button id="refresh-containers" class="primary">Refresh containers</button>
+      </div>
+      <div id="containers" class="containers">No container data yet.</div>
+    </section>
+
+    <section class="card full">
+      <h2>Manual lifecycle call</h2>
+      <p>Enter a Droidspaces container name or ID and call the existing Docker-compatible lifecycle endpoints.</p>
+      <form id="lifecycle-form" class="lifecycle-form">
+        <input id="container-ref" name="container" placeholder="Container name, e.g. Ubuntu" autocomplete="off">
+        <button name="action" value="start">start</button>
+        <button name="action" value="stop">stop</button>
+        <button name="action" value="restart">restart</button>
+      </form>
+      <pre id="lifecycle-result" class="result">No lifecycle call made.</pre>
+    </section>
+
+    <section class="card full">
+      <h2>Event log</h2>
+      <div class="button-row">
+        <button id="load-events">GET /events</button>
+      </div>
+      <pre id="events-result" class="result">No events loaded.</pre>
+    </section>
+  </main>
+
+  <footer>
+    <span id="origin-label"></span>
+  </footer>
+
+  <script src="/webui.js"></script>
+</body>
+</html>

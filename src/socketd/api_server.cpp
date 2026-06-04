@@ -18,9 +18,13 @@
 #include <ctime>
 #include <fstream>
 #include <limits>
+#include <vector>
+
+#include <limits.h>
 
 #include <netinet/in.h>
 #include <sys/socket.h>
+#include <sys/stat.h>
 #include <sys/utsname.h>
 #include <unistd.h>
 
@@ -31,6 +35,9 @@ constexpr std::size_t kMaxRequestHeaderBytes = 16 * 1024;
 constexpr const char* kSocketApiVersion = "1.41";
 constexpr const char* kSocketMinApiVersion = "1.40";
 constexpr const char* kSocketOsType = "linux";
+
+constexpr std::uint64_t kMaxStaticAssetBytes = 32ULL * 1024ULL * 1024ULL;
+constexpr const char* kDefaultWebIndex = "index.html";
 
 std::string socketd_arch_name() {
 #if defined(__x86_64__)
@@ -372,6 +379,313 @@ bool send_ping_ok(int fd, bool suppress_body, std::string& error) {
                             200,
                             "OK",
                             "text/plain; charset=utf-8",
+                            body,
+                            suppress_body,
+                            error);
+}
+
+int hex_digit_value(char c) {
+  if (c >= '0' && c <= '9') {
+    return c - '0';
+  }
+
+  if (c >= 'a' && c <= 'f') {
+    return c - 'a' + 10;
+  }
+
+  if (c >= 'A' && c <= 'F') {
+    return c - 'A' + 10;
+  }
+
+  return -1;
+}
+
+bool percent_decode_url_path(const std::string& input,
+                             std::string& output) {
+  output.clear();
+  output.reserve(input.size());
+
+  for (std::size_t i = 0; i < input.size(); ++i) {
+    const char c = input[i];
+
+    if (c != '%') {
+      if (c == '\0') {
+        return false;
+      }
+
+      output += c;
+      continue;
+    }
+
+    if (i + 2 >= input.size()) {
+      return false;
+    }
+
+    const int hi = hex_digit_value(input[i + 1]);
+    const int lo = hex_digit_value(input[i + 2]);
+    if (hi < 0 || lo < 0) {
+      return false;
+    }
+
+    const char decoded = static_cast<char>((hi << 4) | lo);
+    if (decoded == '\0') {
+      return false;
+    }
+
+    output += decoded;
+    i += 2;
+  }
+
+  return true;
+}
+
+std::string dirname_of(const std::string& path) {
+  const std::size_t slash = path.rfind('/');
+  if (slash == std::string::npos) {
+    return ".";
+  }
+
+  if (slash == 0) {
+    return "/";
+  }
+
+  return path.substr(0, slash);
+}
+
+std::string socketd_binary_dir() {
+  char buffer[PATH_MAX] {};
+
+  const ssize_t len = ::readlink("/proc/self/exe", buffer, sizeof(buffer) - 1);
+  if (len <= 0) {
+    return ".";
+  }
+
+  buffer[len] = '\0';
+  return dirname_of(buffer);
+}
+
+const std::string& web_root_dir() {
+  static const std::string root = socketd_binary_dir() + "/../www/html";
+  return root;
+}
+
+std::string lowercase_ascii(std::string value) {
+  for (char& c : value) {
+    if (c >= 'A' && c <= 'Z') {
+      c = static_cast<char>(c - 'A' + 'a');
+    }
+  }
+
+  return value;
+}
+
+std::string content_type_for_path(const std::string& path) {
+  const std::size_t slash = path.rfind('/');
+  const std::size_t dot = path.rfind('.');
+  if (dot == std::string::npos ||
+      (slash != std::string::npos && dot < slash)) {
+    return "application/octet-stream";
+  }
+
+  const std::string ext = lowercase_ascii(path.substr(dot + 1));
+
+  if (ext == "html" || ext == "htm") {
+    return "text/html; charset=utf-8";
+  }
+
+  if (ext == "css") {
+    return "text/css; charset=utf-8";
+  }
+
+  if (ext == "js" || ext == "mjs") {
+    return "application/javascript; charset=utf-8";
+  }
+
+  if (ext == "json" || ext == "map") {
+    return "application/json; charset=utf-8";
+  }
+
+  if (ext == "svg") {
+    return "image/svg+xml";
+  }
+
+  if (ext == "png") {
+    return "image/png";
+  }
+
+  if (ext == "jpg" || ext == "jpeg") {
+    return "image/jpeg";
+  }
+
+  if (ext == "gif") {
+    return "image/gif";
+  }
+
+  if (ext == "webp") {
+    return "image/webp";
+  }
+
+  if (ext == "ico") {
+    return "image/x-icon";
+  }
+
+  if (ext == "txt") {
+    return "text/plain; charset=utf-8";
+  }
+
+  if (ext == "wasm") {
+    return "application/wasm";
+  }
+
+  return "application/octet-stream";
+}
+
+bool build_static_asset_path(const std::string& target,
+                             std::string& file_path,
+                             std::string& error) {
+  file_path.clear();
+
+  const std::size_t query_pos = target.find('?');
+  const std::string raw_path =
+      query_pos == std::string::npos ? target : target.substr(0, query_pos);
+
+  if (raw_path.empty() || raw_path[0] != '/') {
+    error = "static asset request target is not an origin-form path";
+    return false;
+  }
+
+  std::string decoded_path;
+  if (!percent_decode_url_path(raw_path, decoded_path)) {
+    error = "static asset path contains invalid percent encoding";
+    return false;
+  }
+
+  if (decoded_path.empty() || decoded_path[0] != '/' ||
+      decoded_path.find('\\') != std::string::npos) {
+    error = "static asset path is invalid";
+    return false;
+  }
+
+  std::vector<std::string> segments;
+  std::size_t pos = 1;
+  while (pos <= decoded_path.size()) {
+    const std::size_t slash = decoded_path.find('/', pos);
+    const std::size_t end = slash == std::string::npos ? decoded_path.size()
+                                                        : slash;
+    const std::string segment = decoded_path.substr(pos, end - pos);
+
+    if (!segment.empty() && segment != ".") {
+      if (segment == "..") {
+        error = "static asset path attempts to leave document root";
+        return false;
+      }
+
+      segments.push_back(segment);
+    }
+
+    if (slash == std::string::npos) {
+      break;
+    }
+
+    pos = slash + 1;
+  }
+
+  if (segments.empty() || decoded_path.back() == '/') {
+    segments.push_back(kDefaultWebIndex);
+  }
+
+  std::string relative_path;
+  for (const std::string& segment : segments) {
+    if (!relative_path.empty()) {
+      relative_path += '/';
+    }
+
+    relative_path += segment;
+  }
+
+  file_path = web_root_dir() + "/" + relative_path;
+  return true;
+}
+
+bool read_regular_file(const std::string& file_path,
+                       std::string& body,
+                       bool& not_found,
+                       std::string& error) {
+  not_found = false;
+  body.clear();
+
+  struct stat st {};
+  if (::stat(file_path.c_str(), &st) != 0) {
+    if (errno == ENOENT || errno == ENOTDIR || errno == EACCES) {
+      not_found = true;
+      return false;
+    }
+
+    error = "stat(" + file_path + ") failed: ";
+    error += std::strerror(errno);
+    return false;
+  }
+
+  if (!S_ISREG(st.st_mode)) {
+    not_found = true;
+    return false;
+  }
+
+  if (st.st_size < 0 ||
+      static_cast<std::uint64_t>(st.st_size) > kMaxStaticAssetBytes) {
+    error = "static asset is too large: " + file_path;
+    return false;
+  }
+
+  std::ifstream file(file_path, std::ios::in | std::ios::binary);
+  if (!file.is_open()) {
+    if (errno == ENOENT || errno == ENOTDIR || errno == EACCES) {
+      not_found = true;
+      return false;
+    }
+
+    error = "open(" + file_path + ") failed: ";
+    error += std::strerror(errno);
+    return false;
+  }
+
+  body.resize(static_cast<std::size_t>(st.st_size));
+  if (!body.empty()) {
+    file.read(&body[0], static_cast<std::streamsize>(body.size()));
+    if (!file) {
+      error = "read(" + file_path + ") failed";
+      return false;
+    }
+  }
+
+  return true;
+}
+
+bool send_static_asset_ok(int fd,
+                          const std::string& target,
+                          bool suppress_body,
+                          std::string& error) {
+  std::string file_path;
+  std::string path_error;
+  if (!build_static_asset_path(target, file_path, path_error)) {
+    return send_bad_request(fd, suppress_body, error);
+  }
+
+  std::string body;
+  bool not_found = false;
+  if (!read_regular_file(file_path, body, not_found, error)) {
+    if (not_found) {
+      return send_not_found(fd, suppress_body, error);
+    }
+
+    return send_internal_server_error(fd, error, suppress_body, error);
+  }
+
+  const std::string content_type = content_type_for_path(file_path);
+  return send_http_response(fd,
+                            200,
+                            "OK",
+                            content_type.c_str(),
                             body,
                             suppress_body,
                             error);
@@ -1340,7 +1654,11 @@ bool ApiServer::handle_client(int client_fd, std::string& error) const {
     return send_events_ok(client_fd, target, false, error);
   }
 
-  return send_not_found(client_fd, is_head, error);
+  if (is_get || is_head) {
+    return send_static_asset_ok(client_fd, target, is_head, error);
+  }
+
+  return send_not_found(client_fd, false, error);
 }
 
 bool ApiServer::run(std::string& error) {

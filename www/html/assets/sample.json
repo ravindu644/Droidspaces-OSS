@@ -1,0 +1,6 @@
+{
+  "name": "Droidspaces socketd static-file test asset",
+  "servedFrom": "../www/html/assets/sample.json",
+  "expectedMime": "application/json",
+  "purpose": "Verify static JSON asset delivery without touching Docker-compatible API routes."
+}
