@@ -624,7 +624,6 @@ int ds_setup_x11_socket(struct ds_config *cfg);
 int ds_virgl_daemon_start(struct ds_config *cfg);
 void ds_virgl_daemon_stop(struct ds_config *cfg);
 int ds_setup_virgl_socket(struct ds_config *cfg);
-int check_virgl_needs(void);
 
 /* ---------------------------------------------------------------------------
  * pulseaudio-android.c
@@ -633,7 +632,6 @@ int check_virgl_needs(void);
 int ds_pulse_daemon_start(struct ds_config *cfg);
 void ds_pulse_daemon_stop(struct ds_config *cfg);
 int ds_setup_pulse_socket(struct ds_config *cfg);
-int check_pulse_needs(void);
 
 /* ---------------------------------------------------------------------------
  * network.c
@@ -787,6 +785,15 @@ int show_containers(struct ds_config *cfg);
 int scan_containers(void);
 int check_selinux_permissive_needs(void);
 int check_x11_needs(void);
+int check_virgl_needs(void);
+int check_pulse_needs(void);
+
+/*
+ * ds_feature_needs - generic feature-needs scanner.
+ * Pass offsetof(struct ds_config, <field>) for the boolean flag to check.
+ * Returns: 1=running, 0=installed-but-idle, -1=not-installed
+ */
+int ds_feature_needs(size_t cfg_flag_offset);
 void write_plain_env_file(const char *src, const char *dst);
 
 /* ---------------------------------------------------------------------------
