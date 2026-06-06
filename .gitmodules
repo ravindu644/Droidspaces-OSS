@@ -1,0 +1,3 @@
+[submodule "external/busybox"]
+	path = external/busybox
+	url = https://github.com/Droidspaces/busybox-droidspaces.git
