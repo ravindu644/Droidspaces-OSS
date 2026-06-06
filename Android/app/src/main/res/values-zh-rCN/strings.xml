@@ -457,4 +457,14 @@
     <string name="repo_custom_url_empty">URL 不能为空</string>
     <string name="repo_add_custom">添加自定义仓库</string>
     <string name="read_only">只读</string>
+    <string name="virgl_option">VirGL</string>
+    <string name="pulseaudio_option">PulseAudio</string>
+    <string name="enable_pulseaudio">配置 PulseAudio</string>
+    <string name="enable_pulseaudio_description">通过 PulseAudio 启用音频支持</string>
+    <string name="tx11_extra_flags_label">Termux:X11 额外参数</string>
+    <string name="tx11_extra_flags_placeholder">例如: -dpi 160 -force-sysvshm</string>
+    <string name="enable_virgl">配置 VirGL 3D 加速功能</string>
+    <string name="enable_virgl_description">通过 VirGL 启用 3D 硬件加速</string>
+    <string name="virgl_extra_flags_label">VirGL 额外参数</string>
+    <string name="virgl_extra_flags_placeholder">例如: --multi-clients --angle-vulkan</string>
 </resources>
