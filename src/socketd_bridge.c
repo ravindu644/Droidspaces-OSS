@@ -9,12 +9,33 @@
 #include "droidspace.h"
 #include "socketd_protocol.h"
 
+#include <pwd.h>
+#include <sys/time.h>
+
 /*
  * The public Docker/Podman-compatible socket belongs to the external C++
  * droidspaces-socketd daemon.  This bridge is deliberately narrower: it is a
  * local, private, privileged control path that will eventually expose the
  * Droidspaces-native operations needed by that compatibility daemon.
  */
+
+#define DS_SOCKETD_GROUP "droidspaces"
+#define DS_SOCKETD_CONN_TIMEOUT_SEC 10
+
+static void socketd_set_conn_timeouts(int fd) {
+  struct timeval tv;
+  memset(&tv, 0, sizeof(tv));
+  tv.tv_sec = DS_SOCKETD_CONN_TIMEOUT_SEC;
+
+  if (setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv)) < 0) {
+    ds_warn("socketd backend: failed to set receive timeout: %s",
+            strerror(errno));
+  }
+
+  if (setsockopt(fd, SOL_SOCKET, SO_SNDTIMEO, &tv, sizeof(tv)) < 0) {
+    ds_warn("socketd backend: failed to set send timeout: %s", strerror(errno));
+  }
+}
 
 static int socketd_read_exact(int fd, void *buf, size_t len) {
   uint8_t *p = (uint8_t *)buf;
@@ -76,11 +97,29 @@ static int socketd_peer_authorized(int fd) {
     return 0;
 
   /*
-   * The first socketd implementation is expected to run as root beside the
-   * Droidspaces daemon.  Same-EUID access keeps local developer/test launches
-   * usable on desktop Linux without opening the bridge to arbitrary users.
+   * The abstract backend socket has no filesystem permissions, so enforce the
+   * same local authorization model used by the main Droidspaces daemon: root or
+   * members of the dedicated 'droidspaces' group may connect.
    */
-  return cred.uid == 0 || cred.uid == geteuid();
+  if (cred.uid == 0)
+    return 1;
+
+  struct group *gr = getgrnam(DS_SOCKETD_GROUP);
+  struct passwd *pw = getpwuid(cred.uid);
+  if (!gr || !pw)
+    return 0;
+
+  int ngroups = 64;
+  gid_t groups[64];
+  if (getgrouplist(pw->pw_name, pw->pw_gid, groups, &ngroups) < 0)
+    return 0;
+
+  for (int i = 0; i < ngroups; i++) {
+    if (groups[i] == gr->gr_gid)
+      return 1;
+  }
+
+  return 0;
 #else
   (void)fd;
   return 0;
@@ -1427,6 +1466,7 @@ static int socketd_bridge_loop(void) {
     }
 
     fcntl(conn, F_SETFD, FD_CLOEXEC);
+    socketd_set_conn_timeouts(conn);
     socketd_handle_conn(conn);
     close(conn);
   }
