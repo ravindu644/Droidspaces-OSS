@@ -264,8 +264,8 @@ void cleanup_container_resources(struct ds_config *cfg, pid_t pid,
      * if no external lock is active. */
   }
 
-  /* Network cleanup: remove host veth and iptables rules */
-  if (cfg->net_mode == DS_NET_NAT) {
+  /* Network cleanup: remove host veth and owned network state */
+  if (cfg->net_mode == DS_NET_NAT || cfg->net_mode == DS_NET_GATEWAY) {
     ds_net_cleanup(cfg, pid > 0 ? pid : cfg->container_pid);
   }
 
@@ -1552,6 +1552,9 @@ int show_info(struct ds_config *cfg, int trust_cfg_pid) {
     case DS_NET_NONE:
       net = "none";
       break;
+    case DS_NET_GATEWAY:
+      net = "gateway";
+      break;
     default:
       net = "host";
       break;
@@ -1572,6 +1575,14 @@ int show_info(struct ds_config *cfg, int trust_cfg_pid) {
         }
         printf("\n");
       }
+    } else if (cfg->net_mode == DS_NET_GATEWAY) {
+      printf("GATEWAY_CONTAINER=%s\n", cfg->gateway_container);
+      printf("GATEWAY_NET=%s\n",
+             cfg->gateway_net[0] ? cfg->gateway_net : "lan");
+      if (cfg->gateway_bridge[0])
+        printf("GATEWAY_BRIDGE=%s\n", cfg->gateway_bridge);
+      printf("GATEWAY_IFACE=%s\n",
+             cfg->gateway_lan_ifname[0] ? cfg->gateway_lan_ifname : "eth1");
     }
 
     printf("DISABLE_IPV6=%d\n", cfg->disable_ipv6);
@@ -1702,6 +1713,9 @@ int show_info(struct ds_config *cfg, int trust_cfg_pid) {
     case DS_NET_NONE:
       net = "none";
       break;
+    case DS_NET_GATEWAY:
+      net = "gateway";
+      break;
     default:
       net = "host";
       break;
@@ -1709,7 +1723,13 @@ int show_info(struct ds_config *cfg, int trust_cfg_pid) {
     printf("  Networking: %s\n", net);
     feat_count++;
 
-    /* 2. NAT Configuration (IP, Upstream, Ports) */
+    /* 2. NAT/Gateway Configuration */
+    if (cfg->net_mode == DS_NET_GATEWAY) {
+      printf("  Gateway: %s (%s)\n", cfg->gateway_container,
+             cfg->gateway_net[0] ? cfg->gateway_net : "lan");
+      feat_count++;
+    }
+
     if (cfg->net_mode == DS_NET_NAT) {
       const char *ip =
           cfg->static_nat_ip[0] ? cfg->static_nat_ip : cfg->nat_container_ip;

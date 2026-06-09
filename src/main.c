@@ -51,7 +51,11 @@ void print_usage(void) {
       "  -C, --conf=PATH           Load configuration from file\n\n"
 
       C_BOLD "Options (Networking):" C_RESET "\n"
-      "      --net=MODE            Modes: host (default), nat, none\n"
+      "      --net=MODE            Modes: host (default), nat, none, gateway\n"
+      "      --gateway=NAME        Gateway container for --net=gateway\n"
+      "      --gateway-net=NAME    Gateway LAN name/bridge suffix (default: lan)\n"
+      "      --gateway-iface=IFACE Interface name inside gateway (default: eth1)\n"
+      "      --gateway-bridge=BR   Host bridge for gateway LAN (default: ds-NAME)\n"
       "      --nat-ip=IP           Assign a fixed IP in 172.28.*.* range (nat "
       "mode)\n"
       "      --upstream IFACE      Upstream interface(s) (supports wildcards, "
@@ -201,6 +205,30 @@ static int validate_configuration_cli(struct ds_config *cfg) {
     }
   }
 
+  if (cfg->net_mode == DS_NET_GATEWAY) {
+    if (!cfg->gateway_container[0]) {
+      ds_error("--net=gateway requires --gateway=<container>.");
+      errors++;
+    } else if (reject_container_name(cfg->gateway_container) < 0) {
+      errors++;
+    } else if (strcmp(cfg->gateway_container, cfg->container_name) == 0) {
+      ds_error("A container cannot use itself as --gateway.");
+      errors++;
+    }
+
+    if (cfg->gateway_bridge[0] && strlen(cfg->gateway_bridge) >= IFNAMSIZ) {
+      ds_error("--gateway-bridge interface name is too long: %s",
+               cfg->gateway_bridge);
+      errors++;
+    }
+    if (cfg->gateway_lan_ifname[0] &&
+        strlen(cfg->gateway_lan_ifname) >= IFNAMSIZ) {
+      ds_error("--gateway-iface interface name is too long: %s",
+               cfg->gateway_lan_ifname);
+      errors++;
+    }
+  }
+
   return (errors > 0) ? -1 : 0;
 }
 
@@ -264,19 +292,17 @@ static void enforce_nat_safety(struct ds_config *cfg, int argc, char **argv) {
         "IPv6 is already inactive in NAT mode - --disable-ipv6 has no effect.");
   }
 
-  if (cfg->net_mode == DS_NET_NAT || cfg->net_mode == DS_NET_NONE) {
+  if (cfg->net_mode == DS_NET_NAT || cfg->net_mode == DS_NET_NONE ||
+      cfg->net_mode == DS_NET_GATEWAY) {
     if (!check_ns(CLONE_NEWNET, "net")) {
       printf("\n" C_RED C_BOLD
              "[ FATAL: NETWORK NAMESPACE UNSUPPORTED ]" C_RESET "\n\n");
       ds_error("Kernel does not support CLONE_NEWNET (network namespaces).");
-      ds_log("Cannot use --net=nat or --net=none.");
+      ds_log("Cannot use --net=nat, --net=none, or --net=gateway.");
       ds_log("Tip: Use --net=host (default) for shared host networking.");
       exit(EXIT_FAILURE);
     }
   }
-
-  if (cfg->net_mode != DS_NET_NAT)
-    return;
 
   /* --upstream and --port are only meaningful with --net=nat */
   if (cfg->upstream_iface_count > 0 && cfg->net_mode != DS_NET_NAT) {
@@ -287,6 +313,25 @@ static void enforce_nat_safety(struct ds_config *cfg, int argc, char **argv) {
     ds_warn("--port is only valid with --net=nat - ignoring");
     cfg->port_forward_count = 0;
   }
+
+  if (cfg->net_mode == DS_NET_GATEWAY) {
+    char reason[512];
+    int probe = ds_nl_probe_nat_capability(reason, sizeof(reason));
+    if (probe < 0 || probe == 1) {
+      printf("\n" C_RED C_BOLD
+             "[ FATAL: GATEWAY NETWORKING UNSUPPORTED ]" C_RESET "\n\n");
+      ds_error("--net=gateway requires NET_NS + VETH + BRIDGE support:\n  %s",
+               reason);
+      ds_log("Tip: use --net=nat/host, or rebuild your kernel with "
+             "CONFIG_VETH=y and CONFIG_BRIDGE=y.");
+      exit(1);
+    }
+    ds_log("[NET] Kernel capability probe passed for --net=gateway.");
+    return;
+  }
+
+  if (cfg->net_mode != DS_NET_NAT)
+    return;
 
   /* --upstream is mandatory when using --net=nat */
   if (cfg->upstream_iface_count == 0) {
@@ -368,6 +413,11 @@ int main(int argc, char **argv) {
       {"virgl", no_argument, 0, 270},
       {"virgl-flags", required_argument, 0, 272},
       {"pulse-audio", no_argument, 0, 273},
+      {"gateway", required_argument, 0, 274},
+      {"gateway-container", required_argument, 0, 274},
+      {"gateway-net", required_argument, 0, 275},
+      {"gateway-iface", required_argument, 0, 276},
+      {"gateway-bridge", required_argument, 0, 277},
       {"reset", no_argument, 0, 256},
       {"format", no_argument, 0, 265},
       {"memory", required_argument, 0, 266},
@@ -440,8 +490,11 @@ int main(int argc, char **argv) {
         cfg.net_mode = DS_NET_NONE;
       else if (strcmp(optarg, "host") == 0)
         cfg.net_mode = DS_NET_HOST;
+      else if (strcmp(optarg, "gateway") == 0 ||
+               strcmp(optarg, "delegated-gateway") == 0)
+        cfg.net_mode = DS_NET_GATEWAY;
       else {
-        ds_error("Unknown network mode: '%s'. Valid options: host, nat, none",
+        ds_error("Unknown network mode: '%s'. Valid options: host, nat, none, gateway",
                  optarg);
         ret = 1;
         goto cleanup;
@@ -623,6 +676,20 @@ int main(int argc, char **argv) {
     case 273:
       cfg.pulseaudio = 1;
       break;
+    case 274:
+      safe_strncpy(cfg.gateway_container, optarg,
+                   sizeof(cfg.gateway_container));
+      break;
+    case 275:
+      safe_strncpy(cfg.gateway_net, optarg, sizeof(cfg.gateway_net));
+      break;
+    case 276:
+      safe_strncpy(cfg.gateway_lan_ifname, optarg,
+                   sizeof(cfg.gateway_lan_ifname));
+      break;
+    case 277:
+      safe_strncpy(cfg.gateway_bridge, optarg, sizeof(cfg.gateway_bridge));
+      break;
     case 'I':
       cfg.disable_ipv6 = 1;
       break;
@@ -690,8 +757,11 @@ int main(int argc, char **argv) {
         cli_net_mode = DS_NET_NONE;
       else if (strcmp(optarg, "host") == 0)
         cli_net_mode = DS_NET_HOST;
+      else if (strcmp(optarg, "gateway") == 0 ||
+               strcmp(optarg, "delegated-gateway") == 0)
+        cli_net_mode = DS_NET_GATEWAY;
       else {
-        ds_error("Unknown network mode: '%s'. Valid options: host, nat, none",
+        ds_error("Unknown network mode: '%s'. Valid options: host, nat, none, gateway",
                  optarg);
         ret = 1;
         goto cleanup;

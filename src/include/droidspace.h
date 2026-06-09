@@ -201,9 +201,10 @@ int check_ns(int flag, const char *name);
 /* Networking modes */
 
 enum ds_net_mode {
-  DS_NET_HOST = 0, /* share host network namespace (default) */
-  DS_NET_NAT,      /* isolated netns + bridge + MASQUERADE      */
-  DS_NET_NONE,     /* isolated netns with loopback only          */
+  DS_NET_HOST = 0,    /* share host network namespace (default) */
+  DS_NET_NAT,         /* isolated netns + bridge + MASQUERADE      */
+  DS_NET_NONE,        /* isolated netns with loopback only          */
+  DS_NET_GATEWAY,     /* isolated netns attached to gateway LAN     */
 };
 
 /* Opaque RTNETLINK context - defined in ds_netlink.c */
@@ -324,8 +325,12 @@ struct ds_config {
   char container_name[256];       /* --name= (mandatory) */
   char hostname[256];             /* --hostname= or container_name */
   char dns_servers[1024];         /* --dns= (comma/space separated) */
-  enum ds_net_mode net_mode;      /* --net=host|nat|none */
+  enum ds_net_mode net_mode;      /* --net=host|nat|none|gateway */
   char dns_server_content[1024];  /* In-memory DNS config for boot */
+  char gateway_container[256];    /* --gateway=NAME for gateway mode */
+  char gateway_net[64];           /* --gateway-net=NAME (default: lan) */
+  char gateway_bridge[IFNAMSIZ];  /* optional host bridge name */
+  char gateway_lan_ifname[IFNAMSIZ]; /* ifname inside gateway (default: eth1) */
 
   /* UUID for PID discovery */
   char uuid[DS_UUID_LEN + 1];
@@ -647,6 +652,10 @@ int fix_networking_rootfs(struct ds_config *cfg);
 
 /* NAT veth/bridge lifecycle */
 int setup_veth_host_side(struct ds_config *cfg, pid_t child_pid);
+
+/* Gateway LAN lifecycle: bridge-only veth plumbing, no NAT/DHCP/firewall. */
+int setup_gateway_veth_side(struct ds_config *cfg, pid_t child_pid);
+
 int setup_veth_child_side_named(struct ds_config *cfg, const char *peer_name,
                                 const char *ip_str);
 /* Populate a ds_net_handshake from a container init PID + resolved config.

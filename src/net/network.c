@@ -57,6 +57,119 @@ static void veth_peer_ip(pid_t pid, char *buf, size_t sz) {
   snprintf(buf, sz, "172.28.%d.%d/%d", octet3, octet4, DS_NAT_PREFIX);
 }
 
+static uint32_t ds_net_hash_string(const char *s) {
+  uint32_t h = 5381;
+  if (!s)
+    return h;
+  while (*s)
+    h = ((h << 5) + h) ^ (unsigned char)*s++;
+  return h;
+}
+
+static void gateway_hash_key(struct ds_config *cfg, char *buf, size_t sz) {
+  const char *gw = (cfg && cfg->gateway_container[0])
+                       ? cfg->gateway_container
+                       : "gateway";
+  const char *net =
+      (cfg && cfg->gateway_net[0]) ? cfg->gateway_net : "lan";
+  snprintf(buf, sz, "%s:%s", gw, net);
+}
+
+static void gateway_veth_names(struct ds_config *cfg, char *host, size_t hsz,
+                               char *peer, size_t psz) {
+  char key[384];
+  gateway_hash_key(cfg, key, sizeof(key));
+  uint32_t h = ds_net_hash_string(key);
+  snprintf(host, hsz, "ds-g%08x", h);
+  snprintf(peer, psz, "ds-h%08x", h);
+}
+
+static int gateway_ifname_component_ok(const char *s) {
+  if (!s || !s[0])
+    return 0;
+  for (const unsigned char *p = (const unsigned char *)s; *p; p++) {
+    if (!(isalnum(*p) || *p == '_' || *p == '-'))
+      return 0;
+  }
+  return 1;
+}
+
+static void gateway_bridge_name(struct ds_config *cfg, char *buf, size_t sz) {
+  if (cfg && cfg->gateway_bridge[0]) {
+    safe_strncpy(buf, cfg->gateway_bridge, sz);
+    return;
+  }
+
+  const char *net = (cfg && cfg->gateway_net[0]) ? cfg->gateway_net : "lan";
+  char clean[10] = {0};
+  size_t j = 0;
+  for (size_t i = 0; net[i] && j < sizeof(clean) - 1; i++) {
+    unsigned char c = (unsigned char)net[i];
+    if (isalnum(c) || c == '_' || c == '-')
+      clean[j++] = (char)c;
+  }
+  if (j == 0)
+    safe_strncpy(clean, "lan", sizeof(clean));
+  snprintf(buf, sz, "ds-%s", clean);
+}
+
+static const char *gateway_lan_ifname(struct ds_config *cfg) {
+  if (cfg && cfg->gateway_lan_ifname[0])
+    return cfg->gateway_lan_ifname;
+  return "eth1";
+}
+
+static int ds_netns_rename_up(const char *netns_path, const char *old_name,
+                              const char *new_name) {
+  int self_fd = open("/proc/self/ns/net", O_RDONLY | O_CLOEXEC);
+  if (self_fd < 0)
+    return -errno;
+
+  int target_fd = open(netns_path, O_RDONLY | O_CLOEXEC);
+  if (target_fd < 0) {
+    int e = -errno;
+    close(self_fd);
+    return e;
+  }
+
+  int ret = 0;
+  if (setns(target_fd, CLONE_NEWNET) < 0) {
+    ret = -errno;
+    goto out_restore;
+  }
+
+  ds_nl_ctx_t *ctx = ds_nl_open();
+  if (!ctx) {
+    ret = -errno;
+    goto out_restore;
+  }
+
+  if (new_name && new_name[0] && ds_nl_link_exists(ctx, new_name)) {
+    ds_log("[NET] Gateway: interface %s already exists inside gateway",
+           new_name);
+    ds_nl_link_up(ctx, new_name);
+  } else if (old_name && old_name[0] && new_name && new_name[0] &&
+             strcmp(old_name, new_name) != 0) {
+    if (ds_nl_rename(ctx, old_name, new_name) < 0) {
+      ds_warn("[NET] Gateway: failed to rename %s to %s", old_name, new_name);
+      ret = -1;
+    } else {
+      ds_nl_link_up(ctx, new_name);
+    }
+  } else if (old_name && old_name[0]) {
+    ds_nl_link_up(ctx, old_name);
+  }
+
+  ds_nl_close(ctx);
+
+out_restore:
+  if (setns(self_fd, CLONE_NEWNET) < 0 && ret == 0)
+    ret = -errno;
+  close(target_fd);
+  close(self_fd);
+  return ret;
+}
+
 /* ---------------------------------------------------------------------------
  * Upstream routing globals - shared by android routing setup and monitor
  * ---------------------------------------------------------------------------*/
@@ -171,11 +284,13 @@ void ds_net_derive_handshake(pid_t init_pid, struct ds_config *cfg,
    * ip_str is informational on the child side (voided in
    * setup_veth_child_side_named) but the boot.c log line prints it,
    * so it should reflect the actual IP the DHCP server will offer. */
-  if (cfg && cfg->static_nat_ip[0])
+  if (cfg && cfg->net_mode == DS_NET_NAT && cfg->static_nat_ip[0])
     safe_strncpy(hs->ip_str, cfg->static_nat_ip, sizeof(hs->ip_str));
-  else
+  else if (cfg && cfg->net_mode == DS_NET_NAT)
     veth_peer_ip(init_pid, hs->ip_str,
                  sizeof(hs->ip_str)); /* last-resort fallback */
+  else
+    hs->ip_str[0] = '\0';
 }
 
 /* ---------------------------------------------------------------------------
@@ -738,6 +853,188 @@ int setup_veth_host_side(struct ds_config *cfg, pid_t child_pid) {
 }
 
 /* ---------------------------------------------------------------------------
+ * setup_gateway_veth_side
+ *
+ * Phase-1 OpenWrt gateway mode.  Droidspaces owns only the L2 plumbing:
+ *   - create/reuse a bridge-only LAN with no IP address
+ *   - attach one veth peer to the designated gateway container netns
+ *   - attach one veth peer to the application container netns
+ *
+ * No NAT, DHCP, DNS, port-forwarding, Android policy routing, or firewall
+ * policy is installed here.  The gateway container is expected to run the
+ * routing policy engine (OpenWrt netifd/firewall/dnsmasq/etc.).
+ * ---------------------------------------------------------------------------*/
+
+int setup_gateway_veth_side(struct ds_config *cfg, pid_t child_pid) {
+  if (!cfg || !cfg->gateway_container[0]) {
+    ds_warn("[NET] Gateway: no gateway container configured");
+    return -1;
+  }
+
+  if (strcmp(cfg->gateway_container, cfg->container_name) == 0) {
+    ds_warn("[NET] Gateway: refusing to attach container to itself");
+    return -1;
+  }
+
+  const char *gw_if = gateway_lan_ifname(cfg);
+  if (strlen(gw_if) >= IFNAMSIZ || !gateway_ifname_component_ok(gw_if)) {
+    ds_warn("[NET] Gateway: invalid gateway interface name '%s'", gw_if);
+    return -1;
+  }
+
+  struct ds_config gw_cfg;
+  memset(&gw_cfg, 0, sizeof(gw_cfg));
+  gw_cfg.net_ready_pipe[0] = gw_cfg.net_ready_pipe[1] = -1;
+  gw_cfg.net_done_pipe[0] = gw_cfg.net_done_pipe[1] = -1;
+  safe_strncpy(gw_cfg.container_name, cfg->gateway_container,
+               sizeof(gw_cfg.container_name));
+
+  /* Best effort: loading the config gives UUID fallback discovery, but the
+   * fast pidfile path still works when the config file is unavailable. */
+  (void)ds_config_load_by_name(cfg->gateway_container, &gw_cfg);
+
+  pid_t gw_pid = 0;
+  if (!is_container_running(&gw_cfg, &gw_pid) || gw_pid <= 0) {
+    ds_warn("[NET] Gateway: container '%s' is not running",
+            cfg->gateway_container);
+    ds_config_free(&gw_cfg);
+    return -1;
+  }
+
+  char bridge[IFNAMSIZ];
+  char gw_host[IFNAMSIZ], gw_peer[IFNAMSIZ];
+  char app_host[IFNAMSIZ], app_peer[IFNAMSIZ];
+  gateway_bridge_name(cfg, bridge, sizeof(bridge));
+  gateway_veth_names(cfg, gw_host, sizeof(gw_host), gw_peer, sizeof(gw_peer));
+  veth_host_name(child_pid, app_host, sizeof(app_host));
+  veth_peer_name(child_pid, app_peer, sizeof(app_peer));
+
+  ds_log("[NET] Gateway: wiring %s to gateway %s via bridge %s",
+         cfg->container_name, cfg->gateway_container, bridge);
+
+  ds_nl_ctx_t *ctx = ds_nl_open();
+  if (!ctx) {
+    ds_warn("[NET] Gateway: failed to open RTNETLINK socket");
+    ds_config_free(&gw_cfg);
+    return -1;
+  }
+
+  if (!ds_nl_link_exists(ctx, bridge)) {
+    ds_log("[NET] Gateway: creating delegated LAN bridge %s", bridge);
+    if (ds_nl_create_bridge(ctx, bridge) < 0) {
+      ds_warn("[NET] Gateway: failed to create bridge %s", bridge);
+      ds_nl_close(ctx);
+      ds_config_free(&gw_cfg);
+      return -1;
+    }
+  }
+
+  if (ds_nl_link_up(ctx, bridge) < 0)
+    ds_warn("[NET] Gateway: failed to bring up bridge %s", bridge);
+
+  /* Keep the bridge policy-neutral: no address, no DHCP, no NAT.  Disable
+   * bridge netfilter calls so OpenWrt's own firewalling remains the visible
+   * policy authority inside the delegated network. */
+  write_file("/proc/sys/net/bridge/bridge-nf-call-iptables", "0");
+  write_file("/proc/sys/net/bridge/bridge-nf-call-ip6tables", "0");
+
+  /* Lazily attach a LAN-side interface to the gateway if it is not already
+   * present.  This allows the gateway container to boot with its WAN side
+   * first, then receive its LAN cable when the first client is attached. */
+  if (!ds_nl_link_exists(ctx, gw_host)) {
+    char gw_netns[PATH_MAX];
+    snprintf(gw_netns, sizeof(gw_netns), "/proc/%d/ns/net", (int)gw_pid);
+
+    ds_log("[NET] Gateway: creating gateway veth %s <-> %s", gw_host,
+           gw_peer);
+    if (ds_nl_create_veth(ctx, gw_host, gw_peer) < 0) {
+      ds_warn("[NET] Gateway: failed to create gateway veth pair");
+      ds_nl_close(ctx);
+      ds_config_free(&gw_cfg);
+      return -1;
+    }
+
+    ds_net_disable_tx_checksum(gw_host);
+    if (ds_nl_set_master(ctx, gw_host, bridge) < 0)
+      ds_warn("[NET] Gateway: failed to attach %s to %s", gw_host, bridge);
+    if (ds_nl_link_up(ctx, gw_host) < 0)
+      ds_warn("[NET] Gateway: failed to bring up %s", gw_host);
+
+    int gw_netns_fd = open(gw_netns, O_RDONLY | O_CLOEXEC);
+    if (gw_netns_fd < 0) {
+      ds_warn("[NET] Gateway: failed to open %s: %s", gw_netns,
+              strerror(errno));
+      ds_nl_close(ctx);
+      ds_config_free(&gw_cfg);
+      return -1;
+    }
+
+    int r = ds_nl_move_to_netns(ctx, gw_peer, gw_netns_fd);
+    close(gw_netns_fd);
+    if (r < 0) {
+      ds_warn("[NET] Gateway: failed to move %s into gateway netns",
+              gw_peer);
+      ds_nl_close(ctx);
+      ds_config_free(&gw_cfg);
+      return -1;
+    }
+
+    if (ds_netns_rename_up(gw_netns, gw_peer, gw_if) < 0)
+      ds_warn("[NET] Gateway: moved %s but could not rename/up it as %s",
+              gw_peer, gw_if);
+  } else {
+    if (ds_nl_set_master(ctx, gw_host, bridge) < 0)
+      ds_warn("[NET] Gateway: failed to reattach %s to %s", gw_host, bridge);
+    ds_nl_link_up(ctx, gw_host);
+  }
+
+  /* Wire the application container into the delegated LAN bridge. */
+  ds_nl_del_link(ctx, app_host);
+  ds_log("[NET] Gateway: creating app veth %s <-> %s", app_host, app_peer);
+  if (ds_nl_create_veth(ctx, app_host, app_peer) < 0) {
+    ds_warn("[NET] Gateway: failed to create app veth pair");
+    ds_nl_close(ctx);
+    ds_config_free(&gw_cfg);
+    return -1;
+  }
+
+  ds_net_disable_tx_checksum(app_host);
+  if (ds_nl_set_master(ctx, app_host, bridge) < 0)
+    ds_warn("[NET] Gateway: failed to attach %s to %s", app_host, bridge);
+  if (ds_nl_link_up(ctx, app_host) < 0)
+    ds_warn("[NET] Gateway: failed to bring up %s", app_host);
+
+  char child_netns[PATH_MAX];
+  snprintf(child_netns, sizeof(child_netns), "/proc/%d/ns/net",
+           (int)child_pid);
+  int child_netns_fd = open(child_netns, O_RDONLY | O_CLOEXEC);
+  if (child_netns_fd < 0) {
+    ds_warn("[NET] Gateway: failed to open container netns %s: %s",
+            child_netns, strerror(errno));
+    ds_nl_close(ctx);
+    ds_config_free(&gw_cfg);
+    return -1;
+  }
+
+  int r = ds_nl_move_to_netns(ctx, app_peer, child_netns_fd);
+  close(child_netns_fd);
+  if (r < 0) {
+    ds_warn("[NET] Gateway: failed to move %s into container netns",
+            app_peer);
+    ds_nl_close(ctx);
+    ds_config_free(&gw_cfg);
+    return -1;
+  }
+
+  ds_nl_close(ctx);
+  ds_config_free(&gw_cfg);
+
+  ds_log("[NET] Gateway: delegated LAN ready: %s -> %s -> %s",
+         cfg->container_name, bridge, cfg->gateway_container);
+  return 0;
+}
+
+/* ---------------------------------------------------------------------------
  * setup_veth_child_side_named
  *
  * Called from internal_boot() INSIDE the container's new network namespace.
@@ -771,7 +1068,10 @@ int setup_veth_child_side_named(struct ds_config *cfg, const char *peer_name,
   ds_nl_link_up(ctx, "eth0");
 
   ds_nl_close(ctx);
-  ds_log("[NET] Child: eth0 UP - awaiting DHCP lease from monitor");
+  if (cfg && cfg->net_mode == DS_NET_GATEWAY)
+    ds_log("[NET] Child: eth0 UP - gateway container owns DHCP/routing");
+  else
+    ds_log("[NET] Child: eth0 UP - awaiting DHCP lease from monitor");
   return 0;
 }
 
@@ -798,8 +1098,12 @@ int fix_networking_rootfs(struct ds_config *cfg) {
   char hosts_content[1024];
   const char *hostname = (cfg->hostname[0]) ? cfg->hostname : "localhost";
 
-  /* IPv6 is only enabled in host mode unless explicitly disabled */
-  int ipv6_enabled = (cfg->net_mode == DS_NET_HOST && !cfg->disable_ipv6);
+  /* IPv6 is enabled in host mode and gateway mode unless explicitly disabled.
+   * Gateway mode is policy-owned by OpenWrt, so IPv6 RA/DHCPv6 should be able
+   * to operate inside the application container netns. */
+  int ipv6_enabled = ((cfg->net_mode == DS_NET_HOST ||
+                       cfg->net_mode == DS_NET_GATEWAY) &&
+                      !cfg->disable_ipv6);
   if (ipv6_enabled) {
     snprintf(hosts_content, sizeof(hosts_content),
              "127.0.0.1\tlocalhost\n"
@@ -817,16 +1121,18 @@ int fix_networking_rootfs(struct ds_config *cfg) {
 
   write_file("/etc/hosts", hosts_content);
 
-  /* 3. resolv.conf - always use dns_server_content which ds_get_dns_servers()
-   * already populated with either the user's --dns servers or the compiled-in
-   * defaults (1.1.1.1 / 8.8.8.8). */
-  mkdir("/run/resolvconf", 0755);
-  write_file("/run/resolvconf/resolv.conf", cfg->dns_server_content);
+  /* 3. resolv.conf.  In gateway mode, DNS is owned by the gateway
+   * container's DHCP/DNS service, so avoid overwriting resolver state unless
+   * the user explicitly supplied --dns. */
+  if (cfg->net_mode != DS_NET_GATEWAY || cfg->dns_servers[0]) {
+    mkdir("/run/resolvconf", 0755);
+    write_file("/run/resolvconf/resolv.conf", cfg->dns_server_content);
 
-  /* Link /etc/resolv.conf */
-  unlink("/etc/resolv.conf");
-  if (symlink("/run/resolvconf/resolv.conf", "/etc/resolv.conf") < 0) {
-    ds_warn("Failed to link /etc/resolv.conf: %s", strerror(errno));
+    /* Link /etc/resolv.conf */
+    unlink("/etc/resolv.conf");
+    if (symlink("/run/resolvconf/resolv.conf", "/etc/resolv.conf") < 0) {
+      ds_warn("Failed to link /etc/resolv.conf: %s", strerror(errno));
+    }
   }
 
   if (!ipv6_enabled) {
@@ -1228,6 +1534,25 @@ void ds_net_start_route_monitor(void) {
  * ---------------------------------------------------------------------------*/
 
 void ds_net_cleanup(struct ds_config *cfg, pid_t container_pid) {
+  if (cfg->net_mode == DS_NET_GATEWAY) {
+    ds_nl_ctx_t *ctx = ds_nl_open();
+    if (!ctx)
+      return;
+
+    char veth_host[IFNAMSIZ] = {0};
+    pid_t effective_pid = container_pid > 0 ? container_pid : cfg->container_pid;
+    if (effective_pid > 0) {
+      veth_host_name(effective_pid, veth_host, sizeof(veth_host));
+      ds_nl_del_link(ctx, veth_host);
+      ds_log("[NET] Gateway cleanup: removed %s", veth_host);
+    } else {
+      ds_warn("[NET] Gateway cleanup: cannot derive veth name - no valid PID");
+    }
+
+    ds_nl_close(ctx);
+    return;
+  }
+
   if (cfg->net_mode != DS_NET_NAT)
     return;
 

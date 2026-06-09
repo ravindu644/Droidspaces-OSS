@@ -143,7 +143,7 @@ int internal_boot(struct ds_config *cfg) {
     }
 
     /* Configure our side of the veth (or just loopback for DS_NET_NONE) */
-    if (cfg->net_mode == DS_NET_NAT) {
+    if (cfg->net_mode == DS_NET_NAT || cfg->net_mode == DS_NET_GATEWAY) {
       setup_veth_child_side_named(cfg, hs.peer_name, hs.ip_str);
     } else {
       /* DS_NET_NONE: just bring up loopback */

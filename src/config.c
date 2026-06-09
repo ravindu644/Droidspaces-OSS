@@ -364,12 +364,34 @@ int ds_config_load(const char *config_path, struct ds_config *cfg) {
         cfg->net_mode = DS_NET_NONE;
       } else if (strcmp(val, "host") == 0) {
         cfg->net_mode = DS_NET_HOST;
+      } else if (strcmp(val, "gateway") == 0 ||
+                 strcmp(val, "delegated-gateway") == 0) {
+        cfg->net_mode = DS_NET_GATEWAY;
       } else {
         ds_warn(
             "Unknown network mode '%s' in config file. Defaulting to 'host'.",
             val);
         cfg->net_mode = DS_NET_HOST;
       }
+    } else if (strcmp(key, "gateway_container") == 0) {
+      if (validate_container_name(val))
+        safe_strncpy(cfg->gateway_container, val,
+                     sizeof(cfg->gateway_container));
+      else
+        ds_warn("config: ignoring invalid gateway_container '%s'", val);
+    } else if (strcmp(key, "gateway_net") == 0) {
+      safe_strncpy(cfg->gateway_net, val, sizeof(cfg->gateway_net));
+    } else if (strcmp(key, "gateway_bridge") == 0) {
+      if (strlen(val) < IFNAMSIZ)
+        safe_strncpy(cfg->gateway_bridge, val, sizeof(cfg->gateway_bridge));
+      else
+        ds_warn("config: ignoring too-long gateway_bridge '%s'", val);
+    } else if (strcmp(key, "gateway_lan_ifname") == 0) {
+      if (strlen(val) < IFNAMSIZ)
+        safe_strncpy(cfg->gateway_lan_ifname, val,
+                     sizeof(cfg->gateway_lan_ifname));
+      else
+        ds_warn("config: ignoring too-long gateway_lan_ifname '%s'", val);
     } else if (strcmp(key, "upstream_interfaces") == 0) {
       /* Comma-separated interface names, e.g. "wlan0,rmnet0,ccmni1" */
       char copy[1024];
@@ -688,8 +710,21 @@ static void ds_config_serialize_known(FILE *f, struct ds_config *cfg) {
     fprintf(f, "net_mode=nat\n");
   } else if (cfg->net_mode == DS_NET_NONE) {
     fprintf(f, "net_mode=none\n");
+  } else if (cfg->net_mode == DS_NET_GATEWAY) {
+    fprintf(f, "net_mode=gateway\n");
   } else {
     fprintf(f, "net_mode=host\n");
+  }
+
+  if (cfg->net_mode == DS_NET_GATEWAY) {
+    if (cfg->gateway_container[0])
+      fprintf(f, "gateway_container=%s\n", cfg->gateway_container);
+    if (cfg->gateway_net[0])
+      fprintf(f, "gateway_net=%s\n", cfg->gateway_net);
+    if (cfg->gateway_bridge[0])
+      fprintf(f, "gateway_bridge=%s\n", cfg->gateway_bridge);
+    if (cfg->gateway_lan_ifname[0])
+      fprintf(f, "gateway_lan_ifname=%s\n", cfg->gateway_lan_ifname);
   }
 
   if (cfg->net_mode == DS_NET_NAT && cfg->upstream_iface_count > 0) {
@@ -866,6 +901,15 @@ int ds_config_validate(struct ds_config *cfg) {
       ds_error("custom_init cannot contain spaces: %s", cfg->custom_init);
       errors++;
     }
+  }
+
+  if (cfg->net_mode == DS_NET_GATEWAY) {
+    if (!cfg->gateway_container[0])
+      errors++;
+    else if (!validate_container_name(cfg->gateway_container))
+      errors++;
+    else if (strcmp(cfg->gateway_container, cfg->container_name) == 0)
+      errors++;
   }
 
   return (errors > 0) ? -1 : 0;
