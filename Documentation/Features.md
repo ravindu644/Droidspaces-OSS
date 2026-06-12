@@ -187,7 +187,7 @@ For GUI application support, Droidspaces automatically bind-mounts the X11 socke
 > X11 support can be enabled independently using the `--termux-x11` (`-X`) flag. This is the recommended way to use GUI applications on Android if you do not need full GPU/hardware access, as it preserves a higher level of isolation.
 
 
-After starting the container, set `DISPLAY=:0` inside the container to use the X11 display.
+Droidspaces automatically injects `DISPLAY=:5` and (if VirGL is enabled) `GALLIUM_DRIVER=virpipe` into the container environment via `/run/droidspaces.env`, symlinked from `/etc/profile.d/droidspaces_env.sh`. Shells like `bash` and `sh` source this automatically. If you use `zsh`, `fish`, or another non-login shell, source it manually: `source /run/droidspaces.env`.
 
 ### Supported GPU Families
 

@@ -454,4 +454,15 @@
     <string name="repo_custom_url_empty">URL មិនអាចទទេបានទេ</string>
     <string name="repo_custom_url_invalid">URL ត្រូវតែចាប់ផ្តើមដោយ https://</string>
     <string name="repo_no_custom">មិនទាន់មានការជាវ Repository ផ្ទាល់ខ្លួននៅឡើយទេ។</string>
+    <string name="termux_requirements">តម្រូវការប្រព័ន្ធសម្រាប់ Termux</string>
+    <string name="virgl_option">VirGL</string>
+    <string name="pulseaudio_option">PulseAudio</string>
+    <string name="enable_pulseaudio">កំណត់រចនាសម្ព័ន្ធ PulseAudio</string>
+    <string name="enable_pulseaudio_description">បើកដំណើរការមុខងារសំឡេងតាមរយៈ PulseAudio</string>
+    <string name="tx11_extra_flags_label">ប៉ារ៉ាម៉ែត្របន្ថែមសម្រាប់ Termux:X11</string>
+    <string name="tx11_extra_flags_placeholder">ឧទាហរណ៍៖ -dpi 160 -force-sysvshm</string>
+    <string name="enable_virgl">កំណត់រចនាសម្ព័ន្ធមុខងារបង្កើនល្បឿន VirGL 3D</string>
+    <string name="enable_virgl_description">បើកដំណើរការមុខងារបង្កើនល្បឿនផ្នែករឹង 3D តាមរយៈ VirGL</string>
+    <string name="virgl_extra_flags_label">ប៉ារ៉ាម៉ែត្របន្ថែមសម្រាប់ VirGL</string>
+    <string name="virgl_extra_flags_placeholder">ឧទាហរណ៍៖ --multi-clients --angle-vulkan</string>
 </resources>

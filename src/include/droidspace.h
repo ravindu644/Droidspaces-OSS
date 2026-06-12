@@ -67,7 +67,7 @@
  * ---------------------------------------------------------------------------*/
 
 #define DS_PROJECT_NAME "Droidspaces"
-#define DS_VERSION "6.2.5"
+#define DS_VERSION "6.3.0"
 #define DS_MIN_KERNEL_MAJOR 3
 #define DS_MIN_KERNEL_MINOR 10
 #define DS_RECOMMENDED_KERNEL_MAJOR 4
@@ -456,7 +456,6 @@ void firmware_path_remove(const char *fw_path);
 int run_command(char *const argv[]);
 int run_command_quiet(char *const argv[]);
 int run_command_log(char *const argv[]);
-int get_selinux_context(const char *path, char *buf, size_t size);
 int set_selinux_context(const char *path, const char *context);
 int ds_send_fd(int sock, int fd);
 int ds_recv_fd(int sock);
@@ -494,6 +493,10 @@ typedef void (*ds_child_fn)(int ready_fd, void *user_data);
 pid_t ds_daemon_read_pid(const char *filename);
 void ds_daemon_write_pid(const char *filename, pid_t pid);
 void ds_daemon_remove_pid(const char *filename);
+pid_t ds_resolve_daemon_pid(pid_t cached, const char *pidfile);
+void ds_global_daemon_stop(int (*check_fn)(void), pid_t cached_pid,
+                           pid_t *pid_out, const char *pidfile,
+                           const char *sock_path, const char *tag);
 void ds_oom_protect(void);
 void ds_spawn_log_relay(int pipe_read_fd, const char *log_file,
                         const char *tag);
@@ -516,6 +519,7 @@ int ds_config_add_bind(struct ds_config *cfg, const char *src, const char *dest,
 void free_config_binds(struct ds_config *cfg);
 void free_config_env_vars(struct ds_config *cfg);
 void free_config_unknown_lines(struct ds_config *cfg);
+void ds_config_free(struct ds_config *cfg);
 int ds_split_flags(const char *str, char ***out_argv, int *out_argc);
 void ds_free_split_flags(char **argv, int argc);
 char *ds_config_auto_path(const char *rootfs_path);
@@ -538,9 +542,10 @@ int android_seccomp_setup(int is_systemd, int block_nested_ns,
 int ds_seccomp_apply_minimal(int privileged_mask);
 
 /* SELinux + Termux privilege helpers */
+int get_selinux_context(const char *path, char *buf, size_t size);
 const char *ds_extract_mls(const char *ctx);
-void ds_selinux_dyntransition(const char *mls, char *applied_ctx,
-                              size_t ctx_size);
+void ds_selinux_dyntransition(const char *mls);
+void ds_selinux_enter_domain(void);
 int ds_drop_privileges(int uid);
 int ds_resolve_termux_uid(void);
 
@@ -624,7 +629,6 @@ int ds_setup_x11_socket(struct ds_config *cfg);
 int ds_virgl_daemon_start(struct ds_config *cfg);
 void ds_virgl_daemon_stop(struct ds_config *cfg);
 int ds_setup_virgl_socket(struct ds_config *cfg);
-int check_virgl_needs(void);
 
 /* ---------------------------------------------------------------------------
  * pulseaudio-android.c
@@ -633,7 +637,6 @@ int check_virgl_needs(void);
 int ds_pulse_daemon_start(struct ds_config *cfg);
 void ds_pulse_daemon_stop(struct ds_config *cfg);
 int ds_setup_pulse_socket(struct ds_config *cfg);
-int check_pulse_needs(void);
 
 /* ---------------------------------------------------------------------------
  * network.c
@@ -787,6 +790,15 @@ int show_containers(struct ds_config *cfg);
 int scan_containers(void);
 int check_selinux_permissive_needs(void);
 int check_x11_needs(void);
+int check_virgl_needs(void);
+int check_pulse_needs(void);
+
+/*
+ * ds_feature_needs - generic feature-needs scanner.
+ * Pass offsetof(struct ds_config, <field>) for the boolean flag to check.
+ * Returns: 1=running, 0=installed-but-idle, -1=not-installed
+ */
+int ds_feature_needs(size_t cfg_flag_offset);
 void write_plain_env_file(const char *src, const char *dst);
 
 /* ---------------------------------------------------------------------------

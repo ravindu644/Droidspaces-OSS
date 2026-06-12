@@ -63,10 +63,11 @@ allow system_server droidspacesd fd use
 allow system_server droidspacesd fifo_file write
 
 # for Termux:X11 and DRI3 denials in daemon mode
-allow untrusted_app droidspacesd fd use
-allow untrusted_app droidspacesd fifo_file write
 allow untrusted_app_27 droidspacesd fd use
+allow untrusted_app_27 droidspacesd fifo_file write
 
 # for pulseAudio
 allow audioserver droidspacesd binder { call transfer }
+allow audioserver droidspacesd fd use
 allow mediaserver droidspacesd binder { call transfer }
+allow mediaserver droidspacesd fd use

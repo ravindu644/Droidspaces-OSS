@@ -3,11 +3,13 @@ package com.droidspaces.app.service
 import android.app.*
 import android.content.Context
 import android.content.Intent
+import android.net.Uri
 import android.content.pm.ServiceInfo
 import android.os.Binder
 import android.os.Build
 import android.os.IBinder
 import android.os.PowerManager
+import android.provider.Settings
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.core.app.NotificationCompat
 import com.droidspaces.app.MainActivity
@@ -116,6 +118,35 @@ class TerminalSessionService : Service() {
                         PowerManager.PARTIAL_WAKE_LOCK,
                         "droidspaces:terminal"
                     ).also { it.acquire() }
+                    // Request battery optimization exemption so Android doesn't
+                    // kill the service while the wakelock is held.
+                    // API 23+ (Android 6+); safe no-op below that.
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                        val pm2 = getSystemService(POWER_SERVICE) as PowerManager
+                        if (!pm2.isIgnoringBatteryOptimizations(packageName)) {
+                            try {
+                                // Direct per-app exemption dialog (requires the manifest permission).
+                                startActivity(
+                                    Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS).apply {
+                                        data = Uri.parse("package:$packageName")
+                                        flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                                    }
+                                )
+                            } catch (e: Exception) {
+                                // Fallback: open the general battery optimization settings screen.
+                                // Covers OEMs that block the direct intent (some Xiaomi/MIUI builds).
+                                try {
+                                    startActivity(
+                                        Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS).apply {
+                                            flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                                        }
+                                    )
+                                } catch (e2: Exception) {
+                                    e2.printStackTrace()
+                                }
+                            }
+                        }
+                    }
                 }
             } else {
                 wakeLock?.release()

@@ -95,6 +95,14 @@ fun RequirementsScreen(
                     .padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
+                // Termux Requirements Section
+                ExpandableKernelRequirementsSection(
+                    title = context.getString(R.string.termux_requirements),
+                    code = "# Run this command inside Termux to install dependencies needed for Termux:X11, VirGL and PulseAudio\n\ncurl -fsSL https://github.com/ravindu644/Droidspaces-OSS/raw/refs/heads/dev/scripts/setup-termux.sh | bash",
+                    guideUrl = null,
+                    snackbarHostState = snackbarHostState
+                )
+
                 // non-GKI Kernel Requirements Section
                 ExpandableKernelRequirementsSection(
                     title = context.getString(R.string.kernel_requirements_nongki),
@@ -532,4 +540,3 @@ private fun CheckRequirementsButton(
         }
     }
 }
-

@@ -746,9 +746,7 @@ int start_rootfs(struct ds_config *cfg) {
        * handles this. Let's just return error so parent doesn't report
        * success.
        */
-      free_config_binds(cfg);
-      free_config_env_vars(cfg);
-      free_config_unknown_lines(cfg);
+      ds_config_free(cfg);
       goto cleanup;
     }
 
@@ -766,9 +764,7 @@ int start_rootfs(struct ds_config *cfg) {
 
   if (lock_acquired)
     release_external_lock(cfg->container_name);
-  free_config_binds(cfg);
-  free_config_env_vars(cfg);
-  free_config_unknown_lines(cfg);
+  ds_config_free(cfg);
 
   return 0;
 
@@ -792,9 +788,7 @@ cleanup:
   if (sync_pipe[1] >= 0)
     close(sync_pipe[1]);
 
-  free_config_binds(cfg);
-  free_config_env_vars(cfg);
-  free_config_unknown_lines(cfg);
+  ds_config_free(cfg);
   return -1;
 }
 
@@ -1204,6 +1198,7 @@ int enter_rootfs(struct ds_config *cfg, const char *user) {
       char *shell_argv[] = {"su", "-l", (char *)(uintptr_t)user, NULL};
       execve("/bin/su", shell_argv, environ);
       execve("/usr/bin/su", shell_argv, environ);
+      execve("/run/wrappers/bin/su", shell_argv, environ);
 
       /* Fallback: su not available - look up the shell from /etc/passwd */
       char user_shell[PATH_MAX] = {0};
@@ -1375,6 +1370,7 @@ int run_in_rootfs(struct ds_config *cfg, int argc, char **argv,
                            "-c", cmd_buf, NULL};
         execvp("/bin/su", su_argv);
         execvp("/usr/bin/su", su_argv);
+        execvp("/run/wrappers/bin/su", su_argv);
         ds_error("Failed to exec su for user '%s': %s", as_user,
                  strerror(errno));
         _exit(EXIT_FAILURE);

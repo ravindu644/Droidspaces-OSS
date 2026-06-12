@@ -28,9 +28,9 @@
 
 #include <arpa/inet.h>
 #include <grp.h>
-#include <poll.h>
 #include <pwd.h>
 #include <stddef.h>
+#include <sys/signalfd.h>
 #include <sys/socket.h>
 #include <sys/un.h>
 #include <sys/wait.h>
@@ -42,7 +42,10 @@
 #define DS_MAX_ARGC 64
 #define DS_MAX_ARG 8192
 #define DS_IOBUF 8192
-#define DS_POLL_MS 100
+#define PTY_WBUF_MAX (256 * 1024)  /* absolute buffer cap for PTY master input \
+                                    */
+#define PTY_WBUF_HIGH (192 * 1024) /* suspend conn EPOLLIN above this */
+#define PTY_WBUF_LOW (64 * 1024)   /* resume  conn EPOLLIN below this */
 
 #define MSG_OUT ((uint8_t)0x01)
 #define MSG_ERR ((uint8_t)0x02)
@@ -125,8 +128,6 @@ static void daemon_log_tee(const char *prefix, const char *fmt, ...) {
     ds_log_internal("-", C_RED, 1, fmt, ##__VA_ARGS__);                        \
     daemon_log_tee("-", fmt, ##__VA_ARGS__);                                   \
   } while (0)
-
-static volatile sig_atomic_t g_client_sigwinch = 0;
 
 /*
  * g_self_path is populated once during daemon startup (after daemonize()).
@@ -413,6 +414,13 @@ static void handle_session(int conn, ds_req_t *r) {
     return;
   }
 
+  /* signalfd for zero-latency SIGCHLD: avoids 100ms poll-waitpid loop */
+  sigset_t ss;
+  sigemptyset(&ss);
+  sigaddset(&ss, SIGCHLD);
+  sigprocmask(SIG_BLOCK, &ss, NULL);
+  int sfd = signalfd(-1, &ss, SFD_NONBLOCK | SFD_CLOEXEC);
+
   struct epoll_event ev, events[8];
   int active_reads = 0;
 
@@ -441,6 +449,12 @@ static void handle_session(int conn, ds_req_t *r) {
     active_reads = 2;
   }
 
+  if (sfd >= 0) {
+    ev.events = EPOLLIN;
+    ev.data.fd = sfd;
+    epoll_ctl(epfd, EPOLL_CTL_ADD, sfd, &ev);
+  }
+
   /* watch the connection for dead clients or pty input */
   ev.events = EPOLLHUP | EPOLLERR;
   if (is_pty)
@@ -451,15 +465,36 @@ static void handle_session(int conn, ds_req_t *r) {
   int exit_code = EXIT_PENDING;
   int child_done = 0; /* 0=running, 1=killed, 2=normal-exit-seen */
 
+  /* Non-blocking write buffer for PTY master input.
+   * Prevents blocking the event loop when the PTY kernel buffer is full
+   * (e.g. large paste). Excess bytes are queued here and flushed via
+   * EPOLLOUT on master. */
+  uint8_t *pty_wbuf = NULL;
+  size_t pty_wbuf_len = 0;
+  size_t pty_wbuf_cap = 0;
+  int conn_suspended = 0; /* 1 = conn EPOLLIN removed (wbuf high-water) */
+
   for (;;) {
-    int nfds = epoll_wait(epfd, events, 8, DS_POLL_MS);
+    int nfds = epoll_wait(epfd, events, 8, -1);
     if (nfds < 0 && errno != EINTR)
       break;
 
     for (int i = 0; i < nfds; i++) {
       int fd = events[i].data.fd;
 
-      if (fd == conn) {
+      if (sfd >= 0 && fd == sfd) {
+        /* drain all pending SIGCHLD notifications */
+        struct signalfd_siginfo si;
+        while (read(sfd, &si, sizeof(si)) == (ssize_t)sizeof(si)) {
+          if (!child_done) {
+            int st;
+            if (waitpid(child, &st, WNOHANG) == child) {
+              exit_code = WIFEXITED(st) ? WEXITSTATUS(st) : 1;
+              child_done = is_pty ? 2 : 1;
+            }
+          }
+        }
+      } else if (fd == conn) {
         if (events[i].events & (EPOLLHUP | EPOLLERR)) {
           /* client died unexpectedly, kill the child */
           kill(child, is_pty ? SIGHUP : SIGTERM);
@@ -475,14 +510,69 @@ static void handle_session(int conn, ds_req_t *r) {
             goto session_end;
           }
           if (type == MSG_OUT && mlen > 0 && mlen <= (uint32_t)sizeof(buf)) {
-            if (read_exact(conn, buf, mlen) == 0)
-              write_all(master, buf, mlen);
+            if (read_exact(conn, buf, mlen) == 0) {
+              /* Non-blocking write to PTY master; queue overflow into wbuf. */
+              size_t written = 0;
+              if (pty_wbuf_len == 0) {
+                /* Fast path: no pending data, try direct write first. */
+                ssize_t w = write(master, buf, mlen);
+                if (w > 0)
+                  written = (size_t)w;
+              }
+              size_t rem = mlen - written;
+              if (rem > 0) {
+                /* Buffer remainder; grow wbuf if needed (cap at PTY_WBUF_MAX).
+                 */
+                if (pty_wbuf_len + rem <= PTY_WBUF_MAX) {
+                  if (pty_wbuf_len + rem > pty_wbuf_cap) {
+                    /* Double capacity without overflow: clamp before shifting.
+                     */
+                    size_t ncap = pty_wbuf_cap ? pty_wbuf_cap : DS_IOBUF;
+                    while (ncap < pty_wbuf_len + rem) {
+                      if (ncap > PTY_WBUF_MAX / 2) {
+                        ncap = PTY_WBUF_MAX;
+                        break;
+                      }
+                      ncap *= 2;
+                    }
+                    if (ncap > PTY_WBUF_MAX)
+                      ncap = PTY_WBUF_MAX;
+                    /* Preserve old pointer on realloc failure to avoid leak. */
+                    uint8_t *nb = realloc(pty_wbuf, ncap);
+                    if (nb) {
+                      pty_wbuf = nb;
+                      pty_wbuf_cap = ncap;
+                    }
+                    /* If realloc failed, pty_wbuf unchanged; fall through to
+                     * the capacity check below which will drop the frame. */
+                  }
+                  if (pty_wbuf_len + rem <= pty_wbuf_cap) {
+                    memcpy(pty_wbuf + pty_wbuf_len, buf + written, rem);
+                    pty_wbuf_len += rem;
+                    /* Arm EPOLLOUT on master to flush wbuf. */
+                    ev.events = EPOLLIN | EPOLLOUT | EPOLLHUP | EPOLLERR;
+                    ev.data.fd = master;
+                    epoll_ctl(epfd, EPOLL_CTL_MOD, master, &ev);
+                    /* High-watermark: suspend conn input to apply backpressure.
+                     * Prevents unbounded growth; conn resumes at low-watermark.
+                     */
+                    if (!conn_suspended && pty_wbuf_len >= PTY_WBUF_HIGH) {
+                      ev.events = EPOLLHUP | EPOLLERR; /* no EPOLLIN */
+                      ev.data.fd = conn;
+                      epoll_ctl(epfd, EPOLL_CTL_MOD, conn, &ev);
+                      conn_suspended = 1;
+                    }
+                  }
+                }
+                /* wbuf full and conn suspended: no data lost, client stalls. */
+              }
+            }
           } else if (type == MSG_WINCH && mlen == 4) {
             uint16_t wd[2];
             if (read_exact(conn, wd, 4) == 0) {
               struct winsize nws = {ntohs(wd[0]), ntohs(wd[1]), 0, 0};
               ioctl(master, TIOCSWINSZ, &nws);
-              kill(-child, SIGWINCH); /* signal the whole process group */
+              kill(child, SIGWINCH);
             }
           } else {
             /* drain unknown frames so we don't stall the pipe */
@@ -493,6 +583,50 @@ static void handle_session(int conn, ds_req_t *r) {
               if (read_exact(conn, buf, c) < 0)
                 goto session_end;
               rem -= c;
+            }
+          }
+        }
+      } else if (is_pty && fd == master && (events[i].events & EPOLLOUT)) {
+        /* Flush pending wbuf to PTY master. */
+        while (pty_wbuf_len > 0) {
+          ssize_t w = write(master, pty_wbuf, pty_wbuf_len);
+          if (w > 0) {
+            pty_wbuf_len -= (size_t)w;
+            if (pty_wbuf_len > 0)
+              memmove(pty_wbuf, pty_wbuf + w, pty_wbuf_len);
+          } else if (w < 0 && errno == EAGAIN) {
+            break; /* PTY buffer still full; wait for next EPOLLOUT */
+          } else {
+            break;
+          }
+        }
+        if (pty_wbuf_len == 0) {
+          /* All flushed; stop watching for writability. */
+          ev.events = EPOLLIN | EPOLLHUP | EPOLLERR;
+          ev.data.fd = master;
+          epoll_ctl(epfd, EPOLL_CTL_MOD, master, &ev);
+        }
+        /* Low-watermark: resume conn input once pressure drops. */
+        if (conn_suspended && pty_wbuf_len < PTY_WBUF_LOW) {
+          ev.events = EPOLLIN | EPOLLHUP | EPOLLERR;
+          ev.data.fd = conn;
+          epoll_ctl(epfd, EPOLL_CTL_MOD, conn, &ev);
+          conn_suspended = 0;
+        }
+        /* Also service any pending output from master in this iteration. */
+        if (events[i].events & EPOLLIN) {
+          for (;;) {
+            ssize_t n = read(master, buf, sizeof(buf));
+            if (n > 0) {
+              if (send_frame(conn, MSG_OUT, buf, (uint32_t)n) < 0) {
+                kill(child, SIGHUP);
+                waitpid(child, NULL, 0);
+                goto session_end;
+              }
+            } else {
+              if (errno == EINTR)
+                continue;
+              break;
             }
           }
         }
@@ -510,7 +644,6 @@ static void handle_session(int conn, ds_req_t *r) {
                 goto session_end;
               }
             } else if (n == 0) {
-              /* Truly EOF */
               drained = 1;
               break;
             } else {
@@ -518,10 +651,8 @@ static void handle_session(int conn, ds_req_t *r) {
                 continue;
               if (errno == EAGAIN)
                 break;
-              if (errno == EWOULDBLOCK)
-                break;
               drained = 1;
-              break; /* treat other errors as closure */
+              break;
             }
           }
 
@@ -538,15 +669,6 @@ static void handle_session(int conn, ds_req_t *r) {
               child_done = 2;
           }
         }
-      }
-    }
-
-    if (!child_done) {
-      int st;
-      if (waitpid(child, &st, WNOHANG) == child) {
-        exit_code = WIFEXITED(st) ? WEXITSTATUS(st) : 1;
-        /* for pipes we wait for eof. for ptys, the child exiting is the end. */
-        child_done = is_pty ? 2 : 1;
       }
     }
 
@@ -572,6 +694,12 @@ static void handle_session(int conn, ds_req_t *r) {
   }
 
 session_end:
+  free(pty_wbuf);
+  if (sfd >= 0) {
+    epoll_ctl(epfd, EPOLL_CTL_DEL, sfd, NULL);
+    close(sfd);
+  }
+  sigprocmask(SIG_UNBLOCK, &ss, NULL);
   close(epfd);
   if (master >= 0)
     close(master);
@@ -616,7 +744,7 @@ static void handle_conn(int conn) {
 
   /* log the request */
   {
-    char cmdline[DS_MAX_ARG * 2] = {0};
+    char cmdline[512];
     size_t off = 0;
     for (int i = 0; i < req.argc && off < sizeof(cmdline) - 1; i++) {
       int n = snprintf(cmdline + off, sizeof(cmdline) - off, "%s%s",
@@ -1000,11 +1128,6 @@ int ds_daemon_probe(void) {
 
 /* connect to the daemon and relay our command */
 
-static void client_sigwinch_handler(int sig) {
-  (void)sig;
-  g_client_sigwinch = 1;
-}
-
 int ds_client_run(int argc, char **argv) {
   if (argc < 1)
     return -2;
@@ -1107,6 +1230,7 @@ int ds_client_run(int argc, char **argv) {
   /* run the relay loop */
   struct termios orig;
   int raw_tty_active = 0;
+  int winch_sfd = -1;
 
   if (interactive && has_tty && tcgetattr(STDIN_FILENO, &orig) == 0) {
     raw_tty_active = 1;
@@ -1114,11 +1238,12 @@ int ds_client_run(int argc, char **argv) {
     cfmakeraw(&raw);
     tcsetattr(STDIN_FILENO, TCSAFLUSH, &raw);
 
-    struct sigaction sa;
-    memset(&sa, 0, sizeof(sa));
-    sa.sa_handler = client_sigwinch_handler;
-    sa.sa_flags = SA_RESTART;
-    sigaction(SIGWINCH, &sa, NULL);
+    /* signalfd for SIGWINCH: no handler, no 200ms timeout needed */
+    sigset_t ws;
+    sigemptyset(&ws);
+    sigaddset(&ws, SIGWINCH);
+    sigprocmask(SIG_BLOCK, &ws, NULL);
+    winch_sfd = signalfd(-1, &ws, SFD_NONBLOCK | SFD_CLOEXEC);
   }
 
   int epfd = epoll_create1(EPOLL_CLOEXEC);
@@ -1129,6 +1254,11 @@ int ds_client_run(int argc, char **argv) {
     ev.data.fd = STDIN_FILENO;
     epoll_ctl(epfd, EPOLL_CTL_ADD, STDIN_FILENO, &ev);
   }
+  if (winch_sfd >= 0) {
+    ev.events = EPOLLIN;
+    ev.data.fd = winch_sfd;
+    epoll_ctl(epfd, EPOLL_CTL_ADD, winch_sfd, &ev);
+  }
   ev.events = EPOLLIN | EPOLLHUP | EPOLLERR;
   ev.data.fd = sock;
   epoll_ctl(epfd, EPOLL_CTL_ADD, sock, &ev);
@@ -1137,15 +1267,7 @@ int ds_client_run(int argc, char **argv) {
   char buf[DS_IOBUF];
 
   for (;;) {
-    if (raw_tty_active && g_client_sigwinch) {
-      g_client_sigwinch = 0;
-      struct winsize nws = {24, 80, 0, 0};
-      ioctl(STDIN_FILENO, TIOCGWINSZ, &nws);
-      uint16_t wd2[2] = {htons(nws.ws_row), htons(nws.ws_col)};
-      send_frame(sock, MSG_WINCH, wd2, 4);
-    }
-
-    int nfds = epoll_wait(epfd, events, 4, raw_tty_active ? 200 : -1);
+    int nfds = epoll_wait(epfd, events, 4, -1);
     if (nfds < 0 && errno != EINTR)
       break;
 
@@ -1153,7 +1275,15 @@ int ds_client_run(int argc, char **argv) {
     for (int i = 0; i < nfds && !done; i++) {
       int fd = events[i].data.fd;
 
-      if (fd == STDIN_FILENO) {
+      if (winch_sfd >= 0 && fd == winch_sfd) {
+        struct signalfd_siginfo si;
+        while (read(winch_sfd, &si, sizeof(si)) == (ssize_t)sizeof(si)) {
+          struct winsize nws = {24, 80, 0, 0};
+          ioctl(STDIN_FILENO, TIOCGWINSZ, &nws);
+          uint16_t wd2[2] = {htons(nws.ws_row), htons(nws.ws_col)};
+          send_frame(sock, MSG_WINCH, wd2, 4);
+        }
+      } else if (fd == STDIN_FILENO) {
         ssize_t n = read(STDIN_FILENO, buf, sizeof(buf));
         if (n > 0) {
           if (send_frame(sock, MSG_OUT, buf, (uint32_t)n) < 0)
@@ -1162,21 +1292,11 @@ int ds_client_run(int argc, char **argv) {
           done = 1;
         }
       } else if (fd == sock) {
-        if (events[i].events & (EPOLLIN | EPOLLHUP)) {
-          /* Read as many frames as possible before checking HUP */
+        if (events[i].events & EPOLLIN) {
+          /* drain all available frames without a redundant poll() probe */
           for (;;) {
             uint8_t type;
             uint32_t mlen;
-
-            /* Probe the socket for pending data */
-            int pending = 0;
-            struct pollfd pfd = {sock, POLLIN, 0};
-            if (poll(&pfd, 1, 0) > 0 && (pfd.revents & POLLIN))
-              pending = 1;
-
-            if (!pending)
-              break;
-
             if (recv_frame_hdr(sock, &type, &mlen) < 0) {
               done = 1;
               break;
@@ -1204,6 +1324,13 @@ int ds_client_run(int argc, char **argv) {
               rem -= c;
             }
             fflush(dest);
+            if (done)
+              break;
+
+            /* check for more data without blocking */
+            struct pollfd pfd = {sock, POLLIN, 0};
+            if (poll(&pfd, 1, 0) <= 0 || !(pfd.revents & POLLIN))
+              break;
           }
         }
 
@@ -1217,8 +1344,16 @@ int ds_client_run(int argc, char **argv) {
       break;
   }
 
-  if (raw_tty_active)
+  if (raw_tty_active) {
     tcsetattr(STDIN_FILENO, TCSAFLUSH, &orig);
+    if (winch_sfd >= 0) {
+      sigset_t ws;
+      sigemptyset(&ws);
+      sigaddset(&ws, SIGWINCH);
+      sigprocmask(SIG_UNBLOCK, &ws, NULL);
+      close(winch_sfd);
+    }
+  }
   close(epfd);
   close(sock);
   return exit_code;

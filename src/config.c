@@ -600,6 +600,12 @@ void free_config_unknown_lines(struct ds_config *cfg) {
   cfg->unknown_head = cfg->unknown_tail = NULL;
 }
 
+void ds_config_free(struct ds_config *cfg) {
+  free_config_binds(cfg);
+  free_config_env_vars(cfg);
+  free_config_unknown_lines(cfg);
+}
+
 static void ds_config_serialize_known(FILE *f, struct ds_config *cfg) {
   fprintf(f, "# Droidspaces Container Configuration\n");
   fprintf(f, "# Generated automatically - Changes may be overwritten\n\n");

@@ -795,51 +795,47 @@ int scan_containers(void) {
   return 0;
 }
 
-/**
- * Scans all installed containers and their running status to determine
- * if the host SELinux permissive mode is still needed.
+/*
+ * ds_feature_needs - generic "is this feature still needed?" scanner.
+ *
+ * Reads the int field at cfg_flag_offset inside ds_config to decide
+ * whether the associated global daemon/server should stay up.
  *
  * Returns:
- *  -1: No containers with 'selinux-permissive=yes' are installed.
- *   0: At least one permissive container is installed, but none are running.
- *   1: At least one permissive container is currently running.
+ *   1: at least one running container has the feature enabled
+ *   0: feature containers exist but none are currently running
+ *  -1: no containers with the feature are installed
+ *
+ * Adding support for a new feature costs zero lines here - just define
+ * a DS_FEAT_* constant in droidspace.h and call ds_feature_needs().
  */
-int check_selinux_permissive_needs(void) {
-  char pids_path[PATH_MAX];
-  snprintf(pids_path, sizeof(pids_path), "%s", get_pids_dir());
-  DIR *pd = opendir(pids_path);
+int ds_feature_needs(size_t cfg_flag_offset) {
+  /* Phase 1: any running container with the feature? */
+  DIR *pd = opendir(get_pids_dir());
   if (!pd)
     return -1;
 
-  /* Phase 1: Fast check - are any permissive containers currently running? */
   struct dirent *ent;
   while ((ent = readdir(pd)) != NULL) {
     if (!is_pid_file(ent->d_name))
       continue;
-
     char name[256];
     get_container_name_from_pidfile(ent->d_name, name, sizeof(name));
-
-    struct ds_config tmp_cfg = {0};
-    if (ds_config_load_by_name(name, &tmp_cfg) == 0) {
+    struct ds_config tmp = {0};
+    if (ds_config_load_by_name(name, &tmp) == 0) {
+      int flag = *(int *)((char *)&tmp + cfg_flag_offset);
       pid_t pid;
-      /* Check if THIS running container needs permissive mode */
-      if (tmp_cfg.selinux_permissive && is_container_running(&tmp_cfg, &pid)) {
-        free_config_binds(&tmp_cfg);
-        free_config_env_vars(&tmp_cfg);
-        free_config_unknown_lines(&tmp_cfg);
+      int running = flag && is_container_running(&tmp, &pid);
+      ds_config_free(&tmp);
+      if (running) {
         closedir(pd);
-        return 1; /* Found a running permissive container - stay permissive */
+        return 1;
       }
-      free_config_binds(&tmp_cfg);
-      free_config_env_vars(&tmp_cfg);
-      free_config_unknown_lines(&tmp_cfg);
     }
   }
   closedir(pd);
 
-  /* Phase 2: None are running. But is at least one permissive container
-   * installed? (Requirement: do nothing if none installed). */
+  /* Phase 2: feature installed in any container at all? */
   char containers_path[PATH_MAX];
   snprintf(containers_path, sizeof(containers_path), "%s/Containers",
            get_workspace_dir());
@@ -847,215 +843,35 @@ int check_selinux_permissive_needs(void) {
   if (!cd)
     return -1;
 
-  int permissive_installed = 0;
+  int installed = 0;
   while ((ent = readdir(cd)) != NULL) {
     if (ent->d_name[0] == '.')
       continue;
-
-    struct ds_config tmp_cfg = {0};
-    if (ds_config_load_by_name(ent->d_name, &tmp_cfg) == 0) {
-      if (tmp_cfg.selinux_permissive) {
-        permissive_installed = 1;
-        free_config_binds(&tmp_cfg);
-        free_config_env_vars(&tmp_cfg);
-        free_config_unknown_lines(&tmp_cfg);
+    struct ds_config tmp = {0};
+    if (ds_config_load_by_name(ent->d_name, &tmp) == 0) {
+      int flag = *(int *)((char *)&tmp + cfg_flag_offset);
+      if (flag) {
+        installed = 1;
+        ds_config_free(&tmp);
         break;
       }
-      free_config_binds(&tmp_cfg);
-      free_config_env_vars(&tmp_cfg);
-      free_config_unknown_lines(&tmp_cfg);
+      ds_config_free(&tmp);
     }
   }
   closedir(cd);
-
-  return permissive_installed ? 0 : -1;
+  return installed ? 0 : -1;
 }
 
-/*
- * check_x11_needs - scan running containers to decide if the global
- * Termux-X11 server should stay up.
- *
- * Returns:
- *   1: at least one running container has termux_x11 enabled
- *   0: termux_x11 containers exist but none are running
- *  -1: no containers with termux_x11 are installed
- */
+/* Compat wrappers - thin shims over ds_feature_needs() */
+int check_selinux_permissive_needs(void) {
+  return ds_feature_needs(offsetof(struct ds_config, selinux_permissive));
+}
 int check_x11_needs(void) {
-  DIR *pd = opendir(get_pids_dir());
-  if (!pd)
-    return -1;
-
-  struct dirent *ent;
-  while ((ent = readdir(pd)) != NULL) {
-    if (!is_pid_file(ent->d_name))
-      continue;
-    char name[256];
-    get_container_name_from_pidfile(ent->d_name, name, sizeof(name));
-    struct ds_config tmp = {0};
-    if (ds_config_load_by_name(name, &tmp) == 0) {
-      pid_t pid;
-      int running = tmp.termux_x11 && is_container_running(&tmp, &pid);
-      free_config_binds(&tmp);
-      free_config_env_vars(&tmp);
-      free_config_unknown_lines(&tmp);
-      if (running) {
-        closedir(pd);
-        return 1;
-      }
-    }
-  }
-  closedir(pd);
-
-  /* Phase 2: any termux_x11 container installed at all? */
-  char containers_path[PATH_MAX];
-  snprintf(containers_path, sizeof(containers_path), "%s/Containers",
-           get_workspace_dir());
-  DIR *cd = opendir(containers_path);
-  if (!cd)
-    return -1;
-
-  int x11_installed = 0;
-  while ((ent = readdir(cd)) != NULL) {
-    if (ent->d_name[0] == '.')
-      continue;
-    struct ds_config tmp = {0};
-    if (ds_config_load_by_name(ent->d_name, &tmp) == 0 && tmp.termux_x11) {
-      x11_installed = 1;
-      free_config_binds(&tmp);
-      free_config_env_vars(&tmp);
-      free_config_unknown_lines(&tmp);
-      break;
-    }
-    free_config_binds(&tmp);
-    free_config_env_vars(&tmp);
-    free_config_unknown_lines(&tmp);
-  }
-  closedir(cd);
-  return x11_installed ? 0 : -1;
+  return ds_feature_needs(offsetof(struct ds_config, termux_x11));
 }
-
-/*
- * check_virgl_needs - scan running containers to decide if the global
- * VirGL server should stay up.
- *
- * Returns:
- *   1: at least one running container has virgl enabled
- *   0: virgl containers exist but none are running
- *  -1: no containers with virgl are installed
- */
 int check_virgl_needs(void) {
-  DIR *pd = opendir(get_pids_dir());
-  if (!pd)
-    return -1;
-
-  struct dirent *ent;
-  while ((ent = readdir(pd)) != NULL) {
-    if (!is_pid_file(ent->d_name))
-      continue;
-    char name[256];
-    get_container_name_from_pidfile(ent->d_name, name, sizeof(name));
-    struct ds_config tmp = {0};
-    if (ds_config_load_by_name(name, &tmp) == 0) {
-      pid_t pid;
-      int running = tmp.virgl && is_container_running(&tmp, &pid);
-      free_config_binds(&tmp);
-      free_config_env_vars(&tmp);
-      free_config_unknown_lines(&tmp);
-      if (running) {
-        closedir(pd);
-        return 1;
-      }
-    }
-  }
-  closedir(pd);
-
-  /* Phase 2: any virgl container installed at all? */
-  char containers_path[PATH_MAX];
-  snprintf(containers_path, sizeof(containers_path), "%s/Containers",
-           get_workspace_dir());
-  DIR *cd = opendir(containers_path);
-  if (!cd)
-    return -1;
-
-  int virgl_installed = 0;
-  while ((ent = readdir(cd)) != NULL) {
-    if (ent->d_name[0] == '.')
-      continue;
-    struct ds_config tmp = {0};
-    if (ds_config_load_by_name(ent->d_name, &tmp) == 0 && tmp.virgl) {
-      virgl_installed = 1;
-      free_config_binds(&tmp);
-      free_config_env_vars(&tmp);
-      free_config_unknown_lines(&tmp);
-      break;
-    }
-    free_config_binds(&tmp);
-    free_config_env_vars(&tmp);
-    free_config_unknown_lines(&tmp);
-  }
-  closedir(cd);
-  return virgl_installed ? 0 : -1;
+  return ds_feature_needs(offsetof(struct ds_config, virgl));
 }
-
-/*
- * check_pulse_needs - scan running containers to decide if the global
- * PulseAudio daemon should stay up.
- *
- * Returns:
- *   1: at least one running container has pulseaudio enabled
- *   0: pulseaudio containers exist but none are running
- *  -1: no containers with pulseaudio are installed
- */
 int check_pulse_needs(void) {
-  DIR *pd = opendir(get_pids_dir());
-  if (!pd)
-    return -1;
-
-  struct dirent *ent;
-  while ((ent = readdir(pd)) != NULL) {
-    if (!is_pid_file(ent->d_name))
-      continue;
-    char name[256];
-    get_container_name_from_pidfile(ent->d_name, name, sizeof(name));
-    struct ds_config tmp = {0};
-    if (ds_config_load_by_name(name, &tmp) == 0) {
-      pid_t pid;
-      int running = tmp.pulseaudio && is_container_running(&tmp, &pid);
-      free_config_binds(&tmp);
-      free_config_env_vars(&tmp);
-      free_config_unknown_lines(&tmp);
-      if (running) {
-        closedir(pd);
-        return 1;
-      }
-    }
-  }
-  closedir(pd);
-
-  /* Phase 2: any pulseaudio container installed at all? */
-  char containers_path[PATH_MAX];
-  snprintf(containers_path, sizeof(containers_path), "%s/Containers",
-           get_workspace_dir());
-  DIR *cd = opendir(containers_path);
-  if (!cd)
-    return -1;
-
-  int pulse_installed = 0;
-  while ((ent = readdir(cd)) != NULL) {
-    if (ent->d_name[0] == '.')
-      continue;
-    struct ds_config tmp = {0};
-    if (ds_config_load_by_name(ent->d_name, &tmp) == 0 && tmp.pulseaudio) {
-      pulse_installed = 1;
-      free_config_binds(&tmp);
-      free_config_env_vars(&tmp);
-      free_config_unknown_lines(&tmp);
-      break;
-    }
-    free_config_binds(&tmp);
-    free_config_env_vars(&tmp);
-    free_config_unknown_lines(&tmp);
-  }
-  closedir(cd);
-  return pulse_installed ? 0 : -1;
+  return ds_feature_needs(offsetof(struct ds_config, pulseaudio));
 }

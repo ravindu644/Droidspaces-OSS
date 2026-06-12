@@ -151,7 +151,7 @@ struct DS_SOCKETD_PACKED ds_socketd_bind_record {
 struct DS_SOCKETD_PACKED ds_socketd_inspect_container_record_v1 {
   uint16_t record_version_be; /* currently 1 */
   uint16_t _header_pad;
-  uint32_t record_size_be;    /* sizeof(ds_socketd_inspect_container_record_v1) */
+  uint32_t record_size_be; /* sizeof(ds_socketd_inspect_container_record_v1) */
 
   char name[DS_SOCKETD_RECORD_NAME_MAX];
   char uuid[DS_UUID_LEN + 1];
@@ -162,7 +162,7 @@ struct DS_SOCKETD_PACKED ds_socketd_inspect_container_record_v1 {
   char custom_init[DS_SOCKETD_RECORD_PATH_MAX]; /* empty = /sbin/init */
   char dns_servers[DS_SOCKETD_INSPECT_STRING_MAX];
 
-  int32_t pid_be;       /* host-view PID 1; 0 = stopped */
+  int32_t pid_be;        /* host-view PID 1; 0 = stopped */
   int64_t started_at_be; /* CLOCK_REALTIME seconds; 0 if unknown */
 
   int64_t memory_limit_be; /* bytes; 0 = unlimited */
@@ -184,12 +184,12 @@ struct DS_SOCKETD_PACKED ds_socketd_inspect_container_record_v1 {
   uint8_t block_nested_ns;
   uint8_t is_img_mount;
 
-  uint16_t env_count_be;            /* entries serialized in env[] */
-  uint16_t env_total_count_be;      /* original cfg count before truncation */
-  uint16_t bind_count_be;           /* entries serialized in binds[] */
-  uint16_t bind_total_count_be;     /* original cfg count before truncation */
-  uint16_t port_count_be;           /* entries serialized in ports[] */
-  uint16_t port_total_count_be;     /* original cfg count before truncation */
+  uint16_t env_count_be;        /* entries serialized in env[] */
+  uint16_t env_total_count_be;  /* original cfg count before truncation */
+  uint16_t bind_count_be;       /* entries serialized in binds[] */
+  uint16_t bind_total_count_be; /* original cfg count before truncation */
+  uint16_t port_count_be;       /* entries serialized in ports[] */
+  uint16_t port_total_count_be; /* original cfg count before truncation */
 
   struct ds_socketd_env_record env[DS_SOCKETD_INSPECT_ENV_MAX];
   struct ds_socketd_bind_record binds[DS_SOCKETD_INSPECT_BINDS_MAX];

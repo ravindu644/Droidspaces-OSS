@@ -156,15 +156,15 @@ int android_setup_storage(const char *rootfs_path) {
  * Shared by x11.c and pulseaudio-android.c.  Android-specific.
  * ---------------------------------------------------------------------------*/
 
-/* SELinux domains to try, newest first */
+/* SELinux domains to try -- untrusted_app_27 first (matches real Termux) */
 static const char *const untrusted_domains[] = {
-    "u:r:untrusted_app",    "u:r:untrusted_app_32", "u:r:untrusted_app_30",
-    "u:r:untrusted_app_29", "u:r:untrusted_app_27", "u:r:untrusted_app_25",
+    "u:r:untrusted_app_27", "u:r:untrusted_app_30", "u:r:untrusted_app_29",
+    "u:r:untrusted_app_25", "u:r:untrusted_app_32", "u:r:untrusted_app",
 };
 
 /*
  * Extract MLS categories from a full SELinux context string.
- * e.g. "u:object_r:app_data_file:s0:c78,c257,c512,c768"
+ * e.g. "u:object_r:app_data_file:s0:c80,c257,c512,c768"
  *                                    ^ returned pointer
  */
 const char *ds_extract_mls(const char *ctx) {
@@ -177,12 +177,11 @@ const char *ds_extract_mls(const char *ctx) {
 
 /*
  * Transition the calling process into an untrusted_app SELinux domain
- * with the given MLS categories.  Tries newest API-level domain first.
+ * with the given MLS categories.  Tries untrusted_app_27 first to match
+ * the real Termux process context.
  * Also clears /proc/self/attr/exec to prevent label leaking.
- * Fills applied_ctx (if non-NULL) with the context string that succeeded.
  */
-void ds_selinux_dyntransition(const char *mls, char *applied_ctx,
-                              size_t ctx_size) {
+void ds_selinux_dyntransition(const char *mls) {
   char target[256] = "";
   int fd = open("/proc/self/attr/current", O_WRONLY | O_CLOEXEC);
   if (fd >= 0) {
@@ -202,9 +201,6 @@ void ds_selinux_dyntransition(const char *mls, char *applied_ctx,
     }
     close(fd);
   }
-
-  if (applied_ctx && ctx_size > 0)
-    snprintf(applied_ctx, ctx_size, "%s", target);
 }
 
 /*

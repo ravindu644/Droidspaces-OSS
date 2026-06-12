@@ -46,22 +46,6 @@ if $TEST ! -d "$ROOTFS_PATH"; then
     exit 1
 fi
 
-log "Starting post-extraction fixes for: $ROOTFS_PATH"
-
-# Check if fixes were already applied
-if $TEST -f "$ROOTFS_PATH/etc/droidspaces"; then
-    log "Post-extraction fixes already applied, skipping..."
-    exit 0
-fi
-
-# Detect NixOS
-if $TEST -d "$ROOTFS_PATH/nix"; then
-    log "NixOS detected, skipping all post-extraction fixes (Nix manages its own state)"
-    # Mark as applied anyway to prevent re-running
-    $TOUCH "$ROOTFS_PATH/etc/droidspaces" 2>/dev/null || true
-    exit 0
-fi
-
 # Helper to execute a command inside the chroot environment
 run_in_chroot() {
     local command="$*"
@@ -71,6 +55,28 @@ run_in_chroot() {
     # Note: This assumes /bin/sh exists in the rootfs
     $CHROOT "$ROOTFS_PATH" /bin/sh -c "$common_exports $command"
 }
+
+log "Starting post-extraction fixes for: $ROOTFS_PATH"
+
+# Detect NixOS
+if $TEST -d "$ROOTFS_PATH/nix"; then
+    log "NixOS detected, skipping all post-extraction fixes (Nix manages its own state)"
+    # Mark as applied anyway to prevent re-running
+    $TOUCH "$ROOTFS_PATH/etc/droidspaces" 2>/dev/null || true
+    exit 0
+fi
+
+# Pre-commit machine-id to prevent first-boot deadlock in Fedora 44
+log "Generating machine-id..."
+$CAT /proc/sys/kernel/random/uuid | $BB tr -d '-' | $BB tr -d '\n' > "$ROOTFS_PATH/etc/machine-id"
+$ECHO "" >> "$ROOTFS_PATH/etc/machine-id"
+$CHMOD 444 "$ROOTFS_PATH/etc/machine-id"
+
+# Check if fixes were already applied
+if $TEST -f "$ROOTFS_PATH/etc/droidspaces"; then
+    log "Post-extraction fixes already applied, skipping..."
+    exit 0
+fi
 
 # --- 1. General Fixes (Init-independent) ---
 
@@ -104,12 +110,6 @@ if $TEST -f "$ROOTFS_PATH/usr/bin/systemctl" || $TEST -f "$ROOTFS_PATH/bin/syste
     $TEST -d "$ROOTFS_PATH/usr/lib/systemd/system" && GUEST_SYSTEMD_PATH="/usr/lib/systemd/system"
 
     log "Systemd detected (at $GUEST_SYSTEMD_PATH), applying fixes..."
-
-    # 00. Pre-commit machine-id to prevent first-boot deadlock in Fedora 44
-    log "Generating machine-id..."
-    $CAT /proc/sys/kernel/random/uuid | $BB tr -d '-' | $BB tr -d '\n' > "$ROOTFS_PATH/etc/machine-id"
-    $ECHO "" >> "$ROOTFS_PATH/etc/machine-id"
-    $CHMOD 444 "$ROOTFS_PATH/etc/machine-id"
 
     # 01. Mask problematic services for Android kernels
     log "Masking problematic systemd services..."

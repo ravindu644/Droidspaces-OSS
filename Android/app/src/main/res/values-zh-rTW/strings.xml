@@ -452,4 +452,15 @@
     <string name="repo_custom_url_invalid">網址必須以 https:// 開頭</string>
     <string name="repo_no_custom">目前還沒有訂閱任何自訂儲存庫。</string>
     <string name="read_only">唯讀</string>
+    <string name="virgl_option">VirGL</string>
+    <string name="pulseaudio_option">PulseAudio</string>
+    <string name="enable_pulseaudio">設定 PulseAudio</string>
+    <string name="enable_pulseaudio_description">透過 PulseAudio 啟用音訊支援</string>
+    <string name="tx11_extra_flags_label">Termux:X11 額外參數標記</string>
+    <string name="tx11_extra_flags_placeholder">例如： -dpi 160 -force-sysvshm</string>
+    <string name="enable_virgl">配置 VirGL 3D 加速</string>
+    <string name="enable_virgl_description">透過 VirGL 啟用 3D 硬體加速</string>
+    <string name="virgl_extra_flags_label">VirGL 額外參數標記</string>
+    <string name="virgl_extra_flags_placeholder">例如： --multi-clients --angle-vulkan</string>
+    <string name="termux_requirements">Termux 需求</string>
 </resources>

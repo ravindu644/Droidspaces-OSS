@@ -188,7 +188,7 @@ droidspaces --name=gpu-test --rootfs=/path/to/rootfs --hw-access start
 > X11 支持可以使用 `--termux-x11` (`-X`) 标志独立启用。如果您不需要完整的 GPU/硬件访问权限，这是在 Android 上使用 GUI 应用程序的推荐方式，因为它保留了更高级别的隔离性。
 
 
-启动容器后，在容器内设置 `DISPLAY=:0` 以使用 X11 显示。
+Droidspaces 会通过 `/run/droidspaces.env`（从 `/etc/profile.d/droidspaces_env.sh` 符号链接）自动将 `DISPLAY=:5` 以及（启用 VirGL 时）`GALLIUM_DRIVER=virpipe` 注入到容器环境中。`bash` 和 `sh` 会自动读取此文件。如果您使用 `zsh`、`fish` 或其他非登录 shell，请手动执行：`source /run/droidspaces.env`。
 
 ### 支持的 GPU 系列
 

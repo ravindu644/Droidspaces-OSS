@@ -20,10 +20,10 @@ int ds_openpty(int *master, int *slave, char *name) {
   if (m < 0)
     return -1;
 
-  /* unlock slave */
+  /* best-effort: vendor 4.9 kernels may return EINVAL/EIO on newinstance
+   * devpts mounts; kernel auto-unlocks if needed */
   int unlock = 0;
-  if (ioctl(m, TIOCSPTLCK, &unlock) < 0)
-    goto err;
+  (void)ioctl(m, TIOCSPTLCK, &unlock);
 
   /* try kernel 4.13+ path-free method first */
   int s = ioctl(m, TIOCGPTPEER, O_RDWR | O_NOCTTY | O_CLOEXEC);
@@ -125,11 +125,11 @@ int ds_setup_tios(int fd, struct termios *old) {
 #ifdef IEXTEN
   new_tios.c_lflag &= (tcflag_t)~IEXTEN;
 #endif
-  /* Keep host's ONLCR enabled to avoid staircase output if the container side
-   * stops sending \r (e.g. during shutdown or sudo execution). Duplicate \r
-   * are harmless. */
-  // new_tios.c_oflag &= (tcflag_t)~ONLCR;
-  new_tios.c_oflag |= OPOST;
+  /* Disable output processing: OPOST with ONLCR active on the host PTY causes
+   * the line discipline to transform \n -> \r\n, corrupting TUI escape
+   * sequences from tmux, vim, etc. The container shell sets its own ONLCR on
+   * the inner slave, so \r\n translation happens exactly once, there. */
+  new_tios.c_oflag &= (tcflag_t) ~(OPOST | ONLCR);
   new_tios.c_cc[VMIN] = 1;
   new_tios.c_cc[VTIME] = 0;
 

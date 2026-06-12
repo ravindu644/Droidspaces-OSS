@@ -1165,7 +1165,3 @@ int ds_fix_host_ptys(void) {
   ds_log("Host devpts mounted successfully (Recovery fix).");
   return 0;
 }
-
-/* ---------------------------------------------------------------------------
- * Container introspection helpers (used by info/show)
- * ---------------------------------------------------------------------------*/

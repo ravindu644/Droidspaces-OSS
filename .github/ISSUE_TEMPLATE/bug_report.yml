@@ -7,6 +7,12 @@ body:
   - type: markdown
     attributes:
       value: |
+        ## 🌐 ENGLISH ONLY
+        **All issues MUST be written in English. Non-English reports will be closed without response.**
+
+  - type: markdown
+    attributes:
+      value: |
         ## ⚠️ STRICT ENFORCEMENT NOTICE
         Duct-taped GKI kernels (CRC nukes, broken ABIs) are strictly unsupported.
         *Non-GKI kernels (< 5.x) have an excuse for legacy oddities, but source code is still needed to provide support.*

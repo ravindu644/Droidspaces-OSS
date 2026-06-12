@@ -18,7 +18,7 @@ if (keystorePropertiesFile.exists()) {
 
 // Helper to extract version from C header
 fun getDSVersion(): String {
-    val headerFile = file("../../src/droidspace.h")
+    val headerFile = file("../../src/include/droidspace.h")
     if (!headerFile.exists()) return "1.0.0"
     
     val pattern = Regex("#define\\s+DS_VERSION\\s+\"([^\"]+)\"")

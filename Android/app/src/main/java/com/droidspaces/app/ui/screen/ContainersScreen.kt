@@ -663,21 +663,26 @@ fun ContainersScreen(
                                 }
                             },
                             onEdit = {
+                                onExpandedContainerNameChange(null)
                                 onNavigateToEditContainer(container.name)
                             },
                             onEnter = {
                                 onNavigateToContainerDetails(container.name)
                             },
                             onUninstall = {
+                                onExpandedContainerNameChange(null)
                                 showUninstallConfirmation = container
                             },
                             onMigrate = {
+                                onExpandedContainerNameChange(null)
                                 pendingSparseOperation = SparseOperation.Migrate(container)
                             },
                             onResize = {
+                                onExpandedContainerNameChange(null)
                                 pendingSparseOperation = SparseOperation.Resize(container)
                             },
                             onExport = {
+                                onExpandedContainerNameChange(null)
                                 // Generate filename: <name>_yyyyMMdd_HHmmss.tar.gz
                                 val timestamp = java.text.SimpleDateFormat(
                                     "yyyyMMdd_HHmmss",

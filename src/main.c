@@ -461,18 +461,27 @@ int main(int argc, char **argv) {
    * Commands that do not require root access (docs, help, version) or
    * must be run locally to avoid recursive loops (mode) are never proxied.
    */
-  int is_stateless_cmd =
+  int is_no_root_cmd =
       (discovered_cmd && (strcmp(discovered_cmd, "docs") == 0 ||
                           strcmp(discovered_cmd, "help") == 0 ||
                           strcmp(discovered_cmd, "version") == 0 ||
-                          strcmp(discovered_cmd, "mode") == 0));
+                          strcmp(discovered_cmd, "mode") == 0 ||
+                          strcmp(discovered_cmd, "check") == 0));
 
-  if (!is_daemon_cmd && !is_stateless_cmd && getenv("DS_NO_PROXY") == NULL) {
+  if (!is_daemon_cmd && !is_no_root_cmd && getenv("DS_NO_PROXY") == NULL) {
     int proxy_ret = ds_client_run(argc - 1, argv + 1);
     if (proxy_ret != -2) {
       ret = proxy_ret;
       goto cleanup;
     }
+  }
+
+  /* Unified root gate: block all non-exempt commands before any work begins */
+  if (!is_no_root_cmd && getuid() != 0) {
+    ds_error("Root privileges required for '%s'",
+             discovered_cmd ? discovered_cmd : "(unknown)");
+    ret = 1;
+    goto cleanup;
   }
 
   /*
@@ -1057,12 +1066,6 @@ int main(int argc, char **argv) {
     goto cleanup;
   }
 
-  /* Root required commands */
-  if (getuid() != 0) {
-    ds_error("Root privileges required for '%s'", cmd);
-    ret = 1;
-    goto cleanup;
-  }
   ensure_workspace();
 
   if (strcmp(cmd, "show") == 0) {
@@ -1184,11 +1187,6 @@ int main(int argc, char **argv) {
   }
 
   if (strcmp(cmd, "daemon") == 0) {
-    if (getuid() != 0) {
-      ds_error("Root privileges required for daemon mode");
-      ret = 1;
-      goto cleanup;
-    }
     ret = ds_daemon_run(cfg.foreground, argv);
     goto cleanup;
   }
@@ -1199,9 +1197,7 @@ int main(int argc, char **argv) {
   ret = 1;
 
 cleanup:
-  free_config_unknown_lines(&cfg);
-  free_config_env_vars(&cfg);
-  free_config_binds(&cfg);
+  ds_config_free(&cfg);
   free(cfg.tx11_extra_flags);
   free(cfg.virgl_extra_flags);
   return ret;

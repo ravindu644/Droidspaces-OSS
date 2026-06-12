@@ -17,6 +17,9 @@ logs/
 *.keystore
 local.properties
 
+# IDE / tooling
+compile_commands.json
+
 # Nix stuff
 /result
 *.qcow2

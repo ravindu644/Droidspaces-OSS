@@ -9,12 +9,33 @@
 #include "droidspace.h"
 #include "socketd_protocol.h"
 
+#include <pwd.h>
+#include <sys/time.h>
+
 /*
  * The public Docker/Podman-compatible socket belongs to the external C++
  * droidspaces-socketd daemon.  This bridge is deliberately narrower: it is a
  * local, private, privileged control path that will eventually expose the
  * Droidspaces-native operations needed by that compatibility daemon.
  */
+
+#define DS_SOCKETD_GROUP "droidspaces"
+#define DS_SOCKETD_CONN_TIMEOUT_SEC 10
+
+static void socketd_set_conn_timeouts(int fd) {
+  struct timeval tv;
+  memset(&tv, 0, sizeof(tv));
+  tv.tv_sec = DS_SOCKETD_CONN_TIMEOUT_SEC;
+
+  if (setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv)) < 0) {
+    ds_warn("socketd backend: failed to set receive timeout: %s",
+            strerror(errno));
+  }
+
+  if (setsockopt(fd, SOL_SOCKET, SO_SNDTIMEO, &tv, sizeof(tv)) < 0) {
+    ds_warn("socketd backend: failed to set send timeout: %s", strerror(errno));
+  }
+}
 
 static int socketd_read_exact(int fd, void *buf, size_t len) {
   uint8_t *p = (uint8_t *)buf;
@@ -76,11 +97,29 @@ static int socketd_peer_authorized(int fd) {
     return 0;
 
   /*
-   * The first socketd implementation is expected to run as root beside the
-   * Droidspaces daemon.  Same-EUID access keeps local developer/test launches
-   * usable on desktop Linux without opening the bridge to arbitrary users.
+   * The abstract backend socket has no filesystem permissions, so enforce the
+   * same local authorization model used by the main Droidspaces daemon: root or
+   * members of the dedicated 'droidspaces' group may connect.
    */
-  return cred.uid == 0 || cred.uid == geteuid();
+  if (cred.uid == 0)
+    return 1;
+
+  struct group *gr = getgrnam(DS_SOCKETD_GROUP);
+  struct passwd *pw = getpwuid(cred.uid);
+  if (!gr || !pw)
+    return 0;
+
+  int ngroups = 64;
+  gid_t groups[64];
+  if (getgrouplist(pw->pw_name, pw->pw_gid, groups, &ngroups) < 0)
+    return 0;
+
+  for (int i = 0; i < ngroups; i++) {
+    if (groups[i] == gr->gr_gid)
+      return 1;
+  }
+
+  return 0;
 #else
   (void)fd;
   return 0;
@@ -250,9 +289,7 @@ static int socketd_pidfile_to_container_name(const char *filename,
 }
 
 static void socketd_free_loaded_config(struct ds_config *cfg) {
-  free_config_binds(cfg);
-  free_config_env_vars(cfg);
-  free_config_unknown_lines(cfg);
+  ds_config_free(cfg);
 }
 
 static int socketd_is_uuid_prefix_ref(const char *ref) {
@@ -355,7 +392,6 @@ static int socketd_load_config_by_ref(const char *ref, struct ds_config *cfg) {
 static void socketd_pack_port_record(struct ds_socketd_port_record *dst,
                                      const struct ds_port_forward *src);
 
-
 static void
 socketd_pack_container_record(struct ds_socketd_container_record *record,
                               const struct ds_config *cfg, pid_t pid) {
@@ -405,7 +441,6 @@ socketd_pack_container_record(struct ds_socketd_container_record *record,
   record->started_at_be = (int64_t)socketd_hton64((uint64_t)started_at);
 }
 
-
 static int socketd_u16_count(int count, int max_count) {
   if (count < 0)
     return 0;
@@ -438,8 +473,8 @@ static void socketd_pack_inspect_record(
   safe_strncpy(record->rootfs_path, cfg->rootfs_path,
                sizeof(record->rootfs_path));
 
-  const char *image_ref = cfg->rootfs_img_path[0] ? cfg->rootfs_img_path
-                                                  : cfg->rootfs_path;
+  const char *image_ref =
+      cfg->rootfs_img_path[0] ? cfg->rootfs_img_path : cfg->rootfs_path;
   safe_strncpy(record->image_ref, image_ref, sizeof(record->image_ref));
   safe_strncpy(record->hostname, cfg->hostname, sizeof(record->hostname));
 
@@ -458,7 +493,8 @@ static void socketd_pack_inspect_record(
   int64_t started_at = pid > 0 ? socketd_container_started_at_epoch(pid) : 0;
   record->started_at_be = (int64_t)socketd_hton64((uint64_t)started_at);
 
-  record->memory_limit_be = (int64_t)socketd_hton64((uint64_t)cfg->memory_limit);
+  record->memory_limit_be =
+      (int64_t)socketd_hton64((uint64_t)cfg->memory_limit);
   record->cpu_quota_be = (int64_t)socketd_hton64((uint64_t)cfg->cpu_quota);
   record->cpu_period_be = (int64_t)socketd_hton64((uint64_t)cfg->cpu_period);
   record->pids_limit_be = (int64_t)socketd_hton64((uint64_t)cfg->pids_limit);
@@ -477,8 +513,8 @@ static void socketd_pack_inspect_record(
   record->block_nested_ns = cfg->block_nested_ns ? 1u : 0u;
   record->is_img_mount = cfg->is_img_mount ? 1u : 0u;
 
-  int env_count = socketd_u16_count(cfg->env_var_count,
-                                    DS_SOCKETD_INSPECT_ENV_MAX);
+  int env_count =
+      socketd_u16_count(cfg->env_var_count, DS_SOCKETD_INSPECT_ENV_MAX);
   record->env_count_be = htons((uint16_t)env_count);
   record->env_total_count_be =
       htons((uint16_t)socketd_u16_count(cfg->env_var_count, UINT16_MAX));
@@ -491,8 +527,8 @@ static void socketd_pack_inspect_record(
                    sizeof(record->env[i].value));
   }
 
-  int bind_count = socketd_u16_count(cfg->bind_count,
-                                     DS_SOCKETD_INSPECT_BINDS_MAX);
+  int bind_count =
+      socketd_u16_count(cfg->bind_count, DS_SOCKETD_INSPECT_BINDS_MAX);
   record->bind_count_be = htons((uint16_t)bind_count);
   record->bind_total_count_be =
       htons((uint16_t)socketd_u16_count(cfg->bind_count, UINT16_MAX));
@@ -504,8 +540,8 @@ static void socketd_pack_inspect_record(
     record->binds[i].read_only = cfg->binds[i].ro ? 1u : 0u;
   }
 
-  int port_count = socketd_u16_count(cfg->port_forward_count,
-                                     DS_SOCKETD_RECORD_PORTS_MAX);
+  int port_count =
+      socketd_u16_count(cfg->port_forward_count, DS_SOCKETD_RECORD_PORTS_MAX);
   record->port_count_be = htons((uint16_t)port_count);
   record->port_total_count_be =
       htons((uint16_t)socketd_u16_count(cfg->port_forward_count, UINT16_MAX));
@@ -774,13 +810,9 @@ static int socketd_validate_start_config(struct ds_config *cfg) {
   return 0;
 }
 
-static enum ds_socketd_status
-socketd_read_lifecycle_request(int conn,
-                               uint32_t payload_len,
-                               struct ds_socketd_lifecycle_req *req_out,
-                               char *target_out,
-                               size_t target_size,
-                               int *timeout_seconds_out) {
+static enum ds_socketd_status socketd_read_lifecycle_request(
+    int conn, uint32_t payload_len, struct ds_socketd_lifecycle_req *req_out,
+    char *target_out, size_t target_size, int *timeout_seconds_out) {
   if (!req_out || !target_out || target_size == 0 || !timeout_seconds_out)
     return DS_SOCKETD_STATUS_BAD_REQUEST;
 
@@ -794,8 +826,7 @@ socketd_read_lifecycle_request(int conn,
   if (!target_out[0])
     return DS_SOCKETD_STATUS_BAD_REQUEST;
 
-  int32_t timeout =
-      (int32_t)ntohl((uint32_t)req_out->timeout_seconds_be);
+  int32_t timeout = (int32_t)ntohl((uint32_t)req_out->timeout_seconds_be);
   if (timeout < -1)
     return DS_SOCKETD_STATUS_BAD_REQUEST;
 
@@ -878,16 +909,14 @@ static enum ds_socketd_status socketd_lifecycle_restart(struct ds_config *cfg,
   return DS_SOCKETD_STATUS_OK;
 }
 
-static int socketd_handle_lifecycle_request(int conn,
-                                            uint32_t payload_len,
+static int socketd_handle_lifecycle_request(int conn, uint32_t payload_len,
                                             enum ds_socketd_opcode opcode) {
   struct ds_socketd_lifecycle_req req;
   char target[DS_SOCKETD_RECORD_NAME_MAX];
   int timeout_seconds = -1;
 
-  enum ds_socketd_status status =
-      socketd_read_lifecycle_request(conn, payload_len, &req, target,
-                                     sizeof(target), &timeout_seconds);
+  enum ds_socketd_status status = socketd_read_lifecycle_request(
+      conn, payload_len, &req, target, sizeof(target), &timeout_seconds);
   if (status != DS_SOCKETD_STATUS_OK) {
     socketd_send_response(conn, status, NULL, 0);
     return 0;
@@ -994,9 +1023,9 @@ static void socketd_handle_conn(int conn) {
     uint32_t caps_be =
         htonl(DS_SOCKETD_CAP_PROTOCOL_V1 | DS_SOCKETD_CAP_PING |
               DS_SOCKETD_CAP_CAPABILITIES | DS_SOCKETD_CAP_INFO |
-              DS_SOCKETD_CAP_LIST_CONTAINERS | DS_SOCKETD_CAP_INSPECT_CONTAINER |
-              DS_SOCKETD_CAP_LIFECYCLE | DS_SOCKETD_CAP_LIST_IMAGES |
-              DS_SOCKETD_CAP_POLL_EVENTS);
+              DS_SOCKETD_CAP_LIST_CONTAINERS |
+              DS_SOCKETD_CAP_INSPECT_CONTAINER | DS_SOCKETD_CAP_LIFECYCLE |
+              DS_SOCKETD_CAP_LIST_IMAGES | DS_SOCKETD_CAP_POLL_EVENTS);
 
     socketd_send_response(conn, DS_SOCKETD_STATUS_OK, &caps_be,
                           (uint32_t)sizeof(caps_be));
@@ -1276,13 +1305,11 @@ static void socketd_handle_conn(int conn) {
     return;
   }
 
-
   case DS_SOCKETD_OP_INSPECT_CONTAINER: {
     struct ds_socketd_inspect_container_req inspect_req;
     memset(&inspect_req, 0, sizeof(inspect_req));
 
-    if (socketd_read_payload(conn, &inspect_req,
-                             (uint32_t)sizeof(inspect_req),
+    if (socketd_read_payload(conn, &inspect_req, (uint32_t)sizeof(inspect_req),
                              payload_len) < 0) {
       socketd_send_response(conn, DS_SOCKETD_STATUS_BAD_REQUEST, NULL, 0);
       return;
@@ -1394,7 +1421,6 @@ static void socketd_handle_conn(int conn) {
     return;
   }
 
-
   case DS_SOCKETD_OP_START_CONTAINER:
   case DS_SOCKETD_OP_STOP_CONTAINER:
   case DS_SOCKETD_OP_RESTART_CONTAINER:
@@ -1440,6 +1466,7 @@ static int socketd_bridge_loop(void) {
     }
 
     fcntl(conn, F_SETFD, FD_CLOEXEC);
+    socketd_set_conn_timeouts(conn);
     socketd_handle_conn(conn);
     close(conn);
   }

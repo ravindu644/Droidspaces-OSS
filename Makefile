@@ -10,7 +10,7 @@ OUT_DIR     = output
 CC ?= cc
 
 # Get version from header
-VERSION := $(shell grep "DS_VERSION" $(SRC_DIR)/droidspace.h | awk '{print $$3}' | tr -d '"')
+VERSION := $(shell grep "DS_VERSION" $(SRC_DIR)/include/droidspace.h | awk '{print $$3}' | tr -d '"')
 
 # Parallel jobs - use all available CPU cores
 NPROC := $(shell nproc 2>/dev/null || sysctl -n hw.logicalcpu 2>/dev/null || echo 4)
@@ -18,9 +18,9 @@ NPROC := $(shell nproc 2>/dev/null || sysctl -n hw.logicalcpu 2>/dev/null || ech
 # Verbose control - V=1 shows full commands, V=0 (default) shows kernel-style short logs
 V ?= 0
 
-# Optional private control bridge for the external C++ droidspaces-socketd.
-# Keep this off by default so the stock static Droidspaces binary stays unchanged.
-ENABLE_SOCKETD_BACKEND ?= 0
+# Optional private control bridge used by API-capable WebUI daemons.
+# Enabled by default for WebUI-ready builds; set to 0 for minimal CLI-only builds.
+ENABLE_SOCKETD_BACKEND ?= 1
 
 ifeq ($(V),1)
   Q       =
@@ -37,11 +37,11 @@ endif
 # Source files
 SRCS = $(SRC_DIR)/main.c \
        $(SRC_DIR)/utils.c \
-       $(SRC_DIR)/android.c \
+       $(SRC_DIR)/android/android.c \
        $(SRC_DIR)/seccomp.c \
        $(SRC_DIR)/mount.c \
        $(SRC_DIR)/cgroup.c \
-       $(SRC_DIR)/network.c \
+       $(SRC_DIR)/net/network.c \
        $(SRC_DIR)/terminal.c \
        $(SRC_DIR)/console.c \
        $(SRC_DIR)/pid.c \
@@ -52,18 +52,18 @@ SRCS = $(SRC_DIR)/main.c \
        $(SRC_DIR)/environment.c \
        $(SRC_DIR)/documentation.c \
        $(SRC_DIR)/hardware.c \
-       $(SRC_DIR)/ds_iptables.c \
-       $(SRC_DIR)/ds_netlink.c \
-       $(SRC_DIR)/ds_dhcp.c \
+       $(SRC_DIR)/net/iptables.c \
+       $(SRC_DIR)/net/netlink.c \
+       $(SRC_DIR)/net/dhcp.c \
        $(SRC_DIR)/daemon.c \
        $(SRC_DIR)/check.c \
-       $(SRC_DIR)/x11.c \
-       $(SRC_DIR)/virgl-android.c \
-       $(SRC_DIR)/pulseaudio-android.c \
+       $(SRC_DIR)/android/x11.c \
+       $(SRC_DIR)/android/virgl.c \
+       $(SRC_DIR)/android/pulseaudio.c \
        $(SRC_DIR)/virtualize.c
 
 # Compiler flags - hardened warning set, all warnings are errors
-CFLAGS  = -Wall -Wextra -Wpedantic -Werror -O2 -flto=auto -std=gnu99 -I$(SRC_DIR) -no-pie -pthread
+CFLAGS  = -Wall -Wextra -Wpedantic -Werror -O2 -flto=auto -std=gnu99 -I$(SRC_DIR)/include -no-pie -pthread
 CFLAGS += -Wformat=2 -Wformat-security -Wformat-overflow=2 -Wformat-truncation=2
 CFLAGS += -Wnull-dereference -Wcast-qual -Wlogical-op -Wshadow -Wdouble-promotion -Wundef
 CFLAGS += -Wduplicated-cond -Wduplicated-branches -Wimplicit-fallthrough=3
@@ -122,8 +122,8 @@ help:
 	@echo ""
 	@echo "Options:"
 	@echo "  V=1            - Show full compiler commands"
-	@echo "  ENABLE_SOCKETD_BACKEND=1"
-	@echo "                 - Compile the private droidspaces-socketd backend bridge"
+	@echo "  ENABLE_SOCKETD_BACKEND=0"
+	@echo "                 - Disable the private API backend bridge for minimal builds"
 	@echo ""
 	@echo "Other:"
 	@echo "  make clean     - Remove build artifacts"
@@ -138,6 +138,7 @@ $(OBJ_DIR):
 # Compile each source file to an object - runs in parallel via -j$(NPROC)
 $(OBJ_DIR)/%.o: $(SRC_DIR)/%.c | $(OBJ_DIR)
 	$(msg_cc)
+	$(Q)mkdir -p $(dir $@)
 	$(Q)$(CC) $(CFLAGS) -c $< -o $@
 
 # Link step
@@ -213,7 +214,7 @@ debug-hardened: $(OUT_DIR)
 	@echo "[*] Building hardened debug binary..."
 	@mkdir -p $(OUT_DIR)/.obj/debug
 	$(Q)$(CC) $(SRCS) -o $(OUT_DIR)/$(BINARY_NAME)-hardened \
-		-I$(SRC_DIR) -g3 -O1 -pthread -lutil \
+		-I$(SRC_DIR)/include -I$(SRC_DIR) -g3 -O1 -pthread -lutil \
 		-fsanitize=address -fsanitize=undefined -fsanitize=leak \
 		-fstack-protector-strong -D_FORTIFY_SOURCE=2 \
 		-Wall -Wextra -Wno-unused-parameter

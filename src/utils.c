@@ -1465,21 +1465,30 @@ int get_selinux_context(const char *path, char *buf, size_t size) {
   if (!path || !buf || size == 0)
     return -1;
 
-  /* Use lgetxattr to read the security.selinux attribute */
   ssize_t len = lgetxattr(path, "security.selinux", buf, size - 1);
-  if (len < 0) {
 #ifdef SYS_lgetxattr
+  if (len < 0)
     len = syscall(SYS_lgetxattr, path, "security.selinux", buf, size - 1);
 #endif
-  }
-
-  /* FIX: Check bounds before writing null terminator */
-  if (len < 0 || len >= (ssize_t)(size - 1)) {
+  if (len < 0 || len >= (ssize_t)(size - 1))
     return -1;
-  }
 
   buf[len] = '\0';
   return 0;
+}
+
+/* Transition self into u:r:droidspacesd:s0.
+ * Best-effort: if the write fails (policy not loaded, permissive host),
+ * the caller inherits whatever domain the root process already holds.
+ * No MLS suffix -- droidspacesd is declared permissive in sepolicy.rule. */
+void ds_selinux_enter_domain(void) {
+  const char *ctx = "u:r:droidspacesd:s0";
+  int fd = open("/proc/self/attr/current", O_WRONLY | O_CLOEXEC);
+  if (fd < 0)
+    return;
+  if (write(fd, ctx, strlen(ctx) + 1) < 0) { /* ignore -- best effort */
+  }
+  close(fd);
 }
 
 int ds_get_selinux_status(void) {
@@ -2412,6 +2421,51 @@ void ds_daemon_remove_pid(const char *filename) {
   char path[PATH_MAX];
   snprintf(path, sizeof(path), "%s/%s", get_pids_dir(), filename);
   unlink(path);
+}
+
+/* Resolve a cached pid or fall back to the pidfile. */
+pid_t ds_resolve_daemon_pid(pid_t cached, const char *pidfile) {
+  return cached > 0 ? cached : ds_daemon_read_pid(pidfile);
+}
+
+/*
+ * ds_global_daemon_stop - unified teardown for X11/VirGL/PulseAudio daemons.
+ *
+ * check_fn    : feature-needs checker (returns 1 if still needed)
+ * cached_pid  : cfg->x11_pid / cfg->virgl_pid / cfg->pulse_pid
+ * pid_out     : pointer to that field (zeroed on stop)
+ * pidfile     : e.g. "x11.xpid"
+ * sock_path   : socket to unlink after stop
+ * tag         : log prefix e.g. "[X11]"
+ */
+void ds_global_daemon_stop(int (*check_fn)(void), pid_t cached_pid,
+                           pid_t *pid_out, const char *pidfile,
+                           const char *sock_path, const char *tag) {
+  if (!is_android())
+    return;
+
+  if (check_fn() == 1) {
+    ds_log("%s keeping global server running for other active containers", tag);
+    return;
+  }
+
+  pid_t pid = ds_resolve_daemon_pid(cached_pid, pidfile);
+  if (pid > 0) {
+    ds_log("%s terminating (PID %d)...", tag, (int)pid);
+    kill(pid, SIGTERM);
+    for (int i = 0; i < 10 && kill(pid, 0) == 0; i++)
+      usleep(100000);
+    if (kill(pid, 0) == 0) {
+      kill(pid, SIGKILL);
+      waitpid(pid, NULL, 0);
+    }
+    if (pid_out)
+      *pid_out = 0;
+  }
+
+  ds_daemon_remove_pid(pidfile);
+  if (sock_path)
+    unlink(sock_path);
 }
 
 /* Set oom_score_adj to -1000 (unkillable).  Best-effort, no error return. */

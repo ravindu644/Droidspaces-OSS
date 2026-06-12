@@ -72,5 +72,5 @@ Droidspaces 在 Android 上旨在提供"零终端"体验。从首次安装到运
 ## 下一步
 
 - [Android 应用使用指南](./Usage-Android-App.md)：了解管理详情。
-- [GPU 加速指南](./GPU-Acceleration.md)：启用硬件加速的桌面环境。
+- [显示、音频与桌面指南](./Graphics-and-Audio.md)：配置 GPU 加速、音效与桌面环境自动启动。
 - [Linux CLI 指南](./Linux-CLI.md)：提供专家级命令行访问。

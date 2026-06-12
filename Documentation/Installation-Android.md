@@ -74,5 +74,5 @@ You can verify your system status at any time:
 ## Next Steps
 
 - [Android App Usage Guide](Usage-Android-App.md) for management details.
-- [GPU Acceleration Guide](GPU-Acceleration.md) to enable hardware-accelerated desktop environments.
+- [Display, Audio & Desktop Guide](Graphics-and-Audio.md) to enable GPU acceleration, sound, and desktop environment auto-boot.
 - [Linux CLI Guide](Linux-CLI.md) for expert command-line access.

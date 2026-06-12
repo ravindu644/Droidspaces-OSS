@@ -314,9 +314,7 @@ int ds_net_check_ip_collision(const char *ip_str, const char *exclude_name) {
     if (ds_config_load(config_path, &other) == 0) {
       if (other.static_nat_ip[0] && strcmp(other.static_nat_ip, ip_str) == 0)
         collision = 1;
-      free_config_binds(&other);
-      free_config_env_vars(&other);
-      free_config_unknown_lines(&other);
+      ds_config_free(&other);
     }
   }
 

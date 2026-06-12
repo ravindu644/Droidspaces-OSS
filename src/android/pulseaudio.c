@@ -11,10 +11,6 @@
 #define _GNU_SOURCE
 #include "droidspace.h"
 #include <fcntl.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <sys/mount.h>
 #include <sys/stat.h>
 #include <sys/wait.h>
 #include <unistd.h>
@@ -39,6 +35,41 @@ static int pa_resolve_termux_uid(void) {
     return -1;
   }
   return uid;
+}
+
+/*
+ * Probe for libskcodec.so (needed by libskandroidcodec.so on Samsung One UI
+ * 6.1+). lib64 takes priority; fall back to lib; skip if absent.
+ */
+#define SKCODEC_LIB64 "/system/lib64/libskcodec.so"
+#define SKCODEC_LIB "/system/lib/libskcodec.so"
+
+static const char *find_skcodec(void) {
+  if (access(SKCODEC_LIB64, F_OK) == 0)
+    return SKCODEC_LIB64;
+  if (access(SKCODEC_LIB, F_OK) == 0)
+    return SKCODEC_LIB;
+  return NULL;
+}
+
+/*
+ * Inject libskcodec.so into LD_PRELOAD so the OpenSL ES module can dlopen
+ * libskandroidcodec.so which has it as a hidden dependency on Samsung firmware.
+ */
+static void inject_skcodec_preload(void) {
+  const char *lib = find_skcodec();
+  if (!lib)
+    return;
+
+  const char *existing = getenv("LD_PRELOAD");
+  if (existing && existing[0]) {
+    char buf[PATH_MAX * 2];
+    snprintf(buf, sizeof(buf), "%s:%s", lib, existing);
+    setenv("LD_PRELOAD", buf, 1);
+  } else {
+    setenv("LD_PRELOAD", lib, 1);
+  }
+  ds_log("[PulseAudio] LD_PRELOAD += %s (Samsung OpenSL ES fix)", lib);
 }
 
 /* ---- daemon child ----------------------------------------------------- */
@@ -75,6 +106,10 @@ static void pulse_child_wrapper(int ready_fd, void *user_data) {
   /* Ensure the tmp directory exists (root creates it before priv drop) */
   mkdir_p(TX11_PREFIX "/tmp", 0755);
 
+  /* Stay in droidspacesd (permissive) -- no domain transition needed.
+   * untrusted_app_27 blocks execv of Termux binaries under enforcing. */
+  ds_selinux_enter_domain();
+
   /* Drop root -> Termux UID. */
   if (ds_drop_privileges(args->uid) < 0) {
     perror("[PulseAudio] privilege drop failed");
@@ -83,13 +118,16 @@ static void pulse_child_wrapper(int ready_fd, void *user_data) {
     _exit(1);
   }
 
+  /* Inject libskcodec.so if present -- fixes OpenSL ES on Samsung One UI 6.1+
+   */
+  inject_skcodec_preload();
+
   fprintf(stdout, "[PulseAudio] uid=%d socket=%s\n", (int)getuid(),
           TX11_PULSE_SOCKET);
   fflush(stdout);
 
   /* Launch PulseAudio in non-daemon foreground mode.
-   * - module-native-protocol-unix: UNIX socket with anonymous auth
-   * - module-aaudio-sink: Android AAudio low-latency audio output (default)
+   * - module-native-protocol-unix: UNIX socket at our custom path
    * - --exit-idle-time=-1: never exit on idle (we manage lifecycle ourselves)
    * - --daemonize=no: stay in foreground so our log relay captures all output
    */
@@ -97,10 +135,11 @@ static void pulse_child_wrapper(int ready_fd, void *user_data) {
       TX11_PULSE_BIN,
       "--load=module-native-protocol-unix socket=" TX11_PULSE_SOCKET
       " auth-anonymous=1",
-      "--load=module-aaudio-sink",
       "--exit-idle-time=-1",
       "--daemonize=no",
       "--log-target=stderr",
+      "--use-pid-file=false",
+      "--disallow-exit",
       NULL,
   };
 
@@ -131,10 +170,10 @@ static void run_pactl_set_default(int uid) {
       close(devnull);
     }
 
-    /* Run as the same Termux UID with the same supplementary groups */
-    if (ds_drop_privileges(uid) < 0) {
+    /* Stay in droidspacesd (permissive) */
+    ds_selinux_enter_domain();
+    if (ds_drop_privileges(uid) < 0)
       _exit(1);
-    }
 
     setenv("PULSE_SERVER", "unix:" TX11_PULSE_SOCKET, 1);
     setenv("HOME", TX11_HOME, 1);
@@ -146,6 +185,38 @@ static void run_pactl_set_default(int uid) {
   }
   /* Parent: reap to avoid zombie. We don't care about exit code. */
   waitpid(p, NULL, 0);
+}
+
+/* ---- stale config nuke ------------------------------------------------ */
+
+#define PA_CONFIG_DIR TX11_HOME "/.config/pulse"
+
+/*
+ * Remove PulseAudio's stale runtime dir before each start.
+ * A leftover cookie/pid from a previous crash causes PA to refuse
+ * to bind its socket and exit silently with status=1.
+ */
+static void nuke_pulse_config(void) {
+  if (access(PA_CONFIG_DIR, F_OK) != 0)
+    return;
+
+  ds_log("[PulseAudio] nuking stale config: %s", PA_CONFIG_DIR);
+
+  pid_t child = fork();
+  if (child < 0)
+    return;
+  if (child == 0) {
+    int devnull = open("/dev/null", O_RDWR);
+    if (devnull >= 0) {
+      dup2(devnull, STDOUT_FILENO);
+      dup2(devnull, STDERR_FILENO);
+      close(devnull);
+    }
+    execl("/system/bin/rm", "rm", "-rf", PA_CONFIG_DIR, NULL);
+    _exit(1);
+  }
+  int st;
+  waitpid(child, &st, 0);
 }
 
 /* ---- spawn ------------------------------------------------------------ */
@@ -180,6 +251,7 @@ int ds_pulse_daemon_start(struct ds_config *cfg) {
 
   /* Clean up stale socket from a previous crashed run */
   unlink(TX11_PULSE_SOCKET);
+  nuke_pulse_config();
 
   ds_log("[PulseAudio] launching daemon (uid=%d)", uid);
   pid_t child = spawn_pulse(uid);
@@ -203,32 +275,10 @@ int ds_pulse_daemon_start(struct ds_config *cfg) {
 }
 
 void ds_pulse_daemon_stop(struct ds_config *cfg) {
-  if (!cfg || !is_android())
+  if (!cfg)
     return;
-
-  /* Keep the daemon alive if any other running container still needs it */
-  if (check_pulse_needs() == 1) {
-    ds_log("[PulseAudio] keeping global daemon running for other active "
-           "containers");
-    return;
-  }
-
-  pid_t pid =
-      cfg->pulse_pid > 0 ? cfg->pulse_pid : ds_daemon_read_pid("pulse.ppid");
-  if (pid > 0) {
-    ds_log("[PulseAudio] terminating daemon (PID %d)...", (int)pid);
-    kill(pid, SIGTERM);
-    for (int i = 0; i < 10 && kill(pid, 0) == 0; i++)
-      usleep(100000);
-    if (kill(pid, 0) == 0) {
-      kill(pid, SIGKILL);
-      waitpid(pid, NULL, 0);
-    }
-    cfg->pulse_pid = 0;
-  }
-
-  ds_daemon_remove_pid("pulse.ppid");
-  unlink(TX11_PULSE_SOCKET);
+  ds_global_daemon_stop(check_pulse_needs, cfg->pulse_pid, &cfg->pulse_pid,
+                        "pulse.ppid", TX11_PULSE_SOCKET, "[PulseAudio]");
 }
 
 /* ---- socket bridge ---------------------------------------------------- */
