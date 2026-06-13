@@ -178,8 +178,8 @@
     <string name="search_services">Dienste durchsuchen...</string>
     <string name="enabled_legend">Aktiviert</string>
     <string name="disabled_legend">Deaktiviert</string>
-    <string name="static_legend">Abnormal</string>
-    <string name="abnormal_legend">Anormal</string>
+    <string name="static_legend">Statisch</string>
+    <string name="abnormal_legend">Abnormal</string>
     <string name="masked_legend">Maskiert</string>
     <string name="all_legend">Alle</string>
     <string name="unmask">Unmaskiert</string>
@@ -195,8 +195,8 @@
     <string name="no_running_services">Keine laufenden Dienste</string>
     <string name="no_enabled_services">Keine aktivierten Dienste</string>
     <string name="no_disabled_services">Keine deaktivierten Dienste</string>
-    <string name="no_static_services">Keine abnormalen Dienste</string>
-    <string name="no_abnormal_services">Keine abnormalen Dienste</string>
+    <string name="no_static_services">Keine statischen Dienste</string>
+    <string name="no_abnormal_services">Keine abnormale Dienste</string>
     <string name="no_masked_services">Keine maskierten Dienste</string>
     <!-- System Info Card -->
     <string name="kernel">Kernel</string>
@@ -478,4 +478,15 @@
     <string name="repo_custom_url_invalid">URL muss mit https:// anfangen</string>
     <string name="repo_no_custom">Keine benutzerdefinierten Repositories abonniert.</string>
     <string name="read_only">Schreibgeschützt</string>
+    <string name="termux_requirements">Termux-Anforderungen</string>
+    <string name="virgl_option">VirGL</string>
+    <string name="pulseaudio_option">PulseAudio</string>
+    <string name="enable_pulseaudio">PulseAudio konfigurieren</string>
+    <string name="enable_pulseaudio_description">Aktiviert Audiounterstützung mittels PulseAudio</string>
+    <string name="tx11_extra_flags_label">Termux:X11 Parameter</string>
+    <string name="tx11_extra_flags_placeholder">z.B. -dpi 160 -force-sysvshm</string>
+    <string name="enable_virgl">VirGL 3D-Beschleunigung konfigurieren</string>
+    <string name="enable_virgl_description">Aktiviert 3D-Hardwarebeschleunigung mittels VirGL</string>
+    <string name="virgl_extra_flags_label">VirGL Parameter</string>
+    <string name="virgl_extra_flags_placeholder">z.B. --multi-clients --angle-vulkan</string>
 </resources>
