@@ -508,6 +508,33 @@ int ds_nl_rename(ds_nl_ctx_t *ctx, const char *ifname, const char *newname) {
 }
 
 /* ---------------------------------------------------------------------------
+ * Set an interface's L2 hardware address (IFLA_ADDRESS).
+ * mac points to 6 bytes.  The link should be DOWN to avoid EBUSY on some
+ * drivers; veth tolerates it either way, but callers set it before bringing
+ * the interface up.
+ * ---------------------------------------------------------------------------*/
+
+int ds_nl_set_mac(ds_nl_ctx_t *ctx, const char *ifname, const uint8_t mac[6]) {
+  int idx = ds_nl_get_ifindex(ctx, ifname);
+  if (idx <= 0)
+    return -ENODEV;
+
+  struct {
+    struct nlmsghdr n;
+    struct ifinfomsg i;
+    char buf[256];
+  } req;
+  memset(&req, 0, sizeof(req));
+  req.n.nlmsg_len = NLMSG_LENGTH(sizeof(struct ifinfomsg));
+  req.n.nlmsg_type = RTM_NEWLINK;
+  req.n.nlmsg_flags = NLM_F_REQUEST | NLM_F_ACK;
+  req.i.ifi_family = AF_UNSPEC;
+  req.i.ifi_index = idx;
+  nl_addattr(&req.n, (int)sizeof(req), IFLA_ADDRESS, mac, 6);
+  return ds_nl_talk(ctx, &req.n);
+}
+
+/* ---------------------------------------------------------------------------
  * Add an IPv4 address to an interface
  * ip_be and bcast_be are in network byte order.
  * ---------------------------------------------------------------------------*/

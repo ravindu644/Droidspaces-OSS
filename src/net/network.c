@@ -66,6 +66,23 @@ static uint32_t ds_net_hash_string(const char *s) {
   return h;
 }
 
+/* Derive a stable, locally-administered unicast MAC from the container name.
+ * The same name always yields the same address, so a gateway (e.g. OpenWrt)
+ * sees one persistent host across restarts instead of a fresh random MAC -
+ * and therefore one DHCP lease / LuCI entry - every boot. */
+static void ds_container_mac(const char *name, uint8_t mac[6]) {
+  uint32_t h1 = ds_net_hash_string(name);
+  char salted[300];
+  snprintf(salted, sizeof(salted), "ds-mac:%s", name ? name : "");
+  uint32_t h2 = ds_net_hash_string(salted);
+  mac[0] = 0x02; /* locally administered (bit1), unicast (bit0 clear) */
+  mac[1] = (uint8_t)(h1 >> 24);
+  mac[2] = (uint8_t)(h1 >> 16);
+  mac[3] = (uint8_t)(h1 >> 8);
+  mac[4] = (uint8_t)(h1);
+  mac[5] = (uint8_t)(h2);
+}
+
 static void gateway_hash_key(struct ds_config *cfg, char *buf, size_t sz) {
   const char *gw =
       (cfg && cfg->gateway_container[0]) ? cfg->gateway_container : "gateway";
@@ -1002,6 +1019,19 @@ int setup_veth_child_side_named(struct ds_config *cfg, const char *peer_name,
       ds_warn("[DEBUG] Failed to rename %s to eth0.", peer_name);
   }
 
+  /* 0b. Pin eth0 to a deterministic MAC derived from the container name, so
+   * an upstream gateway sees one stable host across restarts (no LuCI/lease
+   * churn) instead of a new random MAC each boot. Set while down, pre-up. */
+  if (cfg && cfg->container_name[0]) {
+    uint8_t mac[6];
+    ds_container_mac(cfg->container_name, mac);
+    if (ds_nl_set_mac(ctx, "eth0", mac) < 0)
+      ds_warn("[NET] Child: failed to set deterministic MAC on eth0");
+    else
+      ds_log("[NET] Child: eth0 MAC pinned to %02x:%02x:%02x:%02x:%02x:%02x",
+             mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
+  }
+
   /* 1. Loopback */
   ds_nl_link_up(ctx, "lo");
 
@@ -1532,9 +1562,7 @@ void ds_net_cleanup(struct ds_config *cfg, pid_t container_pid) {
       ds_log("[NET] Gateway cleanup: removed %s", veth_host);
 
       /* Refcount the delegated bridge: once the last client veth has left,
-       * tear down the gateway veth and the bridge so idle segments don't
-       * linger.  The gateway's LAN interface is re-plugged lazily the next
-       * time any client attaches to this segment (setup_gateway_veth_side). */
+       * reap the now-empty bridge so idle segments don't linger. */
       char bridge[IFNAMSIZ], gw_host[IFNAMSIZ], gw_peer[IFNAMSIZ];
       gateway_bridge_name(cfg, bridge, sizeof(bridge));
       gateway_veth_names(cfg, gw_host, sizeof(gw_host), gw_peer,
@@ -1545,10 +1573,19 @@ void ds_net_cleanup(struct ds_config *cfg, pid_t container_pid) {
                "delegated LAN",
                clients, bridge);
       } else {
-        ds_nl_del_link(ctx, gw_host);
+        /* Reap the empty bridge, but NEVER delete the gateway veth (gw_host):
+         * its peer is the gateway container's live LAN interface (e.g. eth1),
+         * and deleting either end destroys the pair - ripping the cable out of
+         * a still-running gateway.  OpenWrt's netifd will not re-init a brand
+         * new eth1 that reappears under it, so its DHCP/LAN stays dead until
+         * the gateway is rebooted.  Leaving gw_host masterless keeps eth1
+         * alive; the next client recreates the bridge and reattaches gw_host
+         * (setup_gateway_veth_side else-branch).  When the gateway container
+         * itself stops, its netns dies and gw_host vanishes with its peer,
+         * leaving zero residue. */
         ds_nl_del_link(ctx, bridge);
-        ds_log("[NET] Gateway cleanup: torn down idle delegated LAN %s "
-               "(removed %s)",
+        ds_log("[NET] Gateway cleanup: reaped idle delegated LAN bridge %s "
+               "(kept gateway veth %s)",
                bridge, gw_host);
       }
     } else {

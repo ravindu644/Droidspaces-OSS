@@ -702,6 +702,7 @@ int ds_nl_link_up(ds_nl_ctx_t *ctx, const char *ifname);
 int ds_nl_link_down(ds_nl_ctx_t *ctx, const char *ifname);
 int ds_nl_del_link(ds_nl_ctx_t *ctx, const char *ifname);
 int ds_nl_rename(ds_nl_ctx_t *ctx, const char *ifname, const char *newname);
+int ds_nl_set_mac(ds_nl_ctx_t *ctx, const char *ifname, const uint8_t mac[6]);
 int ds_nl_add_addr4(ds_nl_ctx_t *ctx, const char *ifname, uint32_t ip_be,
                     uint8_t prefix);
 int ds_nl_add_route4(ds_nl_ctx_t *ctx, uint32_t dst_be, uint8_t dst_len,
