@@ -13,7 +13,7 @@
     <string name="feat_overhead_desc">Talks to the host Linux kernel directly. No hypervisor, no virtual machine layer.</string>
     <string name="feat_unkillable_title">Unkillable by design</string>
     <string name="feat_unkillable_desc">Supports native init.rc integration and 2-layer userspace daemons. Completely unkillable.</string>
-    <string name="feat_init_title">systemd / OpenRC as PID 1</string>
+    <string name="feat_init_title">systemd / OpenWrt procd / OpenRC as PID 1</string>
     <string name="feat_init_desc">Full init system support. Real service management, not a simulated environment.</string>
     <string name="feat_isolation_title">Complete isolation</string>
     <string name="feat_isolation_desc">Private PID tree, mount table, hostname, IPC, and cgroup hierarchy per container.</string>
@@ -376,11 +376,15 @@
 
     <!-- Systemd Screen -->
     <string name="systemd_services">Systemd Services</string>
+    <string name="openwrt_services">OpenWrt Services</string>
+    <string name="openwrt">OpenWrt</string>
+    <string name="procd_detected">OpenWrt/procd detected</string>
+    <string name="procd_services_placeholder_desc">Service management for %1$s will be added in the next patch.</string>
     <string name="openrc_services">OpenRC Services</string>
     <string name="openrc">OpenRC</string>
     <string name="init_system">Init System</string>
-    <string name="init_system_not_available">Systemd/OpenRC Not Available</string>
-    <string name="init_system_not_available_desc">This container does not have systemd or OpenRC installed</string>
+    <string name="init_system_not_available">Systemd/OpenWrt/OpenRC Not Available</string>
+    <string name="init_system_not_available_desc">This container does not have systemd, OpenWrt/procd, or OpenRC installed</string>
     <string name="fetching_services">Fetching services...</string>
 
     <string name="search_services">Search services...</string>

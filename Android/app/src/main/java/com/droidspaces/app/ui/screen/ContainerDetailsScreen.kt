@@ -24,6 +24,7 @@ import com.droidspaces.app.ui.component.ContainerUsersCard
 import com.droidspaces.app.util.ContainerInfo
 import com.droidspaces.app.util.ContainerOSInfoManager
 import com.droidspaces.app.util.ContainerSystemdManager
+import com.droidspaces.app.util.ContainerProcdManager
 import com.droidspaces.app.util.ContainerOpenRCManager
 import com.droidspaces.app.util.ContainerManager
 import kotlinx.coroutines.Dispatchers
@@ -72,13 +73,15 @@ fun ContainerDetailsScreen(
         mutableStateOf(ContainerOSInfoManager.getCachedOSInfo(container.name, context))
     }
 
-    // Init system state - detect systemd first, then OpenRC
+    // Init system state - detect systemd first, then OpenWrt/procd, then OpenRC
     var initSystemState by remember { mutableStateOf<InitSystemCardState>(InitSystemCardState.Checking) }
 
     LaunchedEffect(container.name) {
         initSystemState = when {
             ContainerSystemdManager.isSystemdAvailable(container.name) ->
                 InitSystemCardState.Available(InitSystem.SYSTEMD)
+            ContainerProcdManager.isProcdAvailable(container.name) ->
+                InitSystemCardState.Available(InitSystem.PROCD)
             ContainerOpenRCManager.isOpenRCAvailable(container.name) ->
                 InitSystemCardState.Available(InitSystem.OPENRC)
             else ->
@@ -244,7 +247,7 @@ fun ContainerDetailsScreen(
 /**
  * Which init system is available in the container.
  */
-enum class InitSystem { SYSTEMD, OPENRC }
+enum class InitSystem { SYSTEMD, PROCD, OPENRC }
 
 /**
  * Init system card state - sealed for type safety and stability
@@ -437,7 +440,7 @@ private fun TerminalCard(
 }
 
 /**
- * PREMIUM INIT SYSTEM CARD - handles Systemd, OpenRC, and unavailable states.
+ * PREMIUM INIT SYSTEM CARD - handles Systemd, OpenWrt/procd, OpenRC, and unavailable states.
  */
 @Composable
 private fun PremiumInitSystemCard(
@@ -458,6 +461,7 @@ private fun PremiumInitSystemCard(
     val cardTitle = when (state) {
         is InitSystemCardState.Available -> when (state.initSystem) {
             InitSystem.SYSTEMD -> context.getString(R.string.systemd)
+            InitSystem.PROCD -> context.getString(R.string.openwrt)
             InitSystem.OPENRC -> context.getString(R.string.openrc)
         }
         else -> context.getString(R.string.init_system)
