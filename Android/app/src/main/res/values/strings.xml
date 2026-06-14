@@ -392,12 +392,14 @@
     <string name="disabled_legend">Disabled</string>
     <string name="static_legend">Static</string>
     <string name="abnormal_legend">Abnormal</string>
+    <string name="unknown_legend">Unknown</string>
     <string name="masked_legend">Masked</string>
     <string name="all_legend">All</string>
     <string name="unmask">Unmask</string>
     <string name="enable_service">Enable</string>
     <string name="disable_service">Disable</string>
     <string name="restart_service">Restart service</string>
+    <string name="reload_service">Reload service</string>
     <string name="mask_service">Mask service</string>
     <string name="action_successful">%1$s %2$s successful</string>
     <string name="failed_to_action">Failed to %1$s %2$s</string>
@@ -410,6 +412,7 @@
     <string name="no_disabled_services">No disabled services</string>
     <string name="no_static_services">No static services</string>
     <string name="no_abnormal_services">No abnormal services</string>
+    <string name="no_unknown_services">No services with unknown state</string>
     <string name="no_masked_services">No masked services</string>
 
     <!-- System Info Card -->
