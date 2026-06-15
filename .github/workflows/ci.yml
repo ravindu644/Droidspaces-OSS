@@ -69,8 +69,10 @@ jobs:
         echo "[+] Toolchains ready."
         tree -L 3 $HOME/toolchains
 
-    - name: Build All Tarball & Sync to Android
-      run: make all-tarball
+    - name: Build All Tarball, Debian Packages & Sync to Android
+      run: |
+        make all-tarball
+        scripts/mkdeb.sh
 
     - name: Decode Keystore
       env:
@@ -110,6 +112,7 @@ jobs:
         mkdir -p dist
         mv Android/app/build/outputs/apk/release/app-release.apk dist/${APK_NAME}
         mv ${TAR_NAME} dist/
+        mv droidspaces_*.deb dist/
         echo "APK_FILE=dist/${APK_NAME}" >> $GITHUB_ENV
         echo "TAR_FILE=dist/${TAR_NAME}" >> $GITHUB_ENV
 
@@ -134,7 +137,7 @@ jobs:
           echo "EOF"
         } >> "$GITHUB_ENV"
 
-    - name: Upload Final Artifacts (APK & Tarball)
+    - name: Upload Final Artifacts (APK, Tarball & Debian Packages)
       uses: actions/upload-artifact@v4
       with:
         name: droidspaces-artifacts
@@ -211,3 +214,4 @@ jobs:
         files: |
           release-assets/*.apk
           release-assets/*.tar.gz
+          release-assets/*.deb

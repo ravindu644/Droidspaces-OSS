@@ -1,5 +1,6 @@
 *.o
 *.tar.gz
+*.deb
 output/
 *.img
 *.patch
