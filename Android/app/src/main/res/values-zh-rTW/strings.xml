@@ -457,4 +457,12 @@
     <string name="virgl_extra_flags_label">VirGL 額外參數標記</string>
     <string name="virgl_extra_flags_placeholder">例如： --multi-clients --angle-vulkan</string>
     <string name="termux_requirements">Termux 需求</string>
+    <string name="auto_boot_priority">自動啟動優先權</string>
+    <string name="auto_boot_priority_description">容器啟動時的運行順序</string>
+    <string name="auto_boot_priority_hint">拖曳即可重新排序。容器從上到下排列－首先放置網關（例如 OpenWRT），以便它在路由經過它的容器之前啟動。</string>
+    <string name="auto_boot_priority_empty">所有容器均未啟用「啟動時運行」功能。</string>
+    <string name="reorder_handle">拖曳以重新排序</string>
+    <string name="network_mode_gateway">閘道器（虛擬路由器）</string>
+    <string name="network_mode_gateway_short">網路閘道器</string>
+    <string name="gateway_settings">網路閘道器設定</string>
 </resources>
