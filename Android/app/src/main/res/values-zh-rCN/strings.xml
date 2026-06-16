@@ -302,8 +302,8 @@
     <string name="openrc_services">OpenRC 服务</string>
     <string name="openrc">OpenRC</string>
     <string name="init_system">Init 系统</string>
-    <string name="init_system_not_available">Systemd/OpenRC 不可用</string>
-    <string name="init_system_not_available_desc">此容器未安装 systemd 或 OpenRC</string>
+    <string name="init_system_not_available">Systemd/OpenWrt/OpenRC 不可用</string>
+    <string name="init_system_not_available_desc">此容器未安装 systemd、OpenWrt/procd 或 OpenRC</string>
     <string name="installation_setup_summary">安装概要</string>
     <string name="refresh_users">刷新用户</string>
     <string name="mask_service">屏蔽服务</string>
@@ -338,7 +338,7 @@
     <string name="feat_overhead_desc">直接与宿主 Linux 内核交互。无需 Hypervisor，亦无虚拟机层。</string>
     <string name="feat_unkillable_title">由于设计层面而无法被终止</string>
     <string name="feat_unkillable_desc">原生支持 init.rc 集成与双层用户空间守护进程。不会被轻易终止。</string>
-    <string name="feat_init_title">以 systemd 或 OpenRC 作为 PID 1</string>
+    <string name="feat_init_title">以 systemd / OpenWrt procd / OpenRC 作为 PID 1</string>
     <string name="feat_init_desc">支持完整的 Init 系统。具备真实的服务管理能力，并非简单的模拟环境。</string>
     <string name="feat_isolation_title">完全隔离</string>
     <string name="feat_isolation_desc">为每个容器提供独立的 PID 树、挂载表、主机名、IPC 及 cgroup 层级。</string>
@@ -492,4 +492,11 @@
     <string name="error_iface_too_long">太长了 - 最多15个字符</string>
     <string name="error_gateway_bridge_taken">桥接已被 \'%1$s\' 使用。请使用不同的局域网名称。</string>
     <string name="error_gateway_iface_taken">接口已被另一个段（\'%1$s\'）使用。请使用其他接口。</string>
+    <string name="openwrt_services">OpenWrt 服务</string>
+    <string name="procd_services_placeholder_desc">将在下一个补丁中加入 %1$s 的服务管理功能。</string>
+    <string name="unknown_legend">未知</string>
+    <string name="reload_service">重新加载服务</string>
+    <string name="no_unknown_services">没有未知状态的服务</string>
+    <string name="procd_detected">已检测到 OpenWrt/procd</string>
+    <string name="openwrt">OpenWrt</string>
 </resources>
