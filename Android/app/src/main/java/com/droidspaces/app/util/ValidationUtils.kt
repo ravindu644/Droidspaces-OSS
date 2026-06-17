@@ -11,6 +11,17 @@ object ValidationUtils {
     const val MAX_CONTAINER_NAME_LENGTH = 17  // 63 - len("/data/local/Droidspaces/Containers/") - len("/rootfs.img")
 
     /**
+     * Normalizes a container name before it is stored or used to build paths.
+     * Trims leading/trailing whitespace and collapses internal whitespace runs to a
+     * single space, so that e.g. "alpine " -> "alpine" and "alpine    container" ->
+     * "alpine container". This must run BEFORE sanitizeContainerName so the directory
+     * name, the config "name=" field, and the --name passed to the backend all agree.
+     */
+    fun normalizeContainerName(name: String): String {
+        return name.trim().replace(Regex("\\s+"), " ")
+    }
+
+    /**
      * Validates container name: letters, numbers, hyphens, underscores, spaces, and dots allowed.
      */
     fun validateContainerName(name: String, context: Context? = null): ValidationResult {
