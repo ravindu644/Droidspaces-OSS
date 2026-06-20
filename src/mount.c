@@ -870,7 +870,123 @@ out:
 }
 
 /*
- * Resolve loop device node path after LOOP_CTL_GET_FREE.
+ * Android: APEX may occupy low loop minors; LOOP_CTL_GET_FREE can return busy slots.
+ * Fallback: scan upper pool minors when attaching rootfs images.
+ */
+
+static long scan_block_loop_max(void) {
+  long max = 0;
+  DIR *d = opendir("/sys/block");
+  if (!d)
+    return 0;
+  struct dirent *de;
+  while ((de = readdir(d)) != NULL) {
+    if (strncmp(de->d_name, "loop", 4) != 0)
+      continue;
+    char *end;
+    long n = strtol(de->d_name + 4, &end, 10);
+    if (end != de->d_name + 4 && *end == '\0' && n >= 0 && n > max)
+      max = n;
+  }
+  closedir(d);
+  return max;
+}
+
+static long read_max_loop(void) {
+  long max_loop = 64;
+  FILE *f = fopen("/sys/module/loop/parameters/max_loop", "r");
+  if (f) {
+    if (fscanf(f, "%ld", &max_loop) != 1 || max_loop <= 0)
+      max_loop = 64;
+    fclose(f);
+  }
+  /* sysfs max_loop may be lower than existing /sys/block/loopN nodes */
+  if (is_android()) {
+    long block_max = scan_block_loop_max();
+    if (block_max + 1 > max_loop)
+      max_loop = block_max + 1;
+  }
+  return max_loop;
+}
+
+/*
+ * First minor to scan: skip lowest max(16, max_loop/4) slots (APEX uses low minors).
+ * Relative to pool size — not an OEM-specific constant.
+ */
+static long loop_scan_start(long max_loop) {
+  long skip = max_loop / 4;
+  if (skip < 16)
+    skip = 16;
+  if (skip > max_loop)
+    skip = max_loop;
+  long start = max_loop - skip;
+  return start > 0 ? start : 0;
+}
+
+static long loop_scan_used_max(void) {
+  FILE *f = fopen("/proc/loops", "r");
+  if (!f)
+    return 0;
+  char line[256];
+  if (!fgets(line, sizeof(line), f)) {
+    fclose(f);
+    return 0;
+  }
+  long used_max = 0;
+  while (fgets(line, sizeof(line), f)) {
+    long dev = -1;
+    if (sscanf(line, "%*s %ld", &dev) == 1 && dev > used_max)
+      used_max = dev;
+  }
+  fclose(f);
+  return used_max;
+}
+
+static int loop_status_fd(long devnr) {
+  char path[64];
+  if (is_android())
+    snprintf(path, sizeof(path), "/dev/block/loop%ld", devnr);
+  else
+    snprintf(path, sizeof(path), "/dev/loop%ld", devnr);
+
+  int fd = open(path, O_RDWR | O_CLOEXEC);
+  if (fd < 0) {
+    if (is_android())
+      snprintf(path, sizeof(path), "/dev/loop%ld", devnr);
+    else
+      snprintf(path, sizeof(path), "/dev/block/loop%ld", devnr);
+    fd = open(path, O_RDWR | O_CLOEXEC);
+  }
+  return fd;
+}
+
+static int loop_is_free(long devnr) {
+  int fd = loop_status_fd(devnr);
+  if (fd < 0)
+    return 0;
+
+  struct loop_info64 li;
+  int ret = ioctl(fd, LOOP_GET_STATUS64, &li);
+  int err = errno;
+  close(fd);
+  return (ret < 0 && err == ENXIO);
+}
+
+static long loop_find_free_devnr(void) {
+  int ctl_fd = open("/dev/loop-control", O_RDWR | O_CLOEXEC);
+  if (ctl_fd < 0) {
+    ds_error("open /dev/loop-control: %s", strerror(errno));
+    return -1;
+  }
+  long devnr = ioctl(ctl_fd, LOOP_CTL_GET_FREE);
+  close(ctl_fd);
+  if (devnr < 0)
+    ds_error("LOOP_CTL_GET_FREE: %s", strerror(errno));
+  return devnr;
+}
+
+/*
+ * Resolve loop device node path for a specific minor.
  *
  * Android userspace (vold): /dev/block/loopN
  * Android recovery + desktop Linux: /dev/loopN
@@ -915,57 +1031,90 @@ static int open_loop_dev(long devnr, char *path_out, size_t path_size) {
   return -1;
 }
 
-/*
- * Attach img_path to a free loop device via ioctls.
- * Sets LO_FLAGS_AUTOCLEAR so the kernel auto-releases the loop after umount.
- * Returns the open loop_fd on success (caller must close after mount()).
- * loop_path_out is filled with the device node path for the mount() call.
- */
-static int loop_attach(const char *img_path, char *loop_path_out,
-                       size_t path_size) {
-  int ctl_fd = open("/dev/loop-control", O_RDWR | O_CLOEXEC);
-  if (ctl_fd < 0) {
-    ds_error("open /dev/loop-control: %s", strerror(errno));
-    return -1;
-  }
-
-  long devnr = ioctl(ctl_fd, LOOP_CTL_GET_FREE);
-  close(ctl_fd);
-  if (devnr < 0) {
-    ds_error("LOOP_CTL_GET_FREE: %s", strerror(errno));
-    return -1;
-  }
-
+static int loop_attach_one(long devnr, int img_fd, const char *img_path,
+                           char *loop_path_out, size_t path_size) {
   int loop_fd = open_loop_dev(devnr, loop_path_out, path_size);
   if (loop_fd < 0) {
-    ds_error("Failed to open loop%ld: %s", devnr, strerror(errno));
-    return -1;
-  }
-
-  int img_fd = open(img_path, O_RDWR | O_CLOEXEC);
-  if (img_fd < 0) {
-    ds_error("open image %s: %s", img_path, strerror(errno));
-    close(loop_fd);
+    ds_warn("Failed to open loop%ld: %s", devnr, strerror(errno));
     return -1;
   }
 
   if (ioctl(loop_fd, LOOP_SET_FD, img_fd) < 0) {
-    ds_error("LOOP_SET_FD: %s", strerror(errno));
-    close(img_fd);
+    int err = errno;
+    if (err == EBUSY) {
+      ioctl(loop_fd, LOOP_CLR_FD, 0);
+      if (ioctl(loop_fd, LOOP_SET_FD, img_fd) == 0)
+        goto set_status;
+    }
+    ds_warn("LOOP_SET_FD on loop%ld: %s", devnr, strerror(err));
     close(loop_fd);
     return -1;
   }
-  close(img_fd); /* kernel holds a ref; we're done with this fd */
+
+set_status:
 
   struct loop_info64 li;
   memset(&li, 0, sizeof(li));
-  /* AUTOCLEAR: kernel auto-releases loop device after umount + all fds closed
-   */
   li.lo_flags = LO_FLAGS_AUTOCLEAR;
   snprintf((char *)li.lo_file_name, LO_NAME_SIZE, "%.63s", img_path);
 
   if (ioctl(loop_fd, LOOP_SET_STATUS64, &li) < 0)
     ds_warn("LOOP_SET_STATUS64: %s (continuing)", strerror(errno));
+
+  return loop_fd;
+}
+
+/*
+ * Attach img_path to a free loop device via ioctls.
+ * Android: scan high minors first; desktop: LOOP_CTL_GET_FREE.
+ */
+static int loop_attach(const char *img_path, char *loop_path_out,
+                       size_t path_size) {
+  int img_fd = open(img_path, O_RDWR | O_CLOEXEC);
+  if (img_fd < 0) {
+    ds_error("open image %s: %s", img_path, strerror(errno));
+    return -1;
+  }
+
+  int loop_fd = -1;
+
+  if (is_android()) {
+    long max_loop = read_max_loop();
+    long start = loop_scan_start(max_loop);
+    long used_max = loop_scan_used_max();
+    if (used_max >= start)
+      start = used_max + 1;
+    if (start >= max_loop)
+      start = max_loop > 0 ? max_loop - 1 : 0;
+
+    for (long i = max_loop - 1; i >= start; i--) {
+      if (!loop_is_free(i))
+        continue;
+      loop_fd = loop_attach_one(i, img_fd, img_path, loop_path_out, path_size);
+      if (loop_fd >= 0)
+        break;
+    }
+    if (loop_fd < 0) {
+      for (long i = start - 1; i >= 0; i--) {
+        if (!loop_is_free(i))
+          continue;
+        loop_fd =
+            loop_attach_one(i, img_fd, img_path, loop_path_out, path_size);
+        if (loop_fd >= 0)
+          break;
+      }
+    }
+  } else {
+    long devnr = loop_find_free_devnr();
+    if (devnr >= 0)
+      loop_fd =
+          loop_attach_one(devnr, img_fd, img_path, loop_path_out, path_size);
+  }
+
+  close(img_fd);
+
+  if (loop_fd < 0)
+    ds_error("Failed to attach %s to any free loop device", img_path);
 
   return loop_fd;
 }
