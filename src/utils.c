@@ -1016,6 +1016,34 @@ int run_command_log(char *const argv[]) {
   return WIFEXITED(status) ? WEXITSTATUS(status) : -1;
 }
 
+/* --------------------------------------------------------------------------
+ * run_cmd
+ * -------------------------------------------------------------------------- */
+
+int run_cmd(const char *const argv[])
+{
+    pid_t pid;
+    int   status;
+
+    pid = fork();
+    if (pid < 0) {
+        ds_error("fork failed: %s", strerror(errno));
+        return -1;
+    }
+    if (pid == 0) {
+        execvp(argv[0], (char *const *)(const void *)argv);
+        perror(argv[0]);
+        _exit(127);
+    }
+    if (waitpid(pid, &status, 0) < 0) {
+        ds_error("waitpid failed: %s", strerror(errno));
+        return -1;
+    }
+    if (!WIFEXITED(status))
+        return -1;
+    return WEXITSTATUS(status);
+}
+
 /* ---------------------------------------------------------------------------
  * FD Passing (SCM_RIGHTS)
  * ---------------------------------------------------------------------------*/
@@ -2635,4 +2663,27 @@ int ds_bind_mount_socket(const char *src, const char *dst, uid_t uid,
     return -1;
   }
   return 0;
+}
+
+/* --------------------------------------------------------------------------
+ * Size parser: accepts G/M/K suffixes (case-insensitive) or raw bytes
+ * -------------------------------------------------------------------------- */
+
+int parse_size(const char *str, off_t *bytes) {
+    char               *end;
+    unsigned long long  value = strtoull(str, &end, 10);
+
+    if (end == str)
+        return -1;
+
+    switch (*end) {
+    case 'G': case 'g': value *= 1024ULL * 1024ULL * 1024ULL; break;
+    case 'M': case 'm': value *= 1024ULL * 1024ULL;            break;
+    case 'K': case 'k': value *= 1024ULL;                      break;
+    case '\0':                                                   break;
+    default: return -1;
+    }
+
+    *bytes = (off_t)value;
+    return 0;
 }

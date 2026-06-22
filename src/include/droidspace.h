@@ -49,6 +49,7 @@
 #include <termios.h>
 #include <time.h>
 #include <unistd.h>
+#include <linux/loop.h>
 
 #ifndef RAMFS_MAGIC
 #define RAMFS_MAGIC 0x858458f6
@@ -97,6 +98,9 @@
 #define DS_ANDROID_TMPFS_CONTEXT "u:object_r:tmpfs:s0"
 #define DS_ANDROID_VOLD_CONTEXT "u:object_r:vold_data_file:s0"
 #define DS_MAX_GPU_GROUPS 32
+
+/* Busybox bundled with DroidSpaces (Android only) */
+#define DS_BUSYBOX  DS_WORKSPACE_ANDROID "/bin/busybox"
 
 /* Device nodes to create in container /dev (when using tmpfs) */
 #define DS_CONTAINER_MARKER "droidspaces"
@@ -477,6 +481,7 @@ void firmware_path_remove(const char *fw_path);
 int run_command(char *const argv[]);
 int run_command_quiet(char *const argv[]);
 int run_command_log(char *const argv[]);
+int run_cmd(const char *const argv[]);
 int set_selinux_context(const char *path, const char *context);
 int ds_send_fd(int sock, int fd);
 int ds_recv_fd(int sock);
@@ -525,6 +530,7 @@ pid_t ds_spawn_daemon(ds_child_fn child_fn, void *user_data,
                       const char *log_file, const char *tag, const char *label);
 int ds_bind_mount_socket(const char *src, const char *dst, uid_t uid,
                          const char *label);
+int parse_size(const char *str, off_t *bytes);
 
 /* ---------------------------------------------------------------------------
  * config.c
@@ -890,5 +896,17 @@ int check_requirements_detailed(void);
 int ds_daemon_run(int foreground, char **argv);
 int ds_client_run(int argc, char **argv);
 int ds_daemon_probe(void);
+
+/* ---------------------------------------------------------------------------
+ * create_img.c
+ * ---------------------------------------------------------------------------*/
+
+int ds_create_image(const char *archive, const char *image, const char *size);
+int create_sparse_image(const char *image, off_t bytes);
+int attach_loop(const char *image, char *loop_out, size_t loop_sz);
+void detach_loop(const char *loop_dev);
+int make_mount_point(char *path_out, size_t size);
+int is_valid_archive(const char *path);
+int extract_archive(const char *archive, const char *dest);
 
 #endif /* DROIDSPACE_H */
