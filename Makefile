@@ -100,7 +100,7 @@ find-cc = $(shell \
 		echo ""; \
 	fi)
 
-.PHONY: all help clean native x86_64 aarch64 armhf x86 riscv64 all-build tarball all-tarball debug-hardened
+.PHONY: all help clean native x86_64 aarch64 armhf x86 riscv64 all-build tarball all-tarball debug-hardened format
 
 all: help
 
@@ -128,6 +128,7 @@ help:
 	@echo "Other:"
 	@echo "  make clean     - Remove build artifacts"
 	@echo "  make debug-hardened - Build with ASan/UBSan/LSan to find bugs"
+	@echo "  make format    - Run clang-format on all .c/.h/.cpp files"
 
 $(OUT_DIR):
 	$(Q)mkdir -p $(OUT_DIR)
@@ -274,6 +275,11 @@ all-tarball: all-build
 	rm -rf $$TEMP_DIR; \
 	$(MAKE) --no-print-directory sync-android; \
 	echo "[+] Created: $$TARBALL ($$(du -h $$TARBALL | cut -f1))"
+
+format:
+	@command -v clang-format >/dev/null 2>&1 || { echo "Error: clang-format not found"; exit 1; }
+	@find $(SRC_DIR) -name '*.c' -o -name '*.h' -o -name '*.cpp' | xargs clang-format -i
+	@echo "[+] Formatted all source files"
 
 clean:
 	@rm -rf $(OUT_DIR) $(BINARY_NAME)-*.tar.gz

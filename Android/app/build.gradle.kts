@@ -319,6 +319,10 @@ dependencies {
     // Navigation
     implementation("androidx.navigation:navigation-compose:2.7.7")
 
+    // Drag-and-drop reordering for Compose lists (Auto boot priority screen)
+    // 2.1.x targets Compose 1.6.x, matching the BOM above.
+    implementation("sh.calvin.reorderable:reorderable:2.1.1")
+
     // ViewModel
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.7.0")
 

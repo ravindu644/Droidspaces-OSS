@@ -126,12 +126,6 @@
     <string name="network_mode_nat">NAT (implicit)</string>
     <string name="network_mode_none">Niciunul (fără nicio conexiune la rețea)</string>
     <string name="nat_settings">Setări NAT</string>
-    <string name="upstream_interfaces_mandatory">Interfețe de uplink (obligatorii)</string>
-    <string name="upstream_interfaces_required_error">Trebuie specificată minim o interfață de uplink pentru modul NAT.</string>
-    <string name="add_upstream_interface">Adaugă interfață de uplink</string>
-    <string name="available_system_interfaces">Interfețe de sistem disponibile:</string>
-    <string name="enter_manually">Sau scrie-le manual (de asemenea, wildcard-urile sunt suportate):</string>
-    <string name="interface_name_hint">Numele interfeței (de exemplu, wlan0, v4-rmnet_data*)</string>
     <string name="add_port_forward">Adaugă port forward</string>
     <string name="host_port_hint">Portul gazdei (1-65535 sau intervalul 100-200)</string>
     <string name="container_port_hint">Portul container-ului (1-65535 sau interval)</string>

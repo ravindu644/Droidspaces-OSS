@@ -13,7 +13,7 @@
     <string name="feat_overhead_desc">Talks to the host Linux kernel directly. No hypervisor, no virtual machine layer.</string>
     <string name="feat_unkillable_title">Unkillable by design</string>
     <string name="feat_unkillable_desc">Supports native init.rc integration and 2-layer userspace daemons. Completely unkillable.</string>
-    <string name="feat_init_title">systemd / OpenRC as PID 1</string>
+    <string name="feat_init_title">systemd / OpenWrt procd / OpenRC as PID 1</string>
     <string name="feat_init_desc">Full init system support. Real service management, not a simulated environment.</string>
     <string name="feat_isolation_title">Complete isolation</string>
     <string name="feat_isolation_desc">Private PID tree, mount table, hostname, IPC, and cgroup hierarchy per container.</string>
@@ -202,6 +202,11 @@
     <string name="selinux_permissive_description">Set SELinux permissive</string>
     <string name="run_at_boot">Run at Boot</string>
     <string name="run_at_boot_description">Start container on boot</string>
+    <string name="auto_boot_priority">Auto Boot Priority</string>
+    <string name="auto_boot_priority_description">Order in which run-at-boot containers start</string>
+    <string name="auto_boot_priority_hint">Drag to reorder. Containers start top to bottom - put a gateway (e.g. OpenWRT) first so it boots before the containers that route through it.</string>
+    <string name="auto_boot_priority_empty">No containers have Run at Boot enabled.</string>
+    <string name="reorder_handle">Drag to reorder</string>
     <string name="force_cgroupv1">Force Cgroup V1</string>
     <string name="force_cgroupv1_description">Force use of legacy Cgroup V1 hierarchy</string>
     <string name="manual_deadlock_shield">Manual Deadlock Shield</string>
@@ -220,13 +225,34 @@
     <string name="network_mode_host_short">Host</string>
     <string name="network_mode_nat_short">NAT</string>
     <string name="network_mode_none_short">None</string>
+    <string name="network_mode_gateway">Gateway (Virtual Router)</string>
+    <string name="network_mode_gateway_short">Gateway</string>
+
+    <!-- Gateway networking mode -->
+    <string name="gateway_settings">Gateway Settings</string>
+    <string name="gateway_settings_description">Route this container through another container acting as a router (e.g. OpenWRT). That gateway must be running first.</string>
+    <string name="gateway_container">Gateway Container</string>
+    <string name="gateway_net">LAN Name</string>
+    <string name="gateway_net_hint">lan</string>
+    <string name="gateway_iface">Interface in Gateway</string>
+    <string name="gateway_iface_hint">eth1</string>
+    <string name="gateway_bridge">Host Bridge</string>
+    <string name="gateway_bridge_hint">ds-lan</string>
+    <string name="gateway_configure">Configure Gateway</string>
+    <string name="gateway_configure_title">Configure Gateway</string>
+    <string name="gateway_configure_intro">These control how this container plugs into the gateway\'s virtual LAN. The defaults work for a single LAN behind one gateway - change them only when running multiple LAN segments or more than one gateway.</string>
+    <string name="gateway_iface_explain">The interface name this connection shows up as INSIDE the gateway container (e.g. eth1 in OpenWRT). It must match the interface your gateway is set to serve DHCP on. Each separate segment on the same gateway needs its own unique name. Default: eth1.</string>
+    <string name="gateway_net_explain">A label for this LAN segment. Containers that share the same gateway and LAN name join the same virtual switch and can see each other. Use a different name to spin up an isolated second segment. Default: lan.</string>
+    <string name="gateway_bridge_explain">Name of the virtual switch created on the Android host. Leave empty to auto-name it from the LAN name (ds-&lt;lan&gt;). Only set this if you need an exact bridge name. Max 15 characters.</string>
+    <string name="error_gateway_required">Select a gateway container</string>
+    <string name="error_gateway_self">A container cannot be its own gateway</string>
+    <string name="error_gateway_not_installed">This gateway container is not installed</string>
+    <string name="error_no_gateway_candidates">Install another container to act as the gateway</string>
+    <string name="error_gateway_name_chars">Use only letters, digits, _ or -</string>
+    <string name="error_iface_too_long">Too long - max 15 characters</string>
+    <string name="error_gateway_bridge_taken">Bridge already used by \'%1$s\'. Use a different LAN name.</string>
+    <string name="error_gateway_iface_taken">Interface already used by another segment (\'%1$s\'). Use a different one.</string>
     <string name="nat_settings">NAT Settings</string>
-    <string name="upstream_interfaces_mandatory">Upstream Interfaces (Mandatory)</string>
-    <string name="upstream_interfaces_required_error">You must specify at least one upstream interface for NAT mode.</string>
-    <string name="add_upstream_interface">Add Upstream Interface</string>
-    <string name="available_system_interfaces">Available System Interfaces:</string>
-    <string name="enter_manually">Or enter it manually (wildcards are supported too):</string>
-    <string name="interface_name_hint">Interface Name (e.g. wlan0, v4-rmnet_data*)</string>
     <string name="port_forwarding">Port Forwarding</string>
     <string name="add_port_forward">Add Port Forward</string>
     <string name="host_port_hint">Host Port (1-65535 or range 100-200)</string>
@@ -350,11 +376,15 @@
 
     <!-- Systemd Screen -->
     <string name="systemd_services">Systemd Services</string>
+    <string name="openwrt_services">OpenWrt Services</string>
+    <string name="openwrt">OpenWrt</string>
+    <string name="procd_detected">OpenWrt/procd detected</string>
+    <string name="procd_services_placeholder_desc">Service management for %1$s will be added in the next patch.</string>
     <string name="openrc_services">OpenRC Services</string>
     <string name="openrc">OpenRC</string>
     <string name="init_system">Init System</string>
-    <string name="init_system_not_available">Systemd/OpenRC Not Available</string>
-    <string name="init_system_not_available_desc">This container does not have systemd or OpenRC installed</string>
+    <string name="init_system_not_available">Systemd/OpenWrt/OpenRC Not Available</string>
+    <string name="init_system_not_available_desc">This container does not have systemd, OpenWrt/procd, or OpenRC installed</string>
     <string name="fetching_services">Fetching services...</string>
 
     <string name="search_services">Search services...</string>
@@ -362,12 +392,14 @@
     <string name="disabled_legend">Disabled</string>
     <string name="static_legend">Static</string>
     <string name="abnormal_legend">Abnormal</string>
+    <string name="unknown_legend">Unknown</string>
     <string name="masked_legend">Masked</string>
     <string name="all_legend">All</string>
     <string name="unmask">Unmask</string>
     <string name="enable_service">Enable</string>
     <string name="disable_service">Disable</string>
     <string name="restart_service">Restart service</string>
+    <string name="reload_service">Reload service</string>
     <string name="mask_service">Mask service</string>
     <string name="action_successful">%1$s %2$s successful</string>
     <string name="failed_to_action">Failed to %1$s %2$s</string>
@@ -380,6 +412,7 @@
     <string name="no_disabled_services">No disabled services</string>
     <string name="no_static_services">No static services</string>
     <string name="no_abnormal_services">No abnormal services</string>
+    <string name="no_unknown_services">No services with unknown state</string>
     <string name="no_masked_services">No masked services</string>
 
     <!-- System Info Card -->

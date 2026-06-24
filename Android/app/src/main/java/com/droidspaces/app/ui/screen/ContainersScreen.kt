@@ -18,6 +18,7 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.material3.SnackbarHost
 import com.droidspaces.app.ui.util.ProgressDialog
@@ -82,7 +83,8 @@ fun ContainersScreen(
     onNavigateToContainerDetails: (String) -> Unit = {},
     containerViewModel: ContainerViewModel,
     expandedContainerName: String?,
-    onExpandedContainerNameChange: (String?) -> Unit
+    onExpandedContainerNameChange: (String?) -> Unit,
+    emptyStateBottomInset: Dp = 0.dp
 ) {
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
@@ -597,15 +599,15 @@ fun ContainersScreen(
         // Show root unavailable state first, then backend unavailable, then content
         when {
             !isRootAvailable -> {
-                RootUnavailableState()
+                RootUnavailableState(modifier = Modifier.padding(bottom = emptyStateBottomInset))
             }
             !isBackendAvailable -> {
-                ErrorState()
+                ErrorState(modifier = Modifier.padding(bottom = emptyStateBottomInset))
             }
             containers.isEmpty() -> {
                 if (containerViewModel.isRefreshing) {
                     Box(
-                        modifier = Modifier.fillMaxSize(),
+                        modifier = Modifier.fillMaxSize().padding(bottom = emptyStateBottomInset),
                         contentAlignment = Alignment.Center
                     ) {
                         LoadingIndicator(size = LoadingSize.Large)
@@ -614,7 +616,10 @@ fun ContainersScreen(
                     EmptyState(
                         icon = Icons.Default.Storage,
                         title = context.getString(R.string.no_containers_installed),
-                        description = context.getString(R.string.install_container_description)
+                        description = context.getString(R.string.install_container_description),
+                        // Reserve the floating tab bar's space so the centered
+                        // content sits in the visible region, not behind the bar.
+                        modifier = Modifier.padding(bottom = emptyStateBottomInset)
                     )
                 }
             }

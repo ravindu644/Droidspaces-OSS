@@ -22,7 +22,10 @@ fun <T> DsDropdown(
     displayName: (T) -> String,
     onSelect: (T) -> Unit,
     modifier: Modifier = Modifier,
-    leadingIcon: ImageVector? = null
+    leadingIcon: ImageVector? = null,
+    isError: Boolean = false,
+    supportingText: String? = null,
+    enabled: Boolean = true
 ) {
     var expanded by remember { mutableStateOf(false) }
     val focusManager = LocalFocusManager.current
@@ -36,8 +39,9 @@ fun <T> DsDropdown(
     )
 
     ExposedDropdownMenuBox(
-        expanded = expanded,
-        onExpandedChange = { 
+        expanded = expanded && enabled,
+        onExpandedChange = {
+            if (!enabled) return@ExposedDropdownMenuBox
             expanded = it
             if (!it) focusManager.clearFocus()
         },
@@ -47,7 +51,10 @@ fun <T> DsDropdown(
             value = displayName(selected),
             onValueChange = {},
             readOnly = true,
+            enabled = enabled,
+            isError = isError,
             label = { Text(label) },
+            supportingText = supportingText?.let { { Text(it) } },
             trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
             leadingIcon = leadingIcon?.let { icon -> { Icon(icon, contentDescription = null) } },
             shape = fieldShape,

@@ -24,6 +24,7 @@ import com.droidspaces.app.ui.screen.MainTabScreen
 import com.droidspaces.app.ui.screen.RootCheckScreen
 import com.droidspaces.app.ui.screen.SettingsScreen
 import com.droidspaces.app.ui.screen.RequirementsScreen
+import com.droidspaces.app.ui.screen.AutoBootPriorityScreen
 import com.droidspaces.app.ui.screen.WelcomeScreen
 import com.droidspaces.app.ui.screen.ContainerNameScreen
 import com.droidspaces.app.ui.screen.SparseImageConfigScreen
@@ -33,6 +34,7 @@ import com.droidspaces.app.ui.screen.InstallationProgressScreen
 import com.droidspaces.app.ui.screen.EditContainerScreen
 import com.droidspaces.app.ui.screen.ContainerDetailsScreen
 import com.droidspaces.app.ui.screen.SystemdScreen
+import com.droidspaces.app.ui.screen.ProcdScreen
 import com.droidspaces.app.ui.screen.OpenRCScreen
 import com.droidspaces.app.ui.screen.ContainerTerminalScreen
 import com.droidspaces.app.ui.viewmodel.ContainerInstallationViewModel
@@ -68,6 +70,7 @@ sealed class Screen(val route: String) {
     }
     data object Settings : Screen("settings")
     data object Requirements : Screen("requirements")
+    data object AutoBootPriority : Screen("auto_boot_priority")
 
     // Container installation wizard screens
     data object ContainerName : Screen("container_name/{tarballUri}") {
@@ -89,6 +92,9 @@ sealed class Screen(val route: String) {
     }
     data object Systemd : Screen("systemd/{containerName}") {
         fun createRoute(containerName: String) = "systemd/${Uri.encode(containerName)}"
+    }
+    data object Procd : Screen("procd/{containerName}") {
+        fun createRoute(containerName: String) = "procd/${Uri.encode(containerName)}"
     }
     data object OpenRC : Screen("openrc/{containerName}") {
         fun createRoute(containerName: String) = "openrc/${Uri.encode(containerName)}"
@@ -321,10 +327,15 @@ fun DroidspacesNavigation(
                 initialBlockNestedNs = viewModel.blockNestedNs,
                 initialPrivileged = viewModel.privileged,
                 initialEnvFileContent = viewModel.envFileContent ?: "",
-                initialUpstreamInterfaces = viewModel.upstreamInterfaces,
                 initialPortForwards = viewModel.portForwards,
-                onNext = { netMode, disableIPv6, enableAndroidStorage, enableHwAccess, enableGpuMode, enableTermuxX11, tx11ExtraFlags, enableVirgl, virglExtraFlags, enablePulseaudio, selinuxPermissive, volatileMode, bindMounts, dnsServers, runAtBoot, customInit, staticNatIp, forceCgroupv1, blockNestedNs, privileged, envFileContent, upstreamInterfaces, portForwards ->
-                    viewModel.setConfig(netMode, disableIPv6, enableAndroidStorage, enableHwAccess, enableGpuMode, enableTermuxX11, tx11ExtraFlags, enableVirgl, virglExtraFlags, enablePulseaudio, selinuxPermissive, volatileMode, bindMounts, dnsServers, runAtBoot, customInit, staticNatIp, envFileContent, upstreamInterfaces, portForwards, forceCgroupv1, blockNestedNs, privileged)
+                initialGatewayContainer = viewModel.gatewayContainer,
+                initialGatewayNet = viewModel.gatewayNet,
+                initialGatewayIface = viewModel.gatewayIface,
+                initialGatewayBridge = viewModel.gatewayBridge,
+                containerName = viewModel.containerName,
+                installedContainers = sharedContainerViewModel.containerList,
+                onNext = { netMode, disableIPv6, enableAndroidStorage, enableHwAccess, enableGpuMode, enableTermuxX11, tx11ExtraFlags, enableVirgl, virglExtraFlags, enablePulseaudio, selinuxPermissive, volatileMode, bindMounts, dnsServers, runAtBoot, customInit, staticNatIp, forceCgroupv1, blockNestedNs, privileged, envFileContent, portForwards, gatewayContainer, gatewayNet, gatewayIface, gatewayBridge ->
+                    viewModel.setConfig(netMode, disableIPv6, enableAndroidStorage, enableHwAccess, enableGpuMode, enableTermuxX11, tx11ExtraFlags, enableVirgl, virglExtraFlags, enablePulseaudio, selinuxPermissive, volatileMode, bindMounts, dnsServers, runAtBoot, customInit, staticNatIp, envFileContent, portForwards, forceCgroupv1, blockNestedNs, privileged, gatewayContainer, gatewayNet, gatewayIface, gatewayBridge)
                     navController.navigate(Screen.SparseImageConfig.route)
                 },
                 onBack = {
@@ -507,6 +518,24 @@ fun DroidspacesNavigation(
                 },
                 onNavigateToRequirements = {
                     navController.navigate(Screen.Requirements.route)
+                },
+                onNavigateToAutoBootPriority = {
+                    navController.navigate(Screen.AutoBootPriority.route)
+                }
+            )
+        }
+
+        composable(
+            route = Screen.AutoBootPriority.route,
+            enterTransition = defaultEnterTransition,
+            exitTransition = defaultExitTransition,
+            popEnterTransition = defaultEnterTransition,
+            popExitTransition = defaultExitTransition
+        ) {
+            AutoBootPriorityScreen(
+                containerViewModel = sharedContainerViewModel,
+                onBack = {
+                    navController.popBackStack()
                 }
             )
         }
@@ -549,6 +578,8 @@ fun DroidspacesNavigation(
                         when (initSystem) {
                             com.droidspaces.app.ui.screen.InitSystem.SYSTEMD ->
                                 navController.navigate(Screen.Systemd.createRoute(containerName))
+                            com.droidspaces.app.ui.screen.InitSystem.PROCD ->
+                                navController.navigate(Screen.Procd.createRoute(containerName))
                             com.droidspaces.app.ui.screen.InitSystem.OPENRC ->
                                 navController.navigate(Screen.OpenRC.createRoute(containerName))
                         }
@@ -572,6 +603,21 @@ fun DroidspacesNavigation(
         ) { backStackEntry ->
             val containerName = backStackEntry.arguments?.getString("containerName") ?: ""
             SystemdScreen(
+                containerName = containerName,
+                onNavigateBack = { navController.popBackStack() }
+            )
+        }
+
+        composable(
+            route = Screen.Procd.route,
+            arguments = listOf(
+                navArgument("containerName") { type = NavType.StringType }
+            ),
+            enterTransition = defaultEnterTransition,
+            exitTransition = defaultExitTransition
+        ) { backStackEntry ->
+            val containerName = backStackEntry.arguments?.getString("containerName") ?: ""
+            ProcdScreen(
                 containerName = containerName,
                 onNavigateBack = { navController.popBackStack() }
             )

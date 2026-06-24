@@ -137,12 +137,6 @@
     <string name="network_mode_nat">NAT (පෙරනිමිය)</string>
     <string name="network_mode_none">කිසිවක් නැත (Air-gapped)</string>
     <string name="nat_settings">NAT සැකසුම්</string>
-    <string name="upstream_interfaces_mandatory">ප්‍රභව අතුරුමුහුණත් (අනිවාර්ය)</string>
-    <string name="upstream_interfaces_required_error">NAT ක්‍රමය සඳහා අවම වශයෙන් එක් ප්‍රභව අතුරුමුහුණතක් වත් සඳහන් කළ යුතුය.</string>
-    <string name="add_upstream_interface">ප්‍රභව අතුරුමුහුණතක් එක් කරන්න</string>
-    <string name="available_system_interfaces">පද්ධතියේ පවතින අතුරුමුහුණත්:</string>
-    <string name="enter_manually">නැතිනම් එය ඔබම ඇතුළත් කරන්න (Wildcards සඳහාද සහාය දක්වයි):</string>
-    <string name="interface_name_hint">අතුරුමුහුණතේ නම (උදා: wlan0, v4-rmnet_data*)</string>
     <string name="port_forwarding">Port Forwarding</string>
     <string name="add_port_forward">Port Forward එකක් එක් කරන්න</string>
     <string name="host_port_hint">මව් පද්ධතියේ පෝට් එක (1-65535 හෝ පරාසය 100-200)</string>

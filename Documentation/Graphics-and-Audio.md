@@ -164,6 +164,10 @@ Near-native hardware acceleration for **Qualcomm Adreno GPUs** using the open-so
 
 4. Run a GUI application inside the container - Turnip GPU acceleration will be active.
 
+> [!NOTE]
+>
+> **Permission Management (Non-Root Users):** If you are using a non-root user, you must grant them access to the GPU device nodes: `sudo usermod -aG droidspaces-gpu <your_username>`
+
 ---
 
 <a id="pulseaudio"></a>

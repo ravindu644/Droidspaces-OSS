@@ -1,17 +1,17 @@
 *.o
 *.tar.gz
-droidspaces-*
-output
-.cursor
-old_code_with_android-app/
-logs/
+*.deb
+output/
 *.img
-*.txt
 *.patch
 *.diff
 *.rej
 *.orig
 *.config
+.cache
+.claude
+Android/app/src/main/assets/binaries/
+Android/app/src/main/assets/supported_locales.txt
 
 # Keystores
 *.keystore

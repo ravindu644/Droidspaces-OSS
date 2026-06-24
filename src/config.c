@@ -364,43 +364,38 @@ int ds_config_load(const char *config_path, struct ds_config *cfg) {
         cfg->net_mode = DS_NET_NONE;
       } else if (strcmp(val, "host") == 0) {
         cfg->net_mode = DS_NET_HOST;
+      } else if (strcmp(val, "gateway") == 0 ||
+                 strcmp(val, "delegated-gateway") == 0) {
+        cfg->net_mode = DS_NET_GATEWAY;
       } else {
         ds_warn(
             "Unknown network mode '%s' in config file. Defaulting to 'host'.",
             val);
         cfg->net_mode = DS_NET_HOST;
       }
+    } else if (strcmp(key, "gateway_container") == 0) {
+      if (validate_container_name(val))
+        safe_strncpy(cfg->gateway_container, val,
+                     sizeof(cfg->gateway_container));
+      else
+        ds_warn("config: ignoring invalid gateway_container '%s'", val);
+    } else if (strcmp(key, "gateway_net") == 0) {
+      safe_strncpy(cfg->gateway_net, val, sizeof(cfg->gateway_net));
+    } else if (strcmp(key, "gateway_bridge") == 0) {
+      if (strlen(val) < IFNAMSIZ)
+        safe_strncpy(cfg->gateway_bridge, val, sizeof(cfg->gateway_bridge));
+      else
+        ds_warn("config: ignoring too-long gateway_bridge '%s'", val);
+    } else if (strcmp(key, "gateway_lan_ifname") == 0) {
+      if (strlen(val) < IFNAMSIZ)
+        safe_strncpy(cfg->gateway_lan_ifname, val,
+                     sizeof(cfg->gateway_lan_ifname));
+      else
+        ds_warn("config: ignoring too-long gateway_lan_ifname '%s'", val);
     } else if (strcmp(key, "upstream_interfaces") == 0) {
-      /* Comma-separated interface names, e.g. "wlan0,rmnet0,ccmni1" */
-      char copy[1024];
-      safe_strncpy(copy, val, sizeof(copy));
-      char *up_saveptr;
-      char *up_tok = strtok_r(copy, ",", &up_saveptr);
-      while (up_tok && cfg->upstream_iface_count < DS_MAX_UPSTREAM_IFACES) {
-        while (*up_tok == ' ' || *up_tok == '\t')
-          up_tok++;
-        char *up_end = up_tok + strlen(up_tok) - 1;
-        while (up_end > up_tok && (*up_end == ' ' || *up_end == '\t'))
-          *up_end-- = '\0';
-        if (up_tok[0] && strlen(up_tok) < IFNAMSIZ) {
-          int dup = 0;
-          for (int i = 0; i < cfg->upstream_iface_count; i++) {
-            if (strcmp(cfg->upstream_ifaces[i], up_tok) == 0) {
-              dup = 1;
-              break;
-            }
-          }
-          if (!dup) {
-            safe_strncpy(cfg->upstream_ifaces[cfg->upstream_iface_count++],
-                         up_tok, IFNAMSIZ);
-          }
-        }
-        up_tok = strtok_r(NULL, ",", &up_saveptr);
-      }
-      if (up_tok)
-        ds_warn("config: too many upstream_interfaces (max %d) - extra entries "
-                "ignored",
-                DS_MAX_UPSTREAM_IFACES);
+      /* Legacy key from pre-auto-detection builds - the active uplink is
+       * now detected automatically.  Silently swallow it so it is neither
+       * applied nor re-saved as an unknown line. */
     } else if (strcmp(key, "port_forwards") == 0) {
       /* Comma-separated HOST:CONTAINER[/proto], supporting both single ports
        * and ranges.  Accepted formats:
@@ -688,17 +683,21 @@ static void ds_config_serialize_known(FILE *f, struct ds_config *cfg) {
     fprintf(f, "net_mode=nat\n");
   } else if (cfg->net_mode == DS_NET_NONE) {
     fprintf(f, "net_mode=none\n");
+  } else if (cfg->net_mode == DS_NET_GATEWAY) {
+    fprintf(f, "net_mode=gateway\n");
   } else {
     fprintf(f, "net_mode=host\n");
   }
 
-  if (cfg->net_mode == DS_NET_NAT && cfg->upstream_iface_count > 0) {
-    fprintf(f, "upstream_interfaces=");
-    for (int i = 0; i < cfg->upstream_iface_count; i++) {
-      fprintf(f, "%s%s", cfg->upstream_ifaces[i],
-              (i < cfg->upstream_iface_count - 1) ? "," : "");
-    }
-    fprintf(f, "\n");
+  if (cfg->net_mode == DS_NET_GATEWAY) {
+    if (cfg->gateway_container[0])
+      fprintf(f, "gateway_container=%s\n", cfg->gateway_container);
+    if (cfg->gateway_net[0])
+      fprintf(f, "gateway_net=%s\n", cfg->gateway_net);
+    if (cfg->gateway_bridge[0])
+      fprintf(f, "gateway_bridge=%s\n", cfg->gateway_bridge);
+    if (cfg->gateway_lan_ifname[0])
+      fprintf(f, "gateway_lan_ifname=%s\n", cfg->gateway_lan_ifname);
   }
 
   if (cfg->net_mode == DS_NET_NAT && cfg->port_forward_count > 0) {
@@ -868,6 +867,15 @@ int ds_config_validate(struct ds_config *cfg) {
     }
   }
 
+  if (cfg->net_mode == DS_NET_GATEWAY) {
+    if (!cfg->gateway_container[0])
+      errors++;
+    else if (!validate_container_name(cfg->gateway_container))
+      errors++;
+    else if (strcmp(cfg->gateway_container, cfg->container_name) == 0)
+      errors++;
+  }
+
   return (errors > 0) ? -1 : 0;
 }
 
@@ -902,6 +910,23 @@ int ds_config_load_by_name(const char *name, struct ds_config *cfg) {
   char config_path[PATH_MAX];
   snprintf(config_path, sizeof(config_path),
            "%s/Containers/%s/container.config", get_workspace_dir(), safe_name);
+
+  /* Single source of truth: if the container is running, load the immutable
+   * snapshot it actually booted with (/run/droidspaces/container.config inside
+   * its mount ns) so host-side edits to container.config while it runs never
+   * desync stop/cleanup/info. Keep config_file pointing at the workspace copy
+   * so later saves still target the host file. Fall back to the workspace copy
+   * when not running or the snapshot is unreadable. */
+  pid_t pid = find_container_by_name(name);
+  if (pid > 0) {
+    char run_path[PATH_MAX];
+    if (build_proc_root_path(pid, "/run/droidspaces/container.config", run_path,
+                             sizeof(run_path)) == 0 &&
+        access(run_path, F_OK) == 0 && ds_config_load(run_path, cfg) == 0) {
+      safe_strncpy(cfg->config_file, config_path, sizeof(cfg->config_file));
+      return 0;
+    }
+  }
 
   return ds_config_load(config_path, cfg);
 }

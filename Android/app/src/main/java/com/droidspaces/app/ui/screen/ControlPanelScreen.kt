@@ -10,6 +10,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.droidspaces.app.ui.component.EmptyState
@@ -36,6 +37,7 @@ fun ControlPanelScreen(
     containerViewModel: ContainerViewModel,
     onNavigateToContainerDetails: (String) -> Unit = {},
     onNavigateToTerminal: (String) -> Unit = {},
+    emptyStateBottomInset: Dp = 0.dp,
 ) {
     val context = LocalContext.current
     val snackbarHostState = remember { SnackbarHostState() }
@@ -65,10 +67,10 @@ fun ControlPanelScreen(
         // Using when instead of early return to prevent UI glitches during recomposition
         when {
             !isRootAvailable -> {
-                RootUnavailableState()
+                RootUnavailableState(modifier = Modifier.padding(bottom = emptyStateBottomInset))
             }
             !isBackendAvailable -> {
-                ErrorState()
+                ErrorState(modifier = Modifier.padding(bottom = emptyStateBottomInset))
             }
             else -> {
                 if (runningContainers.isEmpty()) {
@@ -76,7 +78,9 @@ fun ControlPanelScreen(
                         icon = Icons.Default.Dashboard,
                         title = context.getString(R.string.no_containers_running),
                         description = context.getString(R.string.start_container_first),
-                        modifier = Modifier.padding(bottom = 120.dp) // Clear floating tab bar
+                        // Reserve the floating tab bar's space so the centered
+                        // content sits in the visible region, not behind the bar.
+                        modifier = Modifier.padding(bottom = emptyStateBottomInset)
                     )
                 } else {
                     Column(

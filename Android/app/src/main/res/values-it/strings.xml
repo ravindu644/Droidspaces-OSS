@@ -161,12 +161,6 @@
     <string name="network_mode_nat">NAT (Predefinita)</string>
     <string name="network_mode_none">Nessuna (Air-gapped)</string>
     <string name="nat_settings">Impostazioni NAT</string>
-    <string name="upstream_interfaces_mandatory">Interfacce Upstream (Obbligatorie)</string>
-    <string name="upstream_interfaces_required_error">Devi specificare almeno un\'interfaccia upstream per la modalità NAT.</string>
-    <string name="add_upstream_interface">Aggiungi interfaccia upstream</string>
-    <string name="available_system_interfaces">Interfacce di sistema disponibili:</string>
-    <string name="enter_manually">O inseriscila manualmente (i wildcard sono supportati):</string>
-    <string name="interface_name_hint">Nome interfaccia (es. wlan0, v4-rmnet_data*)</string>
     <string name="port_forwarding">Inoltro Porte</string>
     <string name="add_port_forward">Aggiungi Port Forward</string>
     <string name="host_port_hint">Porta Host (1-65535 o intervallo 100-200)</string>

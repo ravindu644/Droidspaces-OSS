@@ -15,8 +15,11 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.activity.compose.BackHandler
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -273,6 +276,11 @@ fun MainTabScreen(
         },
         contentWindowInsets = WindowInsets(0)
     ) { innerPadding ->
+        val density = LocalDensity.current
+        // Measured height of the floating bottom bar (incl. system nav inset).
+        // Reserved as bottom space for centered empty states so they sit in the
+        // visible region above the bar instead of behind it.
+        var bottomBarHeight by remember { mutableStateOf(0.dp) }
         Box(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
             Column(
                 modifier = Modifier
@@ -303,7 +311,8 @@ fun MainTabScreen(
                             containerViewModel = containerViewModel,
                             onRefresh = { performRefresh(TabItem.Containers) },
                             expandedContainerName = expandedContainerName,
-                            onExpandedContainerNameChange = { expandedContainerName = it }
+                            onExpandedContainerNameChange = { expandedContainerName = it },
+                            emptyStateBottomInset = bottomBarHeight
                         )
                     }
 
@@ -314,7 +323,8 @@ fun MainTabScreen(
                             containerViewModel = containerViewModel,
                             onRefresh = { performRefresh(TabItem.ControlPanel) },
                             onNavigateToContainerDetails = onNavigateToContainerDetails,
-                            onNavigateToTerminal = onNavigateToTerminal
+                            onNavigateToTerminal = onNavigateToTerminal,
+                            emptyStateBottomInset = bottomBarHeight
                         )
                     }
                 }
@@ -325,6 +335,7 @@ fun MainTabScreen(
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
                     .fillMaxWidth()
+                    .onSizeChanged { bottomBarHeight = with(density) { it.height.toDp() } }
             ) {
                 MainBottomBar(
                     selectedTab = selectedTab,
@@ -499,7 +510,8 @@ private fun ContainersTabContent(
     containerViewModel: ContainerViewModel,
     onRefresh: suspend () -> Unit,
     expandedContainerName: String?,
-    onExpandedContainerNameChange: (String?) -> Unit
+    onExpandedContainerNameChange: (String?) -> Unit,
+    emptyStateBottomInset: Dp = 0.dp
 ) {
     PullToRefreshWrapper(onRefresh = { onRefresh() }) {
         ContainersScreen(
@@ -510,7 +522,8 @@ private fun ContainersTabContent(
             onNavigateToContainerDetails = onNavigateToContainerDetails,
             containerViewModel = containerViewModel,
             expandedContainerName = expandedContainerName,
-            onExpandedContainerNameChange = onExpandedContainerNameChange
+            onExpandedContainerNameChange = onExpandedContainerNameChange,
+            emptyStateBottomInset = emptyStateBottomInset
         )
     }
 }
@@ -523,6 +536,7 @@ private fun ControlPanelTabContent(
     onRefresh: suspend () -> Unit,
     onNavigateToContainerDetails: (String) -> Unit,
     onNavigateToTerminal: (String) -> Unit,
+    emptyStateBottomInset: Dp = 0.dp
 ) {
     var refreshTrigger by remember { mutableStateOf(0) }
 
@@ -536,6 +550,7 @@ private fun ControlPanelTabContent(
             containerViewModel = containerViewModel,
             onNavigateToContainerDetails = onNavigateToContainerDetails,
             onNavigateToTerminal = onNavigateToTerminal,
+            emptyStateBottomInset = emptyStateBottomInset
         )
     }
 }

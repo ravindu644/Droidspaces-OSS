@@ -44,16 +44,20 @@ data class ContainerInfo(
     val bindMounts: List<BindMount> = emptyList(),
     val dnsServers: String = "",
     val runAtBoot: Boolean = false,
+    val runAtBootPriority: Int = 0,
     val status: ContainerStatus = ContainerStatus.STOPPED,
     val pid: Int? = null,
     val useSparseImage: Boolean = false,
     val sparseImageSizeGB: Int? = null,
     val envFileContent: String? = null,
-    val upstreamInterfaces: List<String> = emptyList(),
     val portForwards: List<PortForward> = emptyList(),
     val forceCgroupv1: Boolean = false,
     val blockNestedNs: Boolean = false,
     val staticNatIp: String = "",
+    val gatewayContainer: String = "",
+    val gatewayNet: String = "",
+    val gatewayIface: String = "",
+    val gatewayBridge: String = "",
     val privileged: String = "",
     val customInit: String = "",
     val uuid: String = ""
@@ -83,9 +87,6 @@ data class ContainerInfo(
         if (bindMounts.isNotEmpty()) {
             appendLine("bind_mounts=${bindMounts.joinToString(",") { "${it.src}:${it.dest}${if (it.ro) ":ro" else ""}" }}")
         }
-        if (netMode == "nat" && upstreamInterfaces.isNotEmpty()) {
-            appendLine("upstream_interfaces=${upstreamInterfaces.joinToString(",")}")
-        }
         if (netMode == "nat" && portForwards.isNotEmpty()) {
             appendLine("port_forwards=${portForwards.joinToString(",") {
                 val mapping = if (it.containerPort != null) "${it.hostPort}:${it.containerPort}" else it.hostPort
@@ -96,10 +97,21 @@ data class ContainerInfo(
             appendLine("dns_servers=$dnsServers")
         }
         appendLine("run_at_boot=${if (runAtBoot) "1" else "0"}")
+        if (runAtBoot && runAtBootPriority > 0) {
+            appendLine("run_at_boot_priority=$runAtBootPriority")
+        }
         appendLine("force_cgroupv1=${if (forceCgroupv1) "1" else "0"}")
         appendLine("block_nested_ns=${if (blockNestedNs) "1" else "0"}")
         if (netMode == "nat" && staticNatIp.isNotEmpty()) {
             appendLine("static_nat_ip=$staticNatIp")
+        }
+        // Gateway-mode keys (the C runtime parses gateway_lan_ifname, not gateway_iface).
+        // gateway_container is required in gateway mode; the rest are optional overrides.
+        if (netMode == "gateway") {
+            if (gatewayContainer.isNotBlank()) appendLine("gateway_container=$gatewayContainer")
+            if (gatewayNet.isNotBlank()) appendLine("gateway_net=$gatewayNet")
+            if (gatewayIface.isNotBlank()) appendLine("gateway_lan_ifname=$gatewayIface")
+            if (gatewayBridge.isNotBlank()) appendLine("gateway_bridge=$gatewayBridge")
         }
         appendLine("use_sparse_image=${if (useSparseImage) "1" else "0"}")
         if (sparseImageSizeGB != null) {
@@ -268,9 +280,6 @@ object ContainerManager {
                 }
             } ?: emptyList()
 
-            // Parse upstream interfaces
-            val upstreamInterfaces = configMap["upstream_interfaces"]?.split(",")?.map { it.trim() }?.filter { it.isNotEmpty() } ?: emptyList()
-
             // Parse port forwards: 8080:80/tcp, 9090:90/udp, 1000-2000/tcp (shorthand)
             val portForwards = configMap["port_forwards"]?.split(",")?.mapNotNull { pfStr ->
                 try {
@@ -309,15 +318,19 @@ object ContainerManager {
                 bindMounts = bindMounts,
                 dnsServers = configMap["dns_servers"] ?: "",
                 runAtBoot = configMap["run_at_boot"] == "1",
+                runAtBootPriority = configMap["run_at_boot_priority"]?.toIntOrNull() ?: 0,
                 status = ContainerStatus.STOPPED,
                 useSparseImage = useSparseImage,
                 sparseImageSizeGB = sparseImageSizeGB,
                 envFileContent = loadEnvFileContent(containerName),
-                upstreamInterfaces = upstreamInterfaces,
                 portForwards = portForwards,
                 forceCgroupv1 = configMap["force_cgroupv1"] == "1",
                 blockNestedNs = configMap["block_nested_ns"] == "1",
                 staticNatIp = configMap["static_nat_ip"] ?: "",
+                gatewayContainer = configMap["gateway_container"] ?: "",
+                gatewayNet = configMap["gateway_net"] ?: "",
+                gatewayIface = configMap["gateway_lan_ifname"] ?: "",
+                gatewayBridge = configMap["gateway_bridge"] ?: "",
                 privileged = configMap["privileged"] ?: "",
                 customInit = configMap["custom_init"] ?: "",
                 uuid = configMap["uuid"] ?: ""
@@ -394,29 +407,6 @@ object ContainerManager {
             )
         } else {
             null
-        }
-    }
-
-    /**
-     * List active upstream interfaces by scanning all routing tables.
-     *
-     * Uses `table all` instead of the default table so that CLAT/Qualcomm
-     * devices are correctly detected - on these devices every interface has
-     * its own per-interface routing table and nothing appears in the main
-     * table, so `ip route show default` returns empty.
-     */
-    suspend fun listUpstreamInterfaces(): List<String> = withContext(Dispatchers.IO) {
-        try {
-            val busybox = Constants.BUSYBOX_BINARY_PATH
-            val cmd = "ip route show table all | $busybox grep '^default' | $busybox awk '{for(i=1;i<=NF;i++) if(\$i==\"dev\") print \$(i+1)}' | $busybox grep -Ev '^(ds-|dummy)' | $busybox sort -u"
-            val result = Shell.cmd(cmd).exec()
-            if (result.isSuccess) {
-                result.out.map { it.trim() }.filter { it.isNotEmpty() }
-            } else {
-                emptyList()
-            }
-        } catch (e: Exception) {
-            emptyList()
         }
     }
 

@@ -78,12 +78,14 @@ fun SettingsRowCard(
                             color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f * alpha)
                         )
                     }
-                    Text(
-                        text = subtitle,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.9f * alpha),
-                        fontWeight = FontWeight.Bold
-                    )
+                    if (subtitle.isNotBlank()) {
+                        Text(
+                            text = subtitle,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.9f * alpha),
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
                 }
             }
         }

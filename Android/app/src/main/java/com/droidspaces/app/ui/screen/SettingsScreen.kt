@@ -66,7 +66,8 @@ import androidx.compose.runtime.rememberCoroutineScope
 fun SettingsScreen(
     onBack: () -> Unit,
     onNavigateToInstallation: () -> Unit = {},
-    onNavigateToRequirements: () -> Unit = {}
+    onNavigateToRequirements: () -> Unit = {},
+    onNavigateToAutoBootPriority: () -> Unit = {}
 ) {
     val context = LocalContext.current
     val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
@@ -243,6 +244,33 @@ fun SettingsScreen(
                         }
                     }
                 }
+            )
+
+            // Auto Boot Priority - clickable to navigate to the boot-order screen
+            ListItem(
+                leadingContent = {
+                    Icon(
+                        imageVector = Icons.Default.LowPriority,
+                        contentDescription = null
+                    )
+                },
+                headlineContent = {
+                    Text(
+                        text = context.getString(R.string.auto_boot_priority),
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                },
+                supportingContent = {
+                    Text(context.getString(R.string.auto_boot_priority_description))
+                },
+                trailingContent = {
+                    Icon(
+                        imageVector = Icons.Default.ChevronRight,
+                        contentDescription = null
+                    )
+                },
+                modifier = Modifier.clickable { onNavigateToAutoBootPriority() }
             )
 
             // Requirements Card - clickable to navigate to requirements page

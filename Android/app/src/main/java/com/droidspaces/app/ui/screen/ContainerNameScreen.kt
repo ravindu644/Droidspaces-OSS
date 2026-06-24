@@ -59,18 +59,19 @@ fun ContainerNameScreen(
     // Check for duplicate name when container name changes (instant check using cached names)
     LaunchedEffect(containerName, existingContainerNames) {
         if (containerName.isNotBlank()) {
-            // Validate format first
-            val formatResult = ValidationUtils.validateContainerName(containerName, context)
+            // Validate format first (against the normalized name, which is what we store)
+            val normalizedName = ValidationUtils.normalizeContainerName(containerName)
+            val formatResult = ValidationUtils.validateContainerName(normalizedName, context)
             if (formatResult.isError) {
                 nameError = formatResult.errorMessage
             } else {
                 // Check for duplicate - instant check using cached names
                 // Compare both exact names and sanitized names
                 // This handles cases where user enters "My Container" and there's "My-Container" or vice versa
-                val sanitizedInput = ContainerManager.sanitizeContainerName(containerName)
+                val sanitizedInput = ContainerManager.sanitizeContainerName(normalizedName)
                 val isDuplicate = existingContainerNames.any { existingName ->
                     // Check exact match (case-insensitive)
-                    existingName.equals(containerName, ignoreCase = true) ||
+                    existingName.equals(normalizedName, ignoreCase = true) ||
                     // Check sanitized match (handles spaces vs dashes)
                     ContainerManager.sanitizeContainerName(existingName).equals(sanitizedInput, ignoreCase = true)
                 }
@@ -120,10 +121,11 @@ fun ContainerNameScreen(
                                 enabled = isNextValid,
                                 onClick = {
                                     clearFocus()
-                                     val nameResult = ValidationUtils.validateContainerName(containerName, context)
-                                     val hostnameResult = ValidationUtils.validateHostname(hostname.ifEmpty { ValidationUtils.sanitizeHostname(containerName) }, context)
+                                     val normalizedName = ValidationUtils.normalizeContainerName(containerName)
+                                     val nameResult = ValidationUtils.validateContainerName(normalizedName, context)
+                                     val hostnameResult = ValidationUtils.validateHostname(hostname.ifEmpty { ValidationUtils.sanitizeHostname(normalizedName) }, context)
                                      if (!nameResult.isError && !hostnameResult.isError) {
-                                         onNext(containerName, hostname.ifEmpty { ValidationUtils.sanitizeHostname(containerName) })
+                                         onNext(normalizedName, hostname.ifEmpty { ValidationUtils.sanitizeHostname(normalizedName) })
                                      } else {
                                          nameError = nameResult.errorMessage
                                          hostnameError = hostnameResult.errorMessage

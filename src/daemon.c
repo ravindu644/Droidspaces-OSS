@@ -42,7 +42,8 @@
 #define DS_MAX_ARGC 64
 #define DS_MAX_ARG 8192
 #define DS_IOBUF 8192
-#define PTY_WBUF_MAX (256 * 1024)  /* absolute buffer cap for PTY master input \
+#define PTY_WBUF_MAX                                                           \
+  (256 * 1024)                     /* absolute buffer cap for PTY master input \
                                     */
 #define PTY_WBUF_HIGH (192 * 1024) /* suspend conn EPOLLIN above this */
 #define PTY_WBUF_LOW (64 * 1024)   /* resume  conn EPOLLIN below this */

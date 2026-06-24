@@ -289,13 +289,10 @@ static void print_page(int page, const char *bin) {
 
     printf("%sNAT Mode Configuration:%s\n", bold, reset);
     printf("  %s --name=mycontainer --rootfs=/path/to/rootfs --net=nat "
-           "--upstream=wlan0 "
            "start\n",
            bin);
-    printf("  %s --name=mycontainer --rootfs=/path/to/rootfs --net=nat "
-           "--upstream=rmnet*,wlan0 "
-           "start\n\n",
-           bin);
+    printf("  The internet uplink is detected automatically and tracked "
+           "in real time.\n\n");
 
     printf("%sPort Forwarding (NAT only):%s\n", bold, reset);
     printf("  --port=8080:80          Single port\n");

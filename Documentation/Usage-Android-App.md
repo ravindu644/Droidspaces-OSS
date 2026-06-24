@@ -74,15 +74,8 @@ When editing or creating a container, you can choose from three networking modes
 - **NAT (Isolated)**: Private network namespace with deterministic IP and port forwarding support.
 - **None**: No network access.
 
-### Configuring Upstream Interfaces (NAT Mode)
-If you select **NAT (Isolated)** mode, you **must** specify one or more upstream interfaces for the container to have internet access. The app provides a convenient auto-detection workflow:
-
-1. **Detect Wi-Fi**: Connect to your Wi-Fi network and press the refresh button in the "Upstream Interfaces" menu. Select the interface (usually `wlan0`) that appears.
-2. **Detect Mobile Data**: Disable Wi-Fi and connect to mobile data. Press the refresh button again and select the mobile data interface (e.g., `rmnet0`, `ccmni1`).
-3. **Save**: Both interfaces will now be used by the Route Monitor to keep your container connected as you switch networks.
-
-> [!TIP]
-> You can manually enter wildcards in the Upstream Interfaces list (e.g., `rmnet*`) to ensure connectivity even if your carrier cycles through different interface names (like `rmnet_data0` and `rmnet_data1`).
+### Internet Uplink (NAT Mode)
+If you select **NAT (Isolated)** mode, the internet uplink is detected fully automatically - there is nothing to configure. Droidspaces reads the kernel's own routing state to find the interface Android is currently using for internet (Wi-Fi, mobile data, ethernet) and a background Route Monitor keeps the container connected in real time as you switch networks.
 
 > [!NOTE]
 > NAT mode is IPv4 only. If your carrier only provides IPv6, see the [IPv4 NAT Workaround](Troubleshooting.md#ipv4-quirks).

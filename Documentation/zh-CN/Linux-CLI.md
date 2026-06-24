@@ -111,7 +111,6 @@ sudo droidspaces --name=web,db,app stop
 | 选项 | 简写 | 说明 |
 |--------|------|-------------|
 | `--net=MODE` | | 网络模式：`host`（默认）、`nat` 或 `none`。 |
-| `--upstream IFACE[,..]` | | NAT 模式的上游互联网接口（例如 `wlan0,rmnet0`）。支持通配符（例如 `rmnet*`、`v4-rmnet_data*`）。**NAT 模式必填**。 |
 | `--port HOST:CONT[/proto]` | | 将主机端口转发到容器（NAT 模式）。支持 TCP/UDP。 |
 | `--dns=SERVERS` | `-d` | 自定义 DNS 服务器，逗号分隔。示例：`--dns=1.1.1.1,8.8.8.8` |
 | `--disable-ipv6` | | 禁用 IPv6 网络支持（仅限 Host 模式）。 |
@@ -237,7 +236,6 @@ sudo droidspaces \
   --name=server \
   --rootfs-img=/path/to/rootfs.img \
   --net=nat \
-  --upstream=wlan0,rmnet0 \
   --port=8080:80 \
   start
 ```

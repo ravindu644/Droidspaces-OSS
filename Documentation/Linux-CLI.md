@@ -111,7 +111,6 @@ sudo droidspaces --name=web,db,app stop
 | Option | Short | Description |
 |--------|-------|-------------|
 | `--net=MODE` | | Networking mode: `host` (default), `nat`, or `none`. |
-| `--upstream IFACE[,..]` | | Upstream internet interface(s) for NAT mode (e.g., `wlan0,rmnet0`). Wildcards are supported (e.g., `rmnet*`, `v4-rmnet_data*`). **Mandatory for NAT**. |
 | `--port HOST:CONT[/proto]` | | Forward host port to container (NAT mode). Supports TCP/UDP. |
 | `--dns=SERVERS` | `-d` | Custom DNS servers, comma-separated. Example: `--dns=1.1.1.1,8.8.8.8` |
 | `--disable-ipv6` | | Disable IPv6 networking support (Host mode only). |
@@ -237,7 +236,6 @@ sudo droidspaces \
   --name=server \
   --rootfs-img=/path/to/rootfs.img \
   --net=nat \
-  --upstream=wlan0,rmnet0 \
   --port=8080:80 \
   start
 ```

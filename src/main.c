@@ -23,8 +23,10 @@ void print_usage(void) {
   printf("by " C_CYAN "%s" C_RESET "\n", DS_AUTHOR);
   printf("\n" C_BLUE "%s" C_RESET "\n", DS_REPO);
   printf(C_DIM "Built on: %s %s" C_RESET "\n\n", __DATE__, __TIME__);
+  printf("Usage: droidspaces [options] <command> [args]\n\n");
+
   printf(
-      "Usage: droidspaces [options] <command> [args]\n\n" C_BOLD
+      C_BOLD
       "Commands:" C_RESET "\n"
       "  start                     Start a new container\n"
       "  stop                      Stop one or more containers\n"
@@ -41,32 +43,39 @@ void print_usage(void) {
       "  help                      Show this help message\n"
       "  version                   Show version information\n"
       "  daemon                    Run daemon mode (use --foreground for "
-      "foreground execution)\n\n"
+      "foreground execution)\n\n");
 
-      C_BOLD "Options (Container Setup):" C_RESET "\n"
-      "  -r, --rootfs=PATH         Path to rootfs directory\n"
-      "  -i, --rootfs-img=PATH     Path to rootfs image (.img)\n"
-      "  -n, --name=NAME           Container name (mandatory)\n"
-      "  -h, --hostname=NAME       Set container hostname\n"
-      "  -C, --conf=PATH           Load configuration from file\n\n"
+  printf(C_BOLD "Options (Container Setup):" C_RESET "\n"
+                "  -r, --rootfs=PATH         Path to rootfs directory\n"
+                "  -i, --rootfs-img=PATH     Path to rootfs image (.img)\n"
+                "  -n, --name=NAME           Container name (mandatory)\n"
+                "  -h, --hostname=NAME       Set container hostname\n"
+                "  -C, --conf=PATH           Load configuration from file\n\n");
 
-      C_BOLD "Options (Networking):" C_RESET "\n"
-      "      --net=MODE            Modes: host (default), nat, none\n"
+  printf(
+      C_BOLD
+      "Options (Networking):" C_RESET "\n"
+      "      --net=MODE            Modes: host (default), nat, none, gateway\n"
+      "      --gateway=NAME        Gateway container for --net=gateway\n"
+      "      --gateway-net=NAME    Gateway LAN name/bridge suffix (default: "
+      "lan)\n"
+      "      --gateway-iface=IFACE Interface name inside gateway (default: "
+      "eth1)\n"
+      "      --gateway-bridge=BR   Host bridge for gateway LAN (default: "
+      "ds-NAME)\n"
       "      --nat-ip=IP           Assign a fixed IP in 172.28.*.* range (nat "
       "mode)\n"
-      "      --upstream IFACE      Upstream interface(s) (supports wildcards, "
-      "e.g. rmnet*)\n"
-      "                            e.g. --upstream wlan0 or --upstream "
-      "wlan0,rmnet*\n"
       "      --port [H:]C[/P]      Forward ports (supports ranges and "
       "symmetric ports)\n"
       "                            e.g. --port 22, 80:80/tcp, "
       "1000-2000:1000-2000/udp\n"
       "  -d, --dns=SERVERS         Set custom DNS servers (comma separated)\n"
       "                            e.g. --dns 1.1.1.1,8.8.8.8\n"
-      "  -I, --disable-ipv6        Disable IPv6 inside the container\n\n"
+      "  -I, --disable-ipv6        Disable IPv6 inside the container\n\n");
 
-      C_BOLD "Options (Integration & Hardware):" C_RESET "\n"
+  printf(
+      C_BOLD
+      "Options (Integration & Hardware):" C_RESET "\n"
       "  -S, --enable-android-storage\n"
       "                            Mount Android internal storage (/sdcard)\n"
       "  -H, --hw-access           Enable direct hardware access (/dev nodes)\n"
@@ -77,9 +86,11 @@ void print_usage(void) {
       "      --virgl-flags=\"FLAGS\"   Extra flags passed to "
       "virgl_test_server_android\n"
       "      --pulse-audio         Configure PulseAudio sound server "
-      "support\n\n"
+      "support\n\n");
 
-      C_BOLD "Options (Security & Boot):" C_RESET "\n"
+  printf(
+      C_BOLD
+      "Options (Security & Boot):" C_RESET "\n"
       "  -P, --selinux-permissive  Set host SELinux to permissive mode\n"
       "  -V, --volatile            Discard changes on exit (OverlayFS)\n"
       "      --force-cgroupv1      Force legacy cgroup v1 hierarchy\n"
@@ -90,9 +101,11 @@ void print_usage(void) {
       "      --cpus=COUNT          CPU limit (e.g. 1.5, 2)\n"
       "      --pids-limit=N        Max number of PIDs\n"
       "      --privileged=TAGS     Relax security: nomask, nocaps, noseccomp, "
-      "shared, unfiltered-dev, full\n\n"
+      "shared, unfiltered-dev, full\n\n");
 
-      C_BOLD "Options (Advanced):" C_RESET "\n"
+  printf(
+      C_BOLD
+      "Options (Advanced):" C_RESET "\n"
       "  -f, --foreground          Run in foreground (attach console)\n"
       "      --init=PATH           Custom init binary (default: /sbin/init)\n"
       "  -u, --user=USER           Run command as USER (for 'run' command "
@@ -106,12 +119,13 @@ void print_usage(void) {
       "      --reset               Reset config to defaults (keeps "
       "name/rootfs)\n"
       "      --format              Machine-parseable output (KEY=VALUE)\n"
-      "      --help                Show this help message\n\n"
+      "      --help                Show this help message\n\n");
 
-      C_BOLD "Examples:" C_RESET "\n"
-      "  droidspaces --name=mycontainer --rootfs=/path/to/rootfs start\n"
-      "  droidspaces --name=mycontainer enter\n"
-      "  droidspaces --name=mycontainer stop\n\n");
+  printf(C_BOLD
+         "Examples:" C_RESET "\n"
+         "  droidspaces --name=mycontainer --rootfs=/path/to/rootfs start\n"
+         "  droidspaces --name=mycontainer enter\n"
+         "  droidspaces --name=mycontainer stop\n\n");
 }
 
 /* ---------------------------------------------------------------------------
@@ -201,6 +215,30 @@ static int validate_configuration_cli(struct ds_config *cfg) {
     }
   }
 
+  if (cfg->net_mode == DS_NET_GATEWAY) {
+    if (!cfg->gateway_container[0]) {
+      ds_error("--net=gateway requires --gateway=<container>.");
+      errors++;
+    } else if (reject_container_name(cfg->gateway_container) < 0) {
+      errors++;
+    } else if (strcmp(cfg->gateway_container, cfg->container_name) == 0) {
+      ds_error("A container cannot use itself as --gateway.");
+      errors++;
+    }
+
+    if (cfg->gateway_bridge[0] && strlen(cfg->gateway_bridge) >= IFNAMSIZ) {
+      ds_error("--gateway-bridge interface name is too long: %s",
+               cfg->gateway_bridge);
+      errors++;
+    }
+    if (cfg->gateway_lan_ifname[0] &&
+        strlen(cfg->gateway_lan_ifname) >= IFNAMSIZ) {
+      ds_error("--gateway-iface interface name is too long: %s",
+               cfg->gateway_lan_ifname);
+      errors++;
+    }
+  }
+
   return (errors > 0) ? -1 : 0;
 }
 
@@ -264,44 +302,42 @@ static void enforce_nat_safety(struct ds_config *cfg, int argc, char **argv) {
         "IPv6 is already inactive in NAT mode - --disable-ipv6 has no effect.");
   }
 
-  if (cfg->net_mode == DS_NET_NAT || cfg->net_mode == DS_NET_NONE) {
+  if (cfg->net_mode == DS_NET_NAT || cfg->net_mode == DS_NET_NONE ||
+      cfg->net_mode == DS_NET_GATEWAY) {
     if (!check_ns(CLONE_NEWNET, "net")) {
       printf("\n" C_RED C_BOLD
              "[ FATAL: NETWORK NAMESPACE UNSUPPORTED ]" C_RESET "\n\n");
       ds_error("Kernel does not support CLONE_NEWNET (network namespaces).");
-      ds_log("Cannot use --net=nat or --net=none.");
+      ds_log("Cannot use --net=nat, --net=none, or --net=gateway.");
       ds_log("Tip: Use --net=host (default) for shared host networking.");
       exit(EXIT_FAILURE);
     }
   }
 
-  if (cfg->net_mode != DS_NET_NAT)
-    return;
-
-  /* --upstream and --port are only meaningful with --net=nat */
-  if (cfg->upstream_iface_count > 0 && cfg->net_mode != DS_NET_NAT) {
-    ds_warn("--upstream is only valid with --net=nat - ignoring");
-    cfg->upstream_iface_count = 0;
-  }
+  /* --port is only meaningful with --net=nat */
   if (cfg->port_forward_count > 0 && cfg->net_mode != DS_NET_NAT) {
     ds_warn("--port is only valid with --net=nat - ignoring");
     cfg->port_forward_count = 0;
   }
 
-  /* --upstream is mandatory when using --net=nat */
-  if (cfg->upstream_iface_count == 0) {
-    printf("\n" C_RED C_BOLD "[ FATAL: --upstream REQUIRED ]" C_RESET "\n\n");
-    ds_error("--net=nat requires --upstream <interface(s)>\n"
-             "\n"
-             "  Specify the host interface(s) that provide internet access.\n"
-             "  The monitor will track whichever is currently active.\n"
-             "\n"
-             "  Examples:\n"
-             "    --upstream wlan0\n"
-             "    --upstream wlan0,rmnet0\n"
-             "    --upstream wlan0,rmnet0,ccmni1,v4-ccmni1");
-    exit(EXIT_FAILURE);
+  if (cfg->net_mode == DS_NET_GATEWAY) {
+    char reason[512];
+    int probe = ds_nl_probe_nat_capability(reason, sizeof(reason));
+    if (probe < 0 || probe == 1) {
+      printf("\n" C_RED C_BOLD
+             "[ FATAL: GATEWAY NETWORKING UNSUPPORTED ]" C_RESET "\n\n");
+      ds_error("--net=gateway requires NET_NS + VETH + BRIDGE support:\n  %s",
+               reason);
+      ds_log("Tip: use --net=nat/host, or rebuild your kernel with "
+             "CONFIG_VETH=y and CONFIG_BRIDGE=y.");
+      exit(1);
+    }
+    ds_log("[NET] Kernel capability probe passed for --net=gateway.");
+    return;
   }
+
+  if (cfg->net_mode != DS_NET_NAT)
+    return;
 
   char reason[512];
   int probe = ds_nl_probe_nat_capability(reason, sizeof(reason));
@@ -359,7 +395,6 @@ int main(int argc, char **argv) {
       {"user", required_argument, 0, 'u'},
       {"net", required_argument, 0, 257},
       {"port", required_argument, 0, 258},
-      {"upstream", required_argument, 0, 259},
       {"force-cgroupv1", no_argument, 0, 260},
       {"block-nested-namespaces", no_argument, 0, 261},
       {"privileged", required_argument, 0, 264},
@@ -368,6 +403,11 @@ int main(int argc, char **argv) {
       {"virgl", no_argument, 0, 270},
       {"virgl-flags", required_argument, 0, 272},
       {"pulse-audio", no_argument, 0, 273},
+      {"gateway", required_argument, 0, 274},
+      {"gateway-container", required_argument, 0, 274},
+      {"gateway-net", required_argument, 0, 275},
+      {"gateway-iface", required_argument, 0, 276},
+      {"gateway-bridge", required_argument, 0, 277},
       {"reset", no_argument, 0, 256},
       {"format", no_argument, 0, 265},
       {"memory", required_argument, 0, 266},
@@ -440,8 +480,12 @@ int main(int argc, char **argv) {
         cfg.net_mode = DS_NET_NONE;
       else if (strcmp(optarg, "host") == 0)
         cfg.net_mode = DS_NET_HOST;
+      else if (strcmp(optarg, "gateway") == 0 ||
+               strcmp(optarg, "delegated-gateway") == 0)
+        cfg.net_mode = DS_NET_GATEWAY;
       else {
-        ds_error("Unknown network mode: '%s'. Valid options: host, nat, none",
+        ds_error("Unknown network mode: '%s'. Valid options: host, nat, none, "
+                 "gateway",
                  optarg);
         ret = 1;
         goto cleanup;
@@ -623,6 +667,20 @@ int main(int argc, char **argv) {
     case 273:
       cfg.pulseaudio = 1;
       break;
+    case 274:
+      safe_strncpy(cfg.gateway_container, optarg,
+                   sizeof(cfg.gateway_container));
+      break;
+    case 275:
+      safe_strncpy(cfg.gateway_net, optarg, sizeof(cfg.gateway_net));
+      break;
+    case 276:
+      safe_strncpy(cfg.gateway_lan_ifname, optarg,
+                   sizeof(cfg.gateway_lan_ifname));
+      break;
+    case 277:
+      safe_strncpy(cfg.gateway_bridge, optarg, sizeof(cfg.gateway_bridge));
+      break;
     case 'I':
       cfg.disable_ipv6 = 1;
       break;
@@ -690,8 +748,12 @@ int main(int argc, char **argv) {
         cli_net_mode = DS_NET_NONE;
       else if (strcmp(optarg, "host") == 0)
         cli_net_mode = DS_NET_HOST;
+      else if (strcmp(optarg, "gateway") == 0 ||
+               strcmp(optarg, "delegated-gateway") == 0)
+        cli_net_mode = DS_NET_GATEWAY;
       else {
-        ds_error("Unknown network mode: '%s'. Valid options: host, nat, none",
+        ds_error("Unknown network mode: '%s'. Valid options: host, nat, none, "
+                 "gateway",
                  optarg);
         ret = 1;
         goto cleanup;
@@ -881,52 +943,6 @@ int main(int argc, char **argv) {
       break;
     }
 
-    case 259: {
-      /* --upstream wlan0,rmnet0,ccmni1  (comma-separated list) */
-      char tmp[256];
-      strncpy(tmp, optarg, sizeof(tmp) - 1);
-      tmp[sizeof(tmp) - 1] = '\0';
-      char *saveptr2;
-      char *tok2 = strtok_r(tmp, ",", &saveptr2);
-      while (tok2) {
-        /* Trim leading/trailing whitespace */
-        while (*tok2 == ' ' || *tok2 == '\t')
-          tok2++;
-        char *end2 = tok2 + strlen(tok2) - 1;
-        while (end2 > tok2 && (*end2 == ' ' || *end2 == '\t'))
-          *end2-- = '\0';
-
-        if (tok2[0] == '\0') {
-          tok2 = strtok_r(NULL, ",", &saveptr2);
-          continue;
-        }
-        if (cfg.upstream_iface_count >= DS_MAX_UPSTREAM_IFACES) {
-          ds_error("Too many --upstream interfaces (max %d)",
-                   DS_MAX_UPSTREAM_IFACES);
-          ret = 1;
-          goto cleanup;
-        }
-        if (strlen(tok2) >= IFNAMSIZ) {
-          ds_error("Interface name too long: '%s' (max %d chars)", tok2,
-                   IFNAMSIZ - 1);
-          ret = 1;
-          goto cleanup;
-        }
-        int dup = 0;
-        for (int i = 0; i < cfg.upstream_iface_count; i++) {
-          if (strcmp(cfg.upstream_ifaces[i], tok2) == 0) {
-            dup = 1;
-            break;
-          }
-        }
-        if (!dup) {
-          safe_strncpy(cfg.upstream_ifaces[cfg.upstream_iface_count++], tok2,
-                       IFNAMSIZ);
-        }
-        tok2 = strtok_r(NULL, ",", &saveptr2);
-      }
-      break;
-    }
     case 260:
       /* --force-cgroupv1: escape hatch to legacy hierarchy */
       cfg.force_cgroupv1 = 1;

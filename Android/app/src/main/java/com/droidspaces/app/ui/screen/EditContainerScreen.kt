@@ -51,8 +51,8 @@ import com.droidspaces.app.util.PortForward
 import com.droidspaces.app.ui.component.PrivilegedModeDialog
 import com.droidspaces.app.ui.component.HardwareAccessDialog
 import com.droidspaces.app.ui.component.DsDropdown
+import com.droidspaces.app.ui.component.GatewaySettingsSection
 import androidx.compose.material.icons.filled.Public
-import com.droidspaces.app.ui.component.UpstreamInterfaceList
 import com.droidspaces.app.ui.component.PortForwardingList
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
@@ -106,13 +106,26 @@ fun EditContainerScreen(
     var dnsServers by remember { mutableStateOf(container.dnsServers) }
     var runAtBoot by remember { mutableStateOf(container.runAtBoot) }
     var envFileContent by remember { mutableStateOf(container.envFileContent ?: "") }
-    var upstreamInterfaces by remember { mutableStateOf(container.upstreamInterfaces) }
     var portForwards by remember { mutableStateOf(container.portForwards) }
     var forceCgroupv1 by remember { mutableStateOf(container.forceCgroupv1) }
     var blockNestedNs by remember { mutableStateOf(container.blockNestedNs) }
     var staticNatIp by remember { mutableStateOf(container.staticNatIp) }
+    var gatewayContainer by remember { mutableStateOf(container.gatewayContainer) }
+    var gatewayNet by remember { mutableStateOf(container.gatewayNet) }
+    var gatewayIface by remember { mutableStateOf(container.gatewayIface) }
+    var gatewayBridge by remember { mutableStateOf(container.gatewayBridge) }
     var privileged by remember { mutableStateOf(container.privileged) }
     var customInit by remember { mutableStateOf(container.customInit) }
+
+    val gatewayErrors = ValidationUtils.validateGatewayConfig(
+        selfName = container.name,
+        gatewayContainer = gatewayContainer,
+        net = gatewayNet,
+        iface = gatewayIface,
+        bridge = gatewayBridge,
+        installed = containerViewModel.containerList,
+        context = context
+    )
 
     // Track the "saved" baseline values - updated after each successful save
     var savedHostname by remember { mutableStateOf(container.hostname) }
@@ -132,11 +145,14 @@ fun EditContainerScreen(
     var savedDnsServers by remember { mutableStateOf(container.dnsServers) }
     var savedRunAtBoot by remember { mutableStateOf(container.runAtBoot) }
     var savedEnvFileContent by remember { mutableStateOf(container.envFileContent ?: "") }
-    var savedUpstreamInterfaces by remember { mutableStateOf(container.upstreamInterfaces) }
     var savedPortForwards by remember { mutableStateOf(container.portForwards) }
     var savedForceCgroupv1 by remember { mutableStateOf(container.forceCgroupv1) }
     var savedBlockNestedNs by remember { mutableStateOf(container.blockNestedNs) }
     var savedStaticNatIp by remember { mutableStateOf(container.staticNatIp) }
+    var savedGatewayContainer by remember { mutableStateOf(container.gatewayContainer) }
+    var savedGatewayNet by remember { mutableStateOf(container.gatewayNet) }
+    var savedGatewayIface by remember { mutableStateOf(container.gatewayIface) }
+    var savedGatewayBridge by remember { mutableStateOf(container.gatewayBridge) }
     var savedPrivileged by remember { mutableStateOf(container.privileged) }
     var savedCustomInit by remember { mutableStateOf(container.customInit) }
 
@@ -170,11 +186,14 @@ fun EditContainerScreen(
             dnsServers != savedDnsServers ||
             runAtBoot != savedRunAtBoot ||
             envFileContent != savedEnvFileContent ||
-            upstreamInterfaces != savedUpstreamInterfaces ||
             portForwards != savedPortForwards ||
             forceCgroupv1 != savedForceCgroupv1 ||
             blockNestedNs != savedBlockNestedNs ||
             staticNatIp != savedStaticNatIp ||
+            gatewayContainer != savedGatewayContainer ||
+            gatewayNet != savedGatewayNet ||
+            gatewayIface != savedGatewayIface ||
+            gatewayBridge != savedGatewayBridge ||
             privileged != savedPrivileged ||
             customInit != savedCustomInit
         }
@@ -214,11 +233,14 @@ fun EditContainerScreen(
                     dnsServers = dnsServers,
                     runAtBoot = runAtBoot,
                     envFileContent = if (envFileContent.isBlank()) null else envFileContent,
-                    upstreamInterfaces = upstreamInterfaces,
                     portForwards = portForwards,
                     forceCgroupv1 = forceCgroupv1,
                     blockNestedNs = blockNestedNs,
                     staticNatIp = staticNatIp,
+                    gatewayContainer = gatewayContainer,
+                    gatewayNet = gatewayNet,
+                    gatewayIface = gatewayIface,
+                    gatewayBridge = gatewayBridge,
                     privileged = privileged,
                     customInit = customInit
                 )
@@ -249,11 +271,14 @@ fun EditContainerScreen(
                         savedDnsServers = dnsServers
                         savedRunAtBoot = runAtBoot
                         savedEnvFileContent = envFileContent
-                        savedUpstreamInterfaces = upstreamInterfaces
                         savedPortForwards = portForwards
                         savedForceCgroupv1 = forceCgroupv1
                         savedBlockNestedNs = blockNestedNs
                         savedStaticNatIp = staticNatIp
+                        savedGatewayContainer = gatewayContainer
+                        savedGatewayNet = gatewayNet
+                        savedGatewayIface = gatewayIface
+                        savedGatewayBridge = gatewayBridge
                         savedPrivileged = privileged
                         savedCustomInit = customInit
 
@@ -428,7 +453,8 @@ fun EditContainerScreen(
         },
         bottomBar = {
             val btnShape = RoundedCornerShape(20.dp)
-            val isReadyToSave = !isSaving && !isSaved && hasChanges && (netMode != "nat" || upstreamInterfaces.isNotEmpty()) && hostnameError == null
+            val isReadyToSave = !isSaving && !isSaved && hasChanges && hostnameError == null &&
+                (netMode != "gateway" || gatewayErrors.isValid)
             val targetBtnColor = when {
                 isSaved -> MaterialTheme.colorScheme.primaryContainer
                 isSaving || isReadyToSave -> MaterialTheme.colorScheme.primary
@@ -609,23 +635,30 @@ fun EditContainerScreen(
             DsDropdown(
                 label = context.getString(R.string.network_mode),
                 selected = netMode,
-                options = listOf("nat", "host", "none"),
-                displayName = { context.getString(when (it) { "nat" -> R.string.network_mode_nat; "none" -> R.string.network_mode_none; else -> R.string.network_mode_host }) },
+                options = listOf("nat", "host", "none", "gateway"),
+                displayName = { context.getString(when (it) { "nat" -> R.string.network_mode_nat; "none" -> R.string.network_mode_none; "gateway" -> R.string.network_mode_gateway; else -> R.string.network_mode_host }) },
                 onSelect = { mode -> clearFocus(); netMode = mode; if (mode != "host") disableIPv6 = false },
                 leadingIcon = Icons.Default.Public
             )
 
-            androidx.compose.animation.AnimatedVisibility(
-                visible = netMode == "nat",
-                enter = androidx.compose.animation.expandVertically(
-                    animationSpec = tween(durationMillis = 300, easing = androidx.compose.animation.core.FastOutSlowInEasing),
-                    expandFrom = Alignment.Top
-                ) + androidx.compose.animation.fadeIn(animationSpec = tween(durationMillis = 300)),
-                exit = androidx.compose.animation.shrinkVertically(
-                    animationSpec = tween(durationMillis = 300, easing = androidx.compose.animation.core.FastOutSlowInEasing),
-                    shrinkTowards = Alignment.Top
-                ) + androidx.compose.animation.fadeOut(animationSpec = tween(durationMillis = 300))
-            ) {
+            GatewaySettingsSection(
+                visible = netMode == "gateway",
+                gatewayContainer = gatewayContainer,
+                onGatewayContainerChange = { clearFocus(); gatewayContainer = it },
+                gatewayNet = gatewayNet,
+                onGatewayNetChange = { gatewayNet = it },
+                gatewayIface = gatewayIface,
+                onGatewayIfaceChange = { gatewayIface = it },
+                gatewayBridge = gatewayBridge,
+                onGatewayBridgeChange = { gatewayBridge = it },
+                selfName = container.name,
+                installedContainers = containerViewModel.containerList,
+                errors = gatewayErrors
+            )
+
+            // Instant show/hide (no expand/shrink) so switching modes doesn't fight
+            // the gateway section's animation in the opposite direction.
+            if (netMode == "nat") {
                 Column(
                     modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
                     verticalArrangement = Arrangement.spacedBy(16.dp)
@@ -745,28 +778,6 @@ fun EditContainerScreen(
                         )
                     }
 
-                    // Upstream Interfaces
-                    val isUpstreamValid = upstreamInterfaces.isNotEmpty()
-                    Text(
-                        text = context.getString(R.string.upstream_interfaces_mandatory),
-                        style = MaterialTheme.typography.bodyLarge,
-                        fontWeight = FontWeight.Bold,
-                        color = if (!isUpstreamValid) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface
-                    )
-
-                    if (!isUpstreamValid) {
-                        Text(
-                            text = context.getString(R.string.upstream_interfaces_required_error),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.error
-                        )
-                    }
-
-                    UpstreamInterfaceList(
-                        upstreamInterfaces = upstreamInterfaces,
-                        onInterfacesChange = { upstreamInterfaces = it }
-                    )
-
                     // Port Forwards
                     Text(
                         text = context.getString(R.string.port_forwarding),
@@ -781,6 +792,13 @@ fun EditContainerScreen(
                     )
                 }
             }
+
+            // Static divider (outside the animated blocks so mode switches stay
+            // smooth) separating the networking sub-settings from the DNS field.
+            HorizontalDivider(
+                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.25f),
+                thickness = 1.dp
+            )
 
             // DNS Servers input
             val isDnsError = remember(dnsServers) {

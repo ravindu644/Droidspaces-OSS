@@ -183,12 +183,6 @@
     <string name="network_mode_nat_short">NAT</string>
     <string name="network_mode_none_short">គ្មាន</string>
     <string name="nat_settings">ការកំណត់ NAT</string>
-    <string name="upstream_interfaces_mandatory">ចំណុចប្រទាក់​ខាងលើ (ចាំបាច់)</string>
-    <string name="upstream_interfaces_required_error">អ្នកត្រូវតែបញ្ជាក់យ៉ាងហោចណាស់ចំណុចប្រទាក់ខាងលើមួយសម្រាប់របៀប NAT។</string>
-    <string name="add_upstream_interface">បន្ថែមចំណុចប្រទាក់ខាងលើ</string>
-    <string name="available_system_interfaces">ចំណុចប្រទាក់ប្រព័ន្ធដែលអាចប្រើបាន៖</string>
-    <string name="enter_manually">ឬបញ្ចូលវាដោយដៃ (អក្សរជំនួសក៏ត្រូវបានគាំទ្រផងដែរ)៖</string>
-    <string name="interface_name_hint">ឈ្មោះចំណុចប្រទាក់ (ឧ. wlan0, v4-rmnet_data*)</string>
     <string name="port_forwarding">ការបញ្ជូនបន្តច្រក</string>
     <string name="add_port_forward">បន្ថែម​ច្រក​បញ្ជូនបន្ត</string>
     <string name="host_port_hint">ច្រកម៉ាស៊ីន (1-65535 ឬចន្លោះពី 100-200)</string>

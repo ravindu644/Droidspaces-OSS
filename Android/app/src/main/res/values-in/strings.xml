@@ -145,12 +145,6 @@
     <string name="network_mode_nat">NAT (Default)</string>
     <string name="network_mode_none">Tidak ada (terisolasi secara fisik)</string>
     <string name="nat_settings">Pengaturan NAT</string>
-    <string name="upstream_interfaces_mandatory">Antarmuka Upstream (Wajib)</string>
-    <string name="upstream_interfaces_required_error">Anda harus menentukan setidaknya satu antarmuka upstream untuk mode NAT.</string>
-    <string name="add_upstream_interface">Tambahkan Antarmuka Upstream</string>
-    <string name="available_system_interfaces">Antarmuka Sistem yang Tersedia:</string>
-    <string name="enter_manually">Atau masukkan secara manual (karakter pengganti juga didukung):</string>
-    <string name="interface_name_hint">Nama Antarmuka (misalnya wlan0, v4-rmnet_data*)</string>
     <string name="add_port_forward">Tambahkan Port Forward</string>
     <string name="host_port_hint">Port Host (1–65535 atau rentang 100–200)</string>
     <string name="container_port_hint">Port Kontainer (1–65535 atau rentang)</string>

@@ -164,6 +164,11 @@ Droidspaces 会自动启动 X 服务器和 VirGL 服务器，并将 `DISPLAY=:5`
 
 4. 在容器内运行 GUI 程序 — Turnip GPU 加速将自动生效。
 
+> [!NOTE]
+>
+> **权限管理（非 root 用户）：** 如果你使用的是非 root 用户，则必须授予其访问 GPU 设备节点的权限：
+`sudo usermod -aG droidspaces-gpu <your_username>`
+
 ---
 
 <a id="pulseaudio"></a>

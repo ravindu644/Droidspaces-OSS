@@ -394,6 +394,11 @@ reboot_loop:;
            * switches */
           ds_net_start_route_monitor();
         }
+      } else if (cfg->net_mode == DS_NET_GATEWAY) {
+        if (setup_gateway_veth_side(cfg, netns_pid) < 0) {
+          ds_warn("[NET] Monitor: setup_gateway_veth_side failed - "
+                  "container will remain isolated");
+        }
       }
 
       /* Send handshake to init */

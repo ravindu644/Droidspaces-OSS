@@ -204,6 +204,7 @@ enum ds_net_mode {
   DS_NET_HOST = 0, /* share host network namespace (default) */
   DS_NET_NAT,      /* isolated netns + bridge + MASQUERADE      */
   DS_NET_NONE,     /* isolated netns with loopback only          */
+  DS_NET_GATEWAY,  /* isolated netns attached to gateway LAN     */
 };
 
 /* Opaque RTNETLINK context - defined in ds_netlink.c */
@@ -242,14 +243,35 @@ struct ds_net_handshake {
  * DS_RULE_PRIO_TO_SUBNET  - "to 172.28.0.0/16 lookup main"
  *   Guarantees reply traffic to the container always resolves correctly.
  *
+ * DS_RULE_PRIO_TETHER - "from 172.28.0.0/16 lookup local_network(97)"
+ *   Returns container replies to hotspot/USB-tether clients out the tether
+ *   interface.  Reply packets of DNAT'd port-forward connections still carry
+ *   the container source address at routing time (conntrack un-DNATs in
+ *   POSTROUTING, after the route lookup), so without this rule they would
+ *   match DS_RULE_PRIO_FROM_SUBNET and leak out the WAN uplink instead of
+ *   reaching the tethered client.  netd keeps the connected route of every
+ *   downstream interface (swlan*, ap*, rndis*, ncm*, bt-pan) in the
+ *   local_network table, which has no default route - so this rule only
+ *   matches tether-bound traffic and falls through to FROM_SUBNET otherwise.
+ *   Must sit between TO_SUBNET and FROM_SUBNET.
+ *
  * DS_RULE_PRIO_FROM_SUBNET - "from 172.28.0.0/16 lookup <gw_table>"
- *   Routes container-originated traffic through the active upstream table.
+ *   Routes container-originated traffic through the active uplink table.
  */
 #ifndef DS_RULE_PRIO_TO_SUBNET
 #define DS_RULE_PRIO_TO_SUBNET 6090
 #endif
+#ifndef DS_RULE_PRIO_TETHER
+#define DS_RULE_PRIO_TETHER 6095
+#endif
 #ifndef DS_RULE_PRIO_FROM_SUBNET
 #define DS_RULE_PRIO_FROM_SUBNET 6100
+#endif
+
+/* netd's fixed local_network routing table
+ * (RouteController::ROUTE_TABLE_LOCAL_NETWORK, constant since Android 5.x). */
+#ifndef DS_ANDROID_TABLE_LOCAL_NETWORK
+#define DS_ANDROID_TABLE_LOCAL_NETWORK 97
 #endif
 
 /* Bind mount entry */
@@ -283,7 +305,6 @@ struct ds_tty_info {
  * ---------------------------------------------------------------------------*/
 
 #define DS_MAX_PORT_FORWARDS 32
-#define DS_MAX_UPSTREAM_IFACES 32
 
 struct ds_port_forward {
   uint16_t host_port;          /* port on the Android/Linux host  */
@@ -318,14 +339,18 @@ typedef enum {
 
 struct ds_config {
   /* Paths */
-  char rootfs_path[PATH_MAX];     /* --rootfs=  */
-  char rootfs_img_path[PATH_MAX]; /* --rootfs-img= */
-  char pidfile[PATH_MAX];         /* --pidfile= or auto-resolved */
-  char container_name[256];       /* --name= (mandatory) */
-  char hostname[256];             /* --hostname= or container_name */
-  char dns_servers[1024];         /* --dns= (comma/space separated) */
-  enum ds_net_mode net_mode;      /* --net=host|nat|none */
-  char dns_server_content[1024];  /* In-memory DNS config for boot */
+  char rootfs_path[PATH_MAX];        /* --rootfs=  */
+  char rootfs_img_path[PATH_MAX];    /* --rootfs-img= */
+  char pidfile[PATH_MAX];            /* --pidfile= or auto-resolved */
+  char container_name[256];          /* --name= (mandatory) */
+  char hostname[256];                /* --hostname= or container_name */
+  char dns_servers[1024];            /* --dns= (comma/space separated) */
+  enum ds_net_mode net_mode;         /* --net=host|nat|none|gateway */
+  char dns_server_content[1024];     /* In-memory DNS config for boot */
+  char gateway_container[256];       /* --gateway=NAME for gateway mode */
+  char gateway_net[64];              /* --gateway-net=NAME (default: lan) */
+  char gateway_bridge[IFNAMSIZ];     /* optional host bridge name */
+  char gateway_lan_ifname[IFNAMSIZ]; /* ifname inside gateway (default: eth1) */
 
   /* UUID for PID discovery */
   char uuid[DS_UUID_LEN + 1];
@@ -403,10 +428,6 @@ struct ds_config {
    * Once set in container.config, this IP is reused on every subsequent boot
    * instead of re-deriving a PID-hash IP.  Plain dotted-decimal, no CIDR. */
   char static_nat_ip[INET_ADDRSTRLEN];
-
-  /* Upstream interfaces for NAT routing (--upstream wlan0,rmnet0,...) */
-  char upstream_ifaces[DS_MAX_UPSTREAM_IFACES][IFNAMSIZ];
-  int upstream_iface_count;
 
   /* Resource limits (0 = unlimited) */
   long long memory_limit; /* bytes */
@@ -647,6 +668,10 @@ int fix_networking_rootfs(struct ds_config *cfg);
 
 /* NAT veth/bridge lifecycle */
 int setup_veth_host_side(struct ds_config *cfg, pid_t child_pid);
+
+/* Gateway LAN lifecycle: bridge-only veth plumbing, no NAT/DHCP/firewall. */
+int setup_gateway_veth_side(struct ds_config *cfg, pid_t child_pid);
+
 int setup_veth_child_side_named(struct ds_config *cfg, const char *peer_name,
                                 const char *ip_str);
 /* Populate a ds_net_handshake from a container init PID + resolved config.
@@ -677,18 +702,26 @@ int ds_nl_link_up(ds_nl_ctx_t *ctx, const char *ifname);
 int ds_nl_link_down(ds_nl_ctx_t *ctx, const char *ifname);
 int ds_nl_del_link(ds_nl_ctx_t *ctx, const char *ifname);
 int ds_nl_rename(ds_nl_ctx_t *ctx, const char *ifname, const char *newname);
+int ds_nl_set_mac(ds_nl_ctx_t *ctx, const char *ifname, const uint8_t mac[6]);
 int ds_nl_add_addr4(ds_nl_ctx_t *ctx, const char *ifname, uint32_t ip_be,
                     uint8_t prefix);
 int ds_nl_add_route4(ds_nl_ctx_t *ctx, uint32_t dst_be, uint8_t dst_len,
                      uint32_t gw_be, int oif_idx);
 int ds_nl_move_to_netns(ds_nl_ctx_t *ctx, const char *ifname, int netns_fd);
 int ds_nl_get_iface_table(ds_nl_ctx_t *ctx, const char *ifname, int *table_out);
+int ds_nl_get_table_default_oif(ds_nl_ctx_t *ctx, int table, char *ifname_out);
+int ds_nl_get_android_default(ds_nl_ctx_t *ctx, char *ifname_out,
+                              int *table_out);
 int ds_nl_add_rule4(ds_nl_ctx_t *ctx, uint32_t src_be, uint8_t src_len,
                     uint32_t dst_be, uint8_t dst_len, int table, int priority);
 int ds_nl_del_rule4(ds_nl_ctx_t *ctx, uint32_t src_be, uint8_t src_len,
                     uint32_t dst_be, uint8_t dst_len, int table, int priority);
 void ds_nl_flush_stale_veths(ds_nl_ctx_t *ctx, const char *prefix);
 int ds_nl_count_ifaces_with_prefix(ds_nl_ctx_t *ctx, const char *prefix);
+/* Count links enslaved to `bridge` whose name starts with `prefix`.
+ * Returns 0 if the bridge does not exist. */
+int ds_nl_count_bridge_members_with_prefix(ds_nl_ctx_t *ctx, const char *bridge,
+                                           const char *prefix);
 int ds_nl_list_ifaces(ds_nl_ctx_t *ctx, char names[][IFNAMSIZ], int max);
 /* Kernel capability probe - call before any NAT setup */
 int ds_nl_probe_nat_capability(char *reason, size_t rsz);

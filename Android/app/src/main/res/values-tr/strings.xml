@@ -148,12 +148,6 @@
     <string name="network_mode_nat">NAT (Izole)</string>
     <string name="network_mode_none">Yok</string>
     <string name="nat_settings">NAT Ayarları</string>
-    <string name="upstream_interfaces_mandatory">Upstream Arayüzleri (Zorunlu)</string>
-    <string name="upstream_interfaces_required_error">NAT modu için en az bir adet upstream arabirim belirtmeniz gerekir.</string>
-    <string name="add_upstream_interface">Upstream Arayuzu Ekle</string>
-    <string name="available_system_interfaces">Kullanılabilir Sistem Arayüzleri:</string>
-    <string name="enter_manually">Ya da manuel olarak girin (joker karakterler de desteklenmektedir):</string>
-    <string name="interface_name_hint">Arayuz Adı (örn. wlan0, v4-rmnet_data*)</string>
     <string name="port_forwarding">Port Yönlendirme</string>
     <string name="add_port_forward">Port Yonlendirme Ekle</string>
     <string name="host_port_hint">Host Bağlantı Noktası (1-65535 veya 100-200 aralığı)</string>

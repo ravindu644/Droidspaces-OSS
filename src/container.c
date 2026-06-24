@@ -264,8 +264,8 @@ void cleanup_container_resources(struct ds_config *cfg, pid_t pid,
      * if no external lock is active. */
   }
 
-  /* Network cleanup: remove host veth and iptables rules */
-  if (cfg->net_mode == DS_NET_NAT) {
+  /* Network cleanup: remove host veth and owned network state */
+  if (cfg->net_mode == DS_NET_NAT || cfg->net_mode == DS_NET_GATEWAY) {
     ds_net_cleanup(cfg, pid > 0 ? pid : cfg->container_pid);
   }
 
@@ -1552,6 +1552,9 @@ int show_info(struct ds_config *cfg, int trust_cfg_pid) {
     case DS_NET_NONE:
       net = "none";
       break;
+    case DS_NET_GATEWAY:
+      net = "gateway";
+      break;
     default:
       net = "host";
       break;
@@ -1563,15 +1566,14 @@ int show_info(struct ds_config *cfg, int trust_cfg_pid) {
           cfg->static_nat_ip[0] ? cfg->static_nat_ip : cfg->nat_container_ip;
       if (ip[0])
         printf("NAT_IP=%s\n", ip);
-
-      if (cfg->upstream_iface_count > 0) {
-        printf("UPSTREAM_INTERFACES=");
-        for (int i = 0; i < cfg->upstream_iface_count; i++) {
-          printf("%s%s", cfg->upstream_ifaces[i],
-                 (i < cfg->upstream_iface_count - 1) ? "," : "");
-        }
-        printf("\n");
-      }
+    } else if (cfg->net_mode == DS_NET_GATEWAY) {
+      printf("GATEWAY_CONTAINER=%s\n", cfg->gateway_container);
+      printf("GATEWAY_NET=%s\n",
+             cfg->gateway_net[0] ? cfg->gateway_net : "lan");
+      if (cfg->gateway_bridge[0])
+        printf("GATEWAY_BRIDGE=%s\n", cfg->gateway_bridge);
+      printf("GATEWAY_IFACE=%s\n",
+             cfg->gateway_lan_ifname[0] ? cfg->gateway_lan_ifname : "eth1");
     }
 
     printf("DISABLE_IPV6=%d\n", cfg->disable_ipv6);
@@ -1702,6 +1704,9 @@ int show_info(struct ds_config *cfg, int trust_cfg_pid) {
     case DS_NET_NONE:
       net = "none";
       break;
+    case DS_NET_GATEWAY:
+      net = "gateway";
+      break;
     default:
       net = "host";
       break;
@@ -1709,22 +1714,18 @@ int show_info(struct ds_config *cfg, int trust_cfg_pid) {
     printf("  Networking: %s\n", net);
     feat_count++;
 
-    /* 2. NAT Configuration (IP, Upstream, Ports) */
+    /* 2. NAT/Gateway Configuration */
+    if (cfg->net_mode == DS_NET_GATEWAY) {
+      printf("  Gateway: %s (%s)\n", cfg->gateway_container,
+             cfg->gateway_net[0] ? cfg->gateway_net : "lan");
+      feat_count++;
+    }
+
     if (cfg->net_mode == DS_NET_NAT) {
       const char *ip =
           cfg->static_nat_ip[0] ? cfg->static_nat_ip : cfg->nat_container_ip;
       if (ip[0]) {
         printf("  NAT IP: %s\n", ip);
-        feat_count++;
-      }
-
-      if (cfg->upstream_iface_count > 0) {
-        printf("  Upstream ifaces: ");
-        for (int i = 0; i < cfg->upstream_iface_count; i++) {
-          printf("%s%s", cfg->upstream_ifaces[i],
-                 (i < cfg->upstream_iface_count - 1) ? ", " : "");
-        }
-        printf("\n");
         feat_count++;
       }
 
@@ -1932,6 +1933,14 @@ int restart_rootfs_with_timeout(struct ds_config *cfg, int timeout_seconds) {
   if (stop_rootfs_with_timeout(cfg, 1, timeout_seconds) < 0) {
     return -1;
   }
+  /* The stop above tore down using the booted snapshot (loaded while the
+   * container was alive). It is gone now, so reloading by name returns the
+   * workspace copy - reload it so host-side container.config edits made while
+   * it ran take effect on this restart. start_rootfs re-derives the preserved
+   * mount from the on-disk .mount sidecar, so losing the snapshot paths is
+   * fine. */
+  free_config_binds(cfg);
+  ds_config_load_by_name(cfg->container_name, cfg);
   putchar('\n');
   print_ds_banner();
   return start_rootfs(cfg);

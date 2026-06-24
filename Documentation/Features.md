@@ -33,7 +33,7 @@ Droidspaces supports three networking modes that determine whether a network nam
 
 1. **Host Mode (`--net=host`) - Default**: Droidspaces deliberately does **not** unshare the network namespace. The container shares the host's network stack. This greatly simplifies setup: containers get internet access immediately without virtual bridges, NAT, or firewall rules. On Android, where networking is already complex (cellular, Wi-Fi, VPN), this avoids a whole category of connectivity issues.
 
-2. **NAT Mode (`--net=nat`)**: The container is placed in a private network namespace. It is connected to the host via a virtual bridge or veth pair, providing **Pure Network Isolation** while maintaining internet access through the host's upstream interfaces. Compatible with the vast majority of Android devices.
+2. **NAT Mode (`--net=nat`)**: The container is placed in a private network namespace. It is connected to the host via a virtual bridge or veth pair, providing **Pure Network Isolation** while maintaining internet access through the host's active internet uplink, which is detected automatically. Compatible with the vast majority of Android devices.
 
 3. **None Mode (`--net=none`)**: The container is placed in a private, air-gapped network namespace with only the loopback interface enabled for maximum security.
 
@@ -263,10 +263,10 @@ The container is placed in a private network namespace (`CLONE_NEWNET`) and conn
 - **Deterministic IP**: Each container is assigned a unique IP in the `172.28.0.0/16` range, derived from its PID.
 - **Embedded DHCP**: Droidspaces includes a minimal, built-in DHCP server to automatically configure the container's `eth0`.
 - **Pure Isolation**: The container cannot see or interact with the host's network interfaces directly.
-- **Mandatory Upstream**: You **must** specify which host interfaces provide internet access via `--upstream` (e.g., `--upstream wlan0,rmnet0`). Wildcards are also supported (e.g., `rmnet*`, `wlan0`, `v4-rmnet_data*`).
+- **Automatic Uplink Detection**: No configuration needed. Droidspaces reads the kernel's own ground truth to find the interface that provides internet access - on Android, the policy-routing rule netd installs for the active default network; on standard Linux, the main routing table's default route. CLAT (464xlat) interfaces on IPv6-only mobile networks are handled automatically.
 
 > [!IMPORTANT]
-> NAT mode is **IPv4 only**. If your upstream interface lacks an IPv4 address (IPv6-only network), internet access will not work. See [IPv4 NAT Quirks](Troubleshooting.md#ipv4-quirks) for a workaround.
+> NAT mode is **IPv4 only**. If the host's uplink lacks an IPv4 address (IPv6-only network), internet access will not work. See [IPv4 NAT Quirks](Troubleshooting.md#ipv4-quirks) for a workaround.
 
 ### 3. None Mode (`--net=none`)
 The container gets a private network namespace with only the loopback (`lo`) interface enabled.
@@ -290,9 +290,11 @@ In NAT mode, you can expose container services to the host or local network usin
 --port 2222:22/tcp --port 5000-5050:5000-5050/udp
 ```
 
+Forwarded ports are reachable from any network the host belongs to - including clients connected to the phone's own hotspot or USB tethering on Android.
 
-### Upstream Interface Monitoring
-On Android, the connection often hops between Wi-Fi and Mobile Data. Droidspaces includes a **Route Monitor** that tracks your declared `--upstream` interfaces. If your active interface changes (e.g., you walk out of Wi-Fi range), the monitor automatically updates the kernel's policy routing to keep the container connected without a restart.
+
+### Real-Time Uplink Monitoring
+On Android, the connection often hops between Wi-Fi and Mobile Data. Droidspaces includes a **Route Monitor** that subscribes to kernel routing events (FIB rules, routes, links, addresses). The moment Android switches its default network (e.g., you walk out of Wi-Fi range), the monitor updates the kernel's policy routing to keep the container connected - no configuration, no restart.
 
 ---
 
