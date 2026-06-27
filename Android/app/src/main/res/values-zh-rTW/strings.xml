@@ -494,4 +494,7 @@
     <string name="gateway_iface">網關介面</string>
     <string name="gateway_iface_hint">eth1</string>
     <string name="gateway_bridge">主機網橋</string>
+    <string name="disk_usage">磁碟使用情況</string>
+    <string name="disk_usage_used_of_total">%1$s / %2$s 已使用</string>
+    <string name="disk_usage_calculating">正在計算…</string>
 </resources>

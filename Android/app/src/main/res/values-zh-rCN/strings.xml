@@ -499,4 +499,7 @@
     <string name="no_unknown_services">没有未知状态的服务</string>
     <string name="procd_detected">已检测到 OpenWrt/procd</string>
     <string name="openwrt">OpenWrt</string>
+    <string name="disk_usage">磁盘占用</string>
+    <string name="disk_usage_used_of_total">已使用 %1$s / %2$s</string>
+    <string name="disk_usage_calculating">计算中…</string>
 </resources>
