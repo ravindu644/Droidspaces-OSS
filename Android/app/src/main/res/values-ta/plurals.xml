@@ -1,3 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <plurals name="commit_count">
+        <item quantity="one">%d உறுதி</item>
+        <item quantity="other">%d உறுதியளிக்கிறது</item>
+    </plurals>
+    <plurals name="notification_sessions_running">
+        <item quantity="one">%d அமர்வு இயங்குகிறது</item>
+        <item quantity="other">%d அமர்வுகள் இயங்குகின்றன</item>
+    </plurals>
+    <plurals name="container_count">
+        <item quantity="one">%d கொள்கலன்</item>
+        <item quantity="other">%d கொள்கலன்கள்</item>
+    </plurals>
 </resources>
