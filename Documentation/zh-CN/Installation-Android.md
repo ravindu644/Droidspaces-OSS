@@ -67,7 +67,7 @@ Droidspaces 在 Android 上旨在提供"零终端"体验。从首次安装到运
 你可以随时验证系统状态：
 1. 前往**设置**（齿轮图标）-> **需求**。
 2. 点击**检查需求**。这会在内部运行完整的 `droidspaces check` 套件。
-3. **内核配置**：如果你是一位内核开发者，你可以找到一���可复制的 `droidspaces.config` defconfig 片段，类似于[此页面](./Kernel-Configuration.md#required-kernel-configuration)，以确保你的内核与 Droidspaces 完全兼容。
+3. **内核配置**：如果你是一位内核开发者，你可以找到可复制的 `droidspaces.config` defconfig 片段，类似于[此页面](./Kernel-Configuration.md#required-kernel-configuration)，以确保你的内核与 Droidspaces 完全兼容。
 
 ## 下一步
 
