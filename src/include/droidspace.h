@@ -695,6 +695,11 @@ void ds_net_start_route_monitor(void);
  * cable to every running client that delegates to it, with no client restart.
  * Called from the gateway container's monitor on each boot cycle. */
 void ds_net_rewire_gateway_clients(const char *gateway_name, pid_t gateway_pid);
+/* Gateway teardown: when a container that ACTS AS A GATEWAY stops, explicitly
+ * delete the gateway-side veth(s) it serves and reap any now-idle delegated
+ * bridge.  The kernel does not auto-reap these (the host-side veth pins its
+ * orphan peer netns), so this prevents the leak.  No-op for a non-gateway. */
+void ds_net_gateway_teardown(const char *gateway_name);
 int ds_net_disable_tx_checksum(const char *ifname);
 void parse_cidr(const char *cidr, uint32_t *ip_out, uint32_t *mask_out);
 

@@ -1292,6 +1292,105 @@ void ds_net_rewire_gateway_clients(const char *gateway_name,
 }
 
 /* ---------------------------------------------------------------------------
+ * ds_net_gateway_teardown
+ *
+ * Called when a container that ACTS AS A GATEWAY stops.  The gateway-side veth
+ * ds-g<hash> lives in the host netns; its peer is the gateway's eth1.  When the
+ * gateway stops the kernel does NOT auto-reap ds-g: the host-side veth itself
+ * pins its now-process-less peer netns (a veth end holds a reference to its
+ * peer's namespace), and that netns can only be freed by a cleanup_net that
+ * cannot run while ds-g pins it - a self-sustaining orphan.  So we delete ds-g
+ * explicitly, exactly as NAT mode deletes ds-v<pid>.
+ *
+ * We do not track our own segments (clients choose --gateway-net), so scan the
+ * client configs that delegate to us, derive each segment's bridge + gateway
+ * veth, delete the veth (reaping the peer and freeing the netns), and reap the
+ * bridge once no client veths remain on it.  Per-segment work runs under the
+ * same advisory lock client setup/cleanup use, and bridges are de-duplicated
+ * since many clients can share one segment.  A no-op for a container that is
+ * nobody's gateway.
+ * ---------------------------------------------------------------------------*/
+void ds_net_gateway_teardown(const char *gateway_name) {
+  if (!gateway_name || !gateway_name[0])
+    return;
+
+  char containers_dir[PATH_MAX];
+  snprintf(containers_dir, sizeof(containers_dir), "%s/Containers",
+           get_workspace_dir());
+  DIR *d = opendir(containers_dir);
+  if (!d)
+    return;
+
+  /* De-dupe segments: many clients can share one --gateway-net (one bridge). */
+  char seen[32][IFNAMSIZ];
+  int seen_count = 0;
+
+  struct dirent *ent;
+  while ((ent = readdir(d)) != NULL) {
+    if (ent->d_name[0] == '.')
+      continue;
+
+    struct ds_config c = {0};
+    if (ds_config_load_by_name(ent->d_name, &c) != 0)
+      continue;
+
+    if (!(c.net_mode == DS_NET_GATEWAY && c.gateway_container[0] &&
+          strcmp(c.gateway_container, gateway_name) == 0)) {
+      ds_config_free(&c);
+      continue;
+    }
+
+    char bridge[IFNAMSIZ], gw_host[IFNAMSIZ], gw_peer[IFNAMSIZ];
+    gateway_bridge_name(&c, bridge, sizeof(bridge));
+    gateway_veth_names(&c, gw_host, sizeof(gw_host), gw_peer, sizeof(gw_peer));
+
+    int dup = 0;
+    for (int i = 0; i < seen_count; i++)
+      if (strcmp(seen[i], bridge) == 0) {
+        dup = 1;
+        break;
+      }
+    if (dup) {
+      ds_config_free(&c);
+      continue;
+    }
+    if (seen_count < (int)(sizeof(seen) / sizeof(seen[0])))
+      safe_strncpy(seen[seen_count++], bridge, IFNAMSIZ);
+
+    ds_nl_ctx_t *ctx = ds_nl_open();
+    if (!ctx) {
+      ds_config_free(&c);
+      continue;
+    }
+
+    /* Same lock client setup/cleanup take, so we cannot race a concurrent
+     * client start/wire or the gateway's own rewire on the segment. */
+    int lock = gateway_segment_lock(bridge);
+
+    ds_nl_del_link(ctx, gw_host);
+    ds_log("[NET] Gateway teardown: removed gateway veth %s (segment %s)",
+           gw_host, bridge);
+
+    int clients = ds_nl_count_bridge_members_with_prefix(
+        ctx, bridge, app_veth_host_prefix(&c));
+    if (clients > 0) {
+      ds_log("[NET] Gateway teardown: %d client(s) still on %s - keeping "
+             "bridge",
+             clients, bridge);
+    } else {
+      ds_nl_del_link(ctx, bridge);
+      ds_log("[NET] Gateway teardown: reaped idle delegated LAN bridge %s",
+             bridge);
+    }
+
+    gateway_segment_unlock(lock);
+    ds_nl_close(ctx);
+    ds_config_free(&c);
+  }
+  closedir(d);
+}
+
+/* ---------------------------------------------------------------------------
  * setup_veth_child_side_named
  *
  * Called from internal_boot() INSIDE the container's new network namespace.
@@ -1999,6 +2098,12 @@ void ds_net_start_route_monitor(void) {
  * ---------------------------------------------------------------------------*/
 
 void ds_net_cleanup(struct ds_config *cfg, pid_t container_pid) {
+  /* If this container is a gateway for others, explicitly tear down the
+   * gateway-side veth(s) it serves: the kernel will not auto-reap them (the
+   * host-side veth pins its orphan peer netns).  No-op when nobody delegates
+   * to us, so it is safe to run for every stopping container. */
+  ds_net_gateway_teardown(cfg->container_name);
+
   if (cfg->net_mode == DS_NET_GATEWAY) {
     ds_nl_ctx_t *ctx = ds_nl_open();
     if (!ctx)
@@ -2037,8 +2142,10 @@ void ds_net_cleanup(struct ds_config *cfg, pid_t container_pid) {
                "- keeping bridge to avoid flapping its LAN iface",
                bridge, cfg->gateway_container);
       } else {
-        /* No clients and the gateway is gone (its netns death already took the
-         * gateway veth with its peer) - safe to reap the now-idle bridge. */
+        /* No clients and the gateway is gone.  The gateway's own stop already
+         * ran ds_net_gateway_teardown(), which explicitly deleted the gateway
+         * veth (the kernel does not auto-reap it), so the bridge is now idle
+         * and safe to reap. */
         ds_nl_del_link(ctx, bridge);
         ds_log("[NET] Gateway cleanup: reaped idle delegated LAN bridge %s",
                bridge);
