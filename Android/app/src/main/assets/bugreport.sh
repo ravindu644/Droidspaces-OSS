@@ -12,7 +12,14 @@ BUSYBOX="${DROIDSPACE_DIR}/bin/busybox"
 LOGS_DIR="${DROIDSPACE_DIR}/Logs"
 DATE_TIME="$("${BUSYBOX}" date +"%Y-%m-%d_%H-%M-%S")"
 BUGREPORT_DIR="${LOGS_DIR}/bugreport_${DATE_TIME}"
-OUTPUT_TARBALL="/sdcard/Droidspaces-bugreport_${DATE_TIME}.tar.gz"
+TARBALL="Droidspaces-bugreport_${DATE_TIME}.tar.gz"
+
+# Check if /sdcard is writable
+if [ -w /sdcard ]; then
+    OUTPUT_TARBALL="/sdcard/$TARBALL"
+else
+    OUTPUT_TARBALL="$DROIDSPACE_DIR/$TARBALL"
+fi
 
 # We need busybox for reliable cross-device tools (tar, sort, grep, etc.)
 if [ ! -f "${BUSYBOX}" ] || [ ! -x "${BUSYBOX}" ]; then
