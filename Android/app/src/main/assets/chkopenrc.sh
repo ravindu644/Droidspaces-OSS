@@ -4,6 +4,10 @@
 RUNLEVELS_DIR="/etc/runlevels"
 INITD_DIR="/etc/init.d"
 
+_all_running() {
+   rc-status -f ini 2>/dev/null | awk -F'=' '/=/ {gsub(/^[ \t]+|[ \t]+$/, "", $1); print $1}'
+}
+
 _all_services() {
     ls "$INITD_DIR" 2>/dev/null | grep -v '^\.' | sort
 }
@@ -22,13 +26,24 @@ _get_desc() {
 
 case "$1" in
     --running)
-        # Output: name|Description  (matches chksystemd.sh --running)
-        for svc in $(_all_services); do
-            if rc-service "$svc" status >/dev/null 2>&1; then
+        # Output: name|Description (matches chksystemd.sh --running)
+
+        if running=$(_all_running 2>/dev/null); then
+            # Preferred method: use rc-status output directly.
+            echo "$running" | while IFS= read -r svc; do
+                [ -n "$svc" ] || continue
                 desc=$(_get_desc "$svc")
                 echo "${svc}|${desc}"
-            fi
-        done
+            done
+        else
+            # Fallback: query each service individually.
+            for svc in $(_all_services); do
+                if rc-service "$svc" status >/dev/null 2>&1; then
+                    desc=$(_get_desc "$svc")
+                    echo "${svc}|${desc}"
+                fi
+            done
+        fi
         ;;
     --enabled)
         # Output: name
