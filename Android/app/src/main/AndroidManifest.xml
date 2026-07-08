@@ -13,6 +13,12 @@
     <uses-permission android:name="android.permission.WAKE_LOCK" />
     <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
 
+    <!-- Package visibility (Android 11+): allow launching the anland consumer
+         app for the "Launch Anland Window" action. -->
+    <queries>
+        <package android:name="com.anland.consumer" />
+    </queries>
+
     <application
         android:name=".DroidspacesApplication"
         android:allowBackup="true"

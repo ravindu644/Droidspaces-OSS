@@ -184,6 +184,7 @@ void cleanup_container_resources(struct ds_config *cfg, pid_t pid,
     ds_x11_daemon_stop(cfg);
     ds_virgl_daemon_stop(cfg);
     ds_pulse_daemon_stop(cfg);
+    ds_anland_daemon_stop(cfg);
     if (count_running_containers(NULL, 0) == 0) {
       android_optimizations(0);
     }
@@ -499,6 +500,14 @@ int start_rootfs(struct ds_config *cfg) {
 
   if (is_android() && cfg->pulseaudio) {
     ds_pulse_daemon_start(cfg);
+  }
+
+  /* anland display daemon: generate the per-container host socket and start the
+   * broker before fork so the socket exists when bind-mounted post-pivot. The
+   * generated cfg->anland_sock is recorded in the Pids dir (not container.config)
+   * by ds_anland_daemon_start. */
+  if (is_android() && cfg->anland) {
+    ds_anland_daemon_start(cfg);
   }
 
   /* 3. Early pre-flight for volatile mode (before any host changes) */

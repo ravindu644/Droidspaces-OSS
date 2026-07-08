@@ -32,6 +32,8 @@ fun RunningContainerCard(
     container: ContainerInfo,
     onEnter: () -> Unit = {},
     onTerminalClick: () -> Unit = {},
+    anlandEnabled: Boolean = false,
+    onLaunchAnland: () -> Unit = {},
     osInfo: ContainerOSInfoManager.OSInfo? = null,
     modifier: Modifier = Modifier
 ) {
@@ -72,6 +74,39 @@ fun RunningContainerCard(
                     fontWeight = FontWeight.SemiBold,
                     modifier = Modifier.weight(1f)
                 )
+
+                // Small "anland" pill next to the terminal button, shown only when
+                // this container has the anland display daemon enabled and a live
+                // socket recorded.
+                if (anlandEnabled) {
+                    Surface(
+                        onClick = onLaunchAnland,
+                        shape = RoundedCornerShape(12.dp),
+                        color = MaterialTheme.colorScheme.secondaryContainer,
+                        contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+                        modifier = Modifier.height(30.dp).clip(RoundedCornerShape(12.dp)),
+                        tonalElevation = 0.dp
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 10.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.DesktopWindows,
+                                contentDescription = null,
+                                modifier = Modifier.size(14.dp)
+                            )
+                            Spacer(Modifier.width(6.dp))
+                            Text(
+                                text = "anland",
+                                style = MaterialTheme.typography.labelMedium,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    }
+                    Spacer(Modifier.width(8.dp))
+                }
 
                 val sessionCount by remember {
                     derivedStateOf {

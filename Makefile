@@ -60,6 +60,9 @@ SRCS = $(SRC_DIR)/main.c \
        $(SRC_DIR)/android/x11.c \
        $(SRC_DIR)/android/virgl.c \
        $(SRC_DIR)/android/pulseaudio.c \
+       $(SRC_DIR)/anland/anland.c \
+       $(SRC_DIR)/anland/display_daemon.c \
+       $(SRC_DIR)/anland/socket_utils.c \
        $(SRC_DIR)/virtualize.c
 
 # Compiler flags - hardened warning set, all warnings are errors
@@ -141,6 +144,16 @@ $(OBJ_DIR)/%.o: $(SRC_DIR)/%.c | $(OBJ_DIR)
 	$(msg_cc)
 	$(Q)mkdir -p $(dir $@)
 	$(Q)$(CC) $(CFLAGS) -c $< -o $@
+
+# The anland module vendors the upstream display daemon (written to C11 with
+# unnamed unions / const-casts) plus our integration glue. Relax the pedantic
+# and a few hardened warnings that only apply to first-party code; keep -Werror
+# and the rest. More-specific stem, so this wins over the generic rule above.
+ANLAND_CFLAGS = $(filter-out -Wpedantic -Wcast-qual -Wnull-dereference,$(CFLAGS)) -Wno-format-truncation
+$(OBJ_DIR)/anland/%.o: $(SRC_DIR)/anland/%.c | $(OBJ_DIR)
+	$(msg_cc)
+	$(Q)mkdir -p $(dir $@)
+	$(Q)$(CC) $(ANLAND_CFLAGS) -c $< -o $@
 
 # Link step
 $(BINARY_NAME): $(OBJS) | $(OUT_DIR)
