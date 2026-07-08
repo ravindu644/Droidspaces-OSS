@@ -23,6 +23,12 @@ import com.droidspaces.app.ui.component.PullToRefreshWrapper
 import com.droidspaces.app.ui.component.RunningContainerCard
 import com.droidspaces.app.ui.viewmodel.ContainerViewModel
 import com.droidspaces.app.ui.viewmodel.SystemStatsViewModel
+import com.droidspaces.app.util.ContainerManager
+import android.content.ActivityNotFoundException
+import android.content.ComponentName
+import android.content.Context
+import android.content.Intent
+import android.widget.Toast
 import androidx.compose.ui.platform.LocalContext
 import com.droidspaces.app.R
 
@@ -64,6 +70,17 @@ fun ControlPanelScreen(
 
     val containerUsageMap = systemStatsViewModel.containerUsageMap
 
+    // Per-container anland display socket (recorded by the native runtime in
+    // Pids/<name>.anland). Refreshed whenever the running-container set changes;
+    // presence gates the "Launch Anland Window" button.
+    val anlandSockets = remember { mutableStateMapOf<String, String>() }
+    LaunchedEffect(runningContainers) {
+        anlandSockets.clear()
+        runningContainers.filter { it.enableAnland }.forEach { c ->
+            ContainerManager.getAnlandSocket(c.name)?.let { anlandSockets[c.name] = it }
+        }
+    }
+
     Box(modifier = Modifier.fillMaxSize()) {
         // Show content based on root and backend availability
         // Using when instead of early return to prevent UI glitches during recomposition
@@ -94,6 +111,7 @@ fun ControlPanelScreen(
                         verticalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
                         runningContainers.forEach { container ->
+                            val anlandSock = anlandSockets[container.name]
                             RunningContainerCard(
                                 container = container,
                                 onEnter = {
@@ -101,6 +119,10 @@ fun ControlPanelScreen(
                                 },
                                 onTerminalClick = {
                                     onNavigateToTerminal(container.name)
+                                },
+                                anlandEnabled = container.enableAnland && anlandSock != null,
+                                onLaunchAnland = {
+                                    anlandSock?.let { launchAnland(context, container.name, it) }
                                 },
                                 osInfo = containerUsageMap[container.name],
                             )
@@ -115,6 +137,33 @@ fun ControlPanelScreen(
             hostState = snackbarHostState,
             modifier = Modifier.align(Alignment.BottomCenter)
         )
+    }
+}
+
+/**
+ * Launch the anland consumer app's multi-window activity, pointed at this
+ * container's display socket and titled with the container name. Uses
+ * SecondaryActivity (the consumer's parametrized entry, which dedups by socket
+ * path). No-op with a toast if the consumer app isn't installed.
+ */
+private fun launchAnland(context: Context, containerName: String, socketPath: String) {
+    val intent = Intent(Intent.ACTION_MAIN).apply {
+        component = ComponentName(
+            "com.anland.consumer",
+            "com.anland.consumer.SecondaryActivity"
+        )
+        putExtra("socket_path", socketPath)
+        putExtra("window_name", containerName)
+        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_MULTIPLE_TASK)
+    }
+    try {
+        context.startActivity(intent)
+    } catch (e: ActivityNotFoundException) {
+        Toast.makeText(
+            context,
+            context.getString(R.string.anland_not_installed),
+            Toast.LENGTH_SHORT
+        ).show()
     }
 }
 

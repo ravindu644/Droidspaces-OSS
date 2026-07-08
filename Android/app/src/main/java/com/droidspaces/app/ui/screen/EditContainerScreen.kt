@@ -106,6 +106,7 @@ fun EditContainerScreen(
     var bindMounts by remember { mutableStateOf(container.bindMounts) }
     var dnsServers by remember { mutableStateOf(container.dnsServers) }
     var runAtBoot by remember { mutableStateOf(container.runAtBoot) }
+    var enableAnland by remember { mutableStateOf(container.enableAnland) }
     var envFileContent by remember { mutableStateOf(container.envFileContent ?: "") }
     var upstreamInterfaces by remember { mutableStateOf(container.upstreamInterfaces) }
     var portForwards by remember { mutableStateOf(container.portForwards) }
@@ -146,6 +147,7 @@ fun EditContainerScreen(
     var savedBindMounts by remember { mutableStateOf(container.bindMounts) }
     var savedDnsServers by remember { mutableStateOf(container.dnsServers) }
     var savedRunAtBoot by remember { mutableStateOf(container.runAtBoot) }
+    var savedEnableAnland by remember { mutableStateOf(container.enableAnland) }
     var savedEnvFileContent by remember { mutableStateOf(container.envFileContent ?: "") }
     var savedUpstreamInterfaces by remember { mutableStateOf(container.upstreamInterfaces) }
     var savedPortForwards by remember { mutableStateOf(container.portForwards) }
@@ -188,6 +190,7 @@ fun EditContainerScreen(
             bindMounts != savedBindMounts ||
             dnsServers != savedDnsServers ||
             runAtBoot != savedRunAtBoot ||
+            enableAnland != savedEnableAnland ||
             envFileContent != savedEnvFileContent ||
             upstreamInterfaces != savedUpstreamInterfaces ||
             portForwards != savedPortForwards ||
@@ -236,6 +239,7 @@ fun EditContainerScreen(
                     bindMounts = bindMounts,
                     dnsServers = dnsServers,
                     runAtBoot = runAtBoot,
+                    enableAnland = enableAnland,
                     envFileContent = if (envFileContent.isBlank()) null else envFileContent,
                     upstreamInterfaces = upstreamInterfaces,
                     portForwards = portForwards,
@@ -275,6 +279,7 @@ fun EditContainerScreen(
                         savedBindMounts = bindMounts
                         savedDnsServers = dnsServers
                         savedRunAtBoot = runAtBoot
+                        savedEnableAnland = enableAnland
                         savedEnvFileContent = envFileContent
                         savedUpstreamInterfaces = upstreamInterfaces
                         savedPortForwards = portForwards
@@ -1020,6 +1025,17 @@ fun EditContainerScreen(
                 onCheckedChange = {
                     clearFocus()
                     runAtBoot = it
+                }
+            )
+
+            ToggleCard(
+                icon = Icons.Default.DesktopWindows,
+                title = context.getString(R.string.enable_anland),
+                description = context.getString(R.string.enable_anland_description),
+                checked = enableAnland,
+                onCheckedChange = {
+                    clearFocus()
+                    enableAnland = it
                 }
             )
 
