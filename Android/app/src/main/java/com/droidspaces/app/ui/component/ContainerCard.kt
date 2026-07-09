@@ -183,6 +183,7 @@ fun ContainerCard(
             if (container.enableVirgl) options.add(context.getString(R.string.virgl_option))
             if (container.enablePulseaudio) options.add(context.getString(R.string.pulseaudio_option))
             if (container.selinuxPermissive) options.add(context.getString(R.string.selinux_permissive_option))
+            if (container.allowUserns) options.add(context.getString(R.string.userns_option))
             if (container.volatileMode) options.add(context.getString(R.string.volatile_option))
             if (container.forceCgroupv1) options.add(context.getString(R.string.cgroup_v1_option))
             if (container.blockNestedNs) options.add(context.getString(R.string.deadlock_shield_option))

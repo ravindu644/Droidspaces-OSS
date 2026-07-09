@@ -102,6 +102,7 @@ fun EditContainerScreen(
     var virglExtraFlags by remember { mutableStateOf(container.virglExtraFlags) }
     var enablePulseaudio by remember { mutableStateOf(container.enablePulseaudio) }
     var selinuxPermissive by remember { mutableStateOf(container.selinuxPermissive) }
+    var allowUserns by remember { mutableStateOf(container.allowUserns) }
     var volatileMode by remember { mutableStateOf(container.volatileMode) }
     var bindMounts by remember { mutableStateOf(container.bindMounts) }
     var dnsServers by remember { mutableStateOf(container.dnsServers) }
@@ -143,6 +144,7 @@ fun EditContainerScreen(
     var savedVirglExtraFlags by remember { mutableStateOf(container.virglExtraFlags) }
     var savedEnablePulseaudio by remember { mutableStateOf(container.enablePulseaudio) }
     var savedSelinuxPermissive by remember { mutableStateOf(container.selinuxPermissive) }
+    var savedAllowUserns by remember { mutableStateOf(container.allowUserns) }
     var savedVolatileMode by remember { mutableStateOf(container.volatileMode) }
     var savedBindMounts by remember { mutableStateOf(container.bindMounts) }
     var savedDnsServers by remember { mutableStateOf(container.dnsServers) }
@@ -186,6 +188,7 @@ fun EditContainerScreen(
             virglExtraFlags != savedVirglExtraFlags ||
             enablePulseaudio != savedEnablePulseaudio ||
             selinuxPermissive != savedSelinuxPermissive ||
+            allowUserns != savedAllowUserns ||
             volatileMode != savedVolatileMode ||
             bindMounts != savedBindMounts ||
             dnsServers != savedDnsServers ||
@@ -235,6 +238,7 @@ fun EditContainerScreen(
                     virglExtraFlags = virglExtraFlags,
                     enablePulseaudio = enablePulseaudio,
                     selinuxPermissive = selinuxPermissive,
+                    allowUserns = allowUserns,
                     volatileMode = volatileMode,
                     bindMounts = bindMounts,
                     dnsServers = dnsServers,
@@ -275,6 +279,7 @@ fun EditContainerScreen(
                         savedVirglExtraFlags = virglExtraFlags
                         savedEnablePulseaudio = enablePulseaudio
                         savedSelinuxPermissive = selinuxPermissive
+                        savedAllowUserns = allowUserns
                         savedVolatileMode = volatileMode
                         savedBindMounts = bindMounts
                         savedDnsServers = dnsServers
@@ -976,6 +981,17 @@ fun EditContainerScreen(
                 onCheckedChange = {
                     clearFocus()
                     selinuxPermissive = it
+                }
+            )
+
+            ToggleCard(
+                icon = Icons.Default.Security,
+                title = context.getString(R.string.allow_userns),
+                description = context.getString(R.string.allow_userns_description),
+                checked = allowUserns,
+                onCheckedChange = {
+                    clearFocus()
+                    allowUserns = it
                 }
             )
 
