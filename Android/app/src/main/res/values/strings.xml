@@ -150,6 +150,7 @@
     <string name="cgroup_v1_option">Cgroup V1</string>
     <string name="deadlock_shield_option">Deadlock Shield</string>
     <string name="privileged_option">Privileged</string>
+    <string name="anland_option">Anland</string>
     <string name="installation_setup_summary">Installation Summary</string>
     <string name="review_configuration">Review Configuration</string>
     <string name="tarball_label">Tarball</string>
