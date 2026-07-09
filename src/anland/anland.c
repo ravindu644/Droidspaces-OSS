@@ -89,9 +89,11 @@ static void anland_daemon_child(int out_fd, const char *sock_path) {
   _exit(0);
 }
 
-/* Fork the daemon child and a log-relay grandchild (Logs/anland.log).
+/* Fork the daemon child and a log-relay grandchild. log_path is resolved by
+ * ds_spawn_log_relay() relative to get_logs_dir(), so it must be relative
+ * (e.g. "<name>/anland") and its parent dir must already exist.
  * Returns the daemon PID, or -1 on error. */
-static pid_t spawn_anland_daemon(const char *sock_path) {
+static pid_t spawn_anland_daemon(const char *sock_path, const char *log_path) {
   int pipefd[2];
   if (pipe(pipefd) < 0) {
     ds_warn("[anland] pipe: %s", strerror(errno));
@@ -114,7 +116,7 @@ static pid_t spawn_anland_daemon(const char *sock_path) {
   /* Parent: hand the read end to a log relay; the daemon child holds the only
    * write end, so the relay sees EOF when the daemon exits. */
   close(pipefd[1]);
-  ds_spawn_log_relay(pipefd[0], "anland.log", "anland");
+  ds_spawn_log_relay(pipefd[0], log_path, "anland");
   return child;
 }
 
@@ -170,7 +172,21 @@ int ds_anland_daemon_start(struct ds_config *cfg) {
            ANLAND_SOCK_DIR "/anland-%s.sock", uuid);
 
   ds_log("[anland] launching display daemon on %s", cfg->anland_sock);
-  pid_t child = spawn_anland_daemon(cfg->anland_sock);
+
+  /* ds_spawn_log_relay() resolves its log-file argument relative to
+   * get_logs_dir() (== <workspace>/Logs) and only O_CREATs the final path
+   * component, so we must (a) pre-create the per-container subdir and (b) pass
+   * a RELATIVE "<name>/anland" - passing an absolute path would double-prefix
+   * to <Logs>/<Logs>/... whose parents don't exist, and the relay would fail
+   * its open() and silently exit without writing anything. */
+  char safe_log_name[256];
+  sanitize_container_name(cfg->container_name, safe_log_name,
+                          sizeof(safe_log_name));
+
+  char log_rel[288];
+  snprintf(log_rel, sizeof(log_rel), "%.256s/anland", safe_log_name);
+
+  pid_t child = spawn_anland_daemon(cfg->anland_sock, log_rel);
   if (child <= 0)
     return -1;
 
