@@ -1,0 +1,95 @@
+commit 2a29f4ed50f38379b4a94cef434175eb003c14f3
+Author: Yibo Wang <2024312277@stu.hit.edu.cn>
+Date:   Mon Jul 6 21:17:41 2026 +0800
+
+    fixe bad epoll
+
+diff --git a/fs/eventpoll.c b/fs/eventpoll.c
+index a605368d7..dbcae9e79 100644
+--- a/fs/eventpoll.c
++++ b/fs/eventpoll.c
+@@ -799,6 +799,8 @@ static void ep_free(struct eventpoll *ep)
+ 	kfree_rcu(ep, rcu);
+ }
+ 
++static struct file *epi_fget(const struct epitem *epi);
++
+ /*
+  * Removes a "struct epitem" from the eventpoll RB tree and deallocates
+  * all the associated resources. Must be called with "mtx" held.
+@@ -820,13 +822,34 @@ static bool __ep_remove(struct eventpoll *ep, struct epitem *epi, bool force)
+ 	 */
+ 	ep_unregister_pollwait(ep, epi);
+ 
+-	/* Remove the current item from the list of epoll hooks */
+-	spin_lock(&file->f_lock);
+-	if (epi->dying && !force) {
+-		spin_unlock(&file->f_lock);
+-		return false;
++	if (!force) {
++		/* cheap sync with eventpoll_release_file() */
++		if (unlikely(READ_ONCE(epi->dying)))
++			return false;
++
++		/*
++		 * If we manage to grab a reference it means we're not in
++		 * eventpoll_release_file() and aren't going to be. Pinning
++		 * @file keeps it from reaching refcount zero and starting
++		 * __fput() while we clear and dereference file->f_ep and use
++		 * @file inside the f_lock critical section below, closing the
++		 * struct file / watched struct eventpoll UAF. A successful pin
++		 * also proves we are not racing eventpoll_release_file() on
++		 * this epi, so the redundant re-check of epi->dying under
++		 * f_lock is dropped.
++		 *
++		 * If the pin fails @file has already reached refcount zero and
++		 * its __fput() is in flight; because we bail before clearing
++		 * f_ep that path takes the eventpoll_release() slow path into
++		 * eventpoll_release_file(), which removes the epi under ep->mtx.
++		 */
++		file = epi_fget(epi);
++		if (!file)
++			return false;
+ 	}
+ 
++	/* Remove the current item from the list of epoll hooks */
++	spin_lock(&file->f_lock);
+ 	to_free = NULL;
+ 	head = file->f_ep;
+ 	if (head->first == &epi->fllink && !epi->fllink.next) {
+@@ -861,6 +884,11 @@ static bool __ep_remove(struct eventpoll *ep, struct epitem *epi, bool force)
+ 	kfree_rcu(epi, rcu);
+ 
+ 	percpu_counter_dec(&ep->user->epoll_watches);
++
++	/* Drop the reference pinned above; not taken on the force path. */
++	if (!force)
++		fput(file);
++
+ 	return true;
+ }
+ 
+diff --git a/fs/eventpoll.c b/fs/eventpoll.c
+index 5714e900567c4..4b43bf41296d4 100644
+--- a/fs/eventpoll.c
++++ b/fs/eventpoll.c
+@@ -226,6 +226,9 @@ struct eventpoll {
+ 	 */
+ 	refcount_t refcount;
+ 
++	/* used to defer freeing past ep_get_upwards_depth_proc() RCU walk */
++	struct rcu_head rcu;
++
+ #ifdef CONFIG_NET_RX_BUSY_POLL
+ 	/* used to track busy poll napi_id */
+ 	unsigned int napi_id;
+@@ -819,7 +822,8 @@ static void ep_free(struct eventpoll *ep)
+ 	mutex_destroy(&ep->mtx);
+ 	free_uid(ep->user);
+ 	wakeup_source_unregister(ep->ws);
+-	kfree(ep);
++	/* ep_get_upwards_depth_proc() may still hold epi->ep under RCU */
++	kfree_rcu(ep, rcu);
+ }
+ 
+ /*
