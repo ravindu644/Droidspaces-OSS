@@ -325,6 +325,7 @@ struct ds_port_forward {
 #define DS_PRIV_UNFILTERED                                                     \
   (1 << 4)                  /* No device node blocking (except PTYs)           \
                              */
+#define DS_PRIV_USERNS  (1 << 5) /* Allow user namespace blocking */
 #define DS_PRIV_FULL (0xFF) /* All above */
 
 typedef enum {
@@ -370,6 +371,7 @@ struct ds_config {
   int disable_ipv6;        /* --disable-ipv6 */
   int android_storage;     /* --enable-android-storage */
   int selinux_permissive;  /* --selinux-permissive */
+  int userns_allowed;       /* --allow-userns */
   int net_bridgeless;      /* Probe result: no CONFIG_BRIDGE, use PTP NAT */
   int reboot_cycle;        /* 1 if we are in a reboot loop */
   int force_cgroupv1;  /* --force-cgroupv1: use v1 even if v2 is available */

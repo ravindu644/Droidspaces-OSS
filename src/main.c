@@ -107,7 +107,8 @@ void print_usage(void) {
       "      --cpus=COUNT          CPU limit (e.g. 1.5, 2)\n"
       "      --pids-limit=N        Max number of PIDs\n"
       "      --privileged=TAGS     Relax security: nomask, nocaps, noseccomp, "
-      "shared, unfiltered-dev, full\n\n");
+      "shared, unfiltered-dev, full\n"
+      "      --allow-userns        Allow user namespaces\n\n");
 
   printf(
       C_BOLD
@@ -397,6 +398,7 @@ int main(int argc, char **argv) {
       {"disable-ipv6", no_argument, 0, 'I'},
       {"enable-android-storage", no_argument, 0, 'S'},
       {"selinux-permissive", no_argument, 0, 'P'},
+      {"allow-userns", no_argument, 0, 279},
       {"volatile", no_argument, 0, 'V'},
       {"bind-mount", required_argument, 0, 'B'},
       {"bind", required_argument, 0, 'B'},
@@ -705,6 +707,9 @@ int main(int argc, char **argv) {
       break;
     case 'P':
       cfg.selinux_permissive = 1;
+      break;
+    case 279:
+      cfg.userns_allowed = 1;
       break;
     case 'V':
       cfg.volatile_mode = 1;

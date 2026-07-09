@@ -99,6 +99,7 @@ int ds_seccomp_apply_minimal(int privileged_mask) {
         (struct sock_filter)BPF_STMT(BPF_RET | BPF_K, SECCOMP_RET_KILL_PROCESS);
 #endif
 
+    if (!(privileged_mask & DS_PRIV_USERNS)) {
 #ifdef __NR_clone3
     /* 6. Block clone3 */
     filter[curr++] = (struct sock_filter)BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K,
@@ -128,7 +129,7 @@ int ds_seccomp_apply_minimal(int privileged_mask) {
                                                   0x10000000, 0, 1);
     filter[curr++] = (struct sock_filter)BPF_STMT(
         BPF_RET | BPF_K, SECCOMP_RET_ERRNO | (EPERM & SECCOMP_RET_DATA));
-
+    }
     /*
      * 9. CVE-2026-31431 ("Copy Fail") - mitigation layer 2.
      *
@@ -153,7 +154,6 @@ int ds_seccomp_apply_minimal(int privileged_mask) {
     /* Reload nr for any rules that follow this block. */
     filter[curr++] = (struct sock_filter)BPF_STMT(
         BPF_LD | BPF_W | BPF_ABS, offsetof(struct seccomp_data, nr));
-
     /*
      * 10. Block host clock modification syscalls.
      *
