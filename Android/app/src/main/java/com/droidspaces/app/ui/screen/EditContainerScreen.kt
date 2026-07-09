@@ -984,15 +984,30 @@ fun EditContainerScreen(
                 }
             )
 
+            val isSeccompDisabled = privileged.contains("noseccomp") || privileged.contains("full")
+
+            //use /proc/self/setgroups to detect userns (only exists when CONFIG_USER_NS is enabled)
+            val usernsSupported = remember { java.io.File("/proc/self/setgroups").exists() }
+
+            LaunchedEffect(isSeccompDisabled, usernsSupported) {
+                if (isSeccompDisabled) blockNestedNs = false
+                if (isSeccompDisabled && usernsSupported) allowUserns = true
+                if (!usernsSupported) allowUserns = false
+            }
+
             ToggleCard(
                 icon = Icons.Default.Security,
                 title = context.getString(R.string.allow_userns),
-                description = context.getString(R.string.allow_userns_description),
+                description = if (usernsSupported)
+                    context.getString(R.string.allow_userns_description)
+                else
+                    context.getString(R.string.allow_userns_description_not_supported),
                 checked = allowUserns,
                 onCheckedChange = {
                     clearFocus()
                     allowUserns = it
-                }
+                },
+                enabled = !isSeccompDisabled && usernsSupported
             )
 
             ToggleCard(
@@ -1016,11 +1031,6 @@ fun EditContainerScreen(
                     forceCgroupv1 = it
                 }
             )
-
-            val isSeccompDisabled = privileged.contains("noseccomp") || privileged.contains("full")
-            LaunchedEffect(isSeccompDisabled) {
-                if (isSeccompDisabled) blockNestedNs = false
-            }
 
             ToggleCard(
                 icon = Icons.Default.GppBad,

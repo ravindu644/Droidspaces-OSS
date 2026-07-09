@@ -207,6 +207,7 @@
     <string name="selinux_permissive_description">Set SELinux permissive</string>
     <string name="allow_userns">Allow User Namespaces</string>
     <string name="allow_userns_description">Allow unprivileged user namespaces, which flatpak requires. It may also solve some anland producers running slow. However you may be vulnerable to certain exploits like Fragnesia without a patched kernel.</string>
+    <string name="allow_userns_description_not_supported">Not supported. CONFIG_USER_NS not enabled in kernel.</string>
     <string name="run_at_boot">Run at Boot</string>
     <string name="run_at_boot_description">Start container on boot</string>
     <string name="enable_anland">Anland Display</string>
