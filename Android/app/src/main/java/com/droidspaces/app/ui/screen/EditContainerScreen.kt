@@ -996,7 +996,7 @@ fun EditContainerScreen(
             }
 
             ToggleCard(
-                icon = Icons.Default.Security,
+                icon = Icons.Default.Groups,
                 title = context.getString(R.string.allow_userns),
                 description = if (usernsSupported)
                     context.getString(R.string.allow_userns_description)
