@@ -31,7 +31,9 @@ The patches in this directory fix security vulnerabilities in specific kernel su
     slab_cross_cache_confusion.patch
     act_pedit.patch
     ssh_keysign_pwn.patch
+    dirty_clone.patch
     (For most kernel build scripts, other patchs are not needed)
 2. not using userns
     bad_epoll.patch (Essential)
     ssh_keysign_pwn.patch
+    dirty_clone.patch
