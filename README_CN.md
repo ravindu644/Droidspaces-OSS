@@ -143,6 +143,7 @@ Droidspaces 的独特之处在于其对 Android 和 Linux 本身**零依赖**、
 - [安装指南](#installation)
 - [使用指南](#usage)
 - [显示、音频与桌面](#display-audio-desktop)
+- [Anland (Wayland)](#anland-wayland)
 - [安全与隔离的理念](#security-model)
 - [更多文档](#additional-documentation)
 - [疑难解答](./Documentation/zh-CN/Troubleshooting.md)
@@ -177,6 +178,7 @@ Droidspaces 的设计目标是原生运行在任何搭载 Linux 内核的设备�
 | **命名空间隔离** | 通过 PID、MNT、UTS、IPC 以及 Cgroup 命名空间实现完全隔离。每个容器拥有自己的进程树、挂载表、主机名、IPC 资源和 cgroup 层级。 |
 | **网络隔离** | **4 种网络模式（主机模式、NAT 模式、无网络模式、网关模式）**。通过 `CLONE_NEWNET` 实现纯网络隔离（NAT 模式、无网络模式和网关模式）或共享宿主机网络（主机模式）。NAT 模式会自动检测活跃上行链路（也可用 `--upstream` 手动固定）；网关模式可将 LAN/DHCP/防火墙委托给 OpenWRT 等另一个容器。在 Android 和 Linux 上均可使用。 |
 | **Android 显示与 GPU** | 三种加速模式：**llvmpipe**（软件渲染，适用所有设备）、**VirGL**（Mali/PowerVR）和 **Turnip**（原生高通/Adreno）。自 v6.3.0 起，X 服务器和 VirGL 服务器在容器启动时自动拉起，无需任何 Termux 命令。环境变量（`DISPLAY=:5`、`GALLIUM_DRIVER=virpipe`）自动注入。[[更多信息](./Documentation/zh-CN/Graphics-and-Audio.md)] |
+| **Anland Wayland 显示** | 可选的 Wayland 显示方案，使用 Anland 缓冲区共享协议。打过补丁的 Linux 合成器（如 KWin/Weston）将桌面渲染进 GPU 缓冲区，再由 Android 端的 Anland 进行呈现；在 Droidspaces 中启用 `Anland Display` 并使用支持 Anland 的后端即可。[[配置指南](./Documentation/zh-CN/Anland.md)] |
 | **Android 音效** | PulseAudio 守护进程以 Termux 用户身份在宿主机上运行，使 Android 音频 HAL 授予其设备访问权限。套接字以绑定挂载方式挂载到容器的 `/tmp/.pulse-socket`，`PULSE_SERVER` 自动注入，音效开箱即用。[[更多信息](./Documentation/zh-CN/Graphics-and-Audio.md#pulseaudio)] |
 | **Linux GPU 加速** | 在 Linux 桌面端上无需额外配置 AMD 和 Intel GPU 硬件加速。[[更多信息](./Documentation/zh-CN/Graphics-and-Audio.md)] |
 | **端口转发** | 在 NAT 模式下将宿主机端口转发到容器（例如 `--port 22:22`）。支持 TCP 和 UDP，以及端口范围如 `1-500:1-500`。 |
@@ -349,6 +351,18 @@ GPU 加速方式、音效配置、桌面环境自动启动原理以及 Linux 桌
 
 ---
 
+<a id="anland-wayland"></a>
+
+## Anland (Wayland)
+
+Anland 为 Android 设备提供可选的 Wayland 显示路径。它不走 X11，而是让打过补丁的 Linux 合成器（如 KWin/Weston）将桌面渲染进 GPU 缓冲区，再通过轻量级 Unix 套接字桥接由 Android 端的 Anland 呈现。
+
+使用时需要在 Droidspaces 容器内安装支持 Anland 的后端，在 Android 上安装 Anland APK，然后在容器配置中启用 `GPU 访问` 和 `Anland Display`。推荐使用高通 Snapdragon/Adreno 设备。
+
+后端安装、Rootfs 自动构建、APK 安装以及 Droidspaces 容器设置请参阅 **[Anland (Wayland) 使用指南](./Documentation/zh-CN/Anland.md)**。
+
+---
+
 <a id="security-model"></a>
 
 ## 安全与隔离理念
@@ -389,6 +403,7 @@ GPU 加速方式、音效配置、桌面环境自动启动原理以及 Linux 桌
 | [功能深度解析](./Documentation/zh-CN/Features.md) | 每个主要功能的详细说明。 |
 | [从零开始的网络基础](./Documentation/zh-CN/Networking-From-Zero.md) | 面向初学者解释 Droidspaces 背后的网络概念——NAT、自动上行检测、`--upstream` 固定以及基于 OpenWRT 的网关模式。 |
 | [显示、音频与桌面指南](./Documentation/zh-CN/Graphics-and-Audio.md) | Android 和 Linux 上的 GPU 加速、PulseAudio 音效与桌面环境自动启动。 |
+| [Anland (Wayland) 使用指南](./Documentation/zh-CN/Anland.md) | 通过 Anland 配置 Wayland 显示，包括后端安装、APK 设置与 Droidspaces 容器选项。 |
 | [你可以做的酷炫事情（Tailscale、Docker 等）](./Documentation/zh-CN/Cool-things-you-can-do.md) | 在容器内运行 Tailscale、Docker 等工具的实用配置方案。 |
 | [卸载指南](./Documentation/zh-CN/Uninstallation.md) | 如何从系统中移除 Droidspaces。 |
 
