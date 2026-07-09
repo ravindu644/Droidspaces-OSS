@@ -125,6 +125,7 @@ jobs:
           echo "**Droidspaces Build Successful**"
           echo ""
           echo "**Repository:** [${{ github.repository }}](https://github.com/${{ github.repository }})"
+          echo "**Branch:** ${{ github.ref_name }}"
           echo "**Author:** [${{ github.actor }}](https://github.com/${{ github.actor }})"
           echo "**Event:** $EVENT_TYPE"
           echo ""
