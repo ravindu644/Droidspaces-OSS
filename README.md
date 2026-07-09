@@ -144,6 +144,7 @@ What makes Droidspaces unique is its **zero-dependency, native execution** on bo
 - [Installation](#installation)
 - [Usage](#usage)
 - [Display, Audio & Desktop](#display-audio-desktop)
+- [Anland (Wayland)](#anland-wayland)
 - [Security & Isolation Philosophy](#security-model)
 - [Additional Documentation](#additional-documentation)
 - [Troubleshooting](./Documentation/Troubleshooting.md)
@@ -178,6 +179,7 @@ The entire runtime is a **single static binary** under 400KB, compiled against m
 | **Namespace Isolation** | Complete isolation via PID, MNT, UTS, IPC, and Cgroup namespaces. Each container has its own process tree, mount table, hostname, IPC resources, and cgroup hierarchy. |
 | **Network Isolation** | **4 Networking Modes (Host, NAT, None, Gateway)**. Pure network isolation via `CLONE_NEWNET` (NAT/None/Gateway modes) or shared host networking (Host mode). NAT auto-detects the active uplink (or pin it with `--upstream`); Gateway delegates LAN/DHCP/firewall to another container like OpenWRT. Works on both Android and Linux. |
 | **Android Display & GPU** | Three acceleration modes: **llvmpipe** (software, all devices), **VirGL** (Mali/PowerVR), and **Turnip** (native Qualcomm/Adreno). As of v6.3.0, the X server and VirGL server launch automatically when the container starts - zero manual Termux commands required. Environment variables (`DISPLAY=:5`, `GALLIUM_DRIVER=virpipe`) are injected automatically. [[More info](./Documentation/Graphics-and-Audio.md)] |
+| **Anland Wayland Display** | Optional Wayland display path using Anland's buffer-sharing protocol. A patched Linux compositor such as KWin/Weston renders into GPU buffers that Android presents through Anland; enable `Anland Display` in Droidspaces and use an Anland-supported backend. [[Setup guide](./Documentation/Anland.md)] |
 | **Android Sound** | PulseAudio daemon runs on the host as the Termux user so Android's audio HAL grants it device access. The socket is bind-mounted into the container at `/tmp/.pulse-socket` and `PULSE_SERVER` is injected automatically - audio just works. [[More info](./Documentation/Graphics-and-Audio.md#pulseaudio)] |
 | **Linux GPU Acceleration** | Zero-configuration GPU acceleration for AMD and Intel GPUs on Linux desktop hosts. [[More info](./Documentation/Graphics-and-Audio.md)] |
 | **Port Forwarding** | Forward host ports to the container in NAT mode (e.g., `--port 22:22`). Supports TCP and UDP, as well as ranges like `1-500:1-500`. |
@@ -350,6 +352,18 @@ For GPU acceleration methods, sound setup, DE auto-boot internals, and Linux des
 
 ---
 
+<a id="anland-wayland"></a>
+
+## Anland (Wayland)
+
+Anland provides an optional Wayland display path for Android devices. Instead of X11, a patched Linux compositor such as KWin/Weston renders the desktop into GPU buffers, and Anland presents them on Android through a lightweight Unix-socket bridge.
+
+To use it, install an Anland-supported backend inside the Droidspaces container, install the Anland APK on Android, then enable `GPU Access` and `Anland Display` in the container configuration. Qualcomm Snapdragon/Adreno devices are recommended.
+
+See the **[Anland (Wayland) Usage Guide](./Documentation/Anland.md)** for backend installation, rootfs builder usage, APK setup, and required Droidspaces container settings.
+
+---
+
 <a id="security-model"></a>
 
 ## Security & Isolation Philosophy
@@ -390,6 +404,7 @@ For GPU acceleration methods, sound setup, DE auto-boot internals, and Linux des
 | [Feature Deep Dives](Documentation/Features.md) | Detailed explanation of each major feature. |
 | [Networking From Zero](Documentation/Networking-From-Zero.md) | Beginner-friendly guide to every networking concept behind Droidspaces - NAT, automatic uplink detection, `--upstream` pinning, and gateway mode with OpenWRT. |
 | [Display, Audio & Desktop Guide](Documentation/Graphics-and-Audio.md) | GPU acceleration, PulseAudio sound, and desktop environment auto-boot on Android and Linux. |
+| [Anland (Wayland) Usage Guide](Documentation/Anland.md) | Wayland display setup through Anland, including patched backend installation, APK setup, and Droidspaces container settings. |
 | [Cool Things You Can Do (Tailscale, Docker, etc.)](Documentation/Cool-things-you-can-do.md) | Practical recipes for running Tailscale, Docker, and other tools inside containers. |
 | [Uninstallation Guide](Documentation/Uninstallation.md) | How to remove Droidspaces from your system. |
 
