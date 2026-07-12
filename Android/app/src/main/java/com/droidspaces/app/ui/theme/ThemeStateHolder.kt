@@ -76,14 +76,13 @@ fun rememberThemeState(): ThemeState {
 
     val systemDark = isSystemInDarkTheme()
     val effectiveDarkTheme = if (followSystemTheme) systemDark else darkTheme
-    val effectiveAmoledMode = amoledMode && effectiveDarkTheme // AMOLED only works with dark theme
 
     // Return state that triggers recomposition when any theme preference changes
     return remember(followSystemTheme, darkTheme, amoledMode, useDynamicColor, systemDark, themePalette) {
         ThemeState(
             followSystemTheme = followSystemTheme,
             darkTheme = effectiveDarkTheme,
-            amoledMode = effectiveAmoledMode,
+            amoledMode = amoledMode,
             useDynamicColor = useDynamicColor,
             themePalette = themePalette
         )

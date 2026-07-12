@@ -332,11 +332,6 @@ fun SettingsScreen(
                 checked = followSystemTheme,
                 onCheckedChange = { checked ->
                     prefsManager.followSystemTheme = checked
-                    // Disable AMOLED mode when enabling follow system theme
-                    // Theme state updates automatically via SharedPreferences listener
-                    if (checked && amoledMode) {
-                        prefsManager.amoledMode = false
-                    }
                 }
             )
 
@@ -349,28 +344,23 @@ fun SettingsScreen(
                     checked = darkTheme,
                     onCheckedChange = { checked ->
                         prefsManager.darkTheme = checked
-                        // Disable AMOLED if dark theme is disabled
-                        // Theme state updates automatically via SharedPreferences listener
-                        if (!checked && amoledMode) {
-                            prefsManager.amoledMode = false
-                        }
                     }
                 )
+            }
 
-                // AMOLED Mode (only shown when dark theme is explicitly enabled, directly beneath Dark Theme)
-                if (darkTheme) {
-                    SwitchItem(
-                        icon = Icons.Default.RadioButtonUnchecked,
-                        title = context.getString(R.string.amoled_mode),
-                        summary = context.getString(R.string.amoled_mode_description),
-                        checked = amoledMode,
-                        enabled = true,
-                        onCheckedChange = { checked ->
-                            prefsManager.amoledMode = checked
-                            // Theme state updates automatically via SharedPreferences listener
-                        }
-                    )
-                }
+            // AMOLED Mode (shown when followSystemTheme is true OR manual darkTheme is true)
+            if (followSystemTheme || darkTheme) {
+                SwitchItem(
+                    icon = Icons.Default.RadioButtonUnchecked,
+                    title = context.getString(R.string.amoled_mode),
+                    summary = context.getString(R.string.amoled_mode_description),
+                    checked = amoledMode,
+                    enabled = true,
+                    onCheckedChange = { checked ->
+                        prefsManager.amoledMode = checked
+                        // Theme state updates automatically via SharedPreferences listener
+                    }
+                )
             }
 
             // Use Dynamic Color (Monet theming) - Only show on Android 12+
