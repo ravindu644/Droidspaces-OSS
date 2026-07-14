@@ -35,7 +35,7 @@ fun <T> DsDropdown(
 
     val fieldShape = RoundedCornerShape(20.dp)
     val fieldColors = OutlinedTextFieldDefaults.colors(
-        unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
+        unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f),
         focusedBorderColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.8f),
         unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerLow,
         focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
@@ -77,7 +77,7 @@ fun <T> DsDropdown(
                 .background(MaterialTheme.colorScheme.surfaceContainerHigh)
                 .border(
                     width = 1.dp,
-                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
+                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f),
                     shape = RoundedCornerShape(20.dp)
                 )
         ) {

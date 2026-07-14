@@ -9,8 +9,10 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.droidspaces.app.R
 import com.droidspaces.app.ui.theme.ThemePalette
 
 /**
@@ -37,7 +39,7 @@ fun AccentColorPicker(
             },
             headlineContent = {
                 Text(
-                    text = "Accent Color",
+                    text = stringResource(R.string.accent_color),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.SemiBold
                 )

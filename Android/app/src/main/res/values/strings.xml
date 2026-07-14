@@ -86,6 +86,7 @@
     <string name="amoled_mode_description">Pure black background for OLED displays</string>
     <string name="dynamic_color">Apply System\'s Default Color Palette</string>
     <string name="dynamic_color_description">Use Android 12+ Monet theming (Material You)</string>
+    <string name="accent_color">Accent Color</string>
     <string name="daemon_mode">Daemon Mode</string>
     <string name="daemon_mode_description">Run Droidspaces as a persistent system-level daemon to bypass seccomp blocks from Magisk/APatch, GrapheneOS, etc. This enables high-privilege operations by fetching and running commands from userspace (Reboot required).</string>
     <string name="symlink_integration">Integrate Droidspaces to the system path</string>
