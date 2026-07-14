@@ -66,40 +66,48 @@ fun <T> DsDropdown(
                 .menuAnchor()
                 .fillMaxWidth()
         )
-        ExposedDropdownMenu(
-            expanded = expanded,
-            onDismissRequest = { 
-                expanded = false
-                focusManager.clearFocus()
-            },
-            modifier = Modifier
-                .clip(RoundedCornerShape(20.dp))
-                .background(MaterialTheme.colorScheme.surfaceContainerHigh)
-                .border(
-                    width = 1.dp,
-                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f),
-                    shape = RoundedCornerShape(20.dp)
-                )
+        MaterialTheme(
+            colorScheme = MaterialTheme.colorScheme.copy(
+                surface = MaterialTheme.colorScheme.surfaceContainerHigh,
+                surfaceContainer = MaterialTheme.colorScheme.surfaceContainerHigh
+            ),
+            shapes = MaterialTheme.shapes.copy(
+                extraSmall = RoundedCornerShape(20.dp)
+            )
         ) {
-            options.forEach { option ->
-                DropdownMenuItem(
-                    text = { Text(displayName(option), fontWeight = FontWeight.Medium) },
-                    onClick = {
-                        onSelect(option)
-                        expanded = false
-                        focusManager.clearFocus()
-                    },
-                    leadingIcon = if (option == selected) {
-                        {
-                            Icon(
-                                Icons.Default.Check,
-                                contentDescription = null,
-                                modifier = Modifier.size(18.dp),
-                                tint = MaterialTheme.colorScheme.primary
-                            )
-                        }
-                    } else null
-                )
+            ExposedDropdownMenu(
+                expanded = expanded,
+                onDismissRequest = { 
+                    expanded = false
+                    focusManager.clearFocus()
+                },
+                modifier = Modifier
+                    .border(
+                        width = 1.dp,
+                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f),
+                        shape = RoundedCornerShape(20.dp)
+                    )
+            ) {
+                options.forEach { option ->
+                    DropdownMenuItem(
+                        text = { Text(displayName(option), fontWeight = FontWeight.Medium) },
+                        onClick = {
+                            onSelect(option)
+                            expanded = false
+                            focusManager.clearFocus()
+                        },
+                        leadingIcon = if (option == selected) {
+                            {
+                                Icon(
+                                    Icons.Default.Check,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(18.dp),
+                                    tint = MaterialTheme.colorScheme.primary
+                                )
+                            }
+                        } else null
+                    )
+                }
             }
         }
     }
