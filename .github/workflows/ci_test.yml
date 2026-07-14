@@ -23,6 +23,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       HAS_TELEGRAM: ${{ secrets.API_ID != '' && secrets.API_HASH != '' }}
+      GRADLE_OPTS: "-Dorg.gradle.daemon=false -Dorg.gradle.workers.max=4"
     steps:
     - uses: actions/checkout@v4
 
@@ -64,23 +65,20 @@ jobs:
         rm -f *.tar.zst
         echo "[+] Toolchains ready."
 
-    - name: List Toolchains (Debug)
-      run: |
-        find $HOME/toolchains -maxdepth 3
-
     - name: Build All Tarball, Debian Packages & Sync to Android
       run: |
         make all-tarball
         scripts/mkdeb.sh
 
-    - name: Decode Keystore
+    - name: Prepare Android Build
       env:
         RELEASE_KEYSTORE: ${{ secrets.RELEASE_KEYSTORE }}
-      if: "${{ env.RELEASE_KEYSTORE != '' }}"
-      run: echo "${{ env.RELEASE_KEYSTORE }}" | base64 -d > droidspaces.keystore
-
-    - name: Grant execute permission for gradlew
-      run: chmod +x Android/gradlew
+      run: |
+        # Decode keystore if available
+        if [ -n "$RELEASE_KEYSTORE" ]; then
+          echo "$RELEASE_KEYSTORE" | base64 -d > droidspaces.keystore
+        fi
+        chmod +x Android/gradlew
 
     - name: Generate Contributors
       continue-on-error: true
@@ -97,7 +95,7 @@ jobs:
         KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
       run: |
         cd Android
-        ./gradlew assembleRelease \
+        ./gradlew assembleRelease --no-daemon --build-cache \
           -PKEYSTORE_PASSWORD="${{ secrets.KEYSTORE_PASSWORD }}" \
           -PKEY_ALIAS="${{ secrets.KEY_ALIAS }}" \
           -PKEY_PASSWORD="${{ secrets.KEY_PASSWORD }}"
