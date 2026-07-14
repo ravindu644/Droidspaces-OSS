@@ -1,0 +1,217 @@
+name: test builds vizx
+
+on:
+  push:
+    branches: [ "main", "master" ]
+  pull_request:
+    branches: [ "main", "master" ]
+  workflow_dispatch:
+    inputs:
+      create_release:
+        description: 'Create an Official GitHub Release?'
+        required: true
+        type: boolean
+        default: false
+      tag_name:
+        description: 'Tag name (Only used if Release is checked)'
+        required: false
+        default: 'test'
+
+jobs:
+  build:
+    name: Build Backend & Android App
+    runs-on: ubuntu-latest
+    env:
+      HAS_TELEGRAM: ${{ secrets.API_ID != '' && secrets.API_HASH != '' }}
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up JDK 17
+      uses: actions/setup-java@v4
+      with:
+        java-version: '17'
+        distribution: 'temurin'
+        cache: gradle
+
+    - name: Cache Toolchains
+      id: cache-toolchains
+      uses: actions/cache@v4
+      with:
+        path: ~/toolchains
+        key: ${{ runner.os }}-toolchains-25843896720
+
+    - name: Download Toolchains
+      if: steps.cache-toolchains.outputs.cache-hit != 'true'
+      run: |
+        mkdir -p $HOME/toolchains
+        cd $HOME/toolchains
+        BASE_URL="https://github.com/ravindu644/Droidspaces-OSS/releases/download/compilers-25843896720"
+
+        echo "[*] Downloading toolchains in parallel..."
+        wget -q $BASE_URL/aarch64-linux-musl-cross.tar.zst &
+        wget -q $BASE_URL/arm-linux-musleabihf-cross.tar.zst &
+        wget -q $BASE_URL/i686-linux-musl-cross.tar.zst &
+        wget -q $BASE_URL/x86_64-linux-musl-cross.tar.zst &
+        wget -q $BASE_URL/riscv64-linux-musl-cross.tar.zst &
+        wait
+
+        echo "[*] Extracting toolchains in parallel..."
+        for f in *.tar.zst; do
+          tar -xf "$f" &
+        done
+        wait
+
+        rm -f *.tar.zst
+        echo "[+] Toolchains ready."
+
+    - name: List Toolchains (Debug)
+      run: |
+        find $HOME/toolchains -maxdepth 3
+
+    - name: Build All Tarball, Debian Packages & Sync to Android
+      run: |
+        make all-tarball
+        scripts/mkdeb.sh
+
+    - name: Decode Keystore
+      env:
+        RELEASE_KEYSTORE: ${{ secrets.RELEASE_KEYSTORE }}
+      if: "${{ env.RELEASE_KEYSTORE != '' }}"
+      run: echo "${{ env.RELEASE_KEYSTORE }}" | base64 -d > droidspaces.keystore
+
+    - name: Grant execute permission for gradlew
+      run: chmod +x Android/gradlew
+
+    - name: Generate Contributors
+      continue-on-error: true
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        pip install -q requests
+        python3 scripts/generate_contributors.py
+
+    - name: Build Android App with Gradle
+      env:
+        KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+        KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+        KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+      run: |
+        cd Android
+        ./gradlew assembleRelease \
+          -PKEYSTORE_PASSWORD="${{ secrets.KEYSTORE_PASSWORD }}" \
+          -PKEY_ALIAS="${{ secrets.KEY_ALIAS }}" \
+          -PKEY_PASSWORD="${{ secrets.KEY_PASSWORD }}"
+
+    - name: Stage & Rename Artifacts
+      run: |
+        TAG="${{ github.event.inputs.tag_name || 'CI' }}"
+        COMMIT_HASH=$(git log -1 --pretty=%h)
+        APK_NAME="Droidspaces-universal-${TAG}-${COMMIT_HASH}.apk"
+        TAR_NAME=$(ls droidspaces-v*-*.tar.gz)
+        mkdir -p dist
+        mv Android/app/build/outputs/apk/release/app-release.apk dist/${APK_NAME}
+        mv ${TAR_NAME} dist/
+        mv droidspaces_*.deb dist/
+        echo "APK_FILE=dist/${APK_NAME}" >> $GITHUB_ENV
+        echo "TAR_FILE=dist/${TAR_NAME}" >> $GITHUB_ENV
+
+    - name: Generate Telegram Message
+      if: github.event_name != 'pull_request'
+      run: |
+        EVENT_TYPE="${{ github.event_name == 'workflow_dispatch' && github.event.inputs.create_release == 'true' && 'Official Release' || 'Git Push' }}"
+        COMMIT_MSG=$(git log -1 --pretty=format:%s)
+        {
+          echo "TELEGRAM_MESSAGE<<EOF"
+          echo "**Droidspaces Build Successful**"
+          echo ""
+          echo "**Repository:** [${{ github.repository }}](https://github.com/${{ github.repository }})"
+          echo "**Branch:** ${{ github.ref_name }}"
+          echo "**Author:** [${{ github.actor }}](https://github.com/${{ github.actor }})"
+          echo "**Event:** $EVENT_TYPE"
+          echo ""
+          echo "**Commit Message:**"
+          echo ""
+          echo "\`\`\`"
+          echo "$COMMIT_MSG"
+          echo "\`\`\`"
+          echo "EOF"
+        } >> "$GITHUB_ENV"
+
+    - name: Upload Final Artifacts (APK, Tarball & Debian Packages)
+      uses: actions/upload-artifact@v4
+      with:
+        name: droidspaces-artifacts
+        path: dist/
+
+    - name: Send Telegram Notification
+      if: |
+        github.event_name != 'pull_request' &&
+        env.HAS_TELEGRAM == 'true'
+      uses: xz-dev/TelegramFileUploader@v1
+      with:
+        to-who: ${{ secrets.TELEGRAM_TO }}
+        message: ${{ env.TELEGRAM_MESSAGE }}
+        files: |
+          ${{ env.APK_FILE }}
+          ${{ env.TAR_FILE }}
+      env:
+        API_ID: ${{ secrets.API_ID }}
+        API_HASH: ${{ secrets.API_HASH }}
+        BOT_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
+
+  release:
+    name: Create GitHub Release
+    needs: [build]
+    if: |
+      github.event_name == 'workflow_dispatch' &&
+      github.event.inputs.create_release == 'true' &&
+      github.event.inputs.tag_name != '' &&
+      github.event.inputs.tag_name != 'test'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Download Artifacts
+      uses: actions/download-artifact@v4
+      with:
+        path: release-assets
+        merge-multiple: true
+
+    - name: Generate Changelog
+      id: changelog
+      run: |
+        PREV_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+        echo "Previous tag: $PREV_TAG"
+
+        if [ -z "$PREV_TAG" ]; then
+          CHANGELOG=$(git log --oneline --pretty=format:"* %s (%h)")
+        else
+          CHANGELOG=$(git log ${PREV_TAG}..HEAD --oneline --pretty=format:"* %s (%h)")
+        fi
+
+        {
+          echo "notes<<EOF"
+          echo "$CHANGELOG"
+          echo "EOF"
+        } >> "$GITHUB_OUTPUT"
+
+    - name: Create Release
+      uses: softprops/action-gh-release@v2
+      with:
+        tag_name: ${{ github.event.inputs.tag_name }}
+        name: Droidspaces ${{ github.event.inputs.tag_name || 'Development Build' }}
+        target_commitish: ${{ github.sha }}
+        body: |
+          ## What's Changed
+          ${{ steps.changelog.outputs.notes }}
+
+          ---
+          **Automated Release by Droidspaces CI**
+        files: |
+          release-assets/*.apk
+          release-assets/*.tar.gz
+          release-assets/*.deb
