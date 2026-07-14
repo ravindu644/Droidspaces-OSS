@@ -2,9 +2,9 @@ name: test builds vizx
 
 on:
   push:
-    branches: [ "main", "master" ]
+    branches: [ "main", "master", "ui" ]
   pull_request:
-    branches: [ "main", "master" ]
+    branches: [ "main", "master", "ui" ]
   workflow_dispatch:
     inputs:
       create_release:
