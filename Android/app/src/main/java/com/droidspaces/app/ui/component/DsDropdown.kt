@@ -1,5 +1,7 @@
 package com.droidspaces.app.ui.component
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -8,6 +10,7 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.font.FontWeight
@@ -30,7 +33,7 @@ fun <T> DsDropdown(
     var expanded by remember { mutableStateOf(false) }
     val focusManager = LocalFocusManager.current
 
-    val fieldShape = RoundedCornerShape(16.dp)
+    val fieldShape = RoundedCornerShape(20.dp)
     val fieldColors = OutlinedTextFieldDefaults.colors(
         unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
         focusedBorderColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.8f),
@@ -68,7 +71,15 @@ fun <T> DsDropdown(
             onDismissRequest = { 
                 expanded = false
                 focusManager.clearFocus()
-            }
+            },
+            modifier = Modifier
+                .clip(RoundedCornerShape(20.dp))
+                .background(MaterialTheme.colorScheme.surfaceContainerHigh)
+                .border(
+                    width = 1.dp,
+                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
+                    shape = RoundedCornerShape(20.dp)
+                )
         ) {
             options.forEach { option ->
                 DropdownMenuItem(
