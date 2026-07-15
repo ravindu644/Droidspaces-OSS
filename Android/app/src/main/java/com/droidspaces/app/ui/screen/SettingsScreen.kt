@@ -172,11 +172,11 @@ fun SettingsScreen(
             Surface(
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
                 shape = RoundedCornerShape(24.dp),
-                color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                color = if (darkTheme) MaterialTheme.colorScheme.surfaceContainerHigh else MaterialTheme.colorScheme.surfaceContainer,
                 border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f))
             ) {
                 Column {
-                    ListItem(
+                    ListItem(colors = ListItemDefaults.colors(containerColor = Color.Transparent),
                 leadingContent = {
                     Icon(
                         imageVector = Icons.Default.Build,
@@ -222,7 +222,7 @@ fun SettingsScreen(
                     )
             )
 
-            HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f))
+            HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
 
             // Daemon Mode Toggle
             SwitchItem(
@@ -236,7 +236,7 @@ fun SettingsScreen(
                 }
             )
 
-            HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f))
+            HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
 
             val isBackendAvailable = appStateViewModel.isBackendAvailable
             SwitchItem(
@@ -257,10 +257,10 @@ fun SettingsScreen(
                 }
             )
 
-            HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f))
+            HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
 
             // Auto Boot Priority - clickable to navigate to the boot-order screen
-            ListItem(
+            ListItem(colors = ListItemDefaults.colors(containerColor = Color.Transparent),
                 leadingContent = {
                     Icon(
                         imageVector = Icons.Default.LowPriority,
@@ -286,7 +286,7 @@ fun SettingsScreen(
                 modifier = Modifier.clickable { onNavigateToAutoBootPriority() }
             )
 
-            HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f))
+            HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
 
             // Requirements Card - clickable to navigate to requirements page
             RequirementsCard(
@@ -309,7 +309,7 @@ fun SettingsScreen(
             Surface(
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
                 shape = RoundedCornerShape(24.dp),
-                color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                color = if (darkTheme) MaterialTheme.colorScheme.surfaceContainerHigh else MaterialTheme.colorScheme.surfaceContainer,
                 border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f))
             ) {
                 Column {
@@ -326,7 +326,7 @@ fun SettingsScreen(
                 }
             }
 
-            ListItem(
+            ListItem(colors = ListItemDefaults.colors(containerColor = Color.Transparent),
                 leadingContent = {
                     Icon(
                         imageVector = Icons.Default.Translate,
@@ -348,7 +348,7 @@ fun SettingsScreen(
                 }
             )
 
-            HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f))
+            HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
 
             // Follow System Theme
             SwitchItem(
@@ -363,7 +363,7 @@ fun SettingsScreen(
 
             // Dark Theme (only shown when not following system)
             if (!followSystemTheme) {
-                HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f))
+                HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
                 SwitchItem(
                     icon = Icons.Default.DarkMode,
                     title = context.getString(R.string.dark_theme),
@@ -377,7 +377,7 @@ fun SettingsScreen(
 
             // AMOLED Mode (shown when followSystemTheme is true OR manual darkTheme is true)
             if (followSystemTheme || darkTheme) {
-                HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f))
+                HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
                 SwitchItem(
                     icon = Icons.Default.RadioButtonUnchecked,
                     title = context.getString(R.string.amoled_mode),
@@ -393,7 +393,7 @@ fun SettingsScreen(
 
             // Use Dynamic Color (Monet theming) - Only show on Android 12+
             if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
-                HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f))
+                HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
                 SwitchItem(
                     icon = Icons.Default.ColorLens,
                     title = context.getString(R.string.dynamic_color),
@@ -409,7 +409,7 @@ fun SettingsScreen(
             // Accent Color Picker - show when dynamic color is off,
             // or always show on devices below Android 12 (no dynamic color support)
             if (!useDynamicColor || android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.S) {
-                HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f))
+                HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
                 AccentColorPicker(
                     selectedPalette = themeState.themePalette,
                     isDarkTheme = darkTheme,
@@ -427,10 +427,10 @@ fun SettingsScreen(
             Surface(
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
                 shape = RoundedCornerShape(24.dp),
-                color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                color = if (darkTheme) MaterialTheme.colorScheme.surfaceContainerHigh else MaterialTheme.colorScheme.surfaceContainer,
                 border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f))
             ) {
-                ListItem(
+                ListItem(colors = ListItemDefaults.colors(containerColor = Color.Transparent),
                 leadingContent = {
                     Icon(
                         imageVector = Icons.Default.BugReport,
@@ -491,10 +491,10 @@ fun SettingsScreen(
             Surface(
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
                 shape = RoundedCornerShape(24.dp),
-                color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                color = if (darkTheme) MaterialTheme.colorScheme.surfaceContainerHigh else MaterialTheme.colorScheme.surfaceContainer,
                 border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f))
             ) {
-                ListItem(
+                ListItem(colors = ListItemDefaults.colors(containerColor = Color.Transparent),
                 leadingContent = {
                     Icon(
                         imageVector = Icons.Default.Info,
@@ -801,7 +801,7 @@ private fun RequirementsCard(
 ) {
     val context = LocalContext.current
 
-    ListItem(
+    ListItem(colors = ListItemDefaults.colors(containerColor = Color.Transparent),
         leadingContent = {
             Icon(
                 imageVector = Icons.Default.Code,
