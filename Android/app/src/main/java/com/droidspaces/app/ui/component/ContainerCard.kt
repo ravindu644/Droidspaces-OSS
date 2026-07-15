@@ -199,7 +199,7 @@ fun ContainerCard(
                     .fillMaxWidth()
                     .padding(horizontal = 4.dp),
                 color = MaterialTheme.colorScheme.surfaceContainerHigh, // Depth for secondary actions
-                shape = RoundedCornerShape(12.dp),
+                shape = RoundedCornerShape(20.dp),
                 border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f))
             ) {
                 Row(modifier = Modifier.fillMaxWidth().padding(4.dp), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
