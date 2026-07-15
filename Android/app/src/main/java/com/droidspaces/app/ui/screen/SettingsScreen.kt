@@ -163,13 +163,20 @@ fun SettingsScreen(
             // Backend Reinstallation Section
             Text(
                 text = context.getString(R.string.backend_section),
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold,
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 16.dp),
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.padding(start = 24.dp, bottom = 8.dp, top = 8.dp),
                 color = MaterialTheme.colorScheme.primary
             )
 
-            ListItem(
+            Surface(
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+                shape = RoundedCornerShape(24.dp),
+                color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f))
+            ) {
+                Column {
+                    ListItem(
                 leadingContent = {
                     Icon(
                         imageVector = Icons.Default.Build,
@@ -215,6 +222,8 @@ fun SettingsScreen(
                     )
             )
 
+            HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f))
+
             // Daemon Mode Toggle
             SwitchItem(
                 icon = Icons.Default.SettingsBackupRestore,
@@ -226,6 +235,8 @@ fun SettingsScreen(
                     prefsManager.isDaemonModeEnabled = checked
                 }
             )
+
+            HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f))
 
             val isBackendAvailable = appStateViewModel.isBackendAvailable
             SwitchItem(
@@ -245,6 +256,8 @@ fun SettingsScreen(
                     }
                 }
             )
+
+            HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f))
 
             // Auto Boot Priority - clickable to navigate to the boot-order screen
             ListItem(
@@ -273,23 +286,34 @@ fun SettingsScreen(
                 modifier = Modifier.clickable { onNavigateToAutoBootPriority() }
             )
 
+            HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f))
+
             // Requirements Card - clickable to navigate to requirements page
             RequirementsCard(
                 onNavigateToRequirements = onNavigateToRequirements
             )
+                }
+            }
 
-            HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+            Spacer(modifier = Modifier.height(8.dp))
 
             // Theme Section
             Text(
                 text = context.getString(R.string.appearance_section),
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold,
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 16.dp),
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.padding(start = 24.dp, bottom = 8.dp, top = 8.dp),
                 color = MaterialTheme.colorScheme.primary
             )
 
-            // Language Picker
+            Surface(
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+                shape = RoundedCornerShape(24.dp),
+                color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f))
+            ) {
+                Column {
+                    // Language Picker
             val currentLanguageDisplay = remember(currentAppLocale) {
                 val currentLanguageCode = LocaleHelper.getCurrentLanguageCode()
                 if (currentLanguageCode == "system") {
@@ -324,6 +348,8 @@ fun SettingsScreen(
                 }
             )
 
+            HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f))
+
             // Follow System Theme
             SwitchItem(
                 icon = Icons.Default.BrightnessAuto,
@@ -337,6 +363,7 @@ fun SettingsScreen(
 
             // Dark Theme (only shown when not following system)
             if (!followSystemTheme) {
+                HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f))
                 SwitchItem(
                     icon = Icons.Default.DarkMode,
                     title = context.getString(R.string.dark_theme),
@@ -350,6 +377,7 @@ fun SettingsScreen(
 
             // AMOLED Mode (shown when followSystemTheme is true OR manual darkTheme is true)
             if (followSystemTheme || darkTheme) {
+                HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f))
                 SwitchItem(
                     icon = Icons.Default.RadioButtonUnchecked,
                     title = context.getString(R.string.amoled_mode),
@@ -365,6 +393,7 @@ fun SettingsScreen(
 
             // Use Dynamic Color (Monet theming) - Only show on Android 12+
             if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
+                HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f))
                 SwitchItem(
                     icon = Icons.Default.ColorLens,
                     title = context.getString(R.string.dynamic_color),
@@ -380,6 +409,7 @@ fun SettingsScreen(
             // Accent Color Picker - show when dynamic color is off,
             // or always show on devices below Android 12 (no dynamic color support)
             if (!useDynamicColor || android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.S) {
+                HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f))
                 AccentColorPicker(
                     selectedPalette = themeState.themePalette,
                     isDarkTheme = darkTheme,
@@ -388,11 +418,19 @@ fun SettingsScreen(
                     }
                 )
             }
+                }
+            }
 
-            HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+            Spacer(modifier = Modifier.height(8.dp))
 
             // Bug Report Section
-            ListItem(
+            Surface(
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+                shape = RoundedCornerShape(24.dp),
+                color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f))
+            ) {
+                ListItem(
                 leadingContent = {
                     Icon(
                         imageVector = Icons.Default.BugReport,
@@ -436,20 +474,26 @@ fun SettingsScreen(
                             Modifier
                         }
                     )
-            )
+            }
 
-            HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+            Spacer(modifier = Modifier.height(8.dp))
 
             // About Section
             Text(
                 text = context.getString(R.string.about_section),
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold,
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 16.dp),
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.padding(start = 24.dp, bottom = 8.dp, top = 8.dp),
                 color = MaterialTheme.colorScheme.primary
             )
 
-            ListItem(
+            Surface(
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+                shape = RoundedCornerShape(24.dp),
+                color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f))
+            ) {
+                ListItem(
                 leadingContent = {
                     Icon(
                         imageVector = Icons.Default.Info,
@@ -469,9 +513,10 @@ fun SettingsScreen(
                 modifier = Modifier.clickable {
                     showAboutDialog = true
                 }
-            )
+                )
+            }
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(24.dp))
 
         }
     }
@@ -523,7 +568,7 @@ private fun AboutDialog(onDismiss: () -> Unit) {
             Column(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(24.dp)
+                    .padding(top = 24.dp, start = 24.dp, end = 24.dp, bottom = 8.dp)
             ) {
                 // Title
                 Text(
@@ -680,7 +725,6 @@ private fun AboutDialog(onDismiss: () -> Unit) {
                 }
 
                 // OK Button
-                Spacer(modifier = Modifier.height(8.dp))
                 TextButton(
                     onClick = onDismiss,
                     modifier = Modifier.align(Alignment.End)
