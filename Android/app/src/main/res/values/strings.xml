@@ -593,4 +593,5 @@
     <string name="repo_custom_url_empty">URL cannot be empty</string>
     <string name="repo_custom_url_invalid">URL must start with https://</string>
     <string name="repo_no_custom">No custom repositories subscribed yet.</string>
+    <string name="debugging_section">Debugging</string>
 </resources>
