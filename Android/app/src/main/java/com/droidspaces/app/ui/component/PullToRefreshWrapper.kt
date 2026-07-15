@@ -8,13 +8,8 @@ import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.animation.core.LinearEasing
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.tween
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.nestedscroll.nestedScroll
-import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.delay
 
 /**
@@ -39,15 +34,6 @@ fun PullToRefreshWrapper(
     content: @Composable () -> Unit
 ) {
     val pullToRefreshState = rememberPullToRefreshState()
-    val density = LocalDensity.current
-
-    // Smooth out the progress value to prevent the indicator from teleporting when released
-    val smoothedProgress by animateFloatAsState(
-        targetValue = pullToRefreshState.progress,
-        animationSpec = tween(durationMillis = 250, easing = LinearEasing),
-        label = "SmoothProgress"
-    )
-    val thresholdPx = with(density) { 80.dp.toPx() }
 
     // Handle pull-to-refresh with minimum visible spin time
     LaunchedEffect(pullToRefreshState.isRefreshing) {
@@ -83,8 +69,6 @@ fun PullToRefreshWrapper(
                 .graphicsLayer {
                     // Enable hardware layer for smooth 60fps animation
                     shadowElevation = 0f
-                    // Counteract the teleporting jump by adding the smoothed difference
-                    translationY = (smoothedProgress - pullToRefreshState.progress) * thresholdPx
                 },
             containerColor = MaterialTheme.colorScheme.primaryContainer,
             contentColor = MaterialTheme.colorScheme.primary
