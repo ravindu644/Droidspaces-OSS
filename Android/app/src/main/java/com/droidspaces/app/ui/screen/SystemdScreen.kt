@@ -377,9 +377,29 @@ private fun ServiceCard(
                             }
                             Box {
                                 Surface(onClick = { showMenu = true }, modifier = Modifier.size(48.dp), shape = RoundedCornerShape(16.dp), color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.05f), border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f))) { Box(contentAlignment = Alignment.Center) { Icon(Icons.Default.MoreVert, null, tint = MaterialTheme.colorScheme.onSurfaceVariant) } }
-                                DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
-                                    if (service.isRunning) { DropdownMenuItem(text = { Text(context.getString(R.string.restart_service)) }, leadingIcon = { Icon(Icons.Default.Refresh, null) }, onClick = { showMenu = false; onAction(context.getString(R.string.restart_service)) { ContainerSystemdManager.restartService(containerName, service.name) } }) }
-                                    DropdownMenuItem(text = { Text(context.getString(R.string.mask_service)) }, leadingIcon = { Icon(Icons.Default.Lock, null) }, onClick = { showMenu = false; onAction(context.getString(R.string.mask_service)) { ContainerSystemdManager.maskService(containerName, service.name) } })
+                                MaterialTheme(
+                                    colorScheme = MaterialTheme.colorScheme.copy(
+                                        surface = MaterialTheme.colorScheme.surfaceContainerHigh,
+                                        surfaceContainer = MaterialTheme.colorScheme.surfaceContainerHigh,
+                                        surfaceTint = Color.Transparent
+                                    ),
+                                    shapes = MaterialTheme.shapes.copy(
+                                        extraSmall = RoundedCornerShape(20.dp)
+                                    )
+                                ) {
+                                    DropdownMenu(
+                                        expanded = showMenu,
+                                        onDismissRequest = { showMenu = false },
+                                        modifier = Modifier
+                                            .border(
+                                                width = 1.dp,
+                                                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f),
+                                                shape = RoundedCornerShape(20.dp)
+                                            )
+                                    ) {
+                                        if (service.isRunning) { DropdownMenuItem(text = { Text(context.getString(R.string.restart_service)) }, leadingIcon = { Icon(Icons.Default.Refresh, null) }, onClick = { showMenu = false; onAction(context.getString(R.string.restart_service)) { ContainerSystemdManager.restartService(containerName, service.name) } }) }
+                                        DropdownMenuItem(text = { Text(context.getString(R.string.mask_service)) }, leadingIcon = { Icon(Icons.Default.Lock, null) }, onClick = { showMenu = false; onAction(context.getString(R.string.mask_service)) { ContainerSystemdManager.maskService(containerName, service.name) } })
+                                    }
                                 }
                             }
                         }

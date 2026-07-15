@@ -401,12 +401,32 @@ private fun OpenRCServiceCard(
                                 ) {
                                     Box(contentAlignment = Alignment.Center) { Icon(Icons.Default.MoreVert, null, tint = MaterialTheme.colorScheme.onSurfaceVariant) }
                                 }
-                                DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
-                                    DropdownMenuItem(
-                                        text = { Text(context.getString(R.string.restart_service)) },
-                                        leadingIcon = { Icon(Icons.Default.Refresh, null) },
-                                        onClick = { showMenu = false; onAction(context.getString(R.string.restart_service)) { ContainerOpenRCManager.restartService(containerName, service.name) } }
+                                MaterialTheme(
+                                    colorScheme = MaterialTheme.colorScheme.copy(
+                                        surface = MaterialTheme.colorScheme.surfaceContainerHigh,
+                                        surfaceContainer = MaterialTheme.colorScheme.surfaceContainerHigh,
+                                        surfaceTint = Color.Transparent
+                                    ),
+                                    shapes = MaterialTheme.shapes.copy(
+                                        extraSmall = RoundedCornerShape(20.dp)
                                     )
+                                ) {
+                                    DropdownMenu(
+                                        expanded = showMenu,
+                                        onDismissRequest = { showMenu = false },
+                                        modifier = Modifier
+                                            .border(
+                                                width = 1.dp,
+                                                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f),
+                                                shape = RoundedCornerShape(20.dp)
+                                            )
+                                    ) {
+                                        DropdownMenuItem(
+                                            text = { Text(context.getString(R.string.restart_service)) },
+                                            leadingIcon = { Icon(Icons.Default.Refresh, null) },
+                                            onClick = { showMenu = false; onAction(context.getString(R.string.restart_service)) { ContainerOpenRCManager.restartService(containerName, service.name) } }
+                                        )
+                                    }
                                 }
                             }
                         }
