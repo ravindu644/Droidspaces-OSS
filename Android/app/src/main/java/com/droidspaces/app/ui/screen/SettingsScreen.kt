@@ -474,6 +474,7 @@ fun SettingsScreen(
                             Modifier
                         }
                     )
+                )
             }
 
             Spacer(modifier = Modifier.height(8.dp))
