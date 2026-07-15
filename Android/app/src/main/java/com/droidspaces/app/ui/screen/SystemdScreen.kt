@@ -18,6 +18,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
@@ -377,10 +378,12 @@ private fun ServiceCard(
                             }
                             Box {
                                 Surface(onClick = { showMenu = true }, modifier = Modifier.size(48.dp), shape = RoundedCornerShape(16.dp), color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.05f), border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f))) { Box(contentAlignment = Alignment.Center) { Icon(Icons.Default.MoreVert, null, tint = MaterialTheme.colorScheme.onSurfaceVariant) } }
+                                val isDark = MaterialTheme.colorScheme.background.luminance() < 0.5f
+                                val dropdownColor = if (isDark) MaterialTheme.colorScheme.surfaceContainerHigh else MaterialTheme.colorScheme.surfaceContainer
                                 MaterialTheme(
                                     colorScheme = MaterialTheme.colorScheme.copy(
-                                        surface = MaterialTheme.colorScheme.surfaceContainerHigh,
-                                        surfaceContainer = MaterialTheme.colorScheme.surfaceContainerHigh,
+                                        surface = dropdownColor,
+                                        surfaceContainer = dropdownColor,
                                         surfaceTint = Color.Transparent
                                     ),
                                     shapes = MaterialTheme.shapes.copy(
