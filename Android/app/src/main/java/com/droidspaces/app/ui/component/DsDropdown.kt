@@ -12,6 +12,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.font.FontWeight
@@ -67,10 +68,13 @@ fun <T> DsDropdown(
                 .menuAnchor()
                 .fillMaxWidth()
         )
+        val isDark = MaterialTheme.colorScheme.background.luminance() < 0.5f
+        val dropdownColor = if (isDark) MaterialTheme.colorScheme.surfaceContainerHigh else MaterialTheme.colorScheme.surfaceContainer
+        
         MaterialTheme(
             colorScheme = MaterialTheme.colorScheme.copy(
-                surface = MaterialTheme.colorScheme.surfaceContainerHigh,
-                surfaceContainer = MaterialTheme.colorScheme.surfaceContainerHigh,
+                surface = dropdownColor,
+                surfaceContainer = dropdownColor,
                 surfaceTint = Color.Transparent
             ),
             shapes = MaterialTheme.shapes.copy(
