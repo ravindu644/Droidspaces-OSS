@@ -69,7 +69,8 @@ fun <T> DsDropdown(
         MaterialTheme(
             colorScheme = MaterialTheme.colorScheme.copy(
                 surface = MaterialTheme.colorScheme.surfaceContainerHigh,
-                surfaceContainer = MaterialTheme.colorScheme.surfaceContainerHigh
+                surfaceContainer = MaterialTheme.colorScheme.surfaceContainerHigh,
+                surfaceTint = Color.Transparent
             ),
             shapes = MaterialTheme.shapes.copy(
                 extraSmall = RoundedCornerShape(20.dp)
