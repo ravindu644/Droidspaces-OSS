@@ -119,7 +119,7 @@
     <string name="reinstall_backend_description">重新安装二进制文件和模块</string>
     <string name="copy">复制</string>
     <string name="unknown">未知</string>
-    <string name="developer_ravindu644_role">維護者</string>
+    <string name="developer_ravindu644_role">维护者</string>
     <string name="hostname_label">主机名：%1$s</string>
     <string name="start">启动</string>
     <string name="stop">停止</string>
@@ -508,4 +508,7 @@
     <string name="disk_usage">磁盘占用</string>
     <string name="disk_usage_used_of_total">已使用 %1$s / %2$s</string>
     <string name="disk_usage_calculating">计算中…</string>
+    <string name="allow_userns_description_not_supported">不支持：内核未启用 CONFIG_USER_NS 配置项</string>
+    <string name="allow_userns">允许用户命名空间</string>
+    <string name="userns_option">用户命名空间</string>
 </resources>
