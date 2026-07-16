@@ -511,4 +511,5 @@
     <string name="allow_userns_description_not_supported">不支持：内核未启用 CONFIG_USER_NS 配置项</string>
     <string name="allow_userns">允许用户命名空间</string>
     <string name="userns_option">用户命名空间</string>
+    <string name="allow_userns_description">允许非特权用户命名空间，Flatpak/bwrap/Firefox等软件需要此功能。但是，若内核未打补丁，设备可能易受某些漏洞利用攻击影响（如 Fragnesia）</string>
 </resources>
