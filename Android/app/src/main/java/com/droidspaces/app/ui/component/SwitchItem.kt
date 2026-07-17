@@ -26,7 +26,7 @@ fun SwitchItem(
 
     ListItem(
         colors = ListItemDefaults.colors(containerColor = androidx.compose.ui.graphics.Color.Transparent),
-        verticalAlignment = Alignment.Top,
+        overlineContent = { },
         modifier = Modifier
             .toggleable(
                 value = checked,
