@@ -4,6 +4,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -79,15 +81,26 @@ fun MainTabScreen(
     // containerViewModel is now passed as parameter to ensure sharing
 
 
-    // Tab selection - survives configuration changes
-    var selectedTab by rememberSaveable { mutableStateOf(TabItem.Home) }
+    val tabs = remember { TabItem.entries.toTypedArray() }
+    val pagerState = rememberPagerState(
+        initialPage = 0,
+        pageCount = { tabs.size }
+    )
+    val selectedTab = tabs[pagerState.currentPage]
 
     // Track which container has its action drawer expanded (hoisted for global collapse)
     var expandedContainerName by rememberSaveable { mutableStateOf<String?>(null) }
 
+    // Clear expanded item when tab changes
+    LaunchedEffect(pagerState.currentPage) {
+        expandedContainerName = null
+    }
+
     // Handle back press - return to Home tab if not already there
-    BackHandler(enabled = selectedTab != TabItem.Home) {
-        selectedTab = TabItem.Home
+    BackHandler(enabled = pagerState.currentPage != tabs.indexOf(TabItem.Home)) {
+        scope.launch {
+            pagerState.animateScrollToPage(tabs.indexOf(TabItem.Home))
+        }
     }
 
     // Track if we've already triggered initial load in this session
@@ -286,20 +299,28 @@ fun MainTabScreen(
                 modifier = Modifier
                     .fillMaxSize()
             ) {
-                when (selectedTab) {
-                    TabItem.Home -> {
-                        HomeTabContent(
-                            droidspacesStatus = droidspacesStatus,
-                            isChecking = isChecking,
-                            isRootAvailable = appStateViewModel.isRootAvailable,
-                            onNavigateToInstallation = onNavigateToInstallation,
-                            onNavigateToContainers = { selectedTab = TabItem.Containers },
-                            onNavigateToControlPanel = { selectedTab = TabItem.ControlPanel },
-                            containerCount = containerCount,
-                            runningCount = runningCount,
-                            onRefresh = { performRefresh(TabItem.Home) }
-                        )
-                    }
+                HorizontalPager(
+                    state = pagerState,
+                    modifier = Modifier.fillMaxSize()
+                ) { page ->
+                    when (tabs[page]) {
+                        TabItem.Home -> {
+                            HomeTabContent(
+                                droidspacesStatus = droidspacesStatus,
+                                isChecking = isChecking,
+                                isRootAvailable = appStateViewModel.isRootAvailable,
+                                onNavigateToInstallation = onNavigateToInstallation,
+                                onNavigateToContainers = { 
+                                    scope.launch { pagerState.animateScrollToPage(tabs.indexOf(TabItem.Containers)) }
+                                },
+                                onNavigateToControlPanel = { 
+                                    scope.launch { pagerState.animateScrollToPage(tabs.indexOf(TabItem.ControlPanel)) }
+                                },
+                                containerCount = containerCount,
+                                runningCount = runningCount,
+                                onRefresh = { performRefresh(TabItem.Home) }
+                            )
+                        }
 
                     TabItem.Containers -> {
                         ContainersTabContent(
@@ -327,6 +348,7 @@ fun MainTabScreen(
                             emptyStateBottomInset = bottomBarHeight
                         )
                     }
+                    }
                 }
             }
 
@@ -340,8 +362,9 @@ fun MainTabScreen(
                 MainBottomBar(
                     selectedTab = selectedTab,
                     onTabSelected = { 
-                        selectedTab = it
-                        expandedContainerName = null
+                        scope.launch {
+                            pagerState.animateScrollToPage(tabs.indexOf(it))
+                        }
                     }
                 )
             }
