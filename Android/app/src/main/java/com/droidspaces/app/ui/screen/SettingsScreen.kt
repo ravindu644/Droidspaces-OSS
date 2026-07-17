@@ -177,51 +177,57 @@ fun SettingsScreen(
             ) {
                 Column {
                     ListItem(colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-                        overlineContent = { },
-                        leadingContent = {
-                    Icon(
-                        imageVector = Icons.Default.Build,
-                        contentDescription = null,
-                        tint = if (isRootAvailable) {
-                            MaterialTheme.colorScheme.onSurface
-                        } else {
-                            MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
-                        }
-                    )
-                },
-                headlineContent = {
-                    Text(
-                        text = context.getString(R.string.reinstall_backend),
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.SemiBold,
-                        color = if (isRootAvailable) {
-                            MaterialTheme.colorScheme.onSurface
-                        } else {
-                            MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
-                        }
-                    )
-                },
-                supportingContent = {
-                    Text(
-                        text = context.getString(R.string.reinstall_backend_description),
-                        color = if (isRootAvailable) {
-                            MaterialTheme.colorScheme.onSurfaceVariant
-                        } else {
-                            MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.38f)
-                        }
-                    )
-                },
-                modifier = Modifier
-                    .then(
-                        if (isRootAvailable) {
-                            Modifier.clickable {
-                                onNavigateToInstallation()
+                        modifier = Modifier
+                            .then(
+                                if (isRootAvailable) {
+                                    Modifier.clickable {
+                                        onNavigateToInstallation()
+                                    }
+                                } else {
+                                    Modifier
+                                }
+                            ),
+                        headlineContent = {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(16.dp),
+                                verticalAlignment = Alignment.Top
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Build,
+                                    contentDescription = null,
+                                    modifier = Modifier.padding(top = 2.dp),
+                                    tint = if (isRootAvailable) {
+                                        MaterialTheme.colorScheme.onSurface
+                                    } else {
+                                        MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+                                    }
+                                )
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        text = context.getString(R.string.reinstall_backend),
+                                        style = MaterialTheme.typography.titleMedium,
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = if (isRootAvailable) {
+                                            MaterialTheme.colorScheme.onSurface
+                                        } else {
+                                            MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+                                        }
+                                    )
+                                    Spacer(modifier = Modifier.height(4.dp))
+                                    Text(
+                                        text = context.getString(R.string.reinstall_backend_description),
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = if (isRootAvailable) {
+                                            MaterialTheme.colorScheme.onSurfaceVariant
+                                        } else {
+                                            MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.38f)
+                                        }
+                                    )
+                                }
                             }
-                        } else {
-                            Modifier
                         }
                     )
-            )
 
             HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
 
@@ -262,30 +268,38 @@ fun SettingsScreen(
 
             // Auto Boot Priority - clickable to navigate to the boot-order screen
             ListItem(colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-                overlineContent = { },
-                leadingContent = {
-                    Icon(
-                        imageVector = Icons.Default.LowPriority,
-                        contentDescription = null
-                    )
-                },
+                modifier = Modifier.clickable { onNavigateToAutoBootPriority() },
                 headlineContent = {
-                    Text(
-                        text = context.getString(R.string.auto_boot_priority),
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.SemiBold
-                    )
-                },
-                supportingContent = {
-                    Text(context.getString(R.string.auto_boot_priority_description))
-                },
-                trailingContent = {
-                    Icon(
-                        imageVector = Icons.Default.ChevronRight,
-                        contentDescription = null
-                    )
-                },
-                modifier = Modifier.clickable { onNavigateToAutoBootPriority() }
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(16.dp),
+                        verticalAlignment = Alignment.Top
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.LowPriority,
+                            contentDescription = null,
+                            modifier = Modifier.padding(top = 2.dp)
+                        )
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = context.getString(R.string.auto_boot_priority),
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                text = context.getString(R.string.auto_boot_priority_description),
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        Icon(
+                            imageVector = Icons.Default.ChevronRight,
+                            contentDescription = null,
+                            modifier = Modifier.padding(top = 2.dp)
+                        )
+                    }
+                }
             )
 
             HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
@@ -329,25 +343,32 @@ fun SettingsScreen(
             }
 
             ListItem(colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-                overlineContent = { },
-                leadingContent = {
-                    Icon(
-                        imageVector = Icons.Default.Translate,
-                        contentDescription = null
-                    )
-                },
+                modifier = Modifier.clickable { showLanguageDialog = true },
                 headlineContent = {
-                    Text(
-                        text = context.getString(R.string.language),
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.SemiBold
-                    )
-                },
-                supportingContent = {
-                    Text(currentLanguageDisplay)
-                },
-                modifier = Modifier.clickable {
-                    showLanguageDialog = true
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(16.dp),
+                        verticalAlignment = Alignment.Top
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Translate,
+                            contentDescription = null,
+                            modifier = Modifier.padding(top = 2.dp)
+                        )
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = context.getString(R.string.language),
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                text = currentLanguageDisplay,
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
                 }
             )
 
@@ -443,50 +464,56 @@ fun SettingsScreen(
                 border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f))
             ) {
                 ListItem(colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-                    overlineContent = { },
-                    leadingContent = {
-                    Icon(
-                        imageVector = Icons.Default.BugReport,
-                        contentDescription = null,
-                        tint = if (isRootAvailable) {
-                            MaterialTheme.colorScheme.onSurface
-                        } else {
-                            MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
-                        }
-                    )
-                },
-                headlineContent = {
-                    Text(
-                        text = context.getString(R.string.generate_bug_report),
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.SemiBold,
-                        color = if (isRootAvailable) {
-                            MaterialTheme.colorScheme.onSurface
-                        } else {
-                            MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
-                        }
-                    )
-                },
-                supportingContent = {
-                    Text(
-                        text = context.getString(R.string.generate_bug_report_description),
-                        color = if (isRootAvailable) {
-                            MaterialTheme.colorScheme.onSurfaceVariant
-                        } else {
-                            MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.38f)
-                        }
-                    )
-                },
-                modifier = Modifier
-                    .then(
-                        if (isRootAvailable) {
-                            Modifier.clickable {
-                                showBugReportDialog = true
+                    modifier = Modifier
+                        .then(
+                            if (isRootAvailable) {
+                                Modifier.clickable {
+                                    showBugReportDialog = true
+                                }
+                            } else {
+                                Modifier
                             }
-                        } else {
-                            Modifier
+                        ),
+                    headlineContent = {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(16.dp),
+                            verticalAlignment = Alignment.Top
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.BugReport,
+                                contentDescription = null,
+                                modifier = Modifier.padding(top = 2.dp),
+                                tint = if (isRootAvailable) {
+                                    MaterialTheme.colorScheme.onSurface
+                                } else {
+                                    MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+                                }
+                            )
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = context.getString(R.string.generate_bug_report),
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = if (isRootAvailable) {
+                                        MaterialTheme.colorScheme.onSurface
+                                    } else {
+                                        MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+                                    }
+                                )
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text(
+                                    text = context.getString(R.string.generate_bug_report_description),
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = if (isRootAvailable) {
+                                        MaterialTheme.colorScheme.onSurfaceVariant
+                                    } else {
+                                        MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.38f)
+                                    }
+                                )
+                            }
                         }
-                    )
+                    }
                 )
             }
 
@@ -508,26 +535,33 @@ fun SettingsScreen(
                 border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f))
             ) {
                 ListItem(colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-                    overlineContent = { },
-                    leadingContent = {
-                    Icon(
-                        imageVector = Icons.Default.Info,
-                        contentDescription = null
-                    )
-                },
-                headlineContent = {
-                    Text(
-                        text = context.getString(R.string.about_droidspaces),
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.SemiBold
-                    )
-                },
-                supportingContent = {
-                    Text(getAppVersion(context))
-                },
-                modifier = Modifier.clickable {
-                    showAboutDialog = true
-                }
+                    modifier = Modifier.clickable { showAboutDialog = true },
+                    headlineContent = {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(16.dp),
+                            verticalAlignment = Alignment.Top
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Info,
+                                contentDescription = null,
+                                modifier = Modifier.padding(top = 2.dp)
+                            )
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = context.getString(R.string.about_droidspaces),
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text(
+                                    text = getAppVersion(context),
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                    }
                 )
             }
 
@@ -834,34 +868,39 @@ private fun RequirementsCard(
     val context = LocalContext.current
 
     ListItem(colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-        overlineContent = { },
-        leadingContent = {
-            Icon(
-                imageVector = Icons.Default.Code,
-                contentDescription = null
-            )
-        },
+        modifier = Modifier.clickable(onClick = onNavigateToRequirements),
         headlineContent = {
-            Text(
-                text = context.getString(R.string.requirements),
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold
-            )
-        },
-        supportingContent = {
-            Text(
-                text = context.getString(R.string.requirements_for_droidspaces),
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        },
-        trailingContent = {
-            Icon(
-                imageVector = Icons.Default.ChevronRight,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        },
-        modifier = Modifier.clickable(onClick = onNavigateToRequirements)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(16.dp),
+                verticalAlignment = Alignment.Top
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Code,
+                    contentDescription = null,
+                    modifier = Modifier.padding(top = 2.dp)
+                )
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = context.getString(R.string.requirements),
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = context.getString(R.string.requirements_for_droidspaces),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                Icon(
+                    imageVector = Icons.Default.ChevronRight,
+                    contentDescription = null,
+                    modifier = Modifier.padding(top = 2.dp),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
     )
 }
 

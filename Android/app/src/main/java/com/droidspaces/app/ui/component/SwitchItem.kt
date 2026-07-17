@@ -2,6 +2,7 @@ package com.droidspaces.app.ui.component
 
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.selection.toggleable
+import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
@@ -26,7 +27,6 @@ fun SwitchItem(
 
     ListItem(
         colors = ListItemDefaults.colors(containerColor = androidx.compose.ui.graphics.Color.Transparent),
-        overlineContent = { },
         modifier = Modifier
             .toggleable(
                 value = checked,
@@ -35,42 +35,48 @@ fun SwitchItem(
                 onValueChange = onCheckedChange
             ),
         headlineContent = {
-            Text(
-                modifier = stateAlpha,
-                text = title,
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold
-            )
-        },
-        leadingContent = icon?.let {
-            {
-                Icon(
-                    modifier = stateAlpha,
-                    imageVector = icon,
-                    contentDescription = title
-                )
-            }
-        },
-        trailingContent = {
-            Switch(
-                checked = checked,
-                enabled = enabled,
-                onCheckedChange = null,
-                interactionSource = interactionSource,
-                colors = SwitchDefaults.colors(
-                    checkedThumbColor = MaterialTheme.colorScheme.onPrimary,
-                    checkedTrackColor = MaterialTheme.colorScheme.primary,
-                    uncheckedThumbColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.8f),
-                    uncheckedTrackColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-                    uncheckedBorderColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f),
-                )
-            )
-        },
-        supportingContent = {
-            if (summary != null) {
-                Text(
-                    modifier = stateAlpha,
-                    text = summary
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(16.dp),
+                verticalAlignment = Alignment.Top
+            ) {
+                if (icon != null) {
+                    Icon(
+                        modifier = stateAlpha.padding(top = 2.dp),
+                        imageVector = icon,
+                        contentDescription = title
+                    )
+                }
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        modifier = stateAlpha,
+                        text = title,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                    if (summary != null) {
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            modifier = stateAlpha,
+                            text = summary,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+                Switch(
+                    modifier = stateAlpha.padding(top = 2.dp),
+                    checked = checked,
+                    enabled = enabled,
+                    onCheckedChange = null,
+                    interactionSource = interactionSource,
+                    colors = SwitchDefaults.colors(
+                        checkedThumbColor = MaterialTheme.colorScheme.onPrimary,
+                        checkedTrackColor = MaterialTheme.colorScheme.primary,
+                        uncheckedThumbColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.8f),
+                        uncheckedTrackColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                        uncheckedBorderColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f),
+                    )
                 )
             }
         }
