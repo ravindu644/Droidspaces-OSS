@@ -507,4 +507,7 @@
     <string name="allow_userns">允許使用者命名空間</string>
     <string name="allow_userns_description">允許非特權使用者命名空間（Flatpak、bwrap 和 Firefox 均需要此功能）。不過，若內核未打補丁，您可能會面臨諸如 Fragnesia 之類漏洞的攻擊風險</string>
     <string name="allow_userns_description_not_supported">不支援。核心中未啟用 CONFIG_USER_NS</string>
+    <string name="accent_color">強調色</string>
+    <string name="type_container_name_to_confirm">請準確輸入容器名稱以進行確認：</string>
+    <string name="debugging_section">偵錯</string>
 </resources>
