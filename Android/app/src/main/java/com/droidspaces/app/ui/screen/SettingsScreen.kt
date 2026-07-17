@@ -177,7 +177,8 @@ fun SettingsScreen(
             ) {
                 Column {
                     ListItem(colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-                leadingContent = {
+                        verticalAlignment = Alignment.Top,
+                        leadingContent = {
                     Icon(
                         imageVector = Icons.Default.Build,
                         contentDescription = null,
@@ -261,6 +262,7 @@ fun SettingsScreen(
 
             // Auto Boot Priority - clickable to navigate to the boot-order screen
             ListItem(colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                verticalAlignment = Alignment.Top,
                 leadingContent = {
                     Icon(
                         imageVector = Icons.Default.LowPriority,
@@ -327,6 +329,7 @@ fun SettingsScreen(
             }
 
             ListItem(colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                verticalAlignment = Alignment.Top,
                 leadingContent = {
                     Icon(
                         imageVector = Icons.Default.Translate,
@@ -440,7 +443,8 @@ fun SettingsScreen(
                 border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f))
             ) {
                 ListItem(colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-                leadingContent = {
+                    verticalAlignment = Alignment.Top,
+                    leadingContent = {
                     Icon(
                         imageVector = Icons.Default.BugReport,
                         contentDescription = null,
@@ -504,7 +508,8 @@ fun SettingsScreen(
                 border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f))
             ) {
                 ListItem(colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-                leadingContent = {
+                    verticalAlignment = Alignment.Top,
+                    leadingContent = {
                     Icon(
                         imageVector = Icons.Default.Info,
                         contentDescription = null
@@ -829,6 +834,7 @@ private fun RequirementsCard(
     val context = LocalContext.current
 
     ListItem(colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+        verticalAlignment = Alignment.Top,
         leadingContent = {
             Icon(
                 imageVector = Icons.Default.Code,
