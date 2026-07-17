@@ -1,6 +1,7 @@
 package com.droidspaces.app.ui.screen
 import androidx.compose.ui.graphics.Color
 
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
@@ -61,7 +62,7 @@ enum class TabItem(val titleResId: Int, val icon: androidx.compose.ui.graphics.v
  * 2. Pull-to-refresh
  * 3. Post-installation (when returning from installation flow)
  */
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun MainTabScreen(
     containerViewModel: ContainerViewModel,
