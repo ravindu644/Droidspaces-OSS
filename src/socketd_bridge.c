@@ -1453,11 +1453,9 @@ static void socketd_handle_conn(int conn) {
 
 static int socketd_bridge_loop(void) {
   struct sockaddr_un addr;
-  int server = socket(AF_UNIX, SOCK_STREAM, 0);
+  int server = socket(AF_UNIX, SOCK_STREAM | SOCK_CLOEXEC, 0);
   if (server < 0)
     return -1;
-
-  fcntl(server, F_SETFD, FD_CLOEXEC);
 
   socklen_t addr_len = socketd_backend_addr(&addr);
   if (bind(server, (struct sockaddr *)&addr, addr_len) < 0) {
@@ -1474,7 +1472,7 @@ static int socketd_bridge_loop(void) {
          DS_SOCKETD_BACKEND_SOCK_NAME);
 
   for (;;) {
-    int conn = accept(server, NULL, NULL);
+    int conn = accept4(server, NULL, NULL, SOCK_CLOEXEC);
     if (conn < 0) {
       if (errno == EINTR)
         continue;
@@ -1482,7 +1480,6 @@ static int socketd_bridge_loop(void) {
       continue;
     }
 
-    fcntl(conn, F_SETFD, FD_CLOEXEC);
     socketd_set_conn_timeouts(conn);
     socketd_handle_conn(conn);
     close(conn);
