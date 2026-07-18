@@ -819,13 +819,26 @@ int ds_config_save(const char *config_path, struct ds_config *cfg) {
     }
   }
 
+  /* Step 2: Write all configurations to a temporary file.  Use mkstemp (random
+   * name + O_EXCL) with an explicit 0644 mode: the daemon runs with umask 0, so
+   * a plain fopen would leave container.config world-writable, and a
+   * predictable "<path>.tmp" could be pre-planted as a symlink. */
   char temp_path[PATH_MAX];
-  snprintf(temp_path, sizeof(temp_path), "%s.tmp", config_path);
-
-  /* Step 2: Write all configurations to temporary file */
-  FILE *f_out = fopen(temp_path, "we");
-  if (!f_out)
+  int tn = snprintf(temp_path, sizeof(temp_path), "%s.XXXXXX", config_path);
+  if (tn < 0 || tn >= (int)sizeof(temp_path))
     return -1;
+  int tfd = mkstemp(temp_path);
+  if (tfd < 0)
+    return -1;
+  (void)fcntl(tfd, F_SETFD, FD_CLOEXEC);
+  if (fchmod(tfd, 0644) < 0) { /* best effort; config is world-readable 0644 */
+  }
+  FILE *f_out = fdopen(tfd, "w");
+  if (!f_out) {
+    close(tfd);
+    unlink(temp_path);
+    return -1;
+  }
 
   ds_config_serialize_known(f_out, cfg);
 

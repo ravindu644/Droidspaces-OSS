@@ -988,15 +988,26 @@ int ds_daemon_run(int foreground, char **argv) {
             strerror(errno));
 #endif
 
-  /* Write PID file so the Android app can signal us */
+  /* Write PID file so the Android app can signal us.  The daemon runs with
+   * umask 0, so create it 0644 explicitly (not the fopen default 0666): a
+   * world-writable pidfile would let any local user overwrite it and redirect
+   * the app's signals (SIGUSR2/kill) to an arbitrary PID.  O_NOFOLLOW guards
+   * against a symlink planted in the workspace dir; no O_EXCL so a restart can
+   * replace a stale pidfile. */
   {
     char pid_path[PATH_MAX];
     snprintf(pid_path, sizeof(pid_path), "%s/droidspacesd.pid",
              get_workspace_dir());
-    FILE *pf = fopen(pid_path, "w");
-    if (pf) {
-      fprintf(pf, "%d\n", getpid());
-      fclose(pf);
+    int pfd = open(pid_path,
+                   O_WRONLY | O_CREAT | O_TRUNC | O_NOFOLLOW | O_CLOEXEC, 0644);
+    if (pfd >= 0) {
+      FILE *pf = fdopen(pfd, "w");
+      if (pf) {
+        fprintf(pf, "%d\n", getpid());
+        fclose(pf);
+      } else {
+        close(pfd);
+      }
     }
   }
 
