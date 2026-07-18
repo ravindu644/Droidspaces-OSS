@@ -875,20 +875,27 @@ int stop_rootfs_with_timeout(struct ds_config *cfg, int skip_unmount,
           .sleeptime = 3,
       };
 
-      int fd = open(initctl, O_WRONLY | O_NONBLOCK | O_CLOEXEC);
+      int fd = open(initctl, O_WRONLY | O_NONBLOCK | O_NOFOLLOW | O_CLOEXEC);
       if (fd < 0) {
         /* Fallback: try /dev/initctl (historical path, used by Slackware) */
         snprintf(initctl, sizeof(initctl), "/proc/%d/root/dev/initctl", pid);
-        fd = open(initctl, O_WRONLY | O_NONBLOCK | O_CLOEXEC);
+        fd = open(initctl, O_WRONLY | O_NONBLOCK | O_NOFOLLOW | O_CLOEXEC);
       }
 
-      if (fd >= 0) {
+      /* Only write into an actual FIFO.  The container fully controls
+       * /run/initctl inside its own root: O_NOFOLLOW rejects a symlink at the
+       * final component, and the S_ISFIFO check rejects a regular file the
+       * container may have planted to capture the host-written init_request. */
+      struct stat ictl_st;
+      if (fd >= 0 && fstat(fd, &ictl_st) == 0 && S_ISFIFO(ictl_st.st_mode)) {
         if (write(fd, &req, sizeof(req)) != (ssize_t)sizeof(req))
           ds_warn("sysvinit: short write to initctl, falling back to SIGPWR");
         close(fd);
       } else {
-        ds_warn("sysvinit: cannot open initctl (tried /run and /dev), falling "
-                "back to SIGPWR");
+        if (fd >= 0)
+          close(fd);
+        ds_warn("sysvinit: cannot open initctl FIFO (tried /run and /dev), "
+                "falling back to SIGPWR");
         kill(pid, SIGPWR);
       }
       break;
