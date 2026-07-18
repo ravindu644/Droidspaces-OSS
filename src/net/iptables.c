@@ -707,7 +707,7 @@ static int should_use_raw_api(void) {
 
 static int open_raw_socket(void) {
   probe_iptables_modules();
-  int fd = socket(AF_INET, SOCK_RAW, IPPROTO_RAW);
+  int fd = socket(AF_INET, SOCK_RAW | SOCK_CLOEXEC, IPPROTO_RAW);
   if (fd < 0)
     ds_log("[IPT] Failed to open raw socket: %s", strerror(errno));
   return fd;

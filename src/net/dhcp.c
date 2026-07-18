@@ -561,7 +561,7 @@ void ds_dhcp_server_start(struct ds_config *cfg, const char *veth_host,
    * for the gateway resolves to a real MAC.  Looking up the bind interface
    * works in both bridged and bridgeless modes - no hardcoded bridge
    * dependency.  Falling back to all-zeros would break the container's ARP. */
-  int s = socket(AF_INET, SOCK_DGRAM, 0);
+  int s = socket(AF_INET, SOCK_DGRAM | SOCK_CLOEXEC, 0);
   if (s >= 0) {
     struct ifreq ifr;
     memset(&ifr, 0, sizeof(ifr));

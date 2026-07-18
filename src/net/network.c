@@ -271,7 +271,7 @@ static int g_upstream_count = 0;
  * On Android, the active data interface has IFF_RUNNING set; an interface
  * that is physically present but not carrying data loses IFF_RUNNING. */
 static int iface_is_running(const char *ifname) {
-  int fd = socket(AF_INET, SOCK_DGRAM, 0);
+  int fd = socket(AF_INET, SOCK_DGRAM | SOCK_CLOEXEC, 0);
   if (fd < 0)
     return 0;
   struct ifreq ifr;
@@ -649,7 +649,7 @@ static void ds_net_setup_android_routing(ds_nl_ctx_t *ctx) {
  * ---------------------------------------------------------------------------*/
 
 int ds_net_disable_tx_checksum(const char *ifname) {
-  int fd = socket(AF_INET, SOCK_DGRAM, 0);
+  int fd = socket(AF_INET, SOCK_DGRAM | SOCK_CLOEXEC, 0);
   if (fd < 0)
     return -errno;
 
