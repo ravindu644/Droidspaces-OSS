@@ -671,7 +671,9 @@ int setup_gpu_groups(void) {
 
   /* We'll rewrite the group file to a temporary location */
   const char *group_path = "/etc/group";
-  const char *tmp_path = "/etc/group.tmp";
+  /* Randomized name + O_EXCL (mkstemp) so a symlink pre-planted at a
+   * predictable /etc/group.tmp cannot redirect this root-owned write. */
+  char tmp_path[] = "/etc/group.XXXXXX";
 
   FILE *fin = fopen(group_path, "re");
   if (!fin) {
@@ -679,9 +681,20 @@ int setup_gpu_groups(void) {
     return -1;
   }
 
-  FILE *fout = fopen(tmp_path, "we");
+  int tfd = mkstemp(tmp_path);
+  if (tfd < 0) {
+    ds_warn("Cannot create temp group file: %s", strerror(errno));
+    fclose(fin);
+    return -1;
+  }
+  (void)fcntl(tfd, F_SETFD, FD_CLOEXEC);
+  if (fchmod(tfd, 0644) < 0) { /* best effort; group files are 0644 */
+  }
+  FILE *fout = fdopen(tfd, "w");
   if (!fout) {
-    ds_warn("Cannot create /etc/group.tmp: %s", strerror(errno));
+    ds_warn("Cannot create temp group file: %s", strerror(errno));
+    close(tfd);
+    unlink(tmp_path);
     fclose(fin);
     return -1;
   }

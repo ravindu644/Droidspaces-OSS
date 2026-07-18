@@ -420,20 +420,32 @@ int write_file(const char *path, const char *content) {
 }
 
 int write_file_atomic(const char *path, const char *content) {
+  /* Randomized name + O_EXCL (via mkstemp) so a symlink pre-planted at a
+   * predictable "<path>.tmp" cannot redirect this (often root-owned) write or
+   * let it truncate an arbitrary followed target. */
   char tmp[PATH_MAX];
-  snprintf(tmp, sizeof(tmp), "%s.tmp", path);
-
-  if (write_file(tmp, content) < 0)
+  int n = snprintf(tmp, sizeof(tmp), "%s.XXXXXX", path);
+  if (n < 0 || n >= (int)sizeof(tmp))
     return -1;
 
-  /* fsync before rename - ensures data hits disk on Android before reboot */
-  int sync_fd = open(tmp, O_RDONLY | O_CLOEXEC);
-  if (sync_fd >= 0) {
-    fsync(sync_fd);
-    close(sync_fd);
-  }
+  int fd = mkstemp(tmp);
+  if (fd < 0)
+    return -1;
+  (void)fcntl(fd, F_SETFD, FD_CLOEXEC);
 
-  if (rename(tmp, path) < 0) {
+  size_t len = strlen(content);
+  int ok = (write_all(fd, content, len) == (ssize_t)len);
+
+  /* mkstemp creates the file 0600; preserve the previous 0644 semantics. */
+  if (ok && fchmod(fd, 0644) < 0)
+    ok = 0;
+
+  /* fsync before rename - ensures data hits disk on Android before reboot. */
+  if (ok && fsync(fd) < 0)
+    ok = 0;
+  close(fd);
+
+  if (!ok || rename(tmp, path) < 0) {
     unlink(tmp);
     return -1;
   }
@@ -2664,12 +2676,22 @@ pid_t ds_spawn_daemon(ds_child_fn child_fn, void *user_data,
  */
 int ds_bind_mount_socket(const char *src, const char *dst, uid_t uid,
                          const char *label) {
-  int fd = open(dst, O_WRONLY | O_CREAT | O_CLOEXEC, 0666);
+  /* O_NOFOLLOW: never create through, chown/chmod, or bind-mount over a symlink
+   * planted at dst (which lives in the container's own /tmp).  Operate on the
+   * opened inode via fchown/fchmod so there is no path-re-resolution race. */
+  int fd = open(dst, O_WRONLY | O_CREAT | O_NOFOLLOW | O_CLOEXEC, 0666);
   if (fd >= 0) {
-    close(fd);
-    if (chown(dst, uid, uid) < 0) { /* ignore */
+    if (fchown(fd, uid, uid) < 0) { /* ignore */
     }
-    chmod(dst, 0666);
+    fchmod(fd, 0666);
+    close(fd);
+  } else {
+    struct stat st;
+    if (lstat(dst, &st) == 0 && S_ISLNK(st.st_mode)) {
+      ds_warn("[%s] refusing to bind-mount socket: %s is a symlink", label,
+              dst);
+      return -1;
+    }
   }
   if (mount(src, dst, NULL, MS_BIND, NULL) != 0) {
     ds_warn("[%s] failed to bind-mount socket: %s", label, strerror(errno));
