@@ -462,6 +462,15 @@ int ds_config_load(const char *config_path, struct ds_config *cfg) {
          * Returns 1 on success, 0 on parse/range error. */
         int valid = 1;
 
+        /* Only tcp/udp are valid protocols; the CLI --port path rejects
+         * anything else, so mirror that here instead of storing a bogus proto
+         * that would later be handed to iptables. */
+        if (strcmp(pf->proto, "tcp") != 0 && strcmp(pf->proto, "udp") != 0) {
+          ds_warn("config: invalid protocol '%s' in port_forwards - skipping",
+                  pf->proto);
+          valid = 0;
+        }
+
         /* Host side */
         {
           char *dash = strchr(host_side, '-');
