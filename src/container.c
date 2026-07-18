@@ -1280,6 +1280,31 @@ int enter_rootfs(struct ds_config *cfg, const char *user) {
   return 0;
 }
 
+/* Append arg to buf as a single-quoted shell word, space-separated from any
+ * prior content unless first.  Embedded single quotes use the '\'' idiom.
+ * Writes at most size-1 chars and always NUL-terminates; returns the new
+ * offset.  Preserves argv word boundaries across su -c's shell. */
+static size_t shell_quote_append(char *buf, size_t off, size_t size,
+                                 const char *arg, int first) {
+  if (!first && off < size - 1)
+    buf[off++] = ' ';
+  if (off < size - 1)
+    buf[off++] = '\'';
+  for (const char *p = arg; *p; p++) {
+    if (*p == '\'') {
+      const char *esc = "'\\''"; /* close quote, escaped quote, reopen quote */
+      for (const char *e = esc; *e && off < size - 1; e++)
+        buf[off++] = *e;
+    } else if (off < size - 1) {
+      buf[off++] = *p;
+    }
+  }
+  if (off < size - 1)
+    buf[off++] = '\'';
+  buf[off] = '\0';
+  return off;
+}
+
 int run_in_rootfs(struct ds_config *cfg, int argc, char **argv,
                   const char *as_user) {
   (void)argc;
@@ -1359,19 +1384,17 @@ int run_in_rootfs(struct ds_config *cfg, int argc, char **argv,
          * Otherwise join all args into a single shell string. */
         char cmd_buf[4096];
         if (argv[1] == NULL) {
+          /* Single argument is treated as a shell command string as-is, so a
+           * caller can pass e.g. `-- "ls -la | grep foo"`. */
           safe_strncpy(cmd_buf, argv[0], sizeof(cmd_buf));
         } else {
+          /* Multiple args: shell-quote each so word boundaries (spaces, globs,
+           * metacharacters) survive su's shell -- e.g. `-- rm "a b"` stays two
+           * arguments instead of being resplit into three. */
           size_t off = 0;
-          for (int k = 0; argv[k] && off < sizeof(cmd_buf) - 1; k++) {
-            if (k > 0 && off < sizeof(cmd_buf) - 2)
-              cmd_buf[off++] = ' ';
-            size_t al = strlen(argv[k]);
-            if (off + al >= sizeof(cmd_buf) - 1)
-              al = sizeof(cmd_buf) - 1 - off;
-            memcpy(cmd_buf + off, argv[k], al);
-            off += al;
-          }
-          cmd_buf[off] = '\0';
+          for (int k = 0; argv[k]; k++)
+            off = shell_quote_append(cmd_buf, off, sizeof(cmd_buf), argv[k],
+                                     k == 0);
         }
         char *su_argv[] = {"su", "-",     (char *)(uintptr_t)as_user,
                            "-c", cmd_buf, NULL};
