@@ -171,8 +171,8 @@ static uint64_t socketd_hton64(uint64_t value) {
 #endif
 }
 static uint64_t socketd_ntoh64(uint64_t value) {
-  return socketd_hton64(
-      value); // The byte swap is symmetric. Could be an alias via __attribute__
+  /* Network<->host 64-bit swap is symmetric, so this just forwards. */
+  return socketd_hton64(value);
 }
 
 static int socketd_read_proc_start_ticks(pid_t pid,
@@ -1003,17 +1003,6 @@ static void socketd_handle_conn(int conn) {
     socketd_send_response(conn, DS_SOCKETD_STATUS_BAD_REQUEST, NULL, 0);
     return;
   }
-
-  /*
-   * The currently implemented opcodes do not consume payloads, but draining
-   * a well-sized payload keeps the framing strict and future-proofs callers.
-   */
-#if 0
-  if (payload_len > 0 && socketd_discard_payload(conn, payload_len) < 0) {
-    socketd_send_response(conn, DS_SOCKETD_STATUS_BAD_REQUEST, NULL, 0);
-    return;
-  }
-#endif // deprecated
 
   switch ((enum ds_socketd_opcode)opcode) {
   case DS_SOCKETD_OP_PING: {
