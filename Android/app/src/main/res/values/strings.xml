@@ -152,6 +152,7 @@
     <string name="cgroup_v1_option">Cgroup V1</string>
     <string name="deadlock_shield_option">Deadlock Shield</string>
     <string name="privileged_option">Privileged</string>
+    <string name="anland_option">Anland</string>
     <string name="userns_option">User Namespaces</string>
     <string name="installation_setup_summary">Installation Summary</string>
     <string name="review_configuration">Review Configuration</string>
@@ -211,6 +212,10 @@
     <string name="allow_userns_description_not_supported">Not supported. CONFIG_USER_NS is not enabled in the kernel</string>
     <string name="run_at_boot">Run at Boot</string>
     <string name="run_at_boot_description">Start container on boot</string>
+    <string name="enable_anland">Anland Display</string>
+    <string name="enable_anland_description">Run the anland display daemon so you can open a desktop window</string>
+    <string name="launch_anland_window">Launch Anland</string>
+    <string name="anland_not_installed">Anland consumer app is not installed</string>
     <string name="auto_boot_priority">Auto Boot Priority</string>
     <string name="auto_boot_priority_description">Order in which run-at-boot containers start</string>
     <string name="auto_boot_priority_hint">Drag to reorder. Containers start top to bottom - put a gateway (e.g. OpenWRT) first so it boots before the containers that route through it.</string>

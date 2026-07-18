@@ -365,6 +365,7 @@ struct ds_config {
   int virgl;              /* --virgl (Android only) */
   char *virgl_extra_flags; /* --virgl-flags "..." (heap, NULL if unset) */
   int pulseaudio;          /* --pulse-audio (Android only) */
+  int anland;              /* --anland: embed anland display daemon (Android) */
   int volatile_mode;       /* --volatile */
   int disable_ipv6;        /* --disable-ipv6 */
   int android_storage;     /* --enable-android-storage */
@@ -380,13 +381,15 @@ struct ds_config {
   char prog_name[64];  /* argv[0] for logging */
 
   /* Runtime state */
-  char volatile_dir[PATH_MAX];    /* temporary overlay dir */
-  pid_t container_pid;            /* PID 1 of the container (host view) */
-  pid_t intermediate_pid;         /* intermediate fork pid */
-  pid_t x11_pid;                  /* PID of the Termux-X11 server process */
-  pid_t virgl_pid;                /* PID of the VirGL server process */
-  pid_t pulse_pid;                /* PID of the PulseAudio daemon process */
-  int is_img_mount;               /* 1 if rootfs was loop-mounted from .img */
+  char volatile_dir[PATH_MAX]; /* temporary overlay dir */
+  pid_t container_pid;         /* PID 1 of the container (host view) */
+  pid_t intermediate_pid;      /* intermediate fork pid */
+  pid_t x11_pid;               /* PID of the Termux-X11 server process */
+  pid_t virgl_pid;             /* PID of the VirGL server process */
+  pid_t pulse_pid;             /* PID of the PulseAudio daemon process */
+  pid_t anland_pid;            /* PID of the anland display daemon process */
+  char anland_sock[PATH_MAX];  /* generated host socket for the anland daemon */
+  int is_img_mount;            /* 1 if rootfs was loop-mounted from .img */
   char img_mount_point[PATH_MAX]; /* where the .img was mounted */
   ds_init_type_t init_type;       /* detected container PID 1 init family */
   char custom_init[PATH_MAX]; /* --init=PATH override (default: /sbin/init) */
@@ -670,6 +673,14 @@ int setup_hardware_access(struct ds_config *cfg);
 int ds_x11_daemon_start(struct ds_config *cfg);
 void ds_x11_daemon_stop(struct ds_config *cfg);
 int ds_setup_x11_socket(struct ds_config *cfg);
+
+/* ---------------------------------------------------------------------------
+ * anland/anland.c
+ * ---------------------------------------------------------------------------*/
+
+int ds_anland_daemon_start(struct ds_config *cfg);
+void ds_anland_daemon_stop(struct ds_config *cfg);
+int ds_setup_anland_socket(struct ds_config *cfg);
 
 /* ---------------------------------------------------------------------------
  * virgl-android.c

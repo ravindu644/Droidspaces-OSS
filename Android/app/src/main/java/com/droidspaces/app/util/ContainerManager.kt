@@ -46,6 +46,7 @@ data class ContainerInfo(
     val dnsServers: String = "",
     val runAtBoot: Boolean = false,
     val runAtBootPriority: Int = 0,
+    val enableAnland: Boolean = false,
     val status: ContainerStatus = ContainerStatus.STOPPED,
     val pid: Int? = null,
     val useSparseImage: Boolean = false,
@@ -106,6 +107,7 @@ data class ContainerInfo(
         if (runAtBoot && runAtBootPriority > 0) {
             appendLine("run_at_boot_priority=$runAtBootPriority")
         }
+        appendLine("enable_anland=${if (enableAnland) "1" else "0"}")
         appendLine("force_cgroupv1=${if (forceCgroupv1) "1" else "0"}")
         appendLine("block_nested_ns=${if (blockNestedNs) "1" else "0"}")
         if (netMode == "nat" && staticNatIp.isNotEmpty()) {
@@ -329,6 +331,7 @@ object ContainerManager {
                 dnsServers = configMap["dns_servers"] ?: "",
                 runAtBoot = configMap["run_at_boot"] == "1",
                 runAtBootPriority = configMap["run_at_boot_priority"]?.toIntOrNull() ?: 0,
+                enableAnland = configMap["enable_anland"] == "1",
                 status = ContainerStatus.STOPPED,
                 useSparseImage = useSparseImage,
                 sparseImageSizeGB = sparseImageSizeGB,
@@ -394,6 +397,24 @@ object ContainerManager {
         }
 
         Pair(false, null)
+    }
+
+    /**
+     * Return the anland display-daemon socket path for a running container, or
+     * null if it isn't running / anland isn't active. The native runtime records
+     * the generated per-container socket path in Pids/<name>.anland at start and
+     * removes it on stop, so the presence of a non-empty path also signals that
+     * the anland window can be launched.
+     */
+    suspend fun getAnlandSocket(containerName: String): String? = withContext(Dispatchers.IO) {
+        try {
+            val path = "${Constants.PIDS_BASE_PATH}/$containerName.anland"
+            val result = Shell.cmd("cat \"$path\" 2>/dev/null").exec()
+            val sock = result.out.firstOrNull()?.trim()
+            if (result.isSuccess && !sock.isNullOrEmpty()) sock else null
+        } catch (e: Exception) {
+            null
+        }
     }
 
     /**
