@@ -1897,7 +1897,7 @@ static void *route_monitor_loop(void *arg) {
 
   ds_log("[NET] Uplink route monitor started (automatic detection)");
 
-  int sock = socket(AF_NETLINK, SOCK_RAW, NETLINK_ROUTE);
+  int sock = socket(AF_NETLINK, SOCK_RAW | SOCK_CLOEXEC, NETLINK_ROUTE);
   if (sock < 0) {
     ds_warn("[NET] Route monitor: failed to open netlink socket: %s",
             strerror(errno));

@@ -333,7 +333,7 @@ static void *dhcp_server_loop(void *arg) {
   uint8_t rx_buf[2048];
 
   /* 0. Create the AF_PACKET socket. */
-  packet_sock = socket(AF_PACKET, SOCK_RAW, htons(ETH_P_ALL));
+  packet_sock = socket(AF_PACKET, SOCK_RAW | SOCK_CLOEXEC, htons(ETH_P_ALL));
   if (packet_sock < 0) {
     ds_warn("[DHCP] packet socket: %s", strerror(errno));
     pthread_mutex_lock(&g_dhcp_lock);
