@@ -225,6 +225,21 @@ int ds_config_load(const char *config_path, struct ds_config *cfg) {
     return -1;
   }
 
+  /* A config parsed by the root daemon must only be modifiable by its owner.
+   * Refuse one that is writable by group or other: otherwise any local user
+   * could inject rootfs_path / bind / dns / gateway values that the daemon
+   * then acts on.  fstat the opened descriptor (not the path) to avoid a
+   * check/use race. */
+  {
+    struct stat st;
+    if (fstat(fileno(f), &st) == 0 && (st.st_mode & (S_IWGRP | S_IWOTH))) {
+      ds_warn("Refusing config %s: writable by group/other (mode %04o)",
+              config_path, (unsigned)(st.st_mode & 07777));
+      fclose(f);
+      return -1;
+    }
+  }
+
   /* Clear existing unknown lines to avoid duplication on re-load */
   free_config_unknown_lines(cfg);
 
