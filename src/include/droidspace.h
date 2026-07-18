@@ -530,6 +530,10 @@ void ds_global_daemon_stop(int (*check_fn)(void), pid_t cached_pid,
                            pid_t *pid_out, const char *pidfile,
                            const char *sock_path, const char *tag);
 void ds_oom_protect(void);
+/* Return 1 if peer_pid shares this process's PID namespace (or if it cannot be
+ * determined), 0 only on a positive mismatch.  Used by the abstract-socket
+ * authorizers to reject host-net container peers. */
+int ds_peer_in_pidns(pid_t peer_pid);
 void ds_spawn_log_relay(int pipe_read_fd, const char *log_file,
                         const char *tag);
 pid_t ds_spawn_daemon(ds_child_fn child_fn, void *user_data,

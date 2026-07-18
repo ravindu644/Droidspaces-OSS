@@ -2530,6 +2530,22 @@ void ds_oom_protect(void) {
   }
 }
 
+int ds_peer_in_pidns(pid_t peer_pid) {
+  if (peer_pid <= 0)
+    return 1; /* unknown -> fail open */
+
+  char path[64], self_ns[64], peer_ns[64];
+  ssize_t sn = readlink("/proc/self/ns/pid", self_ns, sizeof(self_ns) - 1);
+  snprintf(path, sizeof(path), "/proc/%d/ns/pid", (int)peer_pid);
+  ssize_t pn = readlink(path, peer_ns, sizeof(peer_ns) - 1);
+  if (sn <= 0 || pn <= 0)
+    return 1; /* cannot determine -> fail open, never wrongly deny */
+
+  self_ns[sn] = '\0';
+  peer_ns[pn] = '\0';
+  return strcmp(self_ns, peer_ns) == 0;
+}
+
 /*
  * Fork a log-relay child that reads from pipe_read_fd and writes timestamped
  * lines to <logs_dir>/<log_file> with [tag] prefix.  The relay ignores all

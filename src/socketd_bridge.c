@@ -97,6 +97,16 @@ static int socketd_peer_authorized(int fd) {
     return 0;
 
   /*
+   * Abstract sockets are scoped to the network namespace, not the filesystem,
+   * so a HOST-net container (sharing our netns but running in its own PID
+   * namespace, presenting uid 0 without a user namespace) could otherwise
+   * connect.  Reject peers outside our PID namespace before any uid/group
+   * check; legitimate host clients are always inside it.
+   */
+  if (!ds_peer_in_pidns(cred.pid))
+    return 0;
+
+  /*
    * The abstract backend socket has no filesystem permissions, so enforce the
    * same local authorization model used by the main Droidspaces daemon: root or
    * members of the dedicated 'droidspaces' group may connect.

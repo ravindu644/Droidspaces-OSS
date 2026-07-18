@@ -1110,6 +1110,17 @@ int ds_daemon_run(int foreground, char **argv) {
         }
       }
 
+      /* Abstract sockets are scoped to the network namespace, not the
+       * filesystem, so a HOST-net container -- sharing our netns but running in
+       * its own PID namespace and presenting uid 0 without a user namespace --
+       * could otherwise pass the checks above.  Reject peers outside our PID
+       * namespace; legitimate host clients are always inside it (in-container
+       * invocations use DS_NO_PROXY and never reach the daemon). */
+      if (allowed && !ds_peer_in_pidns(cred.pid)) {
+        ds_warn("Rejected pid %d: not in daemon PID namespace", (int)cred.pid);
+        allowed = 0;
+      }
+
       if (!allowed) {
         const char *msg = "permission denied: only root or '" DS_GROUP
                           "' group members may connect.";
