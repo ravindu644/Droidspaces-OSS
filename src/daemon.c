@@ -1070,74 +1070,18 @@ int ds_daemon_run(int foreground, char **argv) {
     }
 
     /*
-     * authenticate the peer: only root or members of the 'droidspaces' group
-     * may connect. abstract socket has no filesystem permissions, so we
-     * enforce this via SO_PEERCRED + getgrouplist() -- same model as Docker's
+     * Authenticate the peer via the shared authorizer: only root or members of
+     * the 'droidspaces' group, and only from our own PID namespace (the
+     * abstract socket has no filesystem permissions).  Same model as Docker's
      * unix group.
      */
-    {
-#define DS_GROUP "droidspaces"
-      struct ucred cred;
-      socklen_t clen = sizeof(cred);
-      if (getsockopt(conn, SOL_SOCKET, SO_PEERCRED, &cred, &clen) < 0) {
-        close(conn);
-        continue;
-      }
-
-      int allowed = (cred.uid == 0);
-      if (!allowed) {
-        struct group *gr = getgrnam(DS_GROUP);
-        struct passwd *pw = getpwuid(cred.uid);
-        if (gr && pw) {
-          int ngroups = 64;
-          gid_t stackgroups[64];
-          gid_t *groups = stackgroups;
-          gid_t *heapgroups = NULL;
-          /* getgrouplist() returns -1 when the user belongs to more than
-           * ngroups groups, leaving ngroups set to the required count while
-           * only the first 64 slots are filled.  Iterating to that larger
-           * count would read past the stack buffer (OOB read -> possible auth
-           * bypass or a crash that kills the pre-fork daemon).  Reallocate to
-           * the required size and retry so a legitimate member with many
-           * supplementary groups is still authorized. */
-          if (getgrouplist(pw->pw_name, pw->pw_gid, groups, &ngroups) < 0) {
-            heapgroups = malloc(sizeof(gid_t) * (size_t)ngroups);
-            if (heapgroups && getgrouplist(pw->pw_name, pw->pw_gid, heapgroups,
-                                           &ngroups) >= 0) {
-              groups = heapgroups;
-            } else {
-              ngroups = 0; /* fail closed */
-            }
-          }
-          for (int i = 0; i < ngroups; i++) {
-            if (groups[i] == gr->gr_gid) {
-              allowed = 1;
-              break;
-            }
-          }
-          free(heapgroups);
-        }
-      }
-
-      /* Abstract sockets are scoped to the network namespace, not the
-       * filesystem, so a HOST-net container -- sharing our netns but running in
-       * its own PID namespace and presenting uid 0 without a user namespace --
-       * could otherwise pass the checks above.  Reject peers outside our PID
-       * namespace; legitimate host clients are always inside it (in-container
-       * invocations use DS_NO_PROXY and never reach the daemon). */
-      if (allowed && !ds_peer_in_pidns(cred.pid)) {
-        ds_warn("Rejected pid %d: not in daemon PID namespace", (int)cred.pid);
-        allowed = 0;
-      }
-
-      if (!allowed) {
-        const char *msg = "permission denied: only root or '" DS_GROUP
-                          "' group members may connect.";
-        send_frame(conn, MSG_ERR, msg, (uint32_t)strlen(msg));
-        send_exit(conn, 1);
-        close(conn);
-        continue;
-      }
+    if (!ds_peer_authorized(conn, "droidspaces")) {
+      const char *msg = "permission denied: only root or 'droidspaces' group "
+                        "members may connect.";
+      send_frame(conn, MSG_ERR, msg, (uint32_t)strlen(msg));
+      send_exit(conn, 1);
+      close(conn);
+      continue;
     }
 
     pid_t h = fork();

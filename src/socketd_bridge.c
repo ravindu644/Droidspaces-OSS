@@ -86,54 +86,9 @@ static int socketd_send_response(int fd, enum ds_socketd_status status,
 }
 
 static int socketd_peer_authorized(int fd) {
-#ifdef SO_PEERCRED
-  struct ucred cred;
-  socklen_t cred_len = sizeof(cred);
-  memset(&cred, 0, sizeof(cred));
-
-  if (getsockopt(fd, SOL_SOCKET, SO_PEERCRED, &cred, &cred_len) < 0)
-    return 0;
-  if (cred_len != sizeof(cred))
-    return 0;
-
-  /*
-   * Abstract sockets are scoped to the network namespace, not the filesystem,
-   * so a HOST-net container (sharing our netns but running in its own PID
-   * namespace, presenting uid 0 without a user namespace) could otherwise
-   * connect.  Reject peers outside our PID namespace before any uid/group
-   * check; legitimate host clients are always inside it.
-   */
-  if (!ds_peer_in_pidns(cred.pid))
-    return 0;
-
-  /*
-   * The abstract backend socket has no filesystem permissions, so enforce the
-   * same local authorization model used by the main Droidspaces daemon: root or
-   * members of the dedicated 'droidspaces' group may connect.
-   */
-  if (cred.uid == 0)
-    return 1;
-
-  struct group *gr = getgrnam(DS_SOCKETD_GROUP);
-  struct passwd *pw = getpwuid(cred.uid);
-  if (!gr || !pw)
-    return 0;
-
-  int ngroups = 64;
-  gid_t groups[64];
-  if (getgrouplist(pw->pw_name, pw->pw_gid, groups, &ngroups) < 0)
-    return 0;
-
-  for (int i = 0; i < ngroups; i++) {
-    if (groups[i] == gr->gr_gid)
-      return 1;
-  }
-
-  return 0;
-#else
-  (void)fd;
-  return 0;
-#endif
+  /* Shared with the main daemon: root or a 'droidspaces' group member, and only
+   * from our own PID namespace (the abstract socket has no filesystem ACL). */
+  return ds_peer_authorized(fd, DS_SOCKETD_GROUP);
 }
 
 static int socketd_discard_payload(int fd, uint32_t len) {

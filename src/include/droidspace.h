@@ -538,6 +538,9 @@ void ds_daemon_child_preamble(void);
  * determined), 0 only on a positive mismatch.  Used by the abstract-socket
  * authorizers to reject host-net container peers. */
 int ds_peer_in_pidns(pid_t peer_pid);
+/* Authorize a connected AF_UNIX peer: allow root, or a member of group_name,
+ * but only when the peer shares our PID namespace.  Returns 1 if authorized. */
+int ds_peer_authorized(int fd, const char *group_name);
 void ds_spawn_log_relay(int pipe_read_fd, const char *log_file,
                         const char *tag);
 pid_t ds_spawn_daemon(ds_child_fn child_fn, void *user_data,
