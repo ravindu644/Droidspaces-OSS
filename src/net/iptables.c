@@ -559,7 +559,7 @@ static int remove_matching_rules(int fd, const char *table_name,
           ei++;
           continue;
         }
-        ds_log("[IPT] remove: dropping '%s' rule at offset %u", target_label(t),
+        ds_log("[IPT] remove: matched '%s' rule at offset %u", target_label(t),
                offset);
         cumulative_gone += e->next_offset;
         removed_count++;
@@ -676,6 +676,10 @@ static int remove_matching_rules(int fd, const char *table_name,
       continue;
     }
 
+    ds_warn(
+        "[IPT] remove: table replace on '%s' failed (%s) - caller will fall "
+        "back to the iptables binary",
+        table_name, strerror(err));
     break;
   }
 
@@ -1100,69 +1104,75 @@ int ds_ipt_remove_ds_rules(void) {
   uint32_t ds_src, ds_mask;
   parse_cidr(DS_DEFAULT_SUBNET, &ds_src, &ds_mask);
 
-  /* 1. NAT table: remove our MASQUERADE rule */
-  if (fd >= 0) {
-    struct ipt_getinfo info;
-    unsigned char *base = NULL;
-    if (get_table(fd, "nat", &info, &base) == 0) {
-      remove_matching_rules(fd, "nat", &info, ENTRIES_BLOB(base),
-                            NF_INET_POST_ROUTING, ds_src, ds_mask, NULL, 0);
-      free(base);
-    }
+  /* Binary `iptables -D` forms.  Used when there is no raw socket, and as a
+   * fallback whenever a raw-socket table replace fails to commit: the binary
+   * deletes reliably (taking the xtables lock), so the rule is actually removed
+   * rather than merely logged as removed. */
+  char *del_masq[] = {"iptables",
+                      "-t",
+                      "nat",
+                      "-D",
+                      "POSTROUTING",
+                      "-s",
+                      DS_DEFAULT_SUBNET,
+                      "!",
+                      "-d",
+                      DS_DEFAULT_SUBNET,
+                      "-j",
+                      "MASQUERADE",
+                      NULL};
+  char *del_fwd_in[] = {"iptables",    "-D", "FORWARD", "-i",
+                        DS_NAT_BRIDGE, "-j", "ACCEPT",  NULL};
+  char *del_fwd_out[] = {"iptables",    "-D", "FORWARD", "-o",
+                         DS_NAT_BRIDGE, "-j", "ACCEPT",  NULL};
+  char *del_inp[] = {"iptables",    "-D", "INPUT",  "-i",
+                     DS_NAT_BRIDGE, "-j", "ACCEPT", NULL};
 
-    /* 2. Filter table: remove our bridge FORWARD -i rule */
-    base = NULL;
-    if (get_table(fd, "filter", &info, &base) == 0) {
-      remove_matching_rules(fd, "filter", &info, ENTRIES_BLOB(base),
-                            NF_INET_FORWARD, 0, 0, DS_NAT_BRIDGE,
-                            DS_IPT_MATCH_IN);
-      free(base);
-    }
+  struct ds_ipt_del_target {
+    const char *table;
+    unsigned int hook;
+    uint32_t src;
+    uint32_t mask;
+    const char *iface;
+    unsigned int iface_flags;
+    char **binary_del;
+  } targets[] = {
+      {"nat", NF_INET_POST_ROUTING, ds_src, ds_mask, NULL, 0, del_masq},
+      {"filter", NF_INET_FORWARD, 0, 0, DS_NAT_BRIDGE, DS_IPT_MATCH_IN,
+       del_fwd_in},
+      {"filter", NF_INET_FORWARD, 0, 0, DS_NAT_BRIDGE, DS_IPT_MATCH_OUT,
+       del_fwd_out},
+      {"filter", NF_INET_LOCAL_IN, 0, 0, DS_NAT_BRIDGE, DS_IPT_MATCH_IN,
+       del_inp},
+  };
 
-    /* 3. Filter table: remove our bridge FORWARD -o rule */
-    base = NULL;
-    if (get_table(fd, "filter", &info, &base) == 0) {
-      remove_matching_rules(fd, "filter", &info, ENTRIES_BLOB(base),
-                            NF_INET_FORWARD, 0, 0, DS_NAT_BRIDGE,
-                            DS_IPT_MATCH_OUT);
-      free(base);
+  for (size_t i = 0; i < sizeof(targets) / sizeof(targets[0]); i++) {
+    /* rc < 0 means "not removed via the raw path" (no socket, or the kernel
+     * rejected the table replace) -> use the binary.  rc == 0 means the raw
+     * path committed the delete, or nothing matched. */
+    int rc = -1;
+    if (fd >= 0) {
+      struct ipt_getinfo info;
+      unsigned char *base = NULL;
+      if (get_table(fd, targets[i].table, &info, &base) == 0) {
+        rc = remove_matching_rules(fd, targets[i].table, &info,
+                                   ENTRIES_BLOB(base), targets[i].hook,
+                                   targets[i].src, targets[i].mask,
+                                   targets[i].iface, targets[i].iface_flags);
+        free(base);
+      }
     }
-
-    /* 4. Filter table: remove our bridge INPUT rule */
-    base = NULL;
-    if (get_table(fd, "filter", &info, &base) == 0) {
-      remove_matching_rules(fd, "filter", &info, ENTRIES_BLOB(base),
-                            NF_INET_LOCAL_IN, 0, 0, DS_NAT_BRIDGE,
-                            DS_IPT_MATCH_IN);
-      free(base);
+    if (rc < 0) {
+      if (fd >= 0)
+        ds_log("[IPT] remove: raw delete failed for %s/hook%u - using the "
+               "iptables binary",
+               targets[i].table, targets[i].hook);
+      run_command_quiet(targets[i].binary_del);
     }
-    close(fd);
-  } else {
-    /* Binary fallback for cleanup */
-    char *del_masq[] = {"iptables",
-                        "-t",
-                        "nat",
-                        "-D",
-                        "POSTROUTING",
-                        "-s",
-                        DS_DEFAULT_SUBNET,
-                        "!",
-                        "-d",
-                        DS_DEFAULT_SUBNET,
-                        "-j",
-                        "MASQUERADE",
-                        NULL};
-    run_command_quiet(del_masq);
-    char *del_fwd_in[] = {"iptables",    "-D", "FORWARD", "-i",
-                          DS_NAT_BRIDGE, "-j", "ACCEPT",  NULL};
-    run_command_quiet(del_fwd_in);
-    char *del_fwd_out[] = {"iptables",    "-D", "FORWARD", "-o",
-                           DS_NAT_BRIDGE, "-j", "ACCEPT",  NULL};
-    run_command_quiet(del_fwd_out);
-    char *del_inp[] = {"iptables",    "-D", "INPUT",  "-i",
-                       DS_NAT_BRIDGE, "-j", "ACCEPT", NULL};
-    run_command_quiet(del_inp);
   }
+
+  if (fd >= 0)
+    close(fd);
 
   /* 3. MSS clamp: binary only */
   {
