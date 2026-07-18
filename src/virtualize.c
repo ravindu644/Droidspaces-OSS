@@ -483,9 +483,11 @@ static void bind_vfile(const char *vpath, const char *target,
                        size_t len __attribute__((unused))) {
   if (write_file(vpath, content) < 0)
     return;
-  /* Ensure the target exists as a regular file for bind_mount */
+  /* Ensure the target exists as a regular file for bind_mount.  O_NOFOLLOW so a
+   * symlink planted at the final component is not followed (bind_mount also
+   * rejects a symlinked target as defense-in-depth). */
   if (access(target, F_OK) != 0) {
-    int fd = open(target, O_WRONLY | O_CREAT | O_CLOEXEC, 0444);
+    int fd = open(target, O_WRONLY | O_CREAT | O_NOFOLLOW | O_CLOEXEC, 0444);
     if (fd >= 0)
       close(fd);
   }
