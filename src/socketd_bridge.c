@@ -110,6 +110,17 @@ static int socketd_read_payload(int fd, void *buf, uint32_t expected_len,
   return socketd_read_exact(fd, buf, expected_len);
 }
 
+/* Drain a payload the current opcode does not consume; on a short read reply
+ * BAD_REQUEST.  Returns 0 to continue, -1 if the caller should stop handling
+ * the connection. */
+static int socketd_drain_payload(int conn, uint32_t payload_len) {
+  if (payload_len > 0 && socketd_discard_payload(conn, payload_len) < 0) {
+    socketd_send_response(conn, DS_SOCKETD_STATUS_BAD_REQUEST, NULL, 0);
+    return -1;
+  }
+  return 0;
+}
+
 /*
  * Wire-format 64-bit host -> network conversion.
  *
@@ -925,10 +936,8 @@ static void socketd_handle_conn(int conn) {
 
   switch ((enum ds_socketd_opcode)opcode) {
   case DS_SOCKETD_OP_PING: {
-    if (payload_len > 0 && socketd_discard_payload(conn, payload_len) < 0) {
-      socketd_send_response(conn, DS_SOCKETD_STATUS_BAD_REQUEST, NULL, 0);
+    if (socketd_drain_payload(conn, payload_len) < 0)
       return;
-    }
 
     static const char pong[] = "PONG";
     socketd_send_response(conn, DS_SOCKETD_STATUS_OK, pong,
@@ -937,10 +946,8 @@ static void socketd_handle_conn(int conn) {
   }
 
   case DS_SOCKETD_OP_CAPABILITIES: {
-    if (payload_len > 0 && socketd_discard_payload(conn, payload_len) < 0) {
-      socketd_send_response(conn, DS_SOCKETD_STATUS_BAD_REQUEST, NULL, 0);
+    if (socketd_drain_payload(conn, payload_len) < 0)
       return;
-    }
 
     uint32_t caps_be =
         htonl(DS_SOCKETD_CAP_PROTOCOL_V1 | DS_SOCKETD_CAP_PING |
@@ -955,10 +962,8 @@ static void socketd_handle_conn(int conn) {
   }
 
   case DS_SOCKETD_OP_INFO: {
-    if (payload_len > 0 && socketd_discard_payload(conn, payload_len) < 0) {
-      socketd_send_response(conn, DS_SOCKETD_STATUS_BAD_REQUEST, NULL, 0);
+    if (socketd_drain_payload(conn, payload_len) < 0)
       return;
-    }
 
     uint32_t installed_count = 0;
     if (socketd_count_installed_containers(&installed_count) < 0) {
@@ -1150,10 +1155,8 @@ static void socketd_handle_conn(int conn) {
   }
 
   case DS_SOCKETD_OP_LIST_IMAGES: {
-    if (payload_len > 0 && socketd_discard_payload(conn, payload_len) < 0) {
-      socketd_send_response(conn, DS_SOCKETD_STATUS_BAD_REQUEST, NULL, 0);
+    if (socketd_drain_payload(conn, payload_len) < 0)
       return;
-    }
 
     size_t capacity = 16;
     struct ds_socketd_image_record *records =
