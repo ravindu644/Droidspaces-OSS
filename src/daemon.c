@@ -806,6 +806,15 @@ static void daemonize(int foreground) {
   if (chdir("/") < 0) { /* ignore */
   }
 
+  /* Scrub dynamic-linker and field-splitting env vars before serving requests
+   * and re-exec'ing droidspaces as root, so a value inherited from the launcher
+   * cannot influence the privileged process (defense-in-depth; container init
+   * additionally receives a clearenv() in ds_env_boot_setup). */
+  unsetenv("LD_PRELOAD");
+  unsetenv("LD_LIBRARY_PATH");
+  unsetenv("LD_AUDIT");
+  unsetenv("IFS");
+
   if (!foreground) {
     /* redirect standard streams */
     int dn = open("/dev/null", O_RDONLY);
