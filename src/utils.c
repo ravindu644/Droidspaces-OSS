@@ -74,6 +74,15 @@ int ds_parse_iface_csv(const char *val, char ifaces[][IFNAMSIZ], int *count,
 /* Mirrors ContainerManager.sanitizeContainerName() in the Android app.
  * Replaces spaces with dashes so directory names are consistent. */
 void sanitize_container_name(const char *name, char *out, size_t size) {
+  /* Guard size == 0: 'size - 1' is size_t, so it would wrap to SIZE_MAX and
+   * turn the copy into an unbounded write.  (safe_strncpy/read_file guard this
+   * the same way.) */
+  if (!out || size == 0)
+    return;
+  if (!name) {
+    out[0] = '\0';
+    return;
+  }
   size_t i;
   for (i = 0; i < size - 1 && name[i] != '\0'; i++)
     out[i] = (name[i] == ' ') ? '-' : name[i];
