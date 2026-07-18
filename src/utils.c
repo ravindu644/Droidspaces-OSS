@@ -8,6 +8,7 @@
 #include "droidspace.h"
 #include "socketd_protocol.h"
 #include <ftw.h>
+#include <sys/random.h>
 #include <sys/xattr.h>
 #include <time.h>
 
@@ -533,27 +534,19 @@ int generate_uuid(char *buf, size_t size) {
     }
   }
 
-  /* Fallback path: seeded rand() */
-  static int seeded = 0;
-  if (!seeded) {
-    struct timespec ts;
-    clock_gettime(CLOCK_REALTIME, &ts);
+  /* Fallback path: getrandom(2).  Unlike /dev/urandom it needs no device node
+   * (e.g. when /dev is not yet populated).  If it too is unavailable, fail
+   * closed rather than emit a predictable time+pid-seeded rand() identifier. */
+  ssize_t g = getrandom(raw, sizeof(raw), 0);
+  if (g == (ssize_t)sizeof(raw)) {
+    for (int i = 0; i < (int)sizeof(raw); i++)
+      snprintf(buf + i * 2, 3, "%02x", raw[i]);
 
-    unsigned int seed =
-        (unsigned int)(ts.tv_nsec ^ ts.tv_sec ^ getpid() ^ getppid());
-
-    srand(seed);
-    seeded = 1;
+    buf[DS_UUID_LEN] = '\0';
+    return 0;
   }
 
-  for (int i = 0; i < DS_UUID_LEN / 2; i++)
-    raw[i] = (unsigned char)(rand() & 0xFF);
-
-  for (int i = 0; i < (int)sizeof(raw); i++)
-    snprintf(buf + i * 2, 3, "%02x", raw[i]);
-
-  buf[DS_UUID_LEN] = '\0';
-  return 0;
+  return -1;
 }
 
 /* ---------------------------------------------------------------------------
