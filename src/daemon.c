@@ -1070,14 +1070,32 @@ int ds_daemon_run(int foreground, char **argv) {
         struct passwd *pw = getpwuid(cred.uid);
         if (gr && pw) {
           int ngroups = 64;
-          gid_t groups[64];
-          getgrouplist(pw->pw_name, pw->pw_gid, groups, &ngroups);
+          gid_t stackgroups[64];
+          gid_t *groups = stackgroups;
+          gid_t *heapgroups = NULL;
+          /* getgrouplist() returns -1 when the user belongs to more than
+           * ngroups groups, leaving ngroups set to the required count while
+           * only the first 64 slots are filled.  Iterating to that larger
+           * count would read past the stack buffer (OOB read -> possible auth
+           * bypass or a crash that kills the pre-fork daemon).  Reallocate to
+           * the required size and retry so a legitimate member with many
+           * supplementary groups is still authorized. */
+          if (getgrouplist(pw->pw_name, pw->pw_gid, groups, &ngroups) < 0) {
+            heapgroups = malloc(sizeof(gid_t) * (size_t)ngroups);
+            if (heapgroups && getgrouplist(pw->pw_name, pw->pw_gid, heapgroups,
+                                           &ngroups) >= 0) {
+              groups = heapgroups;
+            } else {
+              ngroups = 0; /* fail closed */
+            }
+          }
           for (int i = 0; i < ngroups; i++) {
             if (groups[i] == gr->gr_gid) {
               allowed = 1;
               break;
             }
           }
+          free(heapgroups);
         }
       }
 
