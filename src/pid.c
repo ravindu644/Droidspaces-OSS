@@ -678,7 +678,22 @@ int ds_metadata_sync(pid_t pid) {
     build_proc_root_path(pid, "/run/droidspaces/mount", path, sizeof(path));
     if (read_file(path, mount, sizeof(mount)) >= 0) {
       mount[strcspn(mount, "\n")] = '\0';
-      save_mount_path(pidfile, mount);
+      /* This marker is read from inside the container's own root, so a
+       * compromised container could plant an arbitrary path; it later feeds
+       * unmount_rootfs_img()/umount2() on the host.  A legitimate image mount
+       * is deterministically DS_IMG_MOUNT_ROOT_UNIVERSAL/<sanitized-name>
+       * (find_available_mountpoint), so require an exact match and ignore
+       * anything else -- this also prevents pointing at another container's
+       * mount. */
+      char expected_mount[PATH_MAX];
+      snprintf(expected_mount, sizeof(expected_mount), "%s/%s",
+               DS_IMG_MOUNT_ROOT_UNIVERSAL, safe_name);
+      if (strcmp(mount, expected_mount) == 0)
+        save_mount_path(pidfile, mount);
+      else if (mount[0])
+        ds_warn("Ignoring unexpected mount marker '%s' from container %d "
+                "(expected %s)",
+                mount, pid, expected_mount);
     }
   }
 
