@@ -294,8 +294,15 @@ static char *gen_stat(struct ds_config *cfg, size_t *out_len) {
   /* Pass 2: emit with recomputed aggregate */
   int agg_done = 0;
   while (fgets(line, sizeof(line), f)) {
-    if (off + 1024 >= cap) {
-      cap *= 2;
+    /* A single /proc/stat line (intr, softirq) can be up to sizeof(line)-1
+     * bytes on hosts with many IRQ vectors.  A fixed-headroom guard is not
+     * enough: size the growth to the actual line length (plus slack for the
+     * generated aggregate "cpu" line and the trailing NUL) before either the
+     * memcpy passthrough or the snprintf below can write. */
+    size_t need = strlen(line) + 512;
+    if (off + need >= cap) {
+      while (off + need >= cap)
+        cap *= 2;
       char *nb = realloc(buf, cap);
       if (!nb) {
         free(buf);
