@@ -113,7 +113,7 @@ int domount_silent(const char *src, const char *tgt, const char *fstype,
   if (mount(src, tgt, fstype, flags, data) < 0) {
     if (errno != EBUSY) {
       ds_log("[DEBUG] mount %s -> %s failed: %s", src ? src : "none",
-             strerror(errno));
+             tgt ? tgt : "none", strerror(errno));
       return -1;
     }
   }
