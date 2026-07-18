@@ -744,9 +744,9 @@ int start_rootfs(struct ds_config *cfg) {
       ds_error("Container failed to boot correctly.");
       /* If pid is still alive, we might want to kill it, but monitor usually
        * handles this. Let's just return error so parent doesn't report
-       * success.
-       */
-      ds_config_free(cfg);
+       * success.  Teardown (including ds_config_free) is owned by the single
+       * cleanup: block below - freeing here would leave cleanup reading a
+       * freed cfg and then double-free it. */
       goto cleanup;
     }
 
