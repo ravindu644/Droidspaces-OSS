@@ -73,6 +73,12 @@ static struct rtattr *nl_nest_begin(struct nlmsghdr *n, int maxlen, int type) {
 
 /* Fix up the length of a nested rtattr opened by nl_nest_begin */
 static void nl_nest_end(struct nlmsghdr *n, struct rtattr *nest) {
+  /* nl_nest_begin() returns NULL if the buffer was exhausted; guard here so
+   * every caller is covered without a NULL write.  The message is then built
+   * without the nest and the kernel rejects it (EINVAL) rather than crashing.
+   */
+  if (!nest)
+    return;
   nest->rta_len = (unsigned short)((uint8_t *)NLMSG_TAIL(n) - (uint8_t *)nest);
 }
 
