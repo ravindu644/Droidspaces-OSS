@@ -151,15 +151,28 @@ int bind_mount(const char *src, const char *tgt) {
     return -1;
   }
 
+  /* Create the target if it does not exist yet.  Use O_NOFOLLOW | O_EXCL for
+   * the file case so a symlink planted at the final component (e.g. by a
+   * malicious rootfs) is never followed or silently reused. */
   struct stat st_tgt;
   if (lstat(tgt, &st_tgt) < 0) {
     if (S_ISDIR(st_src.st_mode)) {
-      mkdir(tgt, st_src.st_mode & 07777);
+      if (mkdir(tgt, st_src.st_mode & 07777) < 0 && errno != EEXIST) {
+        close(src_fd);
+        return -1;
+      }
       if (chown(tgt, st_src.st_uid, st_src.st_gid) < 0) {
         /* ignore chown failure, not critical for bind mount setup */
       }
     } else {
-      write_file(tgt, "");
+      int tf =
+          open(tgt, O_WRONLY | O_CREAT | O_EXCL | O_NOFOLLOW | O_CLOEXEC, 0644);
+      if (tf < 0 && errno != EEXIST) {
+        close(src_fd);
+        return -1;
+      }
+      if (tf >= 0)
+        close(tf);
     }
   } else if (S_ISLNK(st_tgt.st_mode)) {
     ds_error("Security Violation: Bind target %s is a symlink!", tgt);
@@ -168,11 +181,28 @@ int bind_mount(const char *src, const char *tgt) {
     return -1;
   }
 
-  char proc_path[64];
-  snprintf(proc_path, sizeof(proc_path), "/proc/self/fd/%d", src_fd);
+  /* Re-open the target through O_PATH | O_NOFOLLOW and mount onto the resulting
+   * descriptor via /proc/self/fd.  This pins the exact inode we validated, so
+   * the classic lstat()->mount() swap race (target replaced by a symlink in
+   * between) cannot redirect the bind outside the rootfs.  O_NOFOLLOW also
+   * rejects a symlink at the final component here.  (A symlink in an
+   * intermediate component is still resolved at open() time; fully closing
+   * that needs openat2(RESOLVE_NO_SYMLINKS), which is unavailable on the older
+   * kernels Droidspaces supports.  Custom binds get an additional is_subpath()
+   * post-check in setup_custom_binds().) */
+  int tgt_fd = open(tgt, O_PATH | O_NOFOLLOW | O_CLOEXEC);
+  if (tgt_fd < 0) {
+    close(src_fd);
+    return -1;
+  }
 
-  int res = domount(proc_path, tgt, NULL, MS_BIND | MS_REC, NULL);
+  char src_proc[64], tgt_proc[64];
+  snprintf(src_proc, sizeof(src_proc), "/proc/self/fd/%d", src_fd);
+  snprintf(tgt_proc, sizeof(tgt_proc), "/proc/self/fd/%d", tgt_fd);
+
+  int res = domount(src_proc, tgt_proc, NULL, MS_BIND | MS_REC, NULL);
   close(src_fd);
+  close(tgt_fd);
   return res;
 }
 
