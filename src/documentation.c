@@ -179,242 +179,244 @@ static void print_header(int page, int total_pages, const char *title) {
   printf("%s", RESET_TERMINAL);
 }
 
-/* Print page content */
+/* Emit page content through the pager (p_printf), honouring the current scroll
+ * window / dry-run counting held in the g_* pager state. */
 static void print_page(int page, const char *bin) {
   const char *bold = BOLD;
   const char *reset = RESET_TERMINAL;
 
-#define printf p_printf
-
   switch (page) {
   case 0: /* CLI Basics */
-    printf("\n");
-    printf("CLI BASICS & ARGUMENT FLEXIBILITY\n");
-    printf("---------------------------------\n\n");
-    printf("Droidspaces features a robust multi-pass argument parser.\n");
-    printf("You can combine arguments like a \"salad\":\n\n");
+    p_printf("\n");
+    p_printf("CLI BASICS & ARGUMENT FLEXIBILITY\n");
+    p_printf("---------------------------------\n\n");
+    p_printf("Droidspaces features a robust multi-pass argument parser.\n");
+    p_printf("You can combine arguments like a \"salad\":\n\n");
 
-    printf("%sInterchangeable Flags:%s\n", bold, reset);
-    printf("  Short and long flags are identical:\n");
-    printf("  %s -r /path/to/rootfs -n mycontainer start\n", bin);
-    printf("  %s --rootfs /path/to/rootfs --name mycontainer start\n", bin);
-    printf("  %s --rootfs=/path/to/rootfs --name=mycontainer start\n\n", bin);
-    printf("  (Run %s help to study all available short flags)\n\n", bin);
+    p_printf("%sInterchangeable Flags:%s\n", bold, reset);
+    p_printf("  Short and long flags are identical:\n");
+    p_printf("  %s -r /path/to/rootfs -n mycontainer start\n", bin);
+    p_printf("  %s --rootfs /path/to/rootfs --name mycontainer start\n", bin);
+    p_printf("  %s --rootfs=/path/to/rootfs --name=mycontainer start\n\n", bin);
+    p_printf("  (Run %s help to study all available short flags)\n\n", bin);
 
-    printf("%sFlexible Order:%s\n", bold, reset);
-    printf("  Command and flags can be mixed in any order:\n");
-    printf("  %s start --name mycontainer --rootfs /path\n", bin);
-    printf("  %s --rootfs /path/to/rootfs -n mycontainer start\n\n", bin);
+    p_printf("%sFlexible Order:%s\n", bold, reset);
+    p_printf("  Command and flags can be mixed in any order:\n");
+    p_printf("  %s start --name mycontainer --rootfs /path\n", bin);
+    p_printf("  %s --rootfs /path/to/rootfs -n mycontainer start\n\n", bin);
 
-    printf("%sMixing Styles:%s\n", bold, reset);
-    printf("  Feel free to mix short and long flags with or without '=':\n");
-    printf("  %s -r /path/to/rootfs --name=mycontainer --hostname myserver "
-           "start\n",
-           bin);
+    p_printf("%sMixing Styles:%s\n", bold, reset);
+    p_printf("  Feel free to mix short and long flags with or without '=':\n");
+    p_printf("  %s -r /path/to/rootfs --name=mycontainer --hostname myserver "
+             "start\n",
+             bin);
     break;
 
   case 1: /* Quick Start */
-    printf("\n");
-    printf("QUICK START\n");
-    printf("-----------\n\n");
-    printf("%sStarting for the first time:%s\n", bold, reset);
-    printf("  (Define name and rootfs/img path. Flags are persisted to "
-           "config)\n");
-    printf("  # From a rootfs directory\n");
-    printf("  %s --name=mycontainer --rootfs=/path/to/rootfs start\n\n", bin);
-    printf("  # From an ext4 image\n");
-    printf("  %s --name=mycontainer --rootfs-img=/path/to/rootfs.img start\n\n",
-           bin);
+    p_printf("\n");
+    p_printf("QUICK START\n");
+    p_printf("-----------\n\n");
+    p_printf("%sStarting for the first time:%s\n", bold, reset);
+    p_printf("  (Define name and rootfs/img path. Flags are persisted to "
+             "config)\n");
+    p_printf("  # From a rootfs directory\n");
+    p_printf("  %s --name=mycontainer --rootfs=/path/to/rootfs start\n\n", bin);
+    p_printf("  # From an ext4 image\n");
+    p_printf(
+        "  %s --name=mycontainer --rootfs-img=/path/to/rootfs.img start\n\n",
+        bin);
 
-    printf("%sSubsequent starts:%s\n", bold, reset);
-    printf("  (Settings like rootfs path are loaded from the container's "
-           "config file)\n");
-    printf("  %s --name=mycontainer start\n\n", bin);
+    p_printf("%sSubsequent starts:%s\n", bold, reset);
+    p_printf("  (Settings like rootfs path are loaded from the container's "
+             "config file)\n");
+    p_printf("  %s --name=mycontainer start\n\n", bin);
 
-    printf("%sEntering the container:%s\n", bold, reset);
-    printf("  %s --name=mycontainer enter\n", bin);
-    printf("  %s --name=mycontainer enter username\n\n", bin);
+    p_printf("%sEntering the container:%s\n", bold, reset);
+    p_printf("  %s --name=mycontainer enter\n", bin);
+    p_printf("  %s --name=mycontainer enter username\n\n", bin);
 
-    printf("%sRunning Commands:%s\n", bold, reset);
-    printf("  %s --name=mycontainer run 'uname -a'\n", bin);
-    printf("  %s --name=mycontainer --user=myuser run whoami\n\n", bin);
+    p_printf("%sRunning Commands:%s\n", bold, reset);
+    p_printf("  %s --name=mycontainer run 'uname -a'\n", bin);
+    p_printf("  %s --name=mycontainer --user=myuser run whoami\n\n", bin);
 
-    printf("%sStopping:%s\n", bold, reset);
-    printf("  %s --name=mycontainer stop\n", bin);
-    printf("  %s stop --name=c1,c2,c3 (Multi-stop)\n\n", bin);
+    p_printf("%sStopping:%s\n", bold, reset);
+    p_printf("  %s --name=mycontainer stop\n", bin);
+    p_printf("  %s stop --name=c1,c2,c3 (Multi-stop)\n\n", bin);
 
-    printf("%sUsing Configuration Files:%s\n", bold, reset);
-    printf("  %s --config=./container.config start\n", bin);
+    p_printf("%sUsing Configuration Files:%s\n", bold, reset);
+    p_printf("  %s --config=./container.config start\n", bin);
     break;
 
   case 2: /* Management */
-    printf("\n");
-    printf("MANAGEMENT & LIFECYCLE\n");
-    printf("----------------------\n\n");
+    p_printf("\n");
+    p_printf("MANAGEMENT & LIFECYCLE\n");
+    p_printf("----------------------\n\n");
 
-    printf("%sRestarting:%s\n", bold, reset);
-    printf("  %s --name=mycontainer restart\n", bin);
-    printf("  Note: You can also reboot by running `reboot` inside the\n");
-    printf("  container shell or remotely (e.g. via SSH).\n\n");
+    p_printf("%sRestarting:%s\n", bold, reset);
+    p_printf("  %s --name=mycontainer restart\n", bin);
+    p_printf("  Note: You can also reboot by running `reboot` inside the\n");
+    p_printf("  container shell or remotely (e.g. via SSH).\n\n");
 
-    printf("%sListing Containers:%s\n", bold, reset);
-    printf("  %s show\n", bin);
-    printf("  (Displays name and PID inside a table)\n\n");
+    p_printf("%sListing Containers:%s\n", bold, reset);
+    p_printf("  %s show\n", bin);
+    p_printf("  (Displays name and PID inside a table)\n\n");
 
-    printf("%sTechnical Information:%s\n", bold, reset);
-    printf("  %s --name=mycontainer info\n", bin);
-    printf("  (Shows current features, metadata, and container state)\n\n");
+    p_printf("%sTechnical Information:%s\n", bold, reset);
+    p_printf("  %s --name=mycontainer info\n", bin);
+    p_printf("  (Shows current features, metadata, and container state)\n\n");
 
-    printf("%sTechnical Information (machine-parseable):%s\n", bold, reset);
-    printf("  %s --name=mycontainer --format info\n\n", bin);
+    p_printf("%sTechnical Information (machine-parseable):%s\n", bold, reset);
+    p_printf("  %s --name=mycontainer --format info\n\n", bin);
 
-    printf("%sResource Usage:%s\n", bold, reset);
-    printf("  %s --name=mycontainer usage\n", bin);
-    printf("  (Shows uptime, CPU%%, and RAM usage)\n\n");
+    p_printf("%sResource Usage:%s\n", bold, reset);
+    p_printf("  %s --name=mycontainer usage\n", bin);
+    p_printf("  (Shows uptime, CPU%%, and RAM usage)\n\n");
 
-    printf("%sMetadata Recovery:%s\n", bold, reset);
-    printf("  %s scan\n", bin);
-    printf("  (Detects containers even if host-side config/PIDs are lost)\n\n");
+    p_printf("%sMetadata Recovery:%s\n", bold, reset);
+    p_printf("  %s scan\n", bin);
+    p_printf(
+        "  (Detects containers even if host-side config/PIDs are lost)\n\n");
     break;
 
   case 3: /* Networking */
-    printf("\n");
-    printf("NETWORKING\n");
-    printf("----------\n\n");
+    p_printf("\n");
+    p_printf("NETWORKING\n");
+    p_printf("----------\n\n");
 
-    printf("%sIsolation Modes (--net):%s\n", bold, reset);
-    printf("  --net=host     Shared with host (default)\n");
-    printf("  --net=none     No network access (air-gapped)\n");
-    printf("  --net=nat      Isolated namespace with internet access\n");
-    printf("  --net=gateway  LAN delegated to another container "
-           "(e.g. OpenWRT)\n\n");
+    p_printf("%sIsolation Modes (--net):%s\n", bold, reset);
+    p_printf("  --net=host     Shared with host (default)\n");
+    p_printf("  --net=none     No network access (air-gapped)\n");
+    p_printf("  --net=nat      Isolated namespace with internet access\n");
+    p_printf("  --net=gateway  LAN delegated to another container "
+             "(e.g. OpenWRT)\n\n");
 
-    printf("%sNAT Mode Configuration:%s\n", bold, reset);
-    printf("  %s --name=mycontainer --rootfs=/path/to/rootfs --net=nat "
-           "start\n",
-           bin);
-    printf("  The internet uplink is detected automatically and tracked "
-           "in real time\n");
-    printf("  as the host switches networks (Wi-Fi <-> mobile data, "
-           "ethernet, etc.).\n\n");
+    p_printf("%sNAT Mode Configuration:%s\n", bold, reset);
+    p_printf("  %s --name=mycontainer --rootfs=/path/to/rootfs --net=nat "
+             "start\n",
+             bin);
+    p_printf("  The internet uplink is detected automatically and tracked "
+             "in real time\n");
+    p_printf("  as the host switches networks (Wi-Fi <-> mobile data, "
+             "ethernet, etc.).\n\n");
 
-    printf("%sManual Uplink Pinning (--upstream, NAT only):%s\n", bold, reset);
-    printf("  Pin WAN to specific interface(s) and disable auto-detect. "
-           "The list is\n");
-    printf("  comma-separated, priority-ordered, and supports wildcards.\n");
-    printf("  --upstream=wlan0          Always use Wi-Fi\n");
-    printf("  --upstream=wlan0,rmnet*   Prefer Wi-Fi, fall back to mobile "
-           "data\n");
-    printf("  --upstream=tun0           Route only through a phone VPN "
-           "(killswitch)\n");
-    printf("  --upstream=rmnet*         Stay on mobile data while the phone "
-           "uses Wi-Fi\n");
-    printf("  (Use rmnet* - the mobile-data interface number is not stable "
-           "across reconnects.)\n\n");
+    p_printf("%sManual Uplink Pinning (--upstream, NAT only):%s\n", bold,
+             reset);
+    p_printf("  Pin WAN to specific interface(s) and disable auto-detect. "
+             "The list is\n");
+    p_printf("  comma-separated, priority-ordered, and supports wildcards.\n");
+    p_printf("  --upstream=wlan0          Always use Wi-Fi\n");
+    p_printf("  --upstream=wlan0,rmnet*   Prefer Wi-Fi, fall back to mobile "
+             "data\n");
+    p_printf("  --upstream=tun0           Route only through a phone VPN "
+             "(killswitch)\n");
+    p_printf("  --upstream=rmnet*         Stay on mobile data while the phone "
+             "uses Wi-Fi\n");
+    p_printf("  (Use rmnet* - the mobile-data interface number is not stable "
+             "across reconnects.)\n\n");
 
-    printf("%sGateway Mode Configuration:%s\n", bold, reset);
-    printf("  Delegate the LAN to another running container (e.g. OpenWRT), "
-           "which owns\n");
-    printf("  DHCP, DNS, firewall and routing. Start the gateway first, "
-           "then the client.\n");
-    printf("  %s --name=openwrt --rootfs=/path/to/openwrt --net=nat start\n",
-           bin);
-    printf("  %s --name=kali --rootfs=/path/to/kali --net=gateway "
-           "--gateway=openwrt start\n",
-           bin);
-    printf("  --gateway=NAME         Gateway container (required)\n");
-    printf("  --gateway-net=NAME     LAN segment / bridge suffix "
-           "(default: lan)\n");
-    printf("  --gateway-iface=IFACE  Interface name inside the gateway "
-           "(default: eth1)\n");
-    printf("  --gateway-bridge=BR    Override host bridge name "
-           "(default: ds-NAME)\n\n");
+    p_printf("%sGateway Mode Configuration:%s\n", bold, reset);
+    p_printf("  Delegate the LAN to another running container (e.g. OpenWRT), "
+             "which owns\n");
+    p_printf("  DHCP, DNS, firewall and routing. Start the gateway first, "
+             "then the client.\n");
+    p_printf("  %s --name=openwrt --rootfs=/path/to/openwrt --net=nat start\n",
+             bin);
+    p_printf("  %s --name=kali --rootfs=/path/to/kali --net=gateway "
+             "--gateway=openwrt start\n",
+             bin);
+    p_printf("  --gateway=NAME         Gateway container (required)\n");
+    p_printf("  --gateway-net=NAME     LAN segment / bridge suffix "
+             "(default: lan)\n");
+    p_printf("  --gateway-iface=IFACE  Interface name inside the gateway "
+             "(default: eth1)\n");
+    p_printf("  --gateway-bridge=BR    Override host bridge name "
+             "(default: ds-NAME)\n\n");
 
-    printf("%sPort Forwarding (NAT only):%s\n", bold, reset);
-    printf("  --port=8080:80          Single port\n");
-    printf("  --port=1000-2000:1000-2000  Symmetric range\n");
-    printf("  --port=8080:80/udp      Specific protocol\n\n");
+    p_printf("%sPort Forwarding (NAT only):%s\n", bold, reset);
+    p_printf("  --port=8080:80          Single port\n");
+    p_printf("  --port=1000-2000:1000-2000  Symmetric range\n");
+    p_printf("  --port=8080:80/udp      Specific protocol\n\n");
 
-    printf("%sStatic IP assignment:%s\n", bold, reset);
-    printf("  --nat-ip=172.28.5.10\n\n");
+    p_printf("%sStatic IP assignment:%s\n", bold, reset);
+    p_printf("  --nat-ip=172.28.5.10\n\n");
 
-    printf("%sCustom DNS & IPv6:%s\n", bold, reset);
-    printf("  %s --name=mycontainer --dns=1.1.1.1,8.8.4.4 start\n", bin);
-    printf("  %s --name=mycontainer --disable-ipv6 start\n", bin);
+    p_printf("%sCustom DNS & IPv6:%s\n", bold, reset);
+    p_printf("  %s --name=mycontainer --dns=1.1.1.1,8.8.4.4 start\n", bin);
+    p_printf("  %s --name=mycontainer --disable-ipv6 start\n", bin);
     break;
 
   case 4: /* Hardware & Integration */
-    printf("\n");
-    printf("HARDWARE & INTEGRATION\n");
-    printf("----------------------\n\n");
+    p_printf("\n");
+    p_printf("HARDWARE & INTEGRATION\n");
+    p_printf("----------------------\n\n");
 
-    printf("%sFull Hardware Access (--hw-access):%s\n", bold, reset);
-    printf(
+    p_printf("%sFull Hardware Access (--hw-access):%s\n", bold, reset);
+    p_printf(
         "  %s --name=mycontainer --rootfs=/path/to/rootfs --hw-access start\n",
         bin);
-    printf("  (Exposes host /dev nodes, maps GPU groups, setups X11 in "
-           "Linux)\n\n");
+    p_printf("  (Exposes host /dev nodes, maps GPU groups, setups X11 in "
+             "Linux)\n\n");
 
-    printf("%sSecure GPU-only Mode (--gpu):%s\n", bold, reset);
-    printf("  %s --name=mycontainer --rootfs=/path/to/rootfs --gpu start\n",
-           bin);
-    printf("  (Maps ONLY GPU nodes into an isolated tmpfs /dev)\n\n");
+    p_printf("%sSecure GPU-only Mode (--gpu):%s\n", bold, reset);
+    p_printf("  %s --name=mycontainer --rootfs=/path/to/rootfs --gpu start\n",
+             bin);
+    p_printf("  (Maps ONLY GPU nodes into an isolated tmpfs /dev)\n\n");
 
-    printf("%sAndroid-specific Features:%s\n", bold, reset);
-    printf("  --enable-android-storage  Mounts /storage/emulated/0\n");
-    printf("  --termux-x11              Setups Termux:X11 socket\n\n");
+    p_printf("%sAndroid-specific Features:%s\n", bold, reset);
+    p_printf("  --enable-android-storage  Mounts /storage/emulated/0\n");
+    p_printf("  --termux-x11              Setups Termux:X11 socket\n\n");
 
-    printf("%sSystem Integration:%s\n", bold, reset);
-    printf("  --selinux-permissive      Set host SELinux to permissive\n");
-    printf("  --force-cgroupv1          Force legacy cgroup hierarchy\n");
-    printf("  --block-nested-namespaces  Shield against VFS deadlocks\n");
+    p_printf("%sSystem Integration:%s\n", bold, reset);
+    p_printf("  --selinux-permissive      Set host SELinux to permissive\n");
+    p_printf("  --force-cgroupv1          Force legacy cgroup hierarchy\n");
+    p_printf("  --block-nested-namespaces  Shield against VFS deadlocks\n");
     break;
 
   case 5: /* Advanced Features */
-    printf("\n");
-    printf("ADVANCED FEATURES\n");
-    printf("-----------------\n\n");
+    p_printf("\n");
+    p_printf("ADVANCED FEATURES\n");
+    p_printf("-----------------\n\n");
 
-    printf("%sPrivileged Mode (--privileged):%s\n", bold, reset);
-    printf("  Relax security with comma-separated tags:\n");
-    printf("  nomask        Allow write access to /proc and /sys\n");
-    printf("  nocaps        Keep all Linux Capabilities (full root)\n");
-    printf("  noseccomp     Disable syscall filtering (useful for "
-           "flatpak,bwrap and other unprivileged sandboxes)\n");
-    printf("  shared        Enable MS_SHARED mount propagation\n");
-    printf("  unfiltered-dev Bypass device filtering (all host /dev)\n");
-    printf("  full          Enable all above tags\n\n");
+    p_printf("%sPrivileged Mode (--privileged):%s\n", bold, reset);
+    p_printf("  Relax security with comma-separated tags:\n");
+    p_printf("  nomask        Allow write access to /proc and /sys\n");
+    p_printf("  nocaps        Keep all Linux Capabilities (full root)\n");
+    p_printf("  noseccomp     Disable syscall filtering (useful for "
+             "flatpak,bwrap and other unprivileged sandboxes)\n");
+    p_printf("  shared        Enable MS_SHARED mount propagation\n");
+    p_printf("  unfiltered-dev Bypass device filtering (all host /dev)\n");
+    p_printf("  full          Enable all above tags\n\n");
 
-    printf("  %s --name=mycontainer --rootfs=/path/to/rootfs --privileged=full "
-           "start\n\n",
-           bin);
+    p_printf(
+        "  %s --name=mycontainer --rootfs=/path/to/rootfs --privileged=full "
+        "start\n\n",
+        bin);
 
-    printf("%sEphemeral Mode (--volatile):%s\n", bold, reset);
-    printf(
+    p_printf("%sEphemeral Mode (--volatile):%s\n", bold, reset);
+    p_printf(
         "  %s --name=mycontainer --rootfs=/path/to/rootfs --volatile start\n",
         bin);
-    printf("  (All changes are stored in RAM and lost on exit)\n\n");
+    p_printf("  (All changes are stored in RAM and lost on exit)\n\n");
 
-    printf("%sCustom Init (--init):%s\n", bold, reset);
-    printf("  Override the default init binary (/sbin/init).\n");
-    printf("  Useful for distros with non-standard init paths, or for\n");
-    printf("  running a shell directly as PID 1 (e.g. for debugging).\n\n");
-    printf("  %s --name=mycontainer --rootfs=/path/to/rootfs "
-           "--init=/bin/bash start\n\n",
-           bin);
+    p_printf("%sCustom Init (--init):%s\n", bold, reset);
+    p_printf("  Override the default init binary (/sbin/init).\n");
+    p_printf("  Useful for distros with non-standard init paths, or for\n");
+    p_printf("  running a shell directly as PID 1 (e.g. for debugging).\n\n");
+    p_printf("  %s --name=mycontainer --rootfs=/path/to/rootfs "
+             "--init=/bin/bash start\n\n",
+             bin);
 
-    printf("%sBind Mounts & Environment:%s\n", bold, reset);
-    printf("  --bind /host:/cont[:ro]  Bind mount host path (append :ro for "
-           "read-only)\n");
-    printf("  --env /path/to/env.list  Load environment variables\n\n");
+    p_printf("%sBind Mounts & Environment:%s\n", bold, reset);
+    p_printf("  --bind /host:/cont[:ro]  Bind mount host path (append :ro for "
+             "read-only)\n");
+    p_printf("  --env /path/to/env.list  Load environment variables\n\n");
 
-    printf("%sConfig Management:%s\n", bold, reset);
-    printf("  --config=PATH         Load specific config file\n");
-    printf("  --reset               Reset config to defaults\n");
-    printf("  --help                Show summary of all flags\n");
+    p_printf("%sConfig Management:%s\n", bold, reset);
+    p_printf("  --config=PATH         Load specific config file\n");
+    p_printf("  --reset               Reset config to defaults\n");
+    p_printf("  --help                Show summary of all flags\n");
     break;
   }
-#undef printf
 }
 
 /* Read arrow key (escape sequence) */
