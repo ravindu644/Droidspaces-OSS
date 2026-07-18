@@ -565,7 +565,14 @@ void print_documentation(const char *argv0) {
              " [←/→] Prev/Next   [↑/↓] Scroll (%d/%d)   [q] Quit",
              g_scroll_offset + 1, g_total_lines);
     printf("%s", hint);
-    for (int i = strlen(hint) - 8; i < width; i++)
+    /* Pad to the terminal width.  hint contains multi-byte arrow glyphs, so
+     * count display columns (bytes that are not UTF-8 continuation bytes)
+     * rather than strlen, which would over-count and need a magic fudge. */
+    int hint_cols = 0;
+    for (const char *p = hint; *p; p++)
+      if (((unsigned char)*p & 0xC0) != 0x80)
+        hint_cols++;
+    for (int i = hint_cols; i < width; i++)
       printf(" ");
     printf("%s", RESET_TERMINAL);
 
