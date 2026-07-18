@@ -410,7 +410,15 @@ static char *gen_uptime(struct ds_config *cfg, size_t *out_len) {
   char *buf = malloc(64);
   if (!buf)
     return NULL;
-  *out_len = (size_t)snprintf(buf, 64, "%.2f %.2f\n", up, idle);
+  /* snprintf returns the length it *would* have written; clamp to the bytes
+   * actually in the buffer so a consumer's write_all() cannot over-read the
+   * heap if the formatted output ever exceeds 63 chars. */
+  int n = snprintf(buf, 64, "%.2f %.2f\n", up, idle);
+  if (n < 0) {
+    free(buf);
+    return NULL;
+  }
+  *out_len = (n < 64) ? (size_t)n : 63;
   return buf;
 }
 
