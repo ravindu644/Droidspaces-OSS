@@ -201,22 +201,7 @@ static void nuke_pulse_config(void) {
     return;
 
   ds_log("[PulseAudio] nuking stale config: %s", PA_CONFIG_DIR);
-
-  pid_t child = fork();
-  if (child < 0)
-    return;
-  if (child == 0) {
-    int devnull = open("/dev/null", O_RDWR);
-    if (devnull >= 0) {
-      dup2(devnull, STDOUT_FILENO);
-      dup2(devnull, STDERR_FILENO);
-      close(devnull);
-    }
-    execl("/system/bin/rm", "rm", "-rf", PA_CONFIG_DIR, NULL);
-    _exit(1);
-  }
-  int st;
-  waitpid(child, &st, 0);
+  remove_recursive(PA_CONFIG_DIR);
 }
 
 /* ---- spawn ------------------------------------------------------------ */
