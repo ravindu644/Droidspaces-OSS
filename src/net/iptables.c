@@ -1612,7 +1612,18 @@ int ds_ipt_remove_portforwards(struct ds_config *cfg) {
    * process crashed before the file could be written.
    * We intentionally avoid this path in the normal case: parsing iptables-save
    * output through a shell is slower and depends on the host having sh(1). */
-  if (!had_state) {
+  /* Defense-in-depth: container_ip is already validated to 172.28.x.x at every
+   * ingest point, but Pass 3 is the only path that interpolates it into a shell
+   * command.  Re-validate it as a plain IPv4 literal and skip the sweep
+   * otherwise, so no shell metacharacter can ever reach sh -c. */
+  struct in_addr ip_check;
+  int ip_ok = (inet_pton(AF_INET, container_ip, &ip_check) == 1);
+  if (!had_state && !ip_ok)
+    ds_warn("Skipping iptables-save shell sweep: container IP '%s' is not a "
+            "valid IPv4 literal",
+            container_ip);
+
+  if (!had_state && ip_ok) {
     char cmd[512];
 
     /* Remove PREROUTING DNAT rules whose --to-destination targets this IP */
