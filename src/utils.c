@@ -737,18 +737,21 @@ int read_and_validate_pid(const char *pidfile, pid_t *pid_out) {
  * Mount sidecar files (.mount)
  * ---------------------------------------------------------------------------*/
 
-/* Internal helper to convert pidfile path to mount sidecar path: foo.pid ->
- * foo.mount */
-static void pidfile_to_mountfile(const char *pidfile, char *buf, size_t size) {
+/* Convert a pidfile path to a sibling sidecar path with the given extension:
+ * foo.pid -> foo<ext> (replacing a trailing .pid, else appending). */
+static void pidfile_to_sidecar(const char *pidfile, const char *ext, char *buf,
+                               size_t size) {
   safe_strncpy(buf, pidfile, size);
   char *dot = strrchr(buf, '.');
-  if (dot && strcmp(dot, DS_EXT_PID) == 0) {
-    /* If it ends in .pid, replace it */
-    snprintf(dot, size - (size_t)(dot - buf), DS_EXT_MOUNT);
-  } else {
-    /* Otherwise just append */
-    strncat(buf, DS_EXT_MOUNT, size - strlen(buf) - 1);
-  }
+  if (dot && strcmp(dot, DS_EXT_PID) == 0)
+    snprintf(dot, size - (size_t)(dot - buf), "%s", ext);
+  else
+    strncat(buf, ext, size - strlen(buf) - 1);
+}
+
+/* foo.pid -> foo.mount */
+static void pidfile_to_mountfile(const char *pidfile, char *buf, size_t size) {
+  pidfile_to_sidecar(pidfile, DS_EXT_MOUNT, buf, size);
 }
 
 /* Save mount path alongside a pidfile: foo.pid -> foo.mount */
@@ -774,16 +777,9 @@ int remove_mount_path(const char *pidfile) {
  * Init-type sidecar files (.init)
  * ---------------------------------------------------------------------------*/
 
+/* foo.pid -> foo.init */
 static void pidfile_to_initfile(const char *pidfile, char *buf, size_t size) {
-  safe_strncpy(buf, pidfile, size);
-  char *dot = strrchr(buf, '.');
-  if (dot && strcmp(dot, DS_EXT_PID) == 0) {
-    /* If it ends in .pid, replace it */
-    snprintf(dot, size - (size_t)(dot - buf), DS_EXT_INIT);
-  } else {
-    /* Otherwise just append */
-    strncat(buf, DS_EXT_INIT, size - strlen(buf) - 1);
-  }
+  pidfile_to_sidecar(pidfile, DS_EXT_INIT, buf, size);
 }
 
 static const char *init_type_to_string(ds_init_type_t type) {
