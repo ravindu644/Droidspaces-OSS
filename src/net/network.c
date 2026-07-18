@@ -2028,7 +2028,10 @@ static void *route_monitor_loop(void *arg) {
           struct rtattr *rta = RTM_RTA(rtm);
           int rlen = (int)RTM_PAYLOAD(h);
           for (; RTA_OK(rta, rlen); rta = RTA_NEXT(rta, rlen)) {
-            if (rta->rta_type == RTA_OIF)
+            /* RTA_OK bounds only the declared length; require a full 4-byte
+             * payload before dereferencing (defensive; kernel-sourced). */
+            if (rta->rta_type == RTA_OIF &&
+                RTA_PAYLOAD(rta) >= (int)sizeof(int))
               oif = *(int *)RTA_DATA(rta);
           }
           char evname[IFNAMSIZ] = {0};

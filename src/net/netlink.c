@@ -82,6 +82,19 @@ static void nl_nest_end(struct nlmsghdr *n, struct rtattr *nest) {
   nest->rta_len = (unsigned short)((uint8_t *)NLMSG_TAIL(n) - (uint8_t *)nest);
 }
 
+/* Read a 4-byte netlink attribute payload safely.  RTA_OK() bounds only the
+ * declared attribute length, not that the payload is a full 4 bytes, so a
+ * truncated/malformed attribute would otherwise be read out of bounds.
+ * Returns 0 for a short attribute.  (Defensive: the source is the host kernel,
+ * which always emits full-width attributes.)  memcpy also avoids any unaligned
+ * access. */
+static uint32_t nl_rta_u32(struct rtattr *rta) {
+  uint32_t v = 0;
+  if (RTA_PAYLOAD(rta) >= (int)sizeof(v))
+    memcpy(&v, RTA_DATA(rta), sizeof(v));
+  return v;
+}
+
 /* ---------------------------------------------------------------------------
  * Context lifecycle
  * ---------------------------------------------------------------------------*/
@@ -908,7 +921,7 @@ int ds_nl_count_bridge_members_with_prefix(ds_nl_ctx_t *ctx, const char *bridge,
         if (rta->rta_type == IFLA_IFNAME)
           safe_strncpy(ifname, RTA_DATA(rta), IFNAMSIZ);
         else if (rta->rta_type == IFLA_MASTER)
-          master = *(int *)RTA_DATA(rta);
+          master = (int)nl_rta_u32(rta);
       }
       if (master == (int)br_idx && ifname[0] &&
           strncmp(ifname, prefix, prefix_len) == 0)
@@ -997,9 +1010,9 @@ int ds_nl_get_iface_table(ds_nl_ctx_t *ctx, const char *ifname,
       int rlen = (int)RTM_PAYLOAD(h);
       for (; RTA_OK(rta, rlen); rta = RTA_NEXT(rta, rlen)) {
         if (rta->rta_type == RTA_TABLE)
-          r_table = *(int *)RTA_DATA(rta);
+          r_table = (int)nl_rta_u32(rta);
         if (rta->rta_type == RTA_OIF)
-          r_oif = *(int *)RTA_DATA(rta);
+          r_oif = (int)nl_rta_u32(rta);
       }
 
       if ((unsigned int)r_oif == target_idx) {
@@ -1081,11 +1094,11 @@ int ds_nl_get_table_default_oif(ds_nl_ctx_t *ctx, int table, char *ifname_out) {
       int rlen = (int)RTM_PAYLOAD(h);
       for (; RTA_OK(rta, rlen); rta = RTA_NEXT(rta, rlen)) {
         if (rta->rta_type == RTA_TABLE)
-          r_table = *(int *)RTA_DATA(rta);
+          r_table = (int)nl_rta_u32(rta);
         if (rta->rta_type == RTA_OIF)
-          r_oif = *(int *)RTA_DATA(rta);
+          r_oif = (int)nl_rta_u32(rta);
         if (rta->rta_type == RTA_PRIORITY)
-          r_metric = *(uint32_t *)RTA_DATA(rta);
+          r_metric = nl_rta_u32(rta);
       }
 
       if (r_table != table || r_oif <= 0)
@@ -1184,17 +1197,17 @@ int ds_nl_get_android_default(ds_nl_ctx_t *ctx, char *ifname_out,
       for (; RTA_OK(rta, rlen); rta = RTA_NEXT(rta, rlen)) {
         switch (rta->rta_type) {
         case FRA_TABLE:
-          r_table = (int)*(uint32_t *)RTA_DATA(rta);
+          r_table = (int)nl_rta_u32(rta);
           break;
         case FRA_PRIORITY:
-          r_prio = *(uint32_t *)RTA_DATA(rta);
+          r_prio = nl_rta_u32(rta);
           break;
         case FRA_FWMARK:
-          fwmark = *(uint32_t *)RTA_DATA(rta);
+          fwmark = nl_rta_u32(rta);
           have_mark = 1;
           break;
         case FRA_FWMASK:
-          fwmask = *(uint32_t *)RTA_DATA(rta);
+          fwmask = nl_rta_u32(rta);
           have_mask = 1;
           break;
         case FRA_IIFNAME:
