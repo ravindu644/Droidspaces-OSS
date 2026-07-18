@@ -544,6 +544,12 @@ pid_t ds_spawn_daemon(ds_child_fn child_fn, void *user_data,
                       const char *log_file, const char *tag, const char *label);
 int ds_bind_mount_socket(const char *src, const char *dst, uid_t uid,
                          const char *label);
+/* Bridge a Termux host socket (DS_TERMUX_TMP_OLDROOT/<leaf>) into the container
+ * at dst (owned by the host socket's uid), then export env_key=env_val.
+ * Best-effort: warns and skips if the source is absent.  Always returns 0. */
+int ds_bridge_termux_socket(const char *leaf, const char *dst,
+                            const char *env_key, const char *env_val,
+                            const char *label);
 
 /* ---------------------------------------------------------------------------
  * config.c

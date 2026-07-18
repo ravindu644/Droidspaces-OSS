@@ -137,28 +137,8 @@ int ds_setup_virgl_socket(struct ds_config *cfg) {
   if (!is_android() || !cfg->virgl)
     return 0;
 
-  /* Post-pivot_root: host filesystem is accessible under /.old_root.
-   * Use the same DS_TERMUX_TMP_OLDROOT prefix that X11 socket bridging uses,
-   * otherwise stat() will always fail since the raw host path no longer
-   * resolves inside the container's mount namespace. */
-  char src[PATH_MAX];
-  snprintf(src, sizeof(src), "%s/.virgl_test", DS_TERMUX_TMP_OLDROOT);
-
-  struct stat st;
-  if (stat(src, &st) != 0) {
-    ds_warn("VirGL: socket not found at %s - skipping socket bridge", src);
-    return 0;
-  }
-
-  uid_t uid = st.st_uid;
-
-  if (ds_bind_mount_socket(src, DS_VIRGL_SOCKET, uid, "VirGL") < 0)
-    return 0;
-
-  ds_log("VirGL: socket bind-mounted into container");
-
-  /* Set GALLIUM_DRIVER so mesa uses the virpipe backend for HW acceleration */
-  setenv("GALLIUM_DRIVER", "virpipe", 1);
-
-  return 0;
+  /* Post-pivot_root: the host socket lives under DS_TERMUX_TMP_OLDROOT.  Bridge
+   * it in and set GALLIUM_DRIVER so mesa uses the virpipe backend. */
+  return ds_bridge_termux_socket(".virgl_test", DS_VIRGL_SOCKET,
+                                 "GALLIUM_DRIVER", "virpipe", "VirGL");
 }

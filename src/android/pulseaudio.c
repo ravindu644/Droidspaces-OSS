@@ -263,28 +263,9 @@ int ds_setup_pulse_socket(struct ds_config *cfg) {
   if (!is_android() || !cfg->pulseaudio)
     return 0;
 
-  /* Post-pivot_root: host filesystem is under /.old_root.
-   * TX11_PULSE_SOCKET lives in TX11_PREFIX/tmp, accessed via
-   * DS_TERMUX_TMP_OLDROOT, exactly like the VirGL socket. */
-  char src[PATH_MAX];
-  snprintf(src, sizeof(src), "%s/.pulse-socket", DS_TERMUX_TMP_OLDROOT);
-
-  struct stat st;
-  if (stat(src, &st) != 0) {
-    ds_warn("PulseAudio: socket not found at %s - skipping socket bridge", src);
-    return 0;
-  }
-
-  uid_t uid = st.st_uid;
-
-  if (ds_bind_mount_socket(src, DS_PULSE_SOCKET, uid, "PulseAudio") < 0)
-    return 0;
-
-  ds_log("PulseAudio: socket bind-mounted into container");
-
-  /* Inject PULSE_SERVER so all processes inside the container find the daemon
-   */
-  setenv("PULSE_SERVER", "unix:" DS_PULSE_SOCKET, 1);
-
-  return 0;
+  /* Post-pivot_root: the host socket lives under DS_TERMUX_TMP_OLDROOT.  Bridge
+   * it in and export PULSE_SERVER for all container processes. */
+  return ds_bridge_termux_socket(".pulse-socket", DS_PULSE_SOCKET,
+                                 "PULSE_SERVER", "unix:" DS_PULSE_SOCKET,
+                                 "PulseAudio");
 }
