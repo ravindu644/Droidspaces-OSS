@@ -2724,3 +2724,23 @@ int ds_bind_mount_socket(const char *src, const char *dst, uid_t uid,
   }
   return 0;
 }
+
+int ds_bridge_termux_socket(const char *leaf, const char *dst,
+                            const char *env_key, const char *env_val,
+                            const char *label) {
+  char src[PATH_MAX];
+  snprintf(src, sizeof(src), "%s/%s", DS_TERMUX_TMP_OLDROOT, leaf);
+
+  struct stat st;
+  if (stat(src, &st) != 0) {
+    ds_warn("%s: socket not found at %s - skipping socket bridge", label, src);
+    return 0;
+  }
+
+  if (ds_bind_mount_socket(src, dst, st.st_uid, label) < 0)
+    return 0;
+
+  ds_log("%s: socket bind-mounted into container", label);
+  setenv(env_key, env_val, 1);
+  return 0;
+}
