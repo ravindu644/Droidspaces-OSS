@@ -559,35 +559,43 @@ static void socketd_pack_inspect_record(
     socketd_pack_port_record(&record->ports[i], &cfg->port_forwards[i]);
 }
 
+/* Ensure *records_inout has room for one more elem_size element, doubling the
+ * capacity (min 16) with wrap and DS_SOCKETD_MAX_PAYLOAD bounds checks and
+ * zero-filling the newly grown tail.  Returns 0 on success, -1 on failure. */
+static int socketd_grow_array(void **records_inout, size_t *count_inout,
+                              size_t *capacity_inout, size_t elem_size) {
+  if (!records_inout || !count_inout || !capacity_inout || elem_size == 0)
+    return -1;
+
+  if (*count_inout < *capacity_inout)
+    return 0;
+
+  size_t old_capacity = *capacity_inout;
+  size_t new_capacity = old_capacity == 0 ? 16u : old_capacity * 2u;
+  if (new_capacity < old_capacity)
+    return -1;
+  if (new_capacity > DS_SOCKETD_MAX_PAYLOAD / elem_size)
+    return -1;
+
+  void *grown = realloc(*records_inout, new_capacity * elem_size);
+  if (!grown)
+    return -1;
+
+  memset((char *)grown + old_capacity * elem_size, 0,
+         (new_capacity - old_capacity) * elem_size);
+
+  *records_inout = grown;
+  *capacity_inout = new_capacity;
+  return 0;
+}
+
 static int socketd_append_container_record(
     struct ds_socketd_container_record **records_inout, size_t *count_inout,
     size_t *capacity_inout, const struct ds_socketd_container_record *record) {
-  if (!records_inout || !count_inout || !capacity_inout || !record)
+  if (!record ||
+      socketd_grow_array((void **)records_inout, count_inout, capacity_inout,
+                         sizeof(**records_inout)) < 0)
     return -1;
-
-  if (*count_inout >= *capacity_inout) {
-    size_t old_capacity = *capacity_inout;
-    size_t new_capacity = old_capacity == 0 ? 16u : old_capacity * 2u;
-
-    if (new_capacity < old_capacity)
-      return -1;
-
-    if (new_capacity >
-        DS_SOCKETD_MAX_PAYLOAD / sizeof(struct ds_socketd_container_record)) {
-      return -1;
-    }
-
-    struct ds_socketd_container_record *grown =
-        realloc(*records_inout, new_capacity * sizeof(*grown));
-    if (!grown)
-      return -1;
-
-    memset(grown + old_capacity, 0,
-           (new_capacity - old_capacity) * sizeof(*grown));
-
-    *records_inout = grown;
-    *capacity_inout = new_capacity;
-  }
 
   (*records_inout)[*count_inout] = *record;
   (*count_inout)++;
@@ -630,32 +638,10 @@ static int
 socketd_append_image_record(struct ds_socketd_image_record **records_inout,
                             size_t *count_inout, size_t *capacity_inout,
                             const struct ds_socketd_image_record *record) {
-  if (!records_inout || !count_inout || !capacity_inout || !record)
+  if (!record ||
+      socketd_grow_array((void **)records_inout, count_inout, capacity_inout,
+                         sizeof(**records_inout)) < 0)
     return -1;
-
-  if (*count_inout >= *capacity_inout) {
-    size_t old_capacity = *capacity_inout;
-    size_t new_capacity = old_capacity == 0 ? 16u : old_capacity * 2u;
-
-    if (new_capacity < old_capacity)
-      return -1;
-
-    if (new_capacity >
-        DS_SOCKETD_MAX_PAYLOAD / sizeof(struct ds_socketd_image_record)) {
-      return -1;
-    }
-
-    struct ds_socketd_image_record *grown =
-        realloc(*records_inout, new_capacity * sizeof(*grown));
-    if (!grown)
-      return -1;
-
-    memset(grown + old_capacity, 0,
-           (new_capacity - old_capacity) * sizeof(*grown));
-
-    *records_inout = grown;
-    *capacity_inout = new_capacity;
-  }
 
   (*records_inout)[*count_inout] = *record;
   (*count_inout)++;
@@ -665,32 +651,10 @@ socketd_append_image_record(struct ds_socketd_image_record **records_inout,
 static int socketd_append_core_event_record(
     struct ds_socketd_core_event_record **records_inout, size_t *count_inout,
     size_t *capacity_inout, const struct ds_socketd_core_event_record *record) {
-  if (!records_inout || !count_inout || !capacity_inout || !record)
+  if (!record ||
+      socketd_grow_array((void **)records_inout, count_inout, capacity_inout,
+                         sizeof(**records_inout)) < 0)
     return -1;
-
-  if (*count_inout >= *capacity_inout) {
-    size_t old_capacity = *capacity_inout;
-    size_t new_capacity = old_capacity == 0 ? 16u : old_capacity * 2u;
-
-    if (new_capacity < old_capacity)
-      return -1;
-
-    if (new_capacity >
-        DS_SOCKETD_MAX_PAYLOAD / sizeof(struct ds_socketd_core_event_record)) {
-      return -1;
-    }
-
-    struct ds_socketd_core_event_record *grown =
-        realloc(*records_inout, new_capacity * sizeof(*grown));
-    if (!grown)
-      return -1;
-
-    memset(grown + old_capacity, 0,
-           (new_capacity - old_capacity) * sizeof(*grown));
-
-    *records_inout = grown;
-    *capacity_inout = new_capacity;
-  }
 
   (*records_inout)[*count_inout] = *record;
   (*count_inout)++;
