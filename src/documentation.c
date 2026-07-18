@@ -459,7 +459,9 @@ static void handle_sigint(int sig) {
   (void)sig;
   if (g_old_tios_ptr)
     tcsetattr(STDIN_FILENO, TCSAFLUSH, g_old_tios_ptr);
-  printf("\033[?25h"); /* SHOW_CURSOR */
+  /* Async-signal-safe: printf is not, so write the escape directly. */
+  if (write(STDOUT_FILENO, "\033[?25h", 6) < 0) { /* SHOW_CURSOR; ignore */
+  }
   if (write(STDOUT_FILENO, "\033[2J\033[H", 7) < 0) {
     /* ignore */
   }
