@@ -999,7 +999,7 @@ int enter_namespace(pid_t pid, struct ds_config *cfg) {
   /* 1. Open all namespace descriptors first (CRITICAL: before any setns) */
   for (int i = 0; i < 6; i++) {
     snprintf(path, sizeof(path), "/proc/%d/ns/%s", pid, ns_names[i]);
-    ns_fds[i] = open(path, O_RDONLY);
+    ns_fds[i] = open(path, O_RDONLY | O_CLOEXEC);
     if (ns_fds[i] < 0) {
       if (i == 0) { /* mnt is mandatory */
         ds_error("Failed to open mount namespace at %s: %s", path,
@@ -1074,7 +1074,7 @@ int enter_rootfs(struct ds_config *cfg, const char *user) {
   tty.master = tty.slave = -1;
 
   int sv[2];
-  if (socketpair(AF_UNIX, SOCK_STREAM, 0, sv) < 0) {
+  if (socketpair(AF_UNIX, SOCK_STREAM | SOCK_CLOEXEC, 0, sv) < 0) {
     close(tty.master);
     close(tty.slave);
     free_config_env_vars(cfg);
