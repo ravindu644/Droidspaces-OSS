@@ -86,16 +86,7 @@ struct pulse_args {
 static void pulse_child_wrapper(int ready_fd, void *user_data) {
   struct pulse_args *args = (struct pulse_args *)user_data;
 
-  /* Ignore hangups, keyboard interrupts, and broken pipes to keep the daemon
-   * alive through terminal disconnects. SIGTERM is our shutdown signal. */
-  signal(SIGHUP, SIG_IGN);
-  signal(SIGINT, SIG_IGN);
-  signal(SIGQUIT, SIG_IGN);
-  signal(SIGPIPE, SIG_IGN);
-
-  /* Make PulseAudio unkillable by the OOM killer.
-   * Must be done while still root, before privilege drop. */
-  ds_oom_protect();
+  ds_daemon_child_preamble();
 
   /* Set up the Termux environment before dropping privileges */
   setenv("TMPDIR", TX11_PREFIX "/tmp", 1);

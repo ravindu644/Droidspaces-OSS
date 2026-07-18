@@ -530,6 +530,10 @@ void ds_global_daemon_stop(int (*check_fn)(void), pid_t cached_pid,
                            pid_t *pid_out, const char *pidfile,
                            const char *sock_path, const char *tag);
 void ds_oom_protect(void);
+/* Common preamble for a forked long-lived daemon child (audio/GPU/X11 helper):
+ * ignore terminal-disconnect signals so it outlives the launching session and
+ * protect it from the OOM killer.  Must run while still root. */
+void ds_daemon_child_preamble(void);
 /* Return 1 if peer_pid shares this process's PID namespace (or if it cannot be
  * determined), 0 only on a positive mismatch.  Used by the abstract-socket
  * authorizers to reject host-net container peers. */

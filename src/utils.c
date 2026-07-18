@@ -2528,6 +2528,17 @@ void ds_oom_protect(void) {
   }
 }
 
+void ds_daemon_child_preamble(void) {
+  /* Ignore hangups, keyboard interrupts, and broken pipes so the helper
+   * survives terminal disconnects (SIGTERM remains the shutdown signal). */
+  signal(SIGHUP, SIG_IGN);
+  signal(SIGINT, SIG_IGN);
+  signal(SIGQUIT, SIG_IGN);
+  signal(SIGPIPE, SIG_IGN);
+  /* Protect from the OOM killer while still root, before any privilege drop. */
+  ds_oom_protect();
+}
+
 int ds_peer_in_pidns(pid_t peer_pid) {
   if (peer_pid <= 0)
     return 1; /* unknown -> fail open */

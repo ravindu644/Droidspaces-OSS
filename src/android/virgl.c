@@ -31,16 +31,7 @@ struct virgl_args {
 static void virgl_child_wrapper(int ready_fd, void *user_data) {
   struct virgl_args *args = (struct virgl_args *)user_data;
 
-  /* Ignore hangups, keyboard interrupts, and broken pipes to make the server
-   * process robust and persistent (except for SIGTERM which we use to stop it).
-   */
-  signal(SIGHUP, SIG_IGN);
-  signal(SIGINT, SIG_IGN);
-  signal(SIGQUIT, SIG_IGN);
-  signal(SIGPIPE, SIG_IGN);
-
-  /* Make VirGL server unkillable */
-  ds_oom_protect();
+  ds_daemon_child_preamble();
 
   /* Enter droidspacesd domain -- best-effort, fallback on pre-reboot */
   ds_selinux_enter_domain();

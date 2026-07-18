@@ -56,18 +56,7 @@ struct xserver_args {
 static void xserver_child_wrapper(int ready_fd, void *user_data) {
   struct xserver_args *args = (struct xserver_args *)user_data;
 
-  /* Ignore hangups, keyboard interrupts, and broken pipes to make the server
-   * process robust and persistent (except for SIGTERM which we use to stop it).
-   */
-  signal(SIGHUP, SIG_IGN);
-  signal(SIGINT, SIG_IGN);
-  signal(SIGQUIT, SIG_IGN);
-  signal(SIGPIPE, SIG_IGN);
-
-  /* Make Termux-X11 server unkillable.
-   * This must be done while we are still running as root (before dropping
-   * privileges). */
-  ds_oom_protect();
+  ds_daemon_child_preamble();
 
   char ctx[256];
   if (get_selinux_context(TX11_DATA_DIR, ctx, sizeof(ctx)) < 0 &&
