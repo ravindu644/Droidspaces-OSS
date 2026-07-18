@@ -1243,7 +1243,5 @@ int main(int argc, char **argv) {
 
 cleanup:
   ds_config_free(&cfg);
-  free(cfg.tx11_extra_flags);
-  free(cfg.virgl_extra_flags);
   return ret;
 }

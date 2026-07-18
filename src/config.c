@@ -631,6 +631,10 @@ void ds_config_free(struct ds_config *cfg) {
   free_config_binds(cfg);
   free_config_env_vars(cfg);
   free_config_unknown_lines(cfg);
+  free(cfg->tx11_extra_flags);
+  cfg->tx11_extra_flags = NULL;
+  free(cfg->virgl_extra_flags);
+  cfg->virgl_extra_flags = NULL;
 }
 
 static void ds_config_serialize_known(FILE *f, struct ds_config *cfg) {
@@ -829,10 +833,7 @@ int ds_config_save(const char *config_path, struct ds_config *cfg) {
       }
       free(buf_cfg);
       free(buf_disk);
-      free_config_binds(&disk_cfg);
-      free_config_unknown_lines(&disk_cfg);
-      free(disk_cfg.tx11_extra_flags);
-      free(disk_cfg.virgl_extra_flags);
+      ds_config_free(&disk_cfg);
 
       if (is_equal) {
         if (!cfg->config_file_existed) {
