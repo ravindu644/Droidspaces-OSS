@@ -379,4 +379,26 @@
     <string name="privileged_confirm_instruction">Scrie \"NU VOI RAPORTA NICIUN BUG\" în majuscule pentru a confirma:</string>
     <string name="i_understand_caps">NU VOI RAPORTA NICIUN BUG</string>
     <string name="hw_access_disclaimer">Începând cu Droidspaces v6.1.0, udevd are acces adevărat la subsistemele USB, block, input, TTY și network (rețea). Container-ul tău poate accesa hardware pe care îl utilizează Android.\n\nDacă tastatura, cardul SD, sau dispozitivele USB nu mai funcționează în Android după ce pornești un container - acela NU este un bug. Container-ul l-a luat, fiindcă ai dorit acces complet la hardware.\n\nNU raporta probleme cauzate de conflicte de hardware sau kernel panics în timp ce utilizezi acest mod.</string>
+    <string name="backend_section">Backend</string>
+    <string name="termux_requirements">Cerințe pentru Termux</string>
+    <string name="accent_color">Culoare de accent</string>
+    <string name="github">GitHub</string>
+    <string name="ok">OK</string>
+    <string name="type_container_name_to_confirm">Introduceți numele exact al containerului pentru confirmare:</string>
+    <string name="pid_label">PID: %1$d</string>
+    <string name="hw_option">HW</string>
+    <string name="gpu_option">GPU</string>
+    <string name="x11_option">X11</string>
+    <string name="virgl_option">VirGL</string>
+    <string name="pulseaudio_option">PulseAudio</string>
+    <string name="cgroup_v1_option">Cgroup V1</string>
+    <string name="userns_option">Namespace-uri de utilizator (user namespaces)</string>
+    <string name="tarball_label">Arhivă tar</string>
+    <string name="uptime_label">%1$s: %2$s</string>
+    <string name="ip_address_label">%1$s: %2$s</string>
+    <string name="disk_usage">Utilizare spațiu de stocare</string>
+    <string name="disk_usage_used_of_total">%1$s / %2$s utilizat</string>
+    <string name="disk_usage_calculating">Se calculează…</string>
+    <string name="systemd">Systemd</string>
+    <string name="enable_pulseaudio">Configurare PulseAudio</string>
 </resources>

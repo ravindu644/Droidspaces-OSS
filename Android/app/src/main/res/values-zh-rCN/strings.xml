@@ -512,4 +512,7 @@
     <string name="allow_userns">允许用户命名空间</string>
     <string name="userns_option">用户命名空间</string>
     <string name="allow_userns_description">允许非特权用户命名空间，Flatpak/bwrap/Firefox等软件需要此功能。但是，若内核未打补丁，设备可能易受某些漏洞利用攻击影响（如 Fragnesia）</string>
+    <string name="accent_color">强调色</string>
+    <string name="type_container_name_to_confirm">完整输入容器名称以确认：</string>
+    <string name="debugging_section">调试</string>
 </resources>

@@ -10,4 +10,9 @@
         <item quantity="few">%d commit-uri</item>
         <item quantity="other">Commit-urile %d</item>
     </plurals>
+    <plurals name="notification_sessions_running">
+        <item quantity="one">%d sesiune activă</item>
+        <item quantity="few">%d sesiuni active</item>
+        <item quantity="other">%d de sesiuni active</item>
+    </plurals>
 </resources>
