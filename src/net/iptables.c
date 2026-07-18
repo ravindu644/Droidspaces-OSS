@@ -468,8 +468,13 @@ static int remove_matching_rules(int fd, const char *table_name,
 
   while (max_retries-- > 0) {
     unsigned char *new_blob = malloc(cur_info.size);
-    if (!new_blob)
+    if (!new_blob) {
+      /* On an EAGAIN refetch iteration cur_base owns a get_table() blob; free
+       * it before bailing so the early return does not leak it. */
+      if (cur_base)
+        free(cur_base);
       return -ENOMEM;
+    }
 
     /* Allocate per-entry tracking arrays */
     unsigned int *old_offsets =
