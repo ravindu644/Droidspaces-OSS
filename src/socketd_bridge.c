@@ -822,6 +822,10 @@ static enum ds_socketd_status socketd_read_lifecycle_request(
     return DS_SOCKETD_STATUS_BAD_REQUEST;
   }
 
+  /* The wire format does not guarantee target[] is NUL-terminated; force it
+   * before safe_strncpy() (which calls strlen) so a client sending 256
+   * non-zero bytes cannot make strlen read past the fixed-size field. */
+  req_out->target[sizeof(req_out->target) - 1] = '\0';
   safe_strncpy(target_out, req_out->target, target_size);
   if (!target_out[0])
     return DS_SOCKETD_STATUS_BAD_REQUEST;
@@ -1315,6 +1319,9 @@ static void socketd_handle_conn(int conn) {
       return;
     }
 
+    /* Force NUL-termination of the wire field before safe_strncpy()'s strlen
+     * to avoid an out-of-bounds read past the fixed-size target[]. */
+    inspect_req.target[sizeof(inspect_req.target) - 1] = '\0';
     char target[DS_SOCKETD_RECORD_NAME_MAX];
     safe_strncpy(target, inspect_req.target, sizeof(target));
     if (!target[0]) {
