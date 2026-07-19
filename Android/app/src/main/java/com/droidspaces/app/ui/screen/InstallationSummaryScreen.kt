@@ -180,10 +180,32 @@ fun InstallationSummaryScreen(
 }
 
 @Composable
+private fun SummaryItem(label: String, value: String, icon: androidx.compose.ui.graphics.vector.ImageVector) =
+    SummaryItem(label, value) {
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            modifier = Modifier.size(20.dp),
+            tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.8f)
+        )
+    }
+
+@Composable
+private fun SummaryItem(label: String, value: String, icon: androidx.compose.ui.graphics.painter.Painter) =
+    SummaryItem(label, value) {
+        Icon(
+            painter = icon,
+            contentDescription = null,
+            modifier = Modifier.size(20.dp),
+            tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.8f)
+        )
+    }
+
+@Composable
 private fun SummaryItem(
     label: String,
     value: String,
-    icon: Any
+    icon: @Composable () -> Unit
 ) {
     Row(
         modifier = Modifier
@@ -192,24 +214,7 @@ private fun SummaryItem(
         horizontalArrangement = Arrangement.spacedBy(14.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        when (icon) {
-            is androidx.compose.ui.graphics.vector.ImageVector -> {
-                Icon(
-                    imageVector = icon,
-                    contentDescription = null,
-                    modifier = Modifier.size(20.dp),
-                    tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.8f)
-                )
-            }
-            is androidx.compose.ui.graphics.painter.Painter -> {
-                Icon(
-                    painter = icon,
-                    contentDescription = null,
-                    modifier = Modifier.size(20.dp),
-                    tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.8f)
-                )
-            }
-        }
+        icon()
         Column(
             modifier = Modifier.weight(1f),
             verticalArrangement = Arrangement.spacedBy(2.dp)
