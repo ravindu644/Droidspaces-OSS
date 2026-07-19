@@ -102,6 +102,8 @@ object RootfsRepository {
     }
 
     private fun httpGet(url: String): String? {
+        // Refuse cleartext: the rootfs supply chain must not be MITM-able (V13).
+        if (!url.startsWith("https://", ignoreCase = true)) return null
         val conn = (URL(url).openConnection() as HttpURLConnection).apply {
             connectTimeout = CONNECT_TIMEOUT
             readTimeout    = READ_TIMEOUT

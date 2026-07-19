@@ -264,6 +264,8 @@ class PreferencesManager private constructor(context: Context) {
     }
 
     fun addCustomRepo(name: String, url: String) {
+        // Only HTTPS repos — the rootfs manifest/payload must not be MITM-able (V13).
+        if (!url.startsWith("https://", ignoreCase = true)) return
         val current = getCustomRepos().toMutableList()
         if (current.any { it.second == url }) return
         current.add(name to url)

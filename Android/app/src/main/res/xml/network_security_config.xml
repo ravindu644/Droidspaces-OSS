@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Droidspaces talks only to HTTPS endpoints (the rootfs manifest + downloads).
+  Block all cleartext traffic app-wide so a repackage, a lowered targetSdk, or a
+  user-added http:// custom repo cannot silently expose the rootfs supply chain
+  to MITM. See FINDINGS_APP_VULN V13.
+-->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="false" />
+</network-security-config>
