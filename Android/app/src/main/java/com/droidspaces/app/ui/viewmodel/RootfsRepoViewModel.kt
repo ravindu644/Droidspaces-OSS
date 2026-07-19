@@ -130,20 +130,30 @@ class RootfsRepoViewModel(application: Application) : AndroidViewModel(applicati
     fun startDownload(asset: RootfsAsset) {
         if (downloadStates[asset.downloadUrl] is AssetDownloadState.Downloading) return
         val ctx = getApplication<Application>()
-        downloadJobs[asset.downloadUrl]?.cancel()
+        val url = asset.downloadUrl
+        downloadJobs[url]?.cancel()
         val downloadId = RootfsDownloadManager.enqueue(ctx, asset)
-        downloadIds[asset.downloadUrl] = downloadId
-        downloadJobs[asset.downloadUrl] = viewModelScope.launch {
+        downloadIds[url] = downloadId
+        lateinit var job: Job
+        job = viewModelScope.launch {
             RootfsDownloadManager.pollFlow(ctx, asset, downloadId).collect { status ->
                 downloadStates = downloadStates.toMutableMap().apply {
-                    put(asset.downloadUrl, when (status) {
+                    put(url, when (status) {
                         is DownloadStatus.Progress  -> AssetDownloadState.Downloading(status.percent)
                         is DownloadStatus.Completed -> AssetDownloadState.Done(status.fileUri)
                         is DownloadStatus.Failed    -> AssetDownloadState.Failed(status.reason)
                     })
                 }
             }
+            // Poll completed normally (terminal status reached, not cancelled): drop this
+            // job's bookkeeping so the maps don't grow unbounded across repeated downloads.
+            // Guard on identity so a concurrent restart's entry is never removed.
+            if (downloadJobs[url] === job) {
+                downloadJobs.remove(url)
+                downloadIds.remove(url)
+            }
         }
+        downloadJobs[url] = job
     }
 
     fun cancelDownload(asset: RootfsAsset) {
@@ -172,4 +182,12 @@ class RootfsRepoViewModel(application: Application) : AndroidViewModel(applicati
 
     fun getCustomRepos(): List<Pair<String, String>> =
         PreferencesManager.getInstance(getApplication()).getCustomRepos()
+
+    override fun onCleared() {
+        super.onCleared()
+        // viewModelScope cancels the poll coroutines; drop the bookkeeping too.
+        downloadJobs.values.forEach { it.cancel() }
+        downloadJobs.clear()
+        downloadIds.clear()
+    }
 }

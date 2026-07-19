@@ -10,8 +10,9 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 
 class DroidspacesApplication : Application() {
-    // Use SupervisorJob to prevent child coroutine failures from cancelling the scope
-    val applicationScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+    // Use SupervisorJob to prevent child coroutine failures from cancelling the scope.
+    // Private: only this class schedules onto it (avoids an app-wide unscoped launcher).
+    private val applicationScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
     override fun onCreate() {
         super.onCreate()

@@ -9,10 +9,14 @@ import androidx.compose.runtime.setValue
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.droidspaces.app.util.ContainerUsageCollector
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 /**
  * ViewModel for tracking real-time container usage statistics.
@@ -49,20 +53,27 @@ class ContainerUsageViewModel(application: Application) : AndroidViewModel(appli
         // Start new monitoring loop
         updateJob = viewModelScope.launch(Dispatchers.IO) {
             while (true) {
-                // Collect usage for all monitored containers in parallel
-                containerNames.forEach { containerName ->
-                    launch {
-                        try {
-                            val usage = ContainerUsageCollector.collectUsage(containerName)
-                            _usageStats[containerName] = usage
-                        } catch (e: Exception) {
-                            Log.e(TAG, "Failed to collect usage for $containerName", e)
+                // Collect usage for all monitored containers concurrently, but AWAIT the
+                // whole tick before sleeping — so slow collectors can't let successive
+                // ticks pile up an unbounded number of in-flight child coroutines.
+                val results = coroutineScope {
+                    containerNames.map { containerName ->
+                        async {
+                            try {
+                                containerName to ContainerUsageCollector.collectUsage(containerName)
+                            } catch (e: Exception) {
+                                Log.e(TAG, "Failed to collect usage for $containerName", e)
+                                null
+                            }
                         }
-                    }
+                    }.awaitAll()
                 }
 
-                // Remove stats for containers that are no longer monitored
-                _usageStats.keys.removeAll { it !in containerNames }
+                // Compose snapshot state must be mutated on the main thread.
+                withContext(Dispatchers.Main) {
+                    results.filterNotNull().forEach { (name, usage) -> _usageStats[name] = usage }
+                    _usageStats.keys.removeAll { it !in containerNames }
+                }
 
                 // Wait before next update
                 delay(UPDATE_INTERVAL_MS)
