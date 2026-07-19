@@ -15,6 +15,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 
@@ -35,6 +36,8 @@ fun DialogFooterRow(
     confirmEnabled: Boolean = true,
     cancelBorderAlpha: Float = 0.4f,
     textFontWeight: FontWeight = FontWeight.SemiBold,
+    confirmColor: Color = MaterialTheme.colorScheme.primary,
+    confirmContentColor: Color = MaterialTheme.colorScheme.onPrimary,
 ) {
     Row(modifier = modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
         Surface(
@@ -51,7 +54,7 @@ fun DialogFooterRow(
         Surface(
             modifier = Modifier.weight(1f).clip(RoundedCornerShape(14.dp)).clickable(enabled = confirmEnabled, onClick = onConfirm),
             shape = RoundedCornerShape(14.dp),
-            color = if (confirmEnabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f),
+            color = if (confirmEnabled) confirmColor else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f),
             tonalElevation = 0.dp
         ) {
             Box(modifier = Modifier.padding(14.dp), contentAlignment = Alignment.Center) {
@@ -59,7 +62,7 @@ fun DialogFooterRow(
                     confirmLabel,
                     style = MaterialTheme.typography.labelLarge,
                     fontWeight = textFontWeight,
-                    color = if (confirmEnabled) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+                    color = if (confirmEnabled) confirmContentColor else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
                 )
             }
         }

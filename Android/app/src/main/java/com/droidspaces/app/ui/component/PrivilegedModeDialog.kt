@@ -95,28 +95,10 @@ fun PrivilegedModeDialog(
                     fontWeight = FontWeight.Bold
                 )
 
-                // Disclaimer Card
-                Surface(
-                    color = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.3f),
-                    shape = RoundedCornerShape(16.dp),
-                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.error.copy(alpha = 0.2f)),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Column(modifier = Modifier.padding(16.dp)) {
-                        Text(
-                            text = context.getString(R.string.privileged_warning_title),
-                            style = MaterialTheme.typography.titleSmall,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.error
-                        )
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Text(
-                            text = context.getString(R.string.privileged_disclaimer),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onErrorContainer
-                        )
-                    }
-                }
+                DangerousWarningCard(
+                    title = context.getString(R.string.privileged_warning_title),
+                    text = context.getString(R.string.privileged_disclaimer)
+                )
 
                 // Granular Toggles using modern look
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -170,79 +152,38 @@ fun PrivilegedModeDialog(
                     )
                 }
 
-                // Confirmation Gate
+                // Confirmation Gate (not needed when clearing all flags)
                 if (!allOff) {
-                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Text(
-                            text = context.getString(R.string.privileged_confirm_instruction),
-                            style = MaterialTheme.typography.labelMedium,
-                            fontWeight = FontWeight.Bold
-                        )
-                        OutlinedTextField(
-                            value = confirmText,
-                            onValueChange = { confirmText = it },
-                            modifier = Modifier.fillMaxWidth(),
-                            placeholder = { Text(context.getString(R.string.i_understand_caps)) },
-                            singleLine = true,
-                            isError = confirmText.isNotEmpty() && !isConfirmed,
-                            shape = RoundedCornerShape(14.dp),
-                            colors = DsTextFieldDefaults.surfaceColors()
-                        )
-                    }
+                    ConfirmPhraseField(
+                        value = confirmText,
+                        onValueChange = { confirmText = it },
+                        isError = confirmText.isNotEmpty() && !isConfirmed
+                    )
                 }
 
-                // Buttons
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Surface(
-                        modifier = Modifier.weight(1f).clip(RoundedCornerShape(14.dp)).clickable(onClick = onDismiss),
-                        shape = RoundedCornerShape(14.dp),
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.06f),
-                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)),
-                        tonalElevation = 0.dp
-                    ) {
-                        Box(modifier = Modifier.padding(14.dp), contentAlignment = Alignment.Center) {
-                            Text(context.getString(R.string.cancel), style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold)
-                        }
-                    }
-                    Surface(
-                        modifier = Modifier.weight(1f).clip(RoundedCornerShape(14.dp)).clickable(
-                            enabled = isConfirmed || allOff,
-                            onClick = {
-                                val tags = mutableListOf<String>()
-                                if (full) {
-                                    tags.add("full")
-                                } else {
-                                    if (nomask) tags.add("nomask")
-                                    if (nocaps) tags.add("nocaps")
-                                    if (noseccomp) tags.add("noseccomp")
-                                    if (shared) tags.add("shared")
-                                    if (unfiltered) tags.add("unfiltered-dev")
-                                }
-                                onConfirm(tags.joinToString(","))
-                            }
-                        ),
-                        shape = RoundedCornerShape(14.dp),
-                        color = if (isConfirmed || allOff) {
-                            if (allOff) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
+                DialogFooterRow(
+                    dismissLabel = context.getString(R.string.cancel),
+                    confirmLabel = context.getString(R.string.ok),
+                    onDismiss = onDismiss,
+                    onConfirm = {
+                        val tags = mutableListOf<String>()
+                        if (full) {
+                            tags.add("full")
                         } else {
-                            MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f)
-                        },
-                        tonalElevation = 0.dp
-                    ) {
-                        Box(modifier = Modifier.padding(14.dp), contentAlignment = Alignment.Center) {
-                            Text(
-                                context.getString(R.string.ok),
-                                style = MaterialTheme.typography.labelLarge,
-                                fontWeight = FontWeight.SemiBold,
-                                color = if (isConfirmed || allOff) {
-                                    if (allOff) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onError
-                                } else {
-                                    MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
-                                }
-                            )
+                            if (nomask) tags.add("nomask")
+                            if (nocaps) tags.add("nocaps")
+                            if (noseccomp) tags.add("noseccomp")
+                            if (shared) tags.add("shared")
+                            if (unfiltered) tags.add("unfiltered-dev")
                         }
-                    }
-                }
+                        onConfirm(tags.joinToString(","))
+                    },
+                    // allOff means "clear privileged mode" — a safe action, so it is
+                    // enabled without the confirm phrase and uses the primary color.
+                    confirmEnabled = isConfirmed || allOff,
+                    confirmColor = if (allOff) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error,
+                    confirmContentColor = if (allOff) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onError
+                )
             }
         }
     }

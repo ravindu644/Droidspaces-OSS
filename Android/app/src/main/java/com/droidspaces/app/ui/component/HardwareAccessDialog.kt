@@ -53,92 +53,26 @@ fun HardwareAccessDialog(
                     fontWeight = FontWeight.Bold
                 )
 
-                // Warning Card
-                Surface(
-                    color = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.3f),
-                    shape = RoundedCornerShape(16.dp),
-                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.error.copy(alpha = 0.2f)),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Column(modifier = Modifier.padding(16.dp)) {
-                        Text(
-                            text = context.getString(R.string.privileged_warning_title),
-                            style = MaterialTheme.typography.titleSmall,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.error
-                        )
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Text(
-                            text = context.getString(R.string.hw_access_disclaimer),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onErrorContainer
-                        )
-                    }
-                }
+                DangerousWarningCard(
+                    title = context.getString(R.string.privileged_warning_title),
+                    text = context.getString(R.string.hw_access_disclaimer)
+                )
 
-                // Confirmation Gate
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text(
-                        text = context.getString(R.string.privileged_confirm_instruction),
-                        style = MaterialTheme.typography.labelMedium,
-                        fontWeight = FontWeight.Bold
-                    )
-                    OutlinedTextField(
-                        value = confirmText,
-                        onValueChange = { confirmText = it },
-                        modifier = Modifier.fillMaxWidth(),
-                        placeholder = { Text(context.getString(R.string.i_understand_caps)) },
-                        singleLine = true,
-                        isError = confirmText.isNotEmpty() && !isConfirmed,
-                        shape = RoundedCornerShape(14.dp),
-                        colors = DsTextFieldDefaults.surfaceColors()
-                    )
-                }
+                ConfirmPhraseField(
+                    value = confirmText,
+                    onValueChange = { confirmText = it },
+                    isError = confirmText.isNotEmpty() && !isConfirmed
+                )
 
-                // Buttons
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Surface(
-                        modifier = Modifier
-                            .weight(1f)
-                            .clip(RoundedCornerShape(14.dp))
-                            .clickable(onClick = onDismiss),
-                        shape = RoundedCornerShape(14.dp),
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.06f),
-                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)),
-                        tonalElevation = 0.dp
-                    ) {
-                        Box(modifier = Modifier.padding(14.dp), contentAlignment = Alignment.Center) {
-                            Text(
-                                context.getString(R.string.cancel),
-                                style = MaterialTheme.typography.labelLarge,
-                                fontWeight = FontWeight.SemiBold
-                            )
-                        }
-                    }
-                    Surface(
-                        modifier = Modifier
-                            .weight(1f)
-                            .clip(RoundedCornerShape(14.dp))
-                            .clickable(
-                                enabled = isConfirmed,
-                                onClick = onConfirm
-                            ),
-                        shape = RoundedCornerShape(14.dp),
-                        color = if (isConfirmed) MaterialTheme.colorScheme.error
-                                else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f),
-                        tonalElevation = 0.dp
-                    ) {
-                        Box(modifier = Modifier.padding(14.dp), contentAlignment = Alignment.Center) {
-                            Text(
-                                context.getString(R.string.ok),
-                                style = MaterialTheme.typography.labelLarge,
-                                fontWeight = FontWeight.SemiBold,
-                                color = if (isConfirmed) MaterialTheme.colorScheme.onError
-                                        else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
-                            )
-                        }
-                    }
-                }
+                DialogFooterRow(
+                    dismissLabel = context.getString(R.string.cancel),
+                    confirmLabel = context.getString(R.string.ok),
+                    onDismiss = onDismiss,
+                    onConfirm = onConfirm,
+                    confirmEnabled = isConfirmed,
+                    confirmColor = MaterialTheme.colorScheme.error,
+                    confirmContentColor = MaterialTheme.colorScheme.onError
+                )
             }
         }
     }
