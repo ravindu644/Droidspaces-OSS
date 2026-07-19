@@ -297,32 +297,13 @@ fun FilePickerDialog(
 
                     Spacer(modifier = Modifier.height(16.dp))
 
-                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        Surface(
-                            modifier = Modifier.weight(1f).clip(RoundedCornerShape(14.dp)).clickable(onClick = onDismiss),
-                            shape = RoundedCornerShape(14.dp),
-                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.06f),
-                            border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)),
-                            tonalElevation = 0.dp
-                        ) {
-                            Box(modifier = Modifier.padding(14.dp), contentAlignment = Alignment.Center) {
-                                Text(context.getString(R.string.cancel), style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
-                            }
-                        }
-                        Surface(
-                            modifier = Modifier.weight(1f).clip(RoundedCornerShape(14.dp)).clickable(onClick = {
-                                clearFocus()
-                                onConfirm(currentPath)
-                            }),
-                            shape = RoundedCornerShape(14.dp),
-                            color = MaterialTheme.colorScheme.primary,
-                            tonalElevation = 0.dp
-                        ) {
-                            Box(modifier = Modifier.padding(14.dp), contentAlignment = Alignment.Center) {
-                                Text(context.getString(R.string.select_folder), style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onPrimary)
-                            }
-                        }
-                    }
+                    DialogFooterRow(
+                        dismissLabel = context.getString(R.string.cancel),
+                        confirmLabel = context.getString(R.string.select_folder),
+                        onDismiss = onDismiss,
+                        onConfirm = { clearFocus(); onConfirm(currentPath) },
+                        textFontWeight = FontWeight.Bold
+                    )
                 }
             }
         }

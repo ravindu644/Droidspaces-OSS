@@ -847,32 +847,18 @@ private fun RepoManagerDialog(
                 Spacer(Modifier.height(16.dp))
 
                 // Single footer row: Close / Save
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Surface(
-                        modifier = Modifier.weight(1f).clip(RoundedCornerShape(14.dp)).clickable(onClick = onDismiss),
-                        shape = RoundedCornerShape(14.dp),
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.06f),
-                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f))
-                    ) {
-                        Box(Modifier.padding(14.dp), contentAlignment = Alignment.Center) {
-                            Text(context.getString(R.string.cancel), style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold)
-                        }
-                    }
-                    Surface(
-                        modifier = Modifier.weight(1f).clip(RoundedCornerShape(14.dp)).clickable {
-                            val currentUrls = repos.map { it.second }.toSet()
-                            val toRemove = originalUrls.filter { it !in currentUrls }
-                            val toAdd    = repos.filter { it.second !in originalUrls }
-                            onSave(toAdd, toRemove)
-                        },
-                        shape = RoundedCornerShape(14.dp),
-                        color = MaterialTheme.colorScheme.primary
-                    ) {
-                        Box(Modifier.padding(14.dp), contentAlignment = Alignment.Center) {
-                            Text(context.getString(R.string.ok), style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onPrimary)
-                        }
-                    }
-                }
+                DialogFooterRow(
+                    dismissLabel = context.getString(R.string.cancel),
+                    confirmLabel = context.getString(R.string.ok),
+                    onDismiss = onDismiss,
+                    onConfirm = {
+                        val currentUrls = repos.map { it.second }.toSet()
+                        val toRemove = originalUrls.filter { it !in currentUrls }
+                        val toAdd = repos.filter { it.second !in originalUrls }
+                        onSave(toAdd, toRemove)
+                    },
+                    cancelBorderAlpha = 0.35f
+                )
             }
         }
     }
