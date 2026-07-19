@@ -1,4 +1,6 @@
 package com.droidspaces.app.ui.screen
+
+import com.droidspaces.app.ui.component.PrimaryActionBottomBar
 import androidx.compose.ui.graphics.Color
 
 import androidx.activity.compose.BackHandler
@@ -170,51 +172,11 @@ fun InstallationScreen(
             // Show the Continue button once the work is finished, whether it
             // succeeded or failed - it is the only accepted way off this screen.
             if (isSuccess || errorMessage != null) {
-                val btnShape = RoundedCornerShape(20.dp)
-                Surface(
-                    modifier = Modifier.fillMaxWidth(),
-                    color = MaterialTheme.colorScheme.surfaceContainer,
-                    tonalElevation = 0.dp
-                ) {
-                    Column(modifier = Modifier.fillMaxWidth()) {
-                        HorizontalDivider(
-                            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.25f),
-                            thickness = 1.dp
-                        )
-                        Surface(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(24.dp)
-                                .navigationBarsPadding()
-                                .clip(btnShape)
-                                .clickable(
-                                    onClick = onInstallationComplete,
-                                    indication = androidx.compose.material.ripple.rememberRipple(bounded = true),
-                                    interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
-                                ),
-                            shape = btnShape,
-                            color = MaterialTheme.colorScheme.primary,
-                            tonalElevation = 0.dp
-                        ) {
-                            Box(modifier = Modifier.padding(vertical = 16.dp), contentAlignment = Alignment.Center) {
-                                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                    Icon(
-                                        imageVector = if (isSuccess) Icons.Default.Check else Icons.AutoMirrored.Filled.ArrowForward,
-                                        contentDescription = null,
-                                        modifier = Modifier.size(18.dp),
-                                        tint = MaterialTheme.colorScheme.onPrimary
-                                    )
-                                    Text(
-                                        text = context.getString(R.string.continue_button),
-                                        style = MaterialTheme.typography.labelLarge,
-                                        fontWeight = FontWeight.SemiBold,
-                                        color = MaterialTheme.colorScheme.onPrimary
-                                    )
-                                }
-                            }
-                        }
-                    }
-                }
+                PrimaryActionBottomBar(
+                    label = context.getString(R.string.continue_button),
+                    icon = if (isSuccess) Icons.Default.Check else Icons.AutoMirrored.Filled.ArrowForward,
+                    onClick = onInstallationComplete
+                )
             }
         }
     ) { innerPadding ->

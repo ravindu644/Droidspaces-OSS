@@ -1,5 +1,7 @@
 package com.droidspaces.app.ui.screen
 
+import com.droidspaces.app.ui.component.PrimaryActionBottomBar
+
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.animateFloatAsState
 import kotlinx.coroutines.delay
@@ -72,90 +74,50 @@ fun RootCheckScreen(
     Scaffold(
         containerColor = Color.Transparent,
         bottomBar = {
-            Surface(
-                modifier = Modifier.fillMaxWidth(),
-                color = MaterialTheme.colorScheme.surfaceContainer,
-                tonalElevation = 0.dp
-            ) {
-                Column(modifier = Modifier.fillMaxWidth()) {
-                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.25f), thickness = 1.dp)
-                    
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(20.dp)
-                            .navigationBarsPadding()
-                            .animateContentSize(animationSpec = AnimationUtils.fastSpec()),
-                        verticalArrangement = Arrangement.spacedBy(12.dp)
+            PrimaryActionBottomBar(
+                label = context.getString(
+                    if (currentRootStatus == RootStatus.Granted) R.string.continue_button
+                    else if (isChecking) R.string.checking_root
+                    else R.string.check_root_access
+                ),
+                icon = if (currentRootStatus == RootStatus.Granted) Icons.Default.CheckCircle else Icons.Default.Shield,
+                onClick = {
+                    if (currentRootStatus == RootStatus.Granted) onNavigateToInstallation()
+                    else checkRoot()
+                },
+                enabled = !isChecking && currentRootStatus != RootStatus.Checking,
+                disabledContainerColor = MaterialTheme.colorScheme.primary,
+                disabledContentColor = MaterialTheme.colorScheme.onPrimary,
+                horizontalPadding = 20.dp,
+                labelFontSize = 16.sp,
+                secondaryAction = {
+                    androidx.compose.animation.AnimatedVisibility(
+                        visible = currentRootStatus == RootStatus.Denied && hasCheckedRoot,
+                        enter = androidx.compose.animation.expandVertically() + androidx.compose.animation.fadeIn(),
+                        exit = androidx.compose.animation.shrinkVertically() + androidx.compose.animation.fadeOut()
                     ) {
-                        // Main Action Button (Check Root / Continue)
                         Surface(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .clip(btnShape)
-                                .clickable(
-                                    enabled = !isChecking && currentRootStatus != RootStatus.Checking,
-                                    onClick = {
-                                        if (currentRootStatus == RootStatus.Granted) onNavigateToInstallation()
-                                        else checkRoot()
-                                    }
-                                ),
+                                .clickable(onClick = onSkip),
                             shape = btnShape,
-                            color = MaterialTheme.colorScheme.primary,
+                            color = Color.Transparent,
+                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)),
                             tonalElevation = 0.dp
                         ) {
                             Box(modifier = Modifier.padding(vertical = 16.dp), contentAlignment = Alignment.Center) {
-                                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                    Icon(
-                                        imageVector = if (currentRootStatus == RootStatus.Granted) Icons.Default.CheckCircle else Icons.Default.Shield,
-                                        contentDescription = null,
-                                        modifier = Modifier.size(18.dp),
-                                        tint = MaterialTheme.colorScheme.onPrimary
-                                    )
-                                    Text(
-                                        text = context.getString(
-                                            if (currentRootStatus == RootStatus.Granted) R.string.continue_button 
-                                            else if (isChecking) R.string.checking_root 
-                                            else R.string.check_root_access
-                                        ),
-                                        style = MaterialTheme.typography.labelLarge,
-                                        fontWeight = FontWeight.SemiBold,
-                                        fontSize = 16.sp,
-                                        color = MaterialTheme.colorScheme.onPrimary
-                                    )
-                                }
-                            }
-                        }
-
-                        // Skip button - only if Denied and has checked
-                        androidx.compose.animation.AnimatedVisibility(
-                            visible = currentRootStatus == RootStatus.Denied && hasCheckedRoot,
-                            enter = androidx.compose.animation.expandVertically() + androidx.compose.animation.fadeIn(),
-                            exit = androidx.compose.animation.shrinkVertically() + androidx.compose.animation.fadeOut()
-                        ) {
-                            Surface(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clip(btnShape)
-                                    .clickable(onClick = onSkip),
-                                shape = btnShape,
-                                color = Color.Transparent,
-                                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)),
-                                tonalElevation = 0.dp
-                            ) {
-                                Box(modifier = Modifier.padding(vertical = 16.dp), contentAlignment = Alignment.Center) {
-                                    Text(
-                                        text = context.getString(R.string.skip),
-                                        style = MaterialTheme.typography.labelLarge,
-                                        fontWeight = FontWeight.SemiBold,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                }
+                                Text(
+                                    text = context.getString(R.string.skip),
+                                    style = MaterialTheme.typography.labelLarge,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
                             }
                         }
                     }
                 }
-            }
+            )
         }
     ) { innerPadding ->
         Column(
