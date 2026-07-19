@@ -136,14 +136,7 @@ fun InstallationSummaryScreen(
                     if (config.blockNestedNs) SummaryItem(stringResource(R.string.manual_deadlock_shield), stringResource(R.string.enabled_legend), Icons.Default.GppBad)
                     if (config.privileged.isNotEmpty()) SummaryItem(stringResource(R.string.privileged_mode), config.privileged, Icons.Default.GppMaybe)
 
-                    fun countEnvVars(content: String?): Int {
-                        if (content.isNullOrBlank()) return 0
-                        return content.lines()
-                            .map { it.trim() }
-                            .count { it.isNotEmpty() && !it.startsWith("#") && it.contains("=") }
-                    }
-
-                    val envCount = countEnvVars(config.envFileContent)
+                    val envCount = com.droidspaces.app.util.ValidationUtils.countEnvVars(config.envFileContent)
                     if (envCount > 0) {
                         SummaryItem(stringResource(R.string.environment_variables), stringResource(R.string.environment_variables_configured, envCount), Icons.Default.Code)
                     }

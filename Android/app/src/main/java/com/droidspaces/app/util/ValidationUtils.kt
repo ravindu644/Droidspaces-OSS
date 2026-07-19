@@ -71,6 +71,14 @@ object ValidationUtils {
             .trim('-')
     }
 
+    /** Count non-comment `key=value` lines in an env-file body. */
+    fun countEnvVars(content: String?): Int {
+        if (content.isNullOrBlank()) return 0
+        return content.lines()
+            .map { it.trim() }
+            .count { it.isNotEmpty() && !it.startsWith("#") && it.contains("=") }
+    }
+
     // ---- Gateway networking mode --------------------------------------------
 
     // Linux IFNAMSIZ is 16 incl. NUL, so interface/bridge names get 15 usable chars.

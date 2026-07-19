@@ -82,12 +82,7 @@ import com.droidspaces.app.util.Constants
 import com.droidspaces.app.util.ContainerConfigState
 import com.droidspaces.app.util.ContainerInfo
 import com.droidspaces.app.util.GatewayErrors
-
-/** Count non-comment `key=value` lines. Shared by the config screens. */
-private fun countEnvVars(content: String): Int =
-    content.lines()
-        .map { it.trim() }
-        .count { it.isNotEmpty() && !it.startsWith("#") && it.contains("=") }
+import com.droidspaces.app.util.ValidationUtils
 
 /**
  * The single, shared container-configuration form used by both the Create wizard
@@ -602,7 +597,7 @@ fun ContainerConfigForm(
             modifier = Modifier.padding(top = 16.dp)
         )
 
-        val envCount = countEnvVars(state.envFileContent)
+        val envCount = ValidationUtils.countEnvVars(state.envFileContent)
         val envSubtitle = if (envCount > 0) {
             context.getString(R.string.environment_variables_configured, envCount)
         } else {
