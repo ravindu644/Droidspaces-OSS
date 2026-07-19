@@ -209,8 +209,10 @@ fun ContainerDetailsScreen(
                         }
 
                         osInfo?.let { info ->
-                            // Dynamic Height Synced Grid - measure all 6 and find max
-                            val tokens = mutableListOf<@Composable () -> Unit>().apply {
+                            // Dynamic Height Synced Grid - measure all 6 and find max.
+                            // Built once per (osInfo, running) instead of every recomposition
+                            // (this block re-fires on the 2s OS-info poll).
+                            val tokens = remember(info, container.isRunning) { mutableListOf<@Composable () -> Unit>().apply {
                                 add { IdentityToken(context.getString(R.string.distribution), info.prettyName ?: info.name ?: "Linux", IconUtils.getDistroIcon(info.prettyName ?: info.name), MaterialTheme.colorScheme.primary) }
                                 add { IdentityToken(context.getString(R.string.hostname), info.hostname ?: "localhost", rememberVectorPainter(image = Icons.Default.Computer), MaterialTheme.colorScheme.secondary) }
                                 add { IdentityToken(context.getString(R.string.uptime), info.uptime ?: "0s", rememberVectorPainter(image = Icons.Default.Timer), MaterialTheme.colorScheme.tertiary) }
@@ -219,7 +221,7 @@ fun ContainerDetailsScreen(
                                     add { IdentityToken(context.getString(R.string.cpu_usage_label), info.cpuUsage?.let { context.getString(R.string.cpu_percent_label, it) } ?: "---", rememberVectorPainter(image = Icons.Default.Speed), MaterialTheme.colorScheme.primary) }
                                     add { IdentityToken(context.getString(R.string.ram_usage_label), info.ramUsageMb?.let { context.getString(R.string.ram_percent_label, it, info.ramPercent ?: 0.0) } ?: "---", rememberVectorPainter(image = Icons.Default.Memory), MaterialTheme.colorScheme.secondary) }
                                 }
-                            }
+                            } }
 
                             SyncedGrid(items = tokens)
                         } ?: Box(

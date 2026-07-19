@@ -73,7 +73,7 @@ fun RunningContainerCard(
                     modifier = Modifier.weight(1f)
                 )
 
-                val sessionCount by remember {
+                val sessionCount by remember(container.name) {
                     derivedStateOf {
                         TerminalSessionService.globalSessionList.values.count {
                             it.containerName == container.name
