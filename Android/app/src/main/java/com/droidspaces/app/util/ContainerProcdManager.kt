@@ -20,7 +20,6 @@ object ContainerProcdManager {
     private const val TAG = "ContainerProcdManager"
     private const val COMMAND_TIMEOUT_MS = 15_000L
 
-    private val safeServiceName = Regex("^[A-Za-z0-9_.+@-]+$")
     private val safeActions = setOf("start", "stop", "restart", "reload", "enable", "disable", "status")
 
     private var scriptBase64: String? = null
@@ -153,7 +152,7 @@ object ContainerProcdManager {
         }.sortedWith(compareByDescending<ServiceInfo> { it.isRunning }.thenBy { it.name })
     }
 
-    private fun isSafeServiceName(serviceName: String): Boolean = safeServiceName.matches(serviceName)
+    private fun isSafeServiceName(serviceName: String): Boolean = ServiceManagerBase.isSafeServiceName(serviceName)
 
     private fun validateServiceAction(serviceName: String, action: String): CommandResult? {
         if (!isSafeServiceName(serviceName)) {

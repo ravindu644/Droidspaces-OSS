@@ -291,25 +291,34 @@ object ContainerSystemdManager {
         }.sortedWith(compareByDescending<ServiceInfo> { it.isRunning }.thenBy { it.name })
     }
 
-    // Systemctl commands
+    // Systemctl commands. Every service name is validated against the shared
+    // allow-list (ServiceManagerBase) before it is interpolated into the
+    // host-root `run 'systemctl ...'` payload — see FINDINGS_APP_VULN V1.
+    private suspend fun runSystemctl(containerName: String, action: String, serviceName: String): CommandResult {
+        if (!ServiceManagerBase.isSafeServiceName(serviceName)) {
+            return CommandResult(exitCode = 2, output = emptyList(), error = listOf("Invalid unit name: $serviceName"))
+        }
+        return executeSystemctlCommand(containerName, "$action $serviceName")
+    }
+
     suspend fun startService(containerName: String, serviceName: String) =
-        executeSystemctlCommand(containerName, "start --no-block $serviceName")
+        runSystemctl(containerName, "start --no-block", serviceName)
 
     suspend fun stopService(containerName: String, serviceName: String) =
-        executeSystemctlCommand(containerName, "stop $serviceName")
+        runSystemctl(containerName, "stop", serviceName)
 
     suspend fun restartService(containerName: String, serviceName: String) =
-        executeSystemctlCommand(containerName, "restart $serviceName")
+        runSystemctl(containerName, "restart", serviceName)
 
     suspend fun enableService(containerName: String, serviceName: String) =
-        executeSystemctlCommand(containerName, "enable $serviceName")
+        runSystemctl(containerName, "enable", serviceName)
 
     suspend fun disableService(containerName: String, serviceName: String) =
-        executeSystemctlCommand(containerName, "disable $serviceName")
+        runSystemctl(containerName, "disable", serviceName)
 
     suspend fun maskService(containerName: String, serviceName: String) =
-        executeSystemctlCommand(containerName, "mask $serviceName")
+        runSystemctl(containerName, "mask", serviceName)
 
     suspend fun unmaskService(containerName: String, serviceName: String) =
-        executeSystemctlCommand(containerName, "unmask $serviceName")
+        runSystemctl(containerName, "unmask", serviceName)
 }

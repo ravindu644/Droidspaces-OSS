@@ -201,18 +201,28 @@ object ContainerOpenRCManager {
         }.sortedWith(compareByDescending<ServiceInfo> { it.isRunning }.thenBy { it.name })
     }
 
+    // Every service name is validated against the shared allow-list
+    // (ServiceManagerBase) before it is interpolated into the host-root
+    // `run '...'` payload — see FINDINGS_APP_VULN V2.
+    private suspend fun runRC(containerName: String, serviceName: String, buildCommand: (String) -> String): CommandResult {
+        if (!ServiceManagerBase.isSafeServiceName(serviceName)) {
+            return CommandResult(exitCode = 2, output = emptyList(), error = listOf("Invalid service name: $serviceName"))
+        }
+        return executeRCCommand(containerName, buildCommand(serviceName))
+    }
+
     suspend fun startService(containerName: String, serviceName: String) =
-        executeRCCommand(containerName, "rc-service $serviceName start")
+        runRC(containerName, serviceName) { "rc-service $it start" }
 
     suspend fun stopService(containerName: String, serviceName: String) =
-        executeRCCommand(containerName, "rc-service $serviceName stop")
+        runRC(containerName, serviceName) { "rc-service $it stop" }
 
     suspend fun restartService(containerName: String, serviceName: String) =
-        executeRCCommand(containerName, "rc-service $serviceName restart")
+        runRC(containerName, serviceName) { "rc-service $it restart" }
 
     suspend fun enableService(containerName: String, serviceName: String) =
-        executeRCCommand(containerName, "rc-update add $serviceName default")
+        runRC(containerName, serviceName) { "rc-update add $it default" }
 
     suspend fun disableService(containerName: String, serviceName: String) =
-        executeRCCommand(containerName, "rc-update del $serviceName")
+        runRC(containerName, serviceName) { "rc-update del $it" }
 }
