@@ -30,17 +30,19 @@ import com.droidspaces.app.util.ValidationUtils
  * opens a dialog for the optional interface / LAN-name / bridge overrides. All
  * validation errors come from [errors]; the caller blocks Save/Next on `errors.isValid`.
  */
+/** Grouped gateway-mode overrides (replaces 4 separate value/onChange param pairs). */
+data class GatewayConfig(
+    val container: String = "",
+    val net: String = "",
+    val iface: String = "",
+    val bridge: String = "",
+)
+
 @Composable
 fun GatewaySettingsSection(
     visible: Boolean,
-    gatewayContainer: String,
-    onGatewayContainerChange: (String) -> Unit,
-    gatewayNet: String,
-    onGatewayNetChange: (String) -> Unit,
-    gatewayIface: String,
-    onGatewayIfaceChange: (String) -> Unit,
-    gatewayBridge: String,
-    onGatewayBridgeChange: (String) -> Unit,
+    config: GatewayConfig,
+    onConfigChange: (GatewayConfig) -> Unit,
     selfName: String,
     installedContainers: List<ContainerInfo>,
     errors: GatewayErrors
@@ -75,10 +77,10 @@ fun GatewaySettingsSection(
             val noCandidates = candidates.isEmpty()
             DsDropdown(
                 label = context.getString(R.string.gateway_container),
-                selected = gatewayContainer,
+                selected = config.container,
                 options = candidates,
                 displayName = { it },
-                onSelect = onGatewayContainerChange,
+                onSelect = { onConfigChange(config.copy(container = it)) },
                 leadingIcon = Icons.Default.Router,
                 isError = errors.container != null,
                 supportingText = if (noCandidates)
@@ -111,15 +113,13 @@ fun GatewaySettingsSection(
     if (showDialog) {
         GatewayConfigureDialog(
             selfName = selfName,
-            gatewayContainer = gatewayContainer,
+            gatewayContainer = config.container,
             installed = installedContainers,
-            initialNet = gatewayNet,
-            initialIface = gatewayIface,
-            initialBridge = gatewayBridge,
+            initialNet = config.net,
+            initialIface = config.iface,
+            initialBridge = config.bridge,
             onConfirm = { net, iface, bridge ->
-                onGatewayNetChange(net)
-                onGatewayIfaceChange(iface)
-                onGatewayBridgeChange(bridge)
+                onConfigChange(config.copy(net = net, iface = iface, bridge = bridge))
                 showDialog = false
             },
             onDismiss = { showDialog = false }

@@ -277,14 +277,13 @@ fun ContainerConfigForm(
 
         GatewaySettingsSection(
             visible = state.netMode == "gateway",
-            gatewayContainer = state.gatewayContainer,
-            onGatewayContainerChange = { clearFocus(); onStateChange(state.copy(gatewayContainer = it)) },
-            gatewayNet = state.gatewayNet,
-            onGatewayNetChange = { onStateChange(state.copy(gatewayNet = it)) },
-            gatewayIface = state.gatewayIface,
-            onGatewayIfaceChange = { onStateChange(state.copy(gatewayIface = it)) },
-            gatewayBridge = state.gatewayBridge,
-            onGatewayBridgeChange = { onStateChange(state.copy(gatewayBridge = it)) },
+            config = GatewayConfig(state.gatewayContainer, state.gatewayNet, state.gatewayIface, state.gatewayBridge),
+            onConfigChange = { c ->
+                // Preserve original behavior: clear focus only on gateway-container
+                // selection (a dropdown pick), not while typing net/iface/bridge.
+                if (c.container != state.gatewayContainer) clearFocus()
+                onStateChange(state.copy(gatewayContainer = c.container, gatewayNet = c.net, gatewayIface = c.iface, gatewayBridge = c.bridge))
+            },
             selfName = selfName,
             installedContainers = installedContainers,
             errors = gatewayErrors
