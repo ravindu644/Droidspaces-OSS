@@ -136,7 +136,7 @@ class PreferencesManager private constructor(context: Context) {
         get() = prefs.getBoolean(KEY_DAEMON_MODE_ENABLED, false)
         set(value) {
             prefs.edit().putBoolean(KEY_DAEMON_MODE_ENABLED, value).apply()
-            syncDaemonMode(value)
+            DaemonModeRepository.writeToDisk(value)
         }
 
     var isSymlinkEnabled: Boolean
@@ -146,32 +146,15 @@ class PreferencesManager private constructor(context: Context) {
         }
 
     /**
-     * Sync daemon mode preference to the root-protected file on disk.
-     * writes 1 if enabled, 0 if disabled.
-     */
-    private fun syncDaemonMode(enabled: Boolean) {
-        val value = if (enabled) "1" else "0"
-        val path = Constants.DAEMON_MODE_FILE
-        // Use non-blocking shell command to write the file
-        com.topjohnwu.superuser.Shell.cmd("echo '$value' > '$path'").submit()
-    }
-
-    /**
      * Sync daemon mode preference from the root-protected file on disk.
      * Updates SharedPreferences if the file exists and differs.
      */
     fun syncDaemonModeFromDisk() {
-        val path = Constants.DAEMON_MODE_FILE
-        // Use blocking shell command to read the file state accurately
-        val result = com.topjohnwu.superuser.Shell.cmd("cat '$path' 2>/dev/null").exec()
-        if (result.isSuccess && result.out.isNotEmpty()) {
-            val diskValue = result.out[0].trim()
-            val enabled = diskValue == "1"
-            if (isDaemonModeEnabled != enabled) {
-                // Update SharedPreferences ONLY (avoiding recursive syncDaemonMode call)
-                // This will trigger the OnSharedPreferenceChangeListener in the UI
-                prefs.edit().putBoolean(KEY_DAEMON_MODE_ENABLED, enabled).apply()
-            }
+        val enabled = DaemonModeRepository.readFromDisk() ?: return
+        if (isDaemonModeEnabled != enabled) {
+            // Update SharedPreferences ONLY (avoiding a recursive setter/disk write).
+            // This triggers the OnSharedPreferenceChangeListener in the UI.
+            prefs.edit().putBoolean(KEY_DAEMON_MODE_ENABLED, enabled).apply()
         }
     }
 
