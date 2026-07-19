@@ -1,5 +1,7 @@
 package com.droidspaces.app.ui.screen
 
+import com.droidspaces.app.ui.component.DsTextFieldDefaults
+
 import com.droidspaces.app.ui.component.PrimaryActionBottomBar
 import androidx.compose.ui.graphics.Color
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -42,12 +44,7 @@ fun SparseImageConfigScreen(
     var sizeError by remember { mutableStateOf<String?>(null) }
 
     val fieldShape = RoundedCornerShape(16.dp)
-    val fieldColors = OutlinedTextFieldDefaults.colors(
-        unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
-        focusedBorderColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.8f),
-        unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerLow,
-        focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
-    )
+    val fieldColors = DsTextFieldDefaults.colors()
 
     val isNextEnabled = !useSparseImage || (sizeGB.toIntOrNull()?.let { it in 4..512 } == true)
 

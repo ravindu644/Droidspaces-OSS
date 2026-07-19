@@ -1,5 +1,7 @@
 package com.droidspaces.app.ui.screen
 
+import com.droidspaces.app.ui.component.DsTextFieldDefaults
+
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
@@ -281,12 +283,7 @@ fun EditContainerScreen(
                     }
 
                     val hostnameFieldShape = RoundedCornerShape(16.dp)
-                    val hostnameFieldColors = OutlinedTextFieldDefaults.colors(
-                        unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
-                        focusedBorderColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.8f),
-                        unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerLow,
-                        focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
-                    )
+                    val hostnameFieldColors = DsTextFieldDefaults.colors()
                     OutlinedTextField(
                         value = hostname,
                         onValueChange = { hostname = it },

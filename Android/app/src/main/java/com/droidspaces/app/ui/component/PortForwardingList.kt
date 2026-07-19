@@ -214,12 +214,7 @@ private fun AddPortForwardDialog(
                         isError = hostError != null || widthError != null || overlapError != null,
                         supportingText = { Text(hostError ?: widthError ?: overlapError ?: "") },
                         shape = RoundedCornerShape(16.dp),
-                        colors = OutlinedTextFieldDefaults.colors(
-                            unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
-                            focusedBorderColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.8f),
-                            unfocusedContainerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.5f),
-                            focusedContainerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.7f)
-                        )
+                        colors = DsTextFieldDefaults.surfaceColors()
                     )
 
                     OutlinedTextField(
@@ -232,12 +227,7 @@ private fun AddPortForwardDialog(
                         isError = containerError != null || widthError != null || overlapError != null,
                         supportingText = { Text(containerError ?: widthError ?: overlapError ?: context.getString(R.string.optional_symmetric_hint)) },
                         shape = RoundedCornerShape(16.dp),
-                        colors = OutlinedTextFieldDefaults.colors(
-                            unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
-                            focusedBorderColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.8f),
-                            unfocusedContainerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.5f),
-                            focusedContainerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.7f)
-                        )
+                        colors = DsTextFieldDefaults.surfaceColors()
                     )
 
                     DsDropdown(

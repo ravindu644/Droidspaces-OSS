@@ -216,12 +216,7 @@ fun FilePickerDialog(
                             fontFamily = JetBrainsMono
                         ),
                         shape = RoundedCornerShape(14.dp),
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.8f),
-                            unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
-                            unfocusedContainerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.5f),
-                            focusedContainerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.7f)
-                        )
+                        colors = DsTextFieldDefaults.surfaceColors()
                     )
 
                     Spacer(modifier = Modifier.height(12.dp))

@@ -124,12 +124,7 @@ fun ContainerConfigForm(
     var showHwAccessDialog by remember { mutableStateOf(false) }
 
     val modernFieldShape = RoundedCornerShape(16.dp)
-    val modernFieldColors = OutlinedTextFieldDefaults.colors(
-        unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
-        focusedBorderColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.8f),
-        unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerLow,
-        focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
-    )
+    val modernFieldColors = DsTextFieldDefaults.colors()
 
     if (showFilePicker) {
         FilePickerDialog(

@@ -668,12 +668,7 @@ private fun RepoManagerDialog(
     var urlError  by remember { mutableStateOf("") }
 
     val fieldShape  = RoundedCornerShape(14.dp)
-    val fieldColors = OutlinedTextFieldDefaults.colors(
-        unfocusedBorderColor    = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
-        focusedBorderColor      = MaterialTheme.colorScheme.primary.copy(alpha = 0.8f),
-        unfocusedContainerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.5f),
-        focusedContainerColor   = MaterialTheme.colorScheme.surface.copy(alpha = 0.7f)
-    )
+    val fieldColors = DsTextFieldDefaults.surfaceColors()
 
     fun tryAdd() {
         val n = newName.trim(); val u = newUrl.trim()

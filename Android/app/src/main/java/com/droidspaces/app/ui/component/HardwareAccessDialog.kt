@@ -91,12 +91,7 @@ fun HardwareAccessDialog(
                         singleLine = true,
                         isError = confirmText.isNotEmpty() && !isConfirmed,
                         shape = RoundedCornerShape(14.dp),
-                        colors = OutlinedTextFieldDefaults.colors(
-                            unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
-                            focusedBorderColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.8f),
-                            unfocusedContainerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.5f),
-                            focusedContainerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.7f)
-                        )
+                        colors = DsTextFieldDefaults.surfaceColors()
                     )
                 }
 
