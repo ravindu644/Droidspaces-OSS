@@ -12,7 +12,7 @@ import com.droidspaces.app.util.ContainerInfo
 import com.droidspaces.app.util.ContainerOSInfoManager
 import com.droidspaces.app.util.ContainerManager
 import com.droidspaces.app.util.PreferencesManager
-import com.droidspaces.app.util.Constants
+import com.droidspaces.app.util.ContainerRuntime
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
@@ -171,8 +171,7 @@ class ContainerViewModel(application: Application) : AndroidViewModel(applicatio
         try {
             withContext(Dispatchers.IO) {
                 Log.i(TAG, "Executing manual scan...")
-                val command = "${Constants.getDroidspacesCommand()} scan"
-                com.topjohnwu.superuser.Shell.cmd(command).exec()
+                ContainerRuntime.scan()
 
                 // Fetch new list after scan
                 val result = ContainerManager.listContainers()
@@ -195,8 +194,7 @@ class ContainerViewModel(application: Application) : AndroidViewModel(applicatio
         withContext(Dispatchers.IO) {
             try {
                 Log.i(TAG, "Executing silent background scan...")
-                val command = "${Constants.getDroidspacesCommand()} scan"
-                com.topjohnwu.superuser.Shell.cmd(command).exec()
+                ContainerRuntime.scan()
 
                 // Fetch new list and update state
                 val result = ContainerManager.listContainers()
