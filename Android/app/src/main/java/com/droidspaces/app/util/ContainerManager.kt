@@ -29,7 +29,7 @@ data class ContainerInfo(
     val name: String,
     val hostname: String,
     val rootfsPath: String,
-    val netMode: String = "nat",
+    val netMode: String = Constants.DEFAULT_NET_MODE,
     val disableIPv6: Boolean = false,
     val enableAndroidStorage: Boolean = false,
     val enableHwAccess: Boolean = false,
@@ -312,7 +312,7 @@ object ContainerManager {
                 } else {
                     getRootfsPath(containerName)
                 },
-                netMode = configMap["net_mode"] ?: "host",
+                netMode = configMap["net_mode"] ?: Constants.DEFAULT_NET_MODE,
                 disableIPv6 = configMap["disable_ipv6"] == "1",
                 enableAndroidStorage = configMap["enable_android_storage"] == "1",
                 enableHwAccess = configMap["enable_hw_access"] == "1",

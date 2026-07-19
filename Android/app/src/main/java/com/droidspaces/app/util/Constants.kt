@@ -22,6 +22,9 @@ object Constants {
     const val DAEMON_MODE_FILE = "/data/local/Droidspaces/.daemon_mode"
     const val DAEMON_PID_FILE = "/data/local/Droidspaces/droidspacesd.pid"
     const val CONTAINER_CONFIG_FILE = "container.config"
+    // Default network mode — the single source of truth for both the ContainerInfo
+    // model default and the config parser default (they used to disagree).
+    const val DEFAULT_NET_MODE = "nat"
 
     // Preferences keys
     const val PREFS_NAME = "droidspaces_prefs"
