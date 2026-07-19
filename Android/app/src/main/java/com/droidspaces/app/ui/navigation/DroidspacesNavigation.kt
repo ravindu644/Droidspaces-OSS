@@ -339,38 +339,11 @@ fun DroidspacesNavigation(
             )
 
             ContainerConfigScreen(
-                initialNetMode = viewModel.netMode,
-                initialDisableIPv6 = viewModel.disableIPv6,
-                initialEnableAndroidStorage = viewModel.enableAndroidStorage,
-                initialEnableHwAccess = viewModel.enableHwAccess,
-                initialEnableGpuMode = viewModel.enableGpuMode,
-                initialEnableTermuxX11 = viewModel.enableTermuxX11,
-                initialTx11ExtraFlags = viewModel.tx11ExtraFlags,
-                initialEnableVirgl = viewModel.enableVirgl,
-                initialVirglExtraFlags = viewModel.virglExtraFlags,
-                initialEnablePulseaudio = viewModel.enablePulseaudio,
-                initialSelinuxPermissive = viewModel.selinuxPermissive,
-                initialAllowUserns = viewModel.allowUserns,
-                initialVolatileMode = viewModel.volatileMode,
-                initialBindMounts = viewModel.bindMounts,
-                initialDnsServers = viewModel.dnsServers,
-                initialRunAtBoot = viewModel.runAtBoot,
-                initialCustomInit = viewModel.customInit,
-                initialStaticNatIp = viewModel.staticNatIp,
-                initialForceCgroupv1 = viewModel.forceCgroupv1,
-                initialBlockNestedNs = viewModel.blockNestedNs,
-                initialPrivileged = viewModel.privileged,
-                initialEnvFileContent = viewModel.envFileContent ?: "",
-                initialUpstreamInterfaces = viewModel.upstreamInterfaces,
-                initialPortForwards = viewModel.portForwards,
-                initialGatewayContainer = viewModel.gatewayContainer,
-                initialGatewayNet = viewModel.gatewayNet,
-                initialGatewayIface = viewModel.gatewayIface,
-                initialGatewayBridge = viewModel.gatewayBridge,
+                initialState = viewModel.configState,
                 containerName = viewModel.containerName,
                 installedContainers = sharedContainerViewModel.containerList,
-                onNext = { netMode, disableIPv6, enableAndroidStorage, enableHwAccess, enableGpuMode, enableTermuxX11, tx11ExtraFlags, enableVirgl, virglExtraFlags, enablePulseaudio, selinuxPermissive, allowUserns, volatileMode, bindMounts, dnsServers, runAtBoot, customInit, staticNatIp, forceCgroupv1, blockNestedNs, privileged, envFileContent, upstreamInterfaces, portForwards, gatewayContainer, gatewayNet, gatewayIface, gatewayBridge ->
-                    viewModel.setConfig(netMode, disableIPv6, enableAndroidStorage, enableHwAccess, enableGpuMode, enableTermuxX11, tx11ExtraFlags, enableVirgl, virglExtraFlags, enablePulseaudio, selinuxPermissive, allowUserns, volatileMode, bindMounts, dnsServers, runAtBoot, customInit, staticNatIp, envFileContent, upstreamInterfaces, portForwards, forceCgroupv1, blockNestedNs, privileged, gatewayContainer, gatewayNet, gatewayIface, gatewayBridge)
+                onNext = { state ->
+                    viewModel.setConfig(state)
                     navController.navigate(Screen.SparseImageConfig.route)
                 },
                 onBack = {

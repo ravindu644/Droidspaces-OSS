@@ -10,9 +10,9 @@ import com.droidspaces.app.util.ContainerManager
 import com.droidspaces.app.util.ContainerStatus
 import com.droidspaces.app.util.Constants
 
-import com.droidspaces.app.util.BindMount
-import com.droidspaces.app.util.PortForward
+import com.droidspaces.app.util.ContainerConfigState
 import com.droidspaces.app.util.ValidationUtils
+import com.droidspaces.app.util.withConfig
 
 class ContainerInstallationViewModel : ViewModel() {
     var tarballUri: Uri? by mutableStateOf(null)
@@ -24,94 +24,14 @@ class ContainerInstallationViewModel : ViewModel() {
     var hostname: String by mutableStateOf("")
         private set
 
-    var netMode: String by mutableStateOf("nat")
-        private set
-
-    var disableIPv6: Boolean by mutableStateOf(false)
-        private set
-
-    var enableAndroidStorage: Boolean by mutableStateOf(false)
-        private set
-
-    var enableHwAccess: Boolean by mutableStateOf(false)
-        private set
-
-    var enableGpuMode: Boolean by mutableStateOf(false)
-        private set
-
-    var enableTermuxX11: Boolean by mutableStateOf(false)
-        private set
-
-    var tx11ExtraFlags: String by mutableStateOf("")
-        private set
-
-    var enableVirgl: Boolean by mutableStateOf(false)
-        private set
-
-    var virglExtraFlags: String by mutableStateOf("")
-        private set
-
-    var enablePulseaudio: Boolean by mutableStateOf(false)
-        private set
-
-    var selinuxPermissive: Boolean by mutableStateOf(false)
-        private set
-
-    var allowUserns: Boolean by mutableStateOf(false)
-        private set
-
-    var volatileMode: Boolean by mutableStateOf(false)
-        private set
-
-    var bindMounts: List<BindMount> by mutableStateOf(emptyList())
-        private set
-
-    var dnsServers: String by mutableStateOf("")
-        private set
-
-    var runAtBoot: Boolean by mutableStateOf(false)
-        private set
-
-    var customInit: String by mutableStateOf("")
-        private set
-
-    var staticNatIp: String by mutableStateOf("")
-        private set
-
-    var gatewayContainer: String by mutableStateOf("")
-        private set
-
-    var gatewayNet: String by mutableStateOf("")
-        private set
-
-    var gatewayIface: String by mutableStateOf("")
-        private set
-
-    var gatewayBridge: String by mutableStateOf("")
-        private set
-
-    var envFileContent: String? by mutableStateOf(null)
-        private set
-
     var useSparseImage: Boolean by mutableStateOf(true)
         private set
 
     var sparseImageSizeGB: Int by mutableStateOf(8)
         private set
 
-    var upstreamInterfaces: List<String> by mutableStateOf(emptyList())
-        private set
-
-    var portForwards: List<PortForward> by mutableStateOf(emptyList())
-        private set
-
-    var forceCgroupv1: Boolean by mutableStateOf(false)
-        private set
-
-    var blockNestedNs: Boolean by mutableStateOf(false)
-        private set
-
-    var privileged: String by mutableStateOf("")
+    /** All editable networking/security/advanced config, hoisted as one value. */
+    var configState: ContainerConfigState by mutableStateOf(ContainerConfigState())
         private set
 
     fun setTarball(uri: Uri) {
@@ -128,64 +48,8 @@ class ContainerInstallationViewModel : ViewModel() {
         this.sparseImageSizeGB = sizeGB
     }
 
-    fun setConfig(
-        netMode: String,
-        disableIPv6: Boolean,
-        enableAndroidStorage: Boolean,
-        enableHwAccess: Boolean,
-        enableGpuMode: Boolean,
-        enableTermuxX11: Boolean,
-        tx11ExtraFlags: String,
-        enableVirgl: Boolean,
-        virglExtraFlags: String,
-        enablePulseaudio: Boolean,
-        selinuxPermissive: Boolean,
-        allowUserns: Boolean,
-        volatileMode: Boolean,
-        bindMounts: List<BindMount>,
-        dnsServers: String,
-        runAtBoot: Boolean,
-        customInit: String,
-        staticNatIp: String,
-        envFileContent: String?,
-        upstreamInterfaces: List<String>,
-        portForwards: List<PortForward>,
-        forceCgroupv1: Boolean,
-        blockNestedNs: Boolean,
-        privileged: String,
-        gatewayContainer: String,
-        gatewayNet: String,
-        gatewayIface: String,
-        gatewayBridge: String
-    ) {
-        this.netMode = netMode
-        this.disableIPv6 = disableIPv6
-        this.enableAndroidStorage = enableAndroidStorage
-        this.enableHwAccess = enableHwAccess
-        this.enableGpuMode = enableGpuMode
-        this.enableTermuxX11 = enableTermuxX11
-        this.tx11ExtraFlags = tx11ExtraFlags
-        this.enableVirgl = enableVirgl
-        this.virglExtraFlags = virglExtraFlags
-        this.enablePulseaudio = enablePulseaudio
-        this.selinuxPermissive = selinuxPermissive
-        this.allowUserns = allowUserns
-        this.volatileMode = volatileMode
-        this.bindMounts = bindMounts
-        this.dnsServers = dnsServers
-        this.runAtBoot = runAtBoot
-        this.customInit = customInit
-        this.staticNatIp = staticNatIp
-        this.envFileContent = envFileContent
-        this.upstreamInterfaces = upstreamInterfaces
-        this.portForwards = portForwards
-        this.forceCgroupv1 = forceCgroupv1
-        this.blockNestedNs = blockNestedNs
-        this.privileged = privileged
-        this.gatewayContainer = gatewayContainer
-        this.gatewayNet = gatewayNet
-        this.gatewayIface = gatewayIface
-        this.gatewayBridge = gatewayBridge
+    fun setConfig(config: ContainerConfigState) {
+        this.configState = config
     }
 
     fun buildConfig(): ContainerInfo? {
@@ -200,74 +64,19 @@ class ContainerInstallationViewModel : ViewModel() {
             } else {
                 ContainerManager.getRootfsPath(containerName)
             },
-            netMode = netMode,
-            disableIPv6 = disableIPv6,
-            enableAndroidStorage = enableAndroidStorage,
-            enableHwAccess = enableHwAccess,
-            enableGpuMode = enableGpuMode,
-            enableTermuxX11 = enableTermuxX11,
-            tx11ExtraFlags = tx11ExtraFlags,
-            enableVirgl = enableVirgl,
-            virglExtraFlags = virglExtraFlags,
-            enablePulseaudio = enablePulseaudio,
-            selinuxPermissive = selinuxPermissive,
-            allowUserns = allowUserns,
-            volatileMode = volatileMode,
-            bindMounts = bindMounts,
-            dnsServers = dnsServers,
-            runAtBoot = runAtBoot,
-            customInit = customInit,
-            staticNatIp = staticNatIp,
-            gatewayContainer = gatewayContainer,
-            gatewayNet = gatewayNet,
-            gatewayIface = gatewayIface,
-            gatewayBridge = gatewayBridge,
-            envFileContent = envFileContent,
             status = ContainerStatus.STOPPED, // Default status for new container
             useSparseImage = useSparseImage,
             sparseImageSizeGB = if (useSparseImage) sparseImageSizeGB else null,
-            upstreamInterfaces = upstreamInterfaces,
-            portForwards = portForwards,
-            forceCgroupv1 = forceCgroupv1,
-            blockNestedNs = blockNestedNs,
-            privileged = privileged
-        )
+        ).withConfig(configState)
     }
 
     fun reset() {
         tarballUri = null
         containerName = ""
         hostname = ""
-        netMode = "nat"
-        disableIPv6 = false
-        enableAndroidStorage = false
-        enableHwAccess = false
-        enableGpuMode = false
-        enableTermuxX11 = false
-        tx11ExtraFlags = ""
-        enableVirgl = false
-        virglExtraFlags = ""
-        enablePulseaudio = false
-        selinuxPermissive = false
-        allowUserns = false
-        volatileMode = false
-        bindMounts = emptyList()
-        dnsServers = ""
-        runAtBoot = false
-        customInit = ""
-        staticNatIp = ""
-        gatewayContainer = ""
-        gatewayNet = ""
-        gatewayIface = ""
-        gatewayBridge = ""
-        envFileContent = null
         useSparseImage = true
         sparseImageSizeGB = 8
-        upstreamInterfaces = emptyList()
-        portForwards = emptyList()
-        forceCgroupv1 = false
-        blockNestedNs = false
-        privileged = ""
+        configState = ContainerConfigState()
     }
 }
 
