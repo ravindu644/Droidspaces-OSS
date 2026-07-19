@@ -28,6 +28,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
+import com.droidspaces.app.util.ContainerCommandBuilder
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.draw.clip
@@ -127,7 +128,7 @@ fun FilePickerDialog(
             }
             if (targetDir != currentPath && targetDir.isNotEmpty()) {
                 val exists = withContext(Dispatchers.IO) {
-                    val result = Shell.cmd("[ -d \"$targetDir\" ] && echo yes").exec()
+                    val result = Shell.cmd("[ -d ${ContainerCommandBuilder.quote(targetDir)} ] && echo yes").exec()
                     result.isSuccess && result.out.firstOrNull() == "yes"
                 }
                 if (exists) {
@@ -349,7 +350,7 @@ private fun FileItemRow(
 }
 
 private suspend fun fetchItems(path: String, showFiles: Boolean): List<FileItem> = withContext(Dispatchers.IO) {
-    val result = Shell.cmd("ls -F \"$path\" 2>/dev/null").exec()
+    val result = Shell.cmd("ls -F ${ContainerCommandBuilder.quote(path)} 2>/dev/null").exec()
     if (!result.isSuccess) return@withContext emptyList()
 
     result.out.mapNotNull { line ->
