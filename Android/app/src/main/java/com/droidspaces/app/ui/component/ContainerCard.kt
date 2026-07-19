@@ -126,26 +126,7 @@ fun ContainerCard(
                         ContainerStatus.STOPPED -> context.getString(R.string.status_stopped) to MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
                     }
 
-                    Surface(
-                        color = statusColor.copy(alpha = 0.1f),
-                        shape = RoundedCornerShape(8.dp),
-                        border = BorderStroke(1.dp, statusColor.copy(alpha = 0.2f))
-                    ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(6.dp),
-                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-                        ) {
-                            Surface(modifier = Modifier.size(6.dp), shape = CircleShape, color = statusColor) {}
-                            Text(
-                                text = statusText.uppercase(),
-                                style = MaterialTheme.typography.labelSmall,
-                                fontWeight = FontWeight.Black,
-                                letterSpacing = 0.5.sp,
-                                color = statusColor
-                            )
-                        }
-                    }
+                    StatusPill(label = statusText.uppercase(), color = statusColor)
                 }
             }
             

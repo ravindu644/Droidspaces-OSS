@@ -115,26 +115,7 @@ fun DroidspacesStatusCard(
 
                 // Right side: mode pill
                 if (isWorking && backendMode != null) {
-                    Surface(
-                        color = accentColor.copy(alpha = 0.1f),
-                        shape = RoundedCornerShape(8.dp),
-                        border = BorderStroke(1.dp, accentColor.copy(alpha = 0.2f))
-                    ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(6.dp),
-                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-                        ) {
-                            Surface(modifier = Modifier.size(6.dp), shape = CircleShape, color = accentColor) {}
-                            Text(
-                                text = backendMode!!.uppercase(),
-                                style = MaterialTheme.typography.labelSmall,
-                                fontWeight = FontWeight.Black,
-                                letterSpacing = 0.5.sp,
-                                color = accentColor
-                            )
-                        }
-                    }
+                    StatusPill(label = backendMode!!.uppercase(), color = accentColor)
                 }
             }
 
