@@ -38,7 +38,7 @@ object ContainerDiskUsageManager {
      * @return used/total in bytes, or null if the image could not be stat'd.
      */
     suspend fun getUsage(imgPath: String): DiskUsage? = withContext(Dispatchers.IO) {
-        val cmd = "${Constants.BUSYBOX_BINARY_PATH} stat -c '%s %b' \"$imgPath\" 2>/dev/null"
+        val cmd = "${Constants.BUSYBOX_BINARY_PATH} stat -c '%s %b' ${ContainerCommandBuilder.quote(imgPath)} 2>/dev/null"
         val result = Shell.cmd(cmd).exec()
         if (!result.isSuccess) return@withContext null
 
