@@ -47,16 +47,7 @@ sealed class RepoResult {
 }
 
 /** Maps the device's primary ABI to the arch string used in rootfs.json. */
-fun deviceArch(): String {
-    val abi = Build.SUPPORTED_ABIS[0]
-    return when {
-        abi.contains("arm64") || abi.contains("aarch64") -> "aarch64"
-        abi.contains("armeabi") || abi.contains("arm")   -> "armhf"
-        abi.contains("x86_64")                           -> "x86_64"
-        abi.contains("x86")                              -> "x86"
-        else                                             -> "aarch64"
-    }
-}
+fun deviceArch(): String = DeviceArch.suffix()
 
 object RootfsRepository {
 

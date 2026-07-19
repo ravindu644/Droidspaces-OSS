@@ -26,16 +26,7 @@ object BinaryInstaller {
     /**
      * Map Android architecture to binary name suffix
      */
-    private fun getArchitectureSuffix(): String {
-        val arch = Build.SUPPORTED_ABIS[0] // Primary ABI
-        return when {
-            arch.contains("arm64") || arch.contains("aarch64") -> "aarch64"
-            arch.contains("armeabi") || arch.contains("arm") -> "armhf"
-            arch.contains("x86_64") -> "x86_64"
-            arch.contains("x86") -> "x86"
-            else -> "aarch64" // Default to aarch64
-        }
-    }
+    private fun getArchitectureSuffix(): String = DeviceArch.suffix()
 
     /**
      * Get droidspaces binary name for architecture
@@ -55,16 +46,7 @@ object BinaryInstaller {
     /**
      * Get human-readable architecture name
      */
-    fun getArchitectureName(): String {
-        val arch = Build.SUPPORTED_ABIS[0]
-        return when {
-            arch.contains("arm64") || arch.contains("aarch64") -> "ARM64 (aarch64)"
-            arch.contains("armeabi") || arch.contains("arm") -> "ARM (armhf)"
-            arch.contains("x86_64") -> "x86_64"
-            arch.contains("x86") -> "x86"
-            else -> arch
-        }
-    }
+    fun getArchitectureName(): String = DeviceArch.displayName()
 
     /**
      * Install droidspaces binary with progress updates
