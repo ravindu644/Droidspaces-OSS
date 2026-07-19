@@ -375,7 +375,7 @@ object ContainerInstaller {
     private suspend fun cleanup(paths: List<String>, logger: ContainerLogger) {
         paths.reversed().forEach { path ->
             try {
-                val result = Shell.cmd("rm -rf $path 2>&1").exec()
+                val result = Shell.cmd("rm -rf ${ContainerCommandBuilder.quote(path)} 2>&1").exec()
                 if (result.isSuccess) {
                     logger.d("Cleaned up: $path")
                 } else {
