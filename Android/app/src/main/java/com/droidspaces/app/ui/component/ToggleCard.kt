@@ -1,20 +1,17 @@
 package com.droidspaces.app.ui.component
 
-import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material3.*
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.painter.Painter
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
+import androidx.compose.ui.graphics.vector.ImageVector
 
 /**
- * Reusable toggle card component that eliminates duplication in ContainerConfigScreen.
- * Provides consistent styling and behavior for all toggle options.
+ * Toggle option row: a [SettingsCard] with a trailing [Switch]. Tapping the card
+ * toggles the switch.
  */
 @Composable
 fun ToggleCard(
@@ -28,57 +25,21 @@ fun ToggleCard(
     painter: Painter? = null
 ) {
     val alpha = if (enabled) 1f else 0.5f
-    Surface(
-        modifier = modifier.fillMaxWidth(),
+    SettingsCard(
+        title = title,
         onClick = { if (enabled) onCheckedChange(!checked) },
+        modifier = modifier,
         enabled = enabled,
-        shape = RoundedCornerShape(20.dp),
-        color = MaterialTheme.colorScheme.surfaceContainerHigh,
-        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f))
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(10.dp),
-                modifier = Modifier.weight(1f)
-            ) {
-                if (icon != null) {
-                    Icon(
-                        imageVector = icon,
-                        contentDescription = null,
-                        modifier = Modifier.size(20.dp),
-                        tint = MaterialTheme.colorScheme.primary.copy(alpha = alpha)
-                    )
-                } else if (painter != null) {
-                    Icon(
-                        painter = painter,
-                        contentDescription = null,
-                        modifier = Modifier.size(20.dp),
-                        tint = MaterialTheme.colorScheme.primary.copy(alpha = alpha)
-                    )
-                }
-                Column(
-                    modifier = Modifier.weight(1f),
-                    verticalArrangement = Arrangement.spacedBy(4.dp)
-                ) {
-                    Text(
-                        text = title,
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.SemiBold
-                    )
-                    Text(
-                        text = description,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f * alpha)
-                    )
-                }
-            }
+        icon = icon,
+        painter = painter,
+        subtitleContent = {
+            Text(
+                text = description,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f * alpha)
+            )
+        },
+        trailing = {
             Switch(
                 checked = checked,
                 onCheckedChange = null,
@@ -92,6 +53,5 @@ fun ToggleCard(
                 )
             )
         }
-    }
+    )
 }
-
