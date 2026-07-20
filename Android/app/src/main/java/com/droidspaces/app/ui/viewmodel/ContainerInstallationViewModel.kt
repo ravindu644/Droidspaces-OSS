@@ -45,6 +45,9 @@ class ContainerInstallationViewModel : ViewModel() {
     var tx11ExtraFlags: String by mutableStateOf("")
         private set
 
+    var enableAnland: Boolean by mutableStateOf(false)
+        private set
+
     var enableVirgl: Boolean by mutableStateOf(false)
         private set
 
@@ -136,6 +139,7 @@ class ContainerInstallationViewModel : ViewModel() {
         enableGpuMode: Boolean,
         enableTermuxX11: Boolean,
         tx11ExtraFlags: String,
+        enableAnland: Boolean,
         enableVirgl: Boolean,
         virglExtraFlags: String,
         enablePulseaudio: Boolean,
@@ -165,6 +169,7 @@ class ContainerInstallationViewModel : ViewModel() {
         this.enableGpuMode = enableGpuMode
         this.enableTermuxX11 = enableTermuxX11
         this.tx11ExtraFlags = tx11ExtraFlags
+        this.enableAnland = enableAnland
         this.enableVirgl = enableVirgl
         this.virglExtraFlags = virglExtraFlags
         this.enablePulseaudio = enablePulseaudio
@@ -207,6 +212,7 @@ class ContainerInstallationViewModel : ViewModel() {
             enableGpuMode = enableGpuMode,
             enableTermuxX11 = enableTermuxX11,
             tx11ExtraFlags = tx11ExtraFlags,
+            enableAnland = enableAnland,
             enableVirgl = enableVirgl,
             virglExtraFlags = virglExtraFlags,
             enablePulseaudio = enablePulseaudio,
@@ -245,6 +251,7 @@ class ContainerInstallationViewModel : ViewModel() {
         enableGpuMode = false
         enableTermuxX11 = false
         tx11ExtraFlags = ""
+        enableAnland = false
         enableVirgl = false
         virglExtraFlags = ""
         enablePulseaudio = false
