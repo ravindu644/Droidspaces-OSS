@@ -62,6 +62,7 @@ fun ContainerConfigScreen(
     initialEnableGpuMode: Boolean = false,
     initialEnableTermuxX11: Boolean = false,
     initialTx11ExtraFlags: String = "",
+    initialEnableAnland: Boolean = false,
     initialEnableVirgl: Boolean = false,
     initialVirglExtraFlags: String = "",
     initialEnablePulseaudio: Boolean = false,
@@ -93,6 +94,7 @@ fun ContainerConfigScreen(
         enableGpuMode: Boolean,
         enableTermuxX11: Boolean,
         tx11ExtraFlags: String,
+        enableAnland: Boolean,
         enableVirgl: Boolean,
         virglExtraFlags: String,
         enablePulseaudio: Boolean,
@@ -124,6 +126,7 @@ fun ContainerConfigScreen(
     var enableGpuMode by remember { mutableStateOf(initialEnableGpuMode) }
     var enableTermuxX11 by remember { mutableStateOf(initialEnableTermuxX11) }
     var tx11ExtraFlags by remember { mutableStateOf(initialTx11ExtraFlags) }
+    var enableAnland by remember { mutableStateOf(initialEnableAnland) }
     var enableVirgl by remember { mutableStateOf(initialEnableVirgl) }
     var virglExtraFlags by remember { mutableStateOf(initialVirglExtraFlags) }
     var enablePulseaudio by remember { mutableStateOf(initialEnablePulseaudio) }
@@ -332,7 +335,7 @@ fun ContainerConfigScreen(
                             .clickable(
                                 enabled = canProceed,
                                 onClick = {
-                                    onNext(netMode, disableIPv6, enableAndroidStorage, enableHwAccess, enableGpuMode, enableTermuxX11, tx11ExtraFlags, enableVirgl, virglExtraFlags, enablePulseaudio, selinuxPermissive, allowUserns, volatileMode, bindMounts, dnsServers, runAtBoot, customInit, staticNatIp, forceCgroupv1, blockNestedNs, privileged, if (envFileContent.isBlank()) null else envFileContent, upstreamInterfaces, portForwards, gatewayContainer, gatewayNet, gatewayIface, gatewayBridge)
+                                    onNext(netMode, disableIPv6, enableAndroidStorage, enableHwAccess, enableGpuMode, enableTermuxX11, tx11ExtraFlags, enableAnland, enableVirgl, virglExtraFlags, enablePulseaudio, selinuxPermissive, allowUserns, volatileMode, bindMounts, dnsServers, runAtBoot, customInit, staticNatIp, forceCgroupv1, blockNestedNs, privileged, if (envFileContent.isBlank()) null else envFileContent, upstreamInterfaces, portForwards, gatewayContainer, gatewayNet, gatewayIface, gatewayBridge)
                                 },
                                 indication = androidx.compose.material.ripple.rememberRipple(bounded = true),
                                 interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
@@ -670,6 +673,15 @@ fun ContainerConfigScreen(
                 description = context.getString(R.string.termux_x11_description),
                 checked = enableTermuxX11,
                 onCheckedChange = { enableTermuxX11 = it },
+                enabled = true
+            )
+
+            ToggleCard(
+                icon = Icons.Default.DesktopWindows,
+                title = context.getString(R.string.enable_anland),
+                description = context.getString(R.string.enable_anland_description),
+                checked = enableAnland,
+                onCheckedChange = { enableAnland = it },
                 enabled = true
             )
 

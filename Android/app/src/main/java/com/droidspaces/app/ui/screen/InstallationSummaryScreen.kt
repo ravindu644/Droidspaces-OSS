@@ -168,6 +168,7 @@ fun InstallationSummaryScreen(
                     if (config.enableHwAccess) SummaryItem(stringResource(R.string.hardware_access), stringResource(R.string.enabled_legend), Icons.Default.Devices)
                     if (!config.enableHwAccess && config.enableGpuMode) SummaryItem(stringResource(R.string.gpu_access), stringResource(R.string.enabled_legend), Icons.Default.Memory)
                     if (config.enableTermuxX11) SummaryItem(stringResource(R.string.termux_x11), stringResource(R.string.enabled_legend), painterResource(id = R.drawable.ic_x11))
+                    if (config.enableAnland) SummaryItem(stringResource(R.string.enable_anland), stringResource(R.string.enabled_legend), Icons.Default.DesktopWindows)
                     if (config.enableVirgl) SummaryItem(stringResource(R.string.enable_virgl), stringResource(R.string.enabled_legend), Icons.Default.Layers)
                     if (config.enablePulseaudio) SummaryItem(stringResource(R.string.enable_pulseaudio), stringResource(R.string.enabled_legend), Icons.AutoMirrored.Filled.VolumeUp)
                     if (config.selinuxPermissive) SummaryItem(stringResource(R.string.selinux_permissive), stringResource(R.string.enabled_legend), Icons.Default.Security)
@@ -210,7 +211,7 @@ fun InstallationSummaryScreen(
                         !config.enableHwAccess && !config.enableGpuMode && !config.selinuxPermissive &&
                         !config.allowUserns && !config.volatileMode && config.bindMounts.isEmpty() &&
                         !config.runAtBoot && !config.disableIPv6 &&
-                        !config.enableTermuxX11 && !config.enableVirgl && !config.enablePulseaudio &&
+                        !config.enableTermuxX11 && !config.enableAnland && !config.enableVirgl && !config.enablePulseaudio &&
                         !config.forceCgroupv1 && !config.blockNestedNs &&
                         config.upstreamInterfaces.isEmpty() && config.portForwards.isEmpty() &&
                         config.envFileContent.isNullOrBlank()) {
