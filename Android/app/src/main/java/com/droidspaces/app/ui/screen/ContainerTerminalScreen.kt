@@ -76,7 +76,13 @@ fun ContainerTerminalScreen(
             override fun onServiceDisconnected(name: ComponentName?) { binder = null }
         }
         context.bindService(Intent(context, TerminalSessionService::class.java), conn, Context.BIND_AUTO_CREATE)
-        onDispose { context.unbindService(conn) }
+        onDispose {
+            // Detach the UI client from any backgrounded sessions before unbinding so
+            // the service doesn't retain this Activity/TerminalView (VULN V16). The
+            // screen re-attaches its own client on re-entry.
+            binder?.detachAllClients()
+            context.unbindService(conn)
+        }
     }
 
     val availableUsers = remember(initialUsers) {

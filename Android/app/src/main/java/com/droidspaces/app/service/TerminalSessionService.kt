@@ -15,6 +15,7 @@ import androidx.core.app.NotificationCompat
 import com.droidspaces.app.MainActivity
 import com.droidspaces.app.R
 import com.droidspaces.app.ui.terminal.DroidspacesTerminalSession
+import com.droidspaces.app.ui.terminal.NoOpTerminalSessionClient
 import com.termux.terminal.TerminalSession
 import com.termux.terminal.TerminalSessionClient
 
@@ -54,6 +55,16 @@ class TerminalSessionService : Service() {
         }
 
         fun getSession(id: String): TerminalSession? = sessions[id]
+
+        /**
+         * Swap every session's client to the app-scoped no-op so a disposed terminal
+         * screen (its TerminalBackEnd -> Activity/TerminalView) is not retained by this
+         * long-lived service. Sessions keep running; the UI re-attaches its own client
+         * on re-entry. See FINDINGS_APP_VULN V16.
+         */
+        fun detachAllClients() {
+            sessions.values.forEach { it.updateTerminalSessionClient(NoOpTerminalSessionClient) }
+        }
 
         fun terminateSession(id: String) {
             runCatching {
