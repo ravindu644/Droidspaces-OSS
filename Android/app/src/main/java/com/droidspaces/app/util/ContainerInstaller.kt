@@ -37,6 +37,12 @@ object ContainerInstaller {
         var createdPaths = mutableListOf<String>()
 
         try {
+            // Reject control chars in single-line config values (VULN V11).
+            ValidationUtils.validateConfigValues(config).errorMessage?.let {
+                logger.e(it)
+                return@withContext Result.failure(Exception(it))
+            }
+
             // Step 1: Check storage space
             logger.i("Checking available storage space...")
             val freeGB = StorageChecker.getFreeSpaceGB()

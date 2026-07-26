@@ -79,6 +79,27 @@ object ValidationUtils {
             .count { it.isNotEmpty() && !it.startsWith("#") && it.contains("=") }
     }
 
+    /**
+     * Reject line breaks / control characters in the single-line container-config
+     * values. Each is written as a `key=value` line into the root-owned
+     * container.config parsed by the privileged backend, so a newline would inject
+     * an extra trusted key. `envFileContent` is intentionally excluded — it is
+     * legitimately multi-line and written to a separate `.env` file. See VULN V11.
+     */
+    fun validateConfigValues(config: ContainerInfo): ValidationResult {
+        fun hasControl(v: String) = v.any { it.isISOControl() }
+        val invalid = listOf(
+            config.dnsServers, config.staticNatIp, config.customInit,
+            config.tx11ExtraFlags, config.virglExtraFlags, config.privileged,
+            config.gatewayContainer, config.gatewayNet, config.gatewayIface, config.gatewayBridge
+        ).any { hasControl(it) }
+        return if (invalid) {
+            ValidationResult.Error("Configuration values must not contain line breaks")
+        } else {
+            ValidationResult.Success
+        }
+    }
+
     // ---- Gateway networking mode --------------------------------------------
 
     // Linux IFNAMSIZ is 16 incl. NUL, so interface/bridge names get 15 usable chars.

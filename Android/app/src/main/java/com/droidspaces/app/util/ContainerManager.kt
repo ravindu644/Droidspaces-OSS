@@ -459,6 +459,10 @@ object ContainerManager {
         newConfig: ContainerInfo
     ): Result<Unit> = withContext(Dispatchers.IO) {
         try {
+            // Reject control chars in single-line config values (VULN V11).
+            ValidationUtils.validateConfigValues(newConfig).errorMessage?.let {
+                return@withContext Result.failure(Exception(it))
+            }
             val sanitizedName = sanitizeContainerName(containerName)
             val configPath = "$CONTAINERS_BASE_PATH/$sanitizedName/${Constants.CONTAINER_CONFIG_FILE}"
 
