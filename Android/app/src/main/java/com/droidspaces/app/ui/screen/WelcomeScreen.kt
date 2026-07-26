@@ -59,8 +59,6 @@ fun WelcomeScreen(onNavigateToRootCheck: () -> Unit) {
         ShowcaseCard(Icons.Default.PowerSettingsNew, R.string.feat_autoboot_title, R.string.feat_autoboot_desc),
     )
 
-    val btnShape = RoundedCornerShape(20.dp)
-
     Scaffold(
         containerColor = Color.Transparent,
         bottomBar = {

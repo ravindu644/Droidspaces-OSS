@@ -134,7 +134,7 @@ fun InstallationScreen(
                         }
                         errorMessage != null -> {
                             Text(
-                                text = errorMessage ?: context.getString(R.string.unknown_error),
+                                text = errorMessage,
                                 style = MaterialTheme.typography.bodyLarge,
                                 color = MaterialTheme.colorScheme.error,
                                 textAlign = TextAlign.Center

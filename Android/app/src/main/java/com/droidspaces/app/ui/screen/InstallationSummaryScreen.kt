@@ -37,8 +37,6 @@ fun InstallationSummaryScreen(
     onInstall: () -> Unit,
     onBack: () -> Unit
 ) {
-    val btnShape = RoundedCornerShape(20.dp)
-
     Scaffold(
         containerColor = Color.Transparent,
         topBar = {
