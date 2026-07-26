@@ -5,15 +5,15 @@ import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.border
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -320,12 +320,20 @@ private fun InitServiceFilterChipsRow(
     onFilterSelected: (String) -> Unit
 ) {
     val context = LocalContext.current
-    Row(
-        modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 8.dp),
+    val listState = rememberLazyListState()
+    // Keep the highlighted chip on-screen when the filter changes (swipe or tap).
+    LaunchedEffect(selectedFilterId) {
+        val idx = filters.indexOfFirst { it.id == selectedFilterId }
+        if (idx >= 0) listState.animateScrollToItem(idx)
+    }
+    LazyRow(
+        state = listState,
+        modifier = Modifier.fillMaxWidth(),
+        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        filters.forEach { chip ->
+        items(filters) { chip ->
             val count = counts[chip.id] ?: 0
             val isSelected = selectedFilterId == chip.id
             FilterChip(
