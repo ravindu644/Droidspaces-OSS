@@ -106,6 +106,22 @@ sealed class Screen(val route: String) {
     }
 }
 
+/**
+ * Resolve the install-wizard [ContainerInstallationViewModel] scoped to the first
+ * wizard screen's back-stack entry (so all wizard steps share one instance),
+ * falling back to the current entry if that route isn't on the stack.
+ */
+@Composable
+private fun wizardScopedViewModel(
+    navController: NavHostController,
+    backStackEntry: NavBackStackEntry
+): ContainerInstallationViewModel = viewModel(
+    remember(backStackEntry) {
+        runCatching { navController.getBackStackEntry(Screen.ContainerName.route) }
+            .getOrElse { backStackEntry }
+    }
+)
+
 @Composable
 fun DroidspacesNavigation(
     navController: NavHostController = rememberNavController(),
@@ -331,12 +347,7 @@ fun DroidspacesNavigation(
             enterTransition = defaultEnterTransition,
             exitTransition = defaultExitTransition
         ) { backStackEntry ->
-            val viewModel: ContainerInstallationViewModel = viewModel(
-                remember(backStackEntry) {
-                    runCatching { navController.getBackStackEntry(Screen.ContainerName.route) }
-                        .getOrElse { backStackEntry }
-                }
-            )
+            val viewModel = wizardScopedViewModel(navController, backStackEntry)
 
             ContainerConfigScreen(
                 initialState = viewModel.configState,
@@ -357,12 +368,7 @@ fun DroidspacesNavigation(
             enterTransition = defaultEnterTransition,
             exitTransition = defaultExitTransition
         ) { backStackEntry ->
-            val viewModel: ContainerInstallationViewModel = viewModel(
-                remember(backStackEntry) {
-                    runCatching { navController.getBackStackEntry(Screen.ContainerName.route) }
-                        .getOrElse { backStackEntry }
-                }
-            )
+            val viewModel = wizardScopedViewModel(navController, backStackEntry)
 
             SparseImageConfigScreen(
                 initialUseSparseImage = viewModel.useSparseImage,
@@ -382,12 +388,7 @@ fun DroidspacesNavigation(
             enterTransition = defaultEnterTransition,
             exitTransition = defaultExitTransition
         ) { backStackEntry ->
-            val viewModel: ContainerInstallationViewModel = viewModel(
-                remember(backStackEntry) {
-                    runCatching { navController.getBackStackEntry(Screen.ContainerName.route) }
-                        .getOrElse { backStackEntry }
-                }
-            )
+            val viewModel = wizardScopedViewModel(navController, backStackEntry)
             val config = viewModel.buildConfig()
             val tarballUri = viewModel.tarballUri
             val ctx = LocalContext.current
@@ -433,12 +434,7 @@ fun DroidspacesNavigation(
             enterTransition = defaultEnterTransition,
             exitTransition = defaultExitTransition
         ) { backStackEntry ->
-            val viewModel: ContainerInstallationViewModel = viewModel(
-                remember(backStackEntry) {
-                    runCatching { navController.getBackStackEntry(Screen.ContainerName.route) }
-                        .getOrElse { backStackEntry }
-                }
-            )
+            val viewModel = wizardScopedViewModel(navController, backStackEntry)
             val config = viewModel.buildConfig()
             val tarballUri = viewModel.tarballUri
 
