@@ -7,6 +7,9 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -157,7 +160,7 @@ fun ContainersScreen(
             }
             else -> {
                 // Show container cards
-                Column(
+                LazyColumn(
                     modifier = Modifier
                         .fillMaxSize()
                         .combinedClickable(
@@ -165,12 +168,11 @@ fun ContainersScreen(
                             indication = null,
                             onClick = { onExpandedContainerNameChange(null) }
                         )
-                        .verticalScroll(rememberScrollState())
-                        .padding(horizontal = 16.dp)
-                        .padding(top = 8.dp, bottom = 120.dp), // Clear floating tab bar
+                        .padding(horizontal = 16.dp),
+                    contentPadding = PaddingValues(top = 8.dp, bottom = 120.dp), // Clear floating tab bar
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
-                    containers.forEach { container ->
+                    items(containers, key = { it.name }) { container ->
                         // Console button is always visible - logs persist for each container
                         val isRunning = opsViewModel.runningOperationContainer == container.name
 
