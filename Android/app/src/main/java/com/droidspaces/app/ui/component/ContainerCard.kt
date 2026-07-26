@@ -37,25 +37,44 @@ import com.droidspaces.app.util.ContainerOSInfoManager
 import com.droidspaces.app.util.ContainerStatus
 import com.droidspaces.app.util.IconUtils
 
+/**
+ * Per-item callbacks for [ContainerCard], grouped so the call site passes one
+ * stable object instead of 11 separate lambdas.
+ */
+data class ContainerCardActions(
+    val onStart: () -> Unit = {},
+    val onStop: () -> Unit = {},
+    val onRestart: () -> Unit = {},
+    val onEdit: () -> Unit = {},
+    val onEnter: () -> Unit = {},
+    val onUninstall: () -> Unit = {},
+    val onMigrate: () -> Unit = {},
+    val onResize: () -> Unit = {},
+    val onExport: () -> Unit = {},
+    val onToggleExpand: () -> Unit = {},
+    val onShowLogs: () -> Unit = {},
+)
+
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun ContainerCard(
     container: ContainerInfo,
-    onStart: () -> Unit = {},
-    onStop: () -> Unit = {},
-    onRestart: () -> Unit = {},
-    onEdit: () -> Unit = {},
-    onEnter: () -> Unit = {},
-    onUninstall: () -> Unit = {},
-    onMigrate: () -> Unit = {},
-    onResize: () -> Unit = {},
-    onExport: () -> Unit = {},
+    actions: ContainerCardActions = ContainerCardActions(),
     isOperationRunning: Boolean = false,
     isExpanded: Boolean = false,
-    onToggleExpand: () -> Unit = {},
-    onShowLogs: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
+    val onStart = actions.onStart
+    val onStop = actions.onStop
+    val onRestart = actions.onRestart
+    val onEdit = actions.onEdit
+    val onEnter = actions.onEnter
+    val onUninstall = actions.onUninstall
+    val onMigrate = actions.onMigrate
+    val onResize = actions.onResize
+    val onExport = actions.onExport
+    val onToggleExpand = actions.onToggleExpand
+    val onShowLogs = actions.onShowLogs
     val context = LocalContext.current
     val cardShape = RoundedCornerShape(20.dp)
 

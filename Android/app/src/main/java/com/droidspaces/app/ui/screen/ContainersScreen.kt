@@ -41,6 +41,7 @@ import com.droidspaces.app.util.ContainerInfo
 import com.droidspaces.app.util.PreferencesManager
 import com.droidspaces.app.util.FilePickerUtils
 import com.droidspaces.app.ui.component.ContainerCard
+import com.droidspaces.app.ui.component.ContainerCardActions
 import com.droidspaces.app.ui.component.TerminalDialog
 import com.droidspaces.app.ui.component.EmptyState
 import com.droidspaces.app.ui.component.ErrorState
@@ -177,6 +178,7 @@ fun ContainersScreen(
                             container = container,
                             isOperationRunning = isRunning,
                             isExpanded = expandedContainerName == container.name,
+                            actions = ContainerCardActions(
                             onToggleExpand = {
                                 onExpandedContainerNameChange(if (expandedContainerName == container.name) null else container.name)
                             },
@@ -243,6 +245,7 @@ fun ContainersScreen(
                                 pendingExportContainer = container
                                 exportFileLauncher.launch(fileName)
                             }
+                            )
                         )
                     }
                 }
