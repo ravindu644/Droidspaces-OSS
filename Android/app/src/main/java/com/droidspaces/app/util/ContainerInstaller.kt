@@ -268,17 +268,19 @@ object ContainerInstaller {
                 }
             }
         } catch (e: Exception) {
-            // Don't block installation if the validator itself can't be loaded.
-            logger.w("Warning: Failed to load rootfs validator, skipping check: ${e.message}")
-            return
+            // Fail CLOSED: if the validator itself can't be loaded, do not install an
+            // unverified rootfs — it is later run as root. See FINDINGS_APP_VULN V12.
+            logger.e("Failed to load rootfs validator: ${e.message}")
+            throw Exception("Could not verify rootfs: validator unavailable (${e.message})")
         }
 
         try {
             // Make script executable
             val chmodResult = Shell.cmd("chmod 755 \"${scriptFile.absolutePath}\" 2>&1").exec()
             if (!chmodResult.isSuccess) {
-                logger.w("Warning: Failed to make validator executable, skipping check")
-                return
+                // Fail CLOSED — see FINDINGS_APP_VULN V12.
+                logger.e("Failed to make rootfs validator executable")
+                throw Exception("Could not verify rootfs: validator not executable")
             }
 
             val result = Shell.cmd(
