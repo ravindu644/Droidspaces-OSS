@@ -9,6 +9,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -29,8 +30,10 @@ fun AccentColorPicker(
     modifier: Modifier = Modifier
 ) {
     Column(modifier = modifier.fillMaxWidth()) {
-        // Section header
+        // Section header — transparent container so it matches the surrounding
+        // Settings rows (Language / SwitchItem) instead of the darker default surface.
         ListItem(
+            colors = ListItemDefaults.colors(containerColor = Color.Transparent),
             leadingContent = {
                 Icon(
                     imageVector = Icons.Default.Palette,
