@@ -582,7 +582,9 @@
     <string name="repo_dl_error_code">Error code %1$d</string>
     <string name="repo_status_ready">READY</string>
     <string name="repo_status_downloading">DOWNLOADING</string>
+    <string name="repo_status_verifying">VERIFYING</string>
     <string name="repo_status_failed">FAILED</string>
+    <string name="repo_dl_error_integrity">Integrity check failed — the file may be corrupted or tampered with. Delete and re-download.</string>
     <string name="repo_add_custom">Add Custom Repository</string>
     <string name="repo_manage_custom">Manage Repositories</string>
     <string name="repo_manager_subtitle">Subscribe to custom rootfs.json feeds.</string>
