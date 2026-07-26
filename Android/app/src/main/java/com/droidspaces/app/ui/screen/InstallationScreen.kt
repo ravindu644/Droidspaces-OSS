@@ -23,18 +23,9 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import com.droidspaces.app.util.BinaryInstaller
 import com.droidspaces.app.util.InstallationStep
-import com.droidspaces.app.util.ModuleInstaller
 import com.droidspaces.app.util.ModuleInstallationStep
-import com.droidspaces.app.util.DroidspacesChecker
-import com.droidspaces.app.util.DroidspacesBackendStatus
-import com.droidspaces.app.util.PreferencesManager
-import com.topjohnwu.superuser.Shell
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
 import com.droidspaces.app.R
-import com.droidspaces.app.util.Constants
 
 import com.droidspaces.app.ui.viewmodel.AppStateViewModel
 
@@ -45,13 +36,14 @@ fun InstallationScreen(
 ) {
     val context = LocalContext.current
 
-    var currentStep by remember { mutableStateOf<InstallationStep?>(null) }
-    var currentModuleStep by remember { mutableStateOf<ModuleInstallationStep?>(null) }
-    var isInstalling by remember { mutableStateOf(false) }
-    var isSuccess by remember { mutableStateOf(false) }
-    var errorMessage by remember { mutableStateOf<String?>(null) }
-    var isInstallingModule by remember { mutableStateOf(false) }
-    var rebootRecommended by remember { mutableStateOf(false) }
+    // Install orchestration + state live in AppStateViewModel (DT-6). Read as locals
+    // so the UI below is unchanged; these are Compose state reads and recompose.
+    val currentStep = appStateViewModel.installCurrentStep
+    val currentModuleStep = appStateViewModel.installCurrentModuleStep
+    val isSuccess = appStateViewModel.isInstallSuccess
+    val errorMessage = appStateViewModel.installErrorMessage
+    val isInstallingModule = appStateViewModel.isInstallingModule
+    val rebootRecommended = appStateViewModel.installRebootRecommended
 
     // Completely block the back gesture in every state. This screen must be
     // left only via the Continue button, whose handler decides the next
@@ -62,108 +54,9 @@ fun InstallationScreen(
         // Intentionally no-op while installing, on success and on error.
     }
 
-    // Check backend status and determine what to install
+    // Run the install orchestration (idempotent inside the ViewModel).
     LaunchedEffect(Unit) {
-        if (!isInstalling && !isSuccess) {
-            val backendStatus = withContext(Dispatchers.IO) {
-                DroidspacesChecker.checkBackendStatus()
-            }
-
-            isInstalling = true
-
-            val whichBackendMode = withContext(Dispatchers.IO) {
-                com.droidspaces.app.util.SystemInfoManager.getBackendMode(context)
-            }
-            val wasDaemon = whichBackendMode == "DAEMON"
-
-            val isAtomicUpdate = backendStatus is DroidspacesBackendStatus.UpdateAvailable
-
-            isInstallingModule = false
-
-            // Capture symlink state before any module directory removal
-            val wasSymlinkEnabled = withContext(Dispatchers.IO) {
-                com.droidspaces.app.util.SymlinkInstaller.isSymlinkEnabled()
-            }
-
-            // Check if SELinux policy exists BEFORE we start nuking things
-            val sepolicyExists = withContext(Dispatchers.IO) {
-                Shell.cmd("test -f ${Constants.MAGISK_MODULE_PATH}/sepolicy.rule").exec().isSuccess
-            }
-            if (!sepolicyExists) {
-                rebootRecommended = true
-            }
-
-            if (!isAtomicUpdate) {
-                // Clean Slate: Remove the old module, but NEVER the bin directory
-                // (the daemon's g_self_path fix means the old binary stays valid
-                //  until the daemon is restarted, and the new binary is already
-                //  atomically in place at the canonical path).
-                currentStep = InstallationStep.CreatingDirectories("Nuking existing module...")
-                Shell.cmd("rm -rf '/data/adb/modules/droidspaces' 2>&1").exec()
-            }
-
-
-            // Step 2: Install binaries (atomic mv to canonical path - safe even while daemon is running)
-            val binaryResult = BinaryInstaller.install(context) { step ->
-                currentStep = step
-            }
-            binaryResult.fold(
-                onSuccess = {
-                    // Signal the running daemon (if any) that the binary was swapped
-                    if (wasDaemon) {
-                        BinaryInstaller.signalDaemon()
-                    }
-                    // Step 3: Install module
-                    isInstallingModule = true
-                    val moduleResult = ModuleInstaller.install(context) { step ->
-                        currentModuleStep = step
-                    }
-                    moduleResult.fold(
-                        onSuccess = {
-                            // On a truly fresh install, .daemon_mode won't exist yet.
-                            // Force-enable daemon mode so new users get sane defaults.
-                            // On reinstalls/updates the file already exists (value 0 or 1),
-                            // meaning the user has an established preference — leave it alone.
-                            val daemonFileExists = withContext(Dispatchers.IO) {
-                                Shell.cmd("test -f '${Constants.DAEMON_MODE_FILE}'").exec().isSuccess
-                            }
-                            if (!daemonFileExists) {
-                                PreferencesManager.getInstance(context).isDaemonModeEnabled = true
-                            }
-                            // Restore symlink if it was enabled before the update
-                            if (wasSymlinkEnabled) {
-                                withContext(Dispatchers.IO) {
-                                    com.droidspaces.app.util.SymlinkInstaller.enable()
-                                }
-                            }
-                            isSuccess = true
-                            isInstalling = false
-                            isInstallingModule = false
-                            // Proactive refresh to update UI state before user navigates back
-                            appStateViewModel.resetForPostInstallation()
-                            appStateViewModel.forceRefresh()
-                        },
-                        onFailure = { error ->
-                            errorMessage = error.message ?: context.getString(R.string.module_installation_failed)
-                            isInstalling = false
-                            isInstallingModule = false
-                            // Refresh even on failure to update error status
-                            appStateViewModel.resetForPostInstallation()
-                            appStateViewModel.forceRefresh()
-                        }
-                    )
-                },
-                onFailure = { error ->
-                    errorMessage = error.message ?: context.getString(R.string.binary_installation_failed)
-                    isInstalling = false
-                    // Refresh even on failure
-                    appStateViewModel.resetForPostInstallation()
-                    appStateViewModel.forceRefresh()
-                }
-            )
-
-
-        }
+        appStateViewModel.performInstallation()
     }
 
     Scaffold(
