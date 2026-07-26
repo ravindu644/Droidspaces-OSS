@@ -230,7 +230,15 @@ fun InitServiceScreen(
                                     onFilterSelected = { id ->
                                         clearFocus()
                                         val idx = filters.indexOfFirst { it.id == id }
-                                        if (idx >= 0) scope.launch { pagerState.animateScrollToPage(idx) }
+                                        if (idx >= 0) scope.launch {
+                                            // Animate only for adjacent hops; jump directly for distant
+                                            // ones so we don't flip through every page in between.
+                                            if (kotlin.math.abs(idx - pagerState.currentPage) <= 1) {
+                                                pagerState.animateScrollToPage(idx)
+                                            } else {
+                                                pagerState.scrollToPage(idx)
+                                            }
+                                        }
                                     }
                                 )
                                 if (searchQuery.isNotBlank()) {
