@@ -41,6 +41,7 @@ import com.droidspaces.app.R
 import com.droidspaces.app.ui.component.TerminalDialog
 import com.droidspaces.app.ui.viewmodel.AppStateViewModel
 import com.droidspaces.app.util.Constants
+import com.droidspaces.app.util.DroidspacesBackendStatus
 import com.droidspaces.app.util.ContainerOperationExecutor
 import com.droidspaces.app.util.ViewModelLogger
 import kotlinx.coroutines.Dispatchers
@@ -57,6 +58,13 @@ fun RequirementsScreen(
     val context = LocalContext.current
     val appStateViewModel: AppStateViewModel = viewModel()
     val isRootAvailable = appStateViewModel.isRootAvailable
+    // Re-check on entry so a missing/corrupted backend is reflected here even if it
+    // was nuked after the last check elsewhere.
+    LaunchedEffect(Unit) { appStateViewModel.checkBackendStatus(force = true) }
+    // The check runs the droidspaces binary, so it's only meaningful when the
+    // backend is actually usable — gate the button on that (see test plan §2).
+    val backendReady = appStateViewModel.backendStatus == DroidspacesBackendStatus.Available ||
+        appStateViewModel.backendStatus == DroidspacesBackendStatus.UpdateAvailable
     val scope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
 
@@ -232,9 +240,9 @@ CONFIG_TMPFS_XATTR=y""",
                     snackbarHostState = snackbarHostState
                 )
 
-                // Check Requirements Button
+                // Check Requirements Button — disabled without root or a usable backend.
                 CheckRequirementsButton(
-                    isRootAvailable = isRootAvailable,
+                    enabled = isRootAvailable && backendReady,
                     isRunning = isCheckRunning,
                     onClick = {
                     scope.launch {
@@ -489,13 +497,13 @@ private fun CodeBox(
  */
 @Composable
 private fun CheckRequirementsButton(
-    isRootAvailable: Boolean,
+    enabled: Boolean,
     isRunning: Boolean,
     onClick: () -> Unit
 ) {
     val context = LocalContext.current
     val shape = RoundedCornerShape(20.dp)
-    val alpha = if (isRootAvailable && !isRunning) 1f else 0.5f
+    val alpha = if (enabled && !isRunning) 1f else 0.5f
 
     Surface(
         modifier = Modifier
@@ -503,9 +511,9 @@ private fun CheckRequirementsButton(
             .height(54.dp)
             .alpha(alpha)
             .clip(shape)
-            .clickable(enabled = isRootAvailable && !isRunning, onClick = onClick),
+            .clickable(enabled = enabled && !isRunning, onClick = onClick),
         shape = shape,
-        color = if (isRootAvailable && !isRunning) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceContainerHigh,
+        color = if (enabled && !isRunning) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceContainerHigh,
         tonalElevation = 0.dp
     ) {
         Row(
@@ -524,7 +532,7 @@ private fun CheckRequirementsButton(
                     imageVector = Icons.Default.Search,
                     contentDescription = null,
                     modifier = Modifier.size(20.dp),
-                    tint = if (isRootAvailable) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
+                    tint = if (enabled) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
                 )
             }
             Spacer(modifier = Modifier.width(10.dp))
@@ -532,7 +540,7 @@ private fun CheckRequirementsButton(
                 text = context.getString(R.string.check_requirements),
                 style = MaterialTheme.typography.labelLarge,
                 fontWeight = FontWeight.Bold,
-                color = if (isRootAvailable && !isRunning) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
+                color = if (enabled && !isRunning) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
             )
             if (!isRunning) {
                 Spacer(modifier = Modifier.width(6.dp))
@@ -540,7 +548,7 @@ private fun CheckRequirementsButton(
                     imageVector = Icons.Default.ChevronRight,
                     contentDescription = null,
                     modifier = Modifier.size(18.dp),
-                    tint = if (isRootAvailable) MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.7f) else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
+                    tint = if (enabled) MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.7f) else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
                 )
             }
         }
