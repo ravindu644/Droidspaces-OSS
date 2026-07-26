@@ -46,6 +46,15 @@ object ValidationUtils {
     }
 
     /**
+     * The character-safety half of [validateContainerName], WITHOUT the length
+     * limit. Used to drop a container whose on-disk config name carries shell
+     * metacharacters before it can reach a root command — while still loading
+     * over-length-but-safe legacy names. See VULN V10.
+     */
+    fun isSafeContainerName(name: String): Boolean =
+        name.isNotEmpty() && name.matches(Regex("^[a-zA-Z0-9_\\s.-]+$"))
+
+    /**
      * Validates hostname: only numbers, letters (lowercase and uppercase), and dashes allowed.
      * Empty is allowed (will use container name as default).
      */
