@@ -14,7 +14,6 @@ import java.io.File
 
 sealed class DownloadStatus {
     data class Progress(val percent: Int) : DownloadStatus()
-    data object Verifying : DownloadStatus()
     data class Completed(val fileUri: Uri) : DownloadStatus()
     data class Failed(val reason: String) : DownloadStatus()
 }
@@ -32,7 +31,7 @@ object RootfsDownloadManager {
         val dm = context.getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
         val filename = asset.uniqueFilename
         val destFile = File(
-            context.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS),
+            Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS),
             filename
         )
         destFile.delete()
@@ -40,9 +39,7 @@ object RootfsDownloadManager {
             setTitle(filename)
             setDescription(context.getString(R.string.repo_notification_description))
             setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE)
-            // App-private external storage: no other app can read or swap the tarball
-            // before it is verified and extracted as root (V4 — closes the TOCTOU window).
-            setDestinationInExternalFilesDir(context, Environment.DIRECTORY_DOWNLOADS, filename)
+            setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, filename)
             setAllowedOverMetered(true)
             setAllowedOverRoaming(true)
         }
@@ -53,7 +50,7 @@ object RootfsDownloadManager {
         val dm = context.getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
         val filename = asset.uniqueFilename
         val destFile = File(
-            context.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS),
+            Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS),
             filename
         )
         val query = DownloadManager.Query().setFilterById(downloadId)
@@ -82,21 +79,9 @@ object RootfsDownloadManager {
 
                 DownloadManager.STATUS_SUCCESSFUL -> {
                     done = true
-                    // Verify integrity before the file is ever offered for root extraction (V3).
-                    // The file lives in app-private storage (V4), so a match here means it stays
-                    // trustworthy through to `tar -x`. A repo that omits sha256 is downloaded
-                    // as-is (unverified) — the official repo always provides it.
-                    val expected = asset.sha256
-                    if (expected != null) {
-                        emit(DownloadStatus.Verifying)
-                        val actual = runCatching { sha256Hex(destFile) }.getOrNull()
-                        if (actual == null || !actual.equals(expected, ignoreCase = true)) {
-                            destFile.delete()
-                            emit(DownloadStatus.Failed(context.getString(R.string.repo_dl_error_integrity)))
-                            return@flow
-                        }
-                    }
-                    emit(DownloadStatus.Completed(Uri.fromFile(destFile)))
+                    val contentUri = dm.getUriForDownloadedFile(downloadId)
+                        ?: Uri.fromFile(destFile)
+                    emit(DownloadStatus.Completed(contentUri))
                 }
 
                 DownloadManager.STATUS_FAILED -> {
@@ -110,20 +95,6 @@ object RootfsDownloadManager {
     fun cancel(context: Context, downloadId: Long) {
         val dm = context.getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
         dm.remove(downloadId)
-    }
-
-    /** Streaming SHA-256 of [file] as lowercase hex (never loads the whole file into memory). */
-    private fun sha256Hex(file: File): String {
-        val md = java.security.MessageDigest.getInstance("SHA-256")
-        file.inputStream().use { input ->
-            val buf = ByteArray(64 * 1024)
-            while (true) {
-                val n = input.read(buf)
-                if (n < 0) break
-                md.update(buf, 0, n)
-            }
-        }
-        return md.digest().joinToString("") { "%02x".format(it) }
     }
 
     private fun getFailureReason(context: Context, dm: DownloadManager, id: Long): String {

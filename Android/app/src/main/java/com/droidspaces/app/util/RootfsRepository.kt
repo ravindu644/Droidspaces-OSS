@@ -19,9 +19,7 @@ data class RootfsAsset(
     val sizeBytes: Long,
     val buildDate: String,
     val author: String,
-    val sourceRepoName: String,
-    /** Expected SHA-256 of the tarball, from rootfs.json. Null when the repo omits it. */
-    val sha256: String? = null
+    val sourceRepoName: String
 ) {
     // Unique filename derived from metadata - avoids conflicts with generic names like rootfs.tar.xz
     // Includes a short hash of the download URL to guarantee uniqueness even across repos
@@ -133,8 +131,7 @@ object RootfsRepository {
                         sizeBytes      = obj.optLong("size_bytes", 0L),
                         buildDate      = obj.optString("build_date", ""),
                         author         = obj.optString("author", repoName),
-                        sourceRepoName = repoName,
-                        sha256         = obj.optString("sha256", "").trim().ifBlank { null }
+                        sourceRepoName = repoName
                     )
                 )
             }

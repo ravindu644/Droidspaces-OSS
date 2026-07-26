@@ -362,7 +362,6 @@ private fun RootfsAssetCard(
                 val (displayLabel, statusColor) = when (state) {
                     is AssetDownloadState.Done        -> context.getString(R.string.repo_status_ready) to MaterialTheme.colorScheme.primary
                     is AssetDownloadState.Downloading -> context.getString(R.string.repo_status_downloading) to MaterialTheme.colorScheme.tertiary
-                    is AssetDownloadState.Verifying   -> context.getString(R.string.repo_status_verifying) to MaterialTheme.colorScheme.tertiary
                     is AssetDownloadState.Failed      -> context.getString(R.string.repo_status_failed) to MaterialTheme.colorScheme.error
                     else                              -> "" to MaterialTheme.colorScheme.primary
                 }
@@ -498,27 +497,6 @@ private fun RootfsAssetCard(
                 }
             }
 
-            if (state is AssetDownloadState.Verifying) {
-                Column(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalArrangement = Arrangement.spacedBy(6.dp)
-                ) {
-                    LinearProgressIndicator(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(4.dp)
-                            .clip(RoundedCornerShape(2.dp)),
-                        color = MaterialTheme.colorScheme.tertiary,
-                        trackColor = MaterialTheme.colorScheme.tertiary.copy(alpha = 0.15f)
-                    )
-                    Text(
-                        text = context.getString(R.string.repo_status_verifying),
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
-                    )
-                }
-            }
-
             if (state is AssetDownloadState.Failed) {
                 Text(
                     text = state.reason,
@@ -549,14 +527,6 @@ private fun RootfsAssetCard(
                     btnIcon = Icons.Default.Close
                     btnText = context.getString(R.string.repo_cancel)
                     onClickAction = onCancel
-                }
-                is AssetDownloadState.Verifying -> {
-                    // Integrity check in progress — brief, non-cancellable.
-                    btnColor = MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.4f)
-                    accentColor = MaterialTheme.colorScheme.tertiary
-                    btnIcon = Icons.Default.Refresh
-                    btnText = context.getString(R.string.repo_status_verifying)
-                    onClickAction = {}
                 }
                 is AssetDownloadState.Done -> {
                     btnColor = MaterialTheme.colorScheme.primary

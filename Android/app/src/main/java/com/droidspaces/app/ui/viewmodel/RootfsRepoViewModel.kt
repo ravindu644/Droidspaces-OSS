@@ -32,7 +32,6 @@ sealed class RepoUiState {
 sealed class AssetDownloadState {
     data object Idle                        : AssetDownloadState()
     data class  Downloading(val percent: Int) : AssetDownloadState()
-    data object Verifying                    : AssetDownloadState()
     data class  Done(val uri: Uri)          : AssetDownloadState()
     data class  Failed(val reason: String)  : AssetDownloadState()
 }
@@ -79,15 +78,53 @@ class RootfsRepoViewModel(application: Application) : AndroidViewModel(applicati
     }
 
     /**
-     * Looks up a previously downloaded (and thus already integrity-verified) tarball
-     * in the app-private external Downloads dir. Returns a file:// URI if it exists and
-     * is non-empty, else null. Files here can't be tampered with by other apps (V4), and
-     * a repo-downloaded file only lands here after passing SHA-256 verification (V3).
+     * Looks up a content:// URI for a previously downloaded file by name.
+     * Queries DownloadManager first, then checks the file directly.
+     * Verifies that the URI points to an existing, readable, and non-empty file.
+     * Returns null if not found, deleted, or unreadable.
      */
     private fun findDownloadedUri(ctx: android.content.Context, fileName: String): Uri? {
-        val dir = ctx.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS) ?: return null
-        val file = File(dir, fileName)
-        return if (file.exists() && file.length() > 0) Uri.fromFile(file) else null
+        val dm = ctx.getSystemService(android.content.Context.DOWNLOAD_SERVICE) as android.app.DownloadManager
+        val query = android.app.DownloadManager.Query()
+            .setFilterByStatus(android.app.DownloadManager.STATUS_SUCCESSFUL)
+        val cursor = dm.query(query) ?: return null
+        var resultUri: Uri? = null
+        cursor.use {
+            val idCol    = it.getColumnIndex(android.app.DownloadManager.COLUMN_ID)
+            val titleCol = it.getColumnIndex(android.app.DownloadManager.COLUMN_TITLE)
+            while (it.moveToNext()) {
+                if (it.getString(titleCol) == fileName) {
+                    val id = it.getLong(idCol)
+                    val uri = dm.getUriForDownloadedFile(id)
+                    if (uri != null && isUriValidAndNotEmpty(ctx, uri)) {
+                        resultUri = uri
+                        break
+                    }
+                }
+            }
+        }
+        if (resultUri != null) return resultUri
+
+        // Fallback: file exists in Downloads but not tracked by DownloadManager
+        val file = File(
+            Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS),
+            fileName
+        )
+        val fallbackUri = if (file.exists() && file.length() > 0) Uri.fromFile(file) else null
+        if (fallbackUri != null && isUriValidAndNotEmpty(ctx, fallbackUri)) {
+            return fallbackUri
+        }
+        return null
+    }
+
+    private fun isUriValidAndNotEmpty(ctx: android.content.Context, uri: Uri): Boolean {
+        return try {
+            ctx.contentResolver.openAssetFileDescriptor(uri, "r")?.use { fd ->
+                fd.length > 0 || fd.length == android.content.res.AssetFileDescriptor.UNKNOWN_LENGTH
+            } ?: false
+        } catch (e: Exception) {
+            false
+        }
     }
 
     fun startDownload(asset: RootfsAsset) {
@@ -103,7 +140,6 @@ class RootfsRepoViewModel(application: Application) : AndroidViewModel(applicati
                 downloadStates = downloadStates.toMutableMap().apply {
                     put(url, when (status) {
                         is DownloadStatus.Progress  -> AssetDownloadState.Downloading(status.percent)
-                        is DownloadStatus.Verifying -> AssetDownloadState.Verifying
                         is DownloadStatus.Completed -> AssetDownloadState.Done(status.fileUri)
                         is DownloadStatus.Failed    -> AssetDownloadState.Failed(status.reason)
                     })
