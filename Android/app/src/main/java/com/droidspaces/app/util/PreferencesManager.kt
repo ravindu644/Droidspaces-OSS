@@ -3,6 +3,10 @@ package com.droidspaces.app.util
 import android.content.Context
 import android.content.SharedPreferences
 import android.os.Build
+import kotlinx.coroutines.channels.awaitClose
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.callbackFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
 
 /**
  * Ultra-optimized PreferencesManager with zero-allocation hot paths.
@@ -144,6 +148,26 @@ class PreferencesManager private constructor(context: Context) {
         set(value) {
             prefs.edit().putBoolean(KEY_SYMLINK_ENABLED, value).apply()
         }
+
+    /**
+     * Reactive stream of the daemon-mode preference — emits the current value and
+     * every later change (including writes from [syncDaemonModeFromDisk] /
+     * DaemonModeRepository), so the UI can collect it with
+     * collectAsStateWithLifecycle() instead of a hand-rolled change listener.
+     */
+    val daemonModeFlow: Flow<Boolean> = booleanPrefFlow(KEY_DAEMON_MODE_ENABLED, false)
+
+    /** Reactive stream of the symlink-enabled preference. */
+    val symlinkEnabledFlow: Flow<Boolean> = booleanPrefFlow(KEY_SYMLINK_ENABLED, false)
+
+    private fun booleanPrefFlow(key: String, default: Boolean): Flow<Boolean> = callbackFlow {
+        trySend(prefs.getBoolean(key, default))
+        val listener = SharedPreferences.OnSharedPreferenceChangeListener { _, changedKey ->
+            if (changedKey == key || changedKey == null) trySend(prefs.getBoolean(key, default))
+        }
+        prefs.registerOnSharedPreferenceChangeListener(listener)
+        awaitClose { prefs.unregisterOnSharedPreferenceChangeListener(listener) }
+    }.distinctUntilChanged()
 
     /**
      * Sync daemon mode preference from the root-protected file on disk.

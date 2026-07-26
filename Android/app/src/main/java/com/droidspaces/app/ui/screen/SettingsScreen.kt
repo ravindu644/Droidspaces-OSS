@@ -1,7 +1,6 @@
 package com.droidspaces.app.ui.screen
 
 import android.content.Context
-import android.content.SharedPreferences
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.pm.PackageManager
@@ -38,6 +37,7 @@ import androidx.compose.ui.res.painterResource
 import android.content.Intent
 import android.net.Uri
 import com.droidspaces.app.R
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.droidspaces.app.ui.component.AccentColorPicker
 import com.droidspaces.app.ui.component.BugReportDialog
@@ -97,25 +97,12 @@ fun SettingsScreen(
     var showLanguageDialog by remember { mutableStateOf(false) }
     var currentAppLocale by remember { mutableStateOf(LocaleHelper.getCurrentAppLocale(context)) }
 
-    // Daemon mode state
-    var isDaemonModeEnabled by remember { mutableStateOf(prefsManager.isDaemonModeEnabled) }
-
-    // Symlink state
-    var isSymlinkEnabled by remember { mutableStateOf(prefsManager.isSymlinkEnabled) }
-
-    // Register SharedPreferences listener for daemon mode
-    DisposableEffect(prefsManager) {
-        val listener = SharedPreferences.OnSharedPreferenceChangeListener { _: SharedPreferences, key: String? ->
-            when (key) {
-                PreferencesManager.KEY_DAEMON_MODE_ENABLED -> isDaemonModeEnabled = prefsManager.isDaemonModeEnabled
-                PreferencesManager.KEY_SYMLINK_ENABLED -> isSymlinkEnabled = prefsManager.isSymlinkEnabled
-            }
-        }
-        prefsManager.prefs.registerOnSharedPreferenceChangeListener(listener)
-        onDispose {
-            prefsManager.prefs.unregisterOnSharedPreferenceChangeListener(listener)
-        }
-    }
+    // Daemon mode + symlink state, collected reactively from prefs
+    // (replaces a hand-rolled SharedPreferences change listener).
+    val isDaemonModeEnabled by prefsManager.daemonModeFlow
+        .collectAsStateWithLifecycle(initialValue = prefsManager.isDaemonModeEnabled)
+    val isSymlinkEnabled by prefsManager.symlinkEnabledFlow
+        .collectAsStateWithLifecycle(initialValue = prefsManager.isSymlinkEnabled)
 
     // Listen for locale changes and sync daemon mode from disk
     LaunchedEffect(Unit) {
