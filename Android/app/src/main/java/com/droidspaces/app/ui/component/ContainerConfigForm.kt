@@ -33,6 +33,7 @@ import androidx.compose.material.icons.filled.Code
 import androidx.compose.material.icons.filled.Computer
 import androidx.compose.material.icons.filled.Cyclone
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.DesktopWindows
 import androidx.compose.material.icons.filled.Devices
 import androidx.compose.material.icons.filled.Dns
 import androidx.compose.material.icons.filled.GppBad
@@ -451,6 +452,15 @@ fun ContainerConfigForm(
             description = context.getString(R.string.termux_x11_description),
             checked = state.enableTermuxX11,
             onCheckedChange = { onStateChange(state.copy(enableTermuxX11 = it)) },
+            enabled = true
+        )
+
+        ToggleCard(
+            icon = Icons.Default.DesktopWindows,
+            title = context.getString(R.string.enable_anland),
+            description = context.getString(R.string.enable_anland_description),
+            checked = state.enableAnland,
+            onCheckedChange = { clearFocus(); onStateChange(state.copy(enableAnland = it)) },
             enabled = true
         )
 

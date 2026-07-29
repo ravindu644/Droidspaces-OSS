@@ -74,3 +74,9 @@ allow mediaserver droidspacesd fd use
 
 # fix permission denied when read/write mounted storage (#213)
 allow mediaprovider_app droidspacesd fd use
+
+# for anland
+allow untrusted_app droidspacesd fd use
+allow surfaceflinger droidspacesd fd use
+allow hal_graphics_composer_default droidspacesd fd use
+allow untrusted_app su unix_stream_socket { read write }
