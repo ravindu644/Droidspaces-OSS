@@ -439,6 +439,9 @@ int show_containers(struct ds_config *cfg) {
           ds_config_load(snap, &tmp_cfg) == 0) {
         safe_strncpy(st->name, tmp_cfg.container_name, sizeof(st->name));
         safe_strncpy(st->hostname, tmp_cfg.hostname, sizeof(st->hostname));
+        ds_anland_load_sock(&tmp_cfg);
+        safe_strncpy(st->anland_sock, tmp_cfg.anland_sock,
+                     sizeof(st->anland_sock));
       }
       ds_config_free(&tmp_cfg);
       if (!st->hostname[0])

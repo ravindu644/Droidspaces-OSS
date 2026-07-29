@@ -43,7 +43,8 @@ object ContainerOSInfoManager {
         val ramUsedKb: Long? = null,
         val ramPercent: Double? = null,
         /** The memory limit in force. Null when unlimited, and then [ramPercent] is of the host's RAM. */
-        val ramLimitKb: Long? = null
+        val ramLimitKb: Long? = null,
+        val anlandSocket: String? = null
     ) {
         /** "13.50 MB / 1.50 GB (1%)" under a limit, "13.50 MB (0.2%)" of the host without one.
          * Each side picks its own unit, the way fastfetch prints memory. */
@@ -136,6 +137,7 @@ object ContainerOSInfoManager {
             id = null,
             hostname = obj.optString("hostname").ifEmpty { null },
             ipAddress = obj.optString("ip").ifEmpty { null },
+            anlandSocket = obj.optString("anland_sock").ifEmpty { null },
             uptime = obj.optString("uptime").ifEmpty { null },
             cpuUsage = (if (cpuLimitPermill > 0) cpuPermill * 100.0 / cpuLimitPermill else cpuPermill / 10.0).coerceIn(0.0, 100.0),
             ramUsedKb = if (ramTotalKb > 0) ramUsedKb else null,

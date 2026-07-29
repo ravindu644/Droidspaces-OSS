@@ -89,7 +89,9 @@ void print_usage(void) {
       "      --virgl-flags=\"FLAGS\"   Extra flags passed to "
       "virgl_test_server_android\n"
       "      --pulse-audio         Configure PulseAudio sound server "
-      "support\n\n");
+      "support\n"
+      "      --anland              Embed the anland display daemon "
+      "(Android)\n\n");
 
   printf(
       C_BOLD
@@ -380,6 +382,7 @@ static struct option long_options[] = {
     {"virgl", no_argument, 0, 270},
     {"virgl-flags", required_argument, 0, 272},
     {"pulse-audio", no_argument, 0, 273},
+    {"anland", no_argument, 0, 280},
     {"gateway", required_argument, 0, 274},
     {"gateway-container", required_argument, 0, 274},
     {"gateway-net", required_argument, 0, 275},
@@ -479,6 +482,9 @@ int ds_apply_cli_overrides(int argc, char **argv, struct ds_config *cfg,
       break;
     case 273:
       cfg->pulseaudio = 1;
+      break;
+    case 280:
+      cfg->anland = 1;
       break;
     case 274:
       safe_strncpy(cfg->gateway_container, optarg,

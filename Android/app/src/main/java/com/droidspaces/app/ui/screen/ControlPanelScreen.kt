@@ -27,6 +27,7 @@ import com.droidspaces.app.ui.util.AnimatedListEntry
 import com.droidspaces.app.ui.util.rememberAnimatedEntries
 import com.droidspaces.app.ui.viewmodel.ContainerViewModel
 import com.droidspaces.app.ui.viewmodel.SystemStatsViewModel
+import com.droidspaces.app.util.AnlandUtils
 import androidx.compose.ui.platform.LocalContext
 import com.droidspaces.app.R
 
@@ -106,6 +107,8 @@ fun ControlPanelScreen(
                     ) {
                         entries.forEach { entry ->
                             val container = entry.item
+                            // Socket path comes with the heartbeat; presence gates the button
+                            val anlandSock = containerUsageMap[container.name]?.anlandSocket
                             // Keyed, so a card's state stays with its container when one leaves.
                             key(entry.key) {
                                 AnimatedListEntry(entry) {
@@ -116,6 +119,10 @@ fun ControlPanelScreen(
                                         },
                                         onTerminalClick = {
                                             onNavigateToTerminal(container.name)
+                                        },
+                                        anlandEnabled = container.enableAnland && anlandSock != null,
+                                        onLaunchAnland = {
+                                            anlandSock?.let { AnlandUtils.launchWindow(context, container.name, it) }
                                         },
                                         osInfo = containerUsageMap[container.name],
                                     )

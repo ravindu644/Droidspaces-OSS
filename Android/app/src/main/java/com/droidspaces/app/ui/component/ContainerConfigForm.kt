@@ -16,6 +16,7 @@ import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material.icons.filled.AutoDelete
 import androidx.compose.material.icons.filled.Code
 import androidx.compose.material.icons.filled.Cyclone
+import androidx.compose.material.icons.filled.DesktopWindows
 import androidx.compose.material.icons.filled.DeveloperBoard
 import androidx.compose.material.icons.filled.Devices
 import androidx.compose.material.icons.filled.Dns
@@ -203,6 +204,14 @@ fun ContainerConfigForm(
             summary = context.getString(R.string.termux_x11_description),
             checked = state.enableTermuxX11,
             onCheckedChange = { clearFocus(); onStateChange(state.copy(enableTermuxX11 = it)) }
+        )
+        GroupDivider()
+        SwitchItem(
+            icon = Icons.Default.DesktopWindows,
+            title = context.getString(R.string.enable_anland),
+            summary = context.getString(R.string.enable_anland_description),
+            checked = state.enableAnland,
+            onCheckedChange = { clearFocus(); onStateChange(state.copy(enableAnland = it)) }
         )
         GroupDivider()
         SwitchItem(

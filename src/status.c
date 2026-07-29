@@ -314,6 +314,7 @@ void ds_json_status(const struct ds_status *st, int *first) {
   ds_json_str("hostname", st->hostname, first);
   ds_json_str("ip", st->ip, first);
   ds_json_str("ip6", st->ip6, first);
+  ds_json_str("anland_sock", st->anland_sock, first);
   ds_json_int("uptime_sec", st->uptime_sec, first);
   ds_json_str("uptime", uptime, first);
   ds_json_int("ram_used_kb", st->ram_used_kb, first);
