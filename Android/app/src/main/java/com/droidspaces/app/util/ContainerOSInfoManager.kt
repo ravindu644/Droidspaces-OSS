@@ -40,7 +40,8 @@ object ContainerOSInfoManager {
         val uptime: String? = null,
         val cpuUsage: Double? = null,
         val ramUsageMb: Long? = null,
-        val ramPercent: Double? = null
+        val ramPercent: Double? = null,
+        val anlandSocket: String? = null
     )
 
     /**
@@ -117,6 +118,7 @@ object ContainerOSInfoManager {
             id = null,
             hostname = obj.optString("hostname").ifEmpty { null },
             ipAddress = obj.optString("ip").ifEmpty { null },
+            anlandSocket = obj.optString("anland_sock").ifEmpty { null },
             uptime = obj.optString("uptime").ifEmpty { null },
             cpuUsage = (obj.optLong("cpu_permill") / 10.0).coerceIn(0.0, 100.0),
             ramUsageMb = if (ramTotalKb > 0) ramUsedKb / 1024 else null,

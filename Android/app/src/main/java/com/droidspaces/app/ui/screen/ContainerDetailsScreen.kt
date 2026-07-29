@@ -29,6 +29,7 @@ import com.droidspaces.app.util.ContainerSystemdManager
 import com.droidspaces.app.util.ContainerProcdManager
 import com.droidspaces.app.util.ContainerOpenRCManager
 import com.droidspaces.app.util.ContainerDiskUsageManager
+import com.droidspaces.app.util.AnlandUtils
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import com.droidspaces.app.util.AnimationUtils
@@ -253,7 +254,12 @@ fun ContainerDetailsScreen(
             item(key = "terminal_${container.name}") {
                 TerminalCard(
                     containerName = container.name,
-                    onOpenTerminal = onNavigateToTerminal
+                    onOpenTerminal = onNavigateToTerminal,
+                    // Socket path comes with the heartbeat; presence gates the button
+                    anlandEnabled = container.enableAnland && osInfo?.anlandSocket != null,
+                    onLaunchAnland = {
+                        osInfo?.anlandSocket?.let { AnlandUtils.launchWindow(context, container.name, it) }
+                    }
                 )
             }
 
@@ -293,6 +299,7 @@ private fun hasOSInfoChanged(old: ContainerOSInfoManager.OSInfo, new: ContainerO
            old.id != new.id ||
            old.hostname != new.hostname ||
            old.ipAddress != new.ipAddress ||
+           old.anlandSocket != new.anlandSocket ||
            old.uptime != new.uptime ||
            old.cpuUsage != new.cpuUsage ||
            old.ramUsageMb != new.ramUsageMb ||
@@ -371,6 +378,8 @@ private fun IdentityToken(
 private fun TerminalCard(
     containerName: String,
     onOpenTerminal: () -> Unit,
+    anlandEnabled: Boolean = false,
+    onLaunchAnland: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
@@ -400,10 +409,12 @@ private fun TerminalCard(
         color = MaterialTheme.colorScheme.surfaceContainerHigh,
         border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f))
     ) {
+      Column(
+          modifier = Modifier.fillMaxWidth().padding(20.dp),
+          verticalArrangement = Arrangement.spacedBy(14.dp)
+      ) {
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(20.dp),
+            modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -460,6 +471,31 @@ private fun TerminalCard(
                 )
             }
         }
+
+        // Launch the anland desktop window, shown only when this container has
+        // the anland display daemon enabled and a live socket recorded.
+        if (anlandEnabled) {
+            Button(
+                onClick = onLaunchAnland,
+                modifier = Modifier.fillMaxWidth(),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                    contentColor = MaterialTheme.colorScheme.onSecondaryContainer
+                )
+            ) {
+                Icon(
+                    Icons.Default.DesktopWindows,
+                    contentDescription = null,
+                    modifier = Modifier.size(16.dp)
+                )
+                Spacer(Modifier.width(6.dp))
+                Text(
+                    context.getString(R.string.launch_anland_window),
+                    fontWeight = FontWeight.SemiBold
+                )
+            }
+        }
+      }
     }
 }
 
