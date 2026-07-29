@@ -180,6 +180,7 @@ fun ContainerCard(
                     if (container.enableHwAccess) add(context.getString(R.string.hw_option))
                     if (container.enableGpuMode || container.enableHwAccess) add(context.getString(R.string.gpu_option))
                     if (container.enableTermuxX11) add(context.getString(R.string.x11_option))
+                    if (container.enableAnland) add(context.getString(R.string.anland_option))
                     if (container.enableVirgl) add(context.getString(R.string.virgl_option))
                     if (container.enablePulseaudio) add(context.getString(R.string.pulseaudio_option))
                     if (container.selinuxPermissive) add(context.getString(R.string.selinux_permissive_option))

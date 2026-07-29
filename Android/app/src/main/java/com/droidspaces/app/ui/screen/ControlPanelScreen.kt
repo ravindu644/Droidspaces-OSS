@@ -23,6 +23,8 @@ import com.droidspaces.app.ui.component.PullToRefreshWrapper
 import com.droidspaces.app.ui.component.RunningContainerCard
 import com.droidspaces.app.ui.viewmodel.ContainerViewModel
 import com.droidspaces.app.ui.viewmodel.SystemStatsViewModel
+import com.droidspaces.app.util.AnlandUtils
+import com.droidspaces.app.util.ContainerManager
 import androidx.compose.ui.platform.LocalContext
 import com.droidspaces.app.R
 
@@ -64,6 +66,17 @@ fun ControlPanelScreen(
 
     val containerUsageMap = systemStatsViewModel.containerUsageMap
 
+    // Per-container anland display socket (recorded by the native runtime in
+    // Pids/<name>.anland). Refreshed whenever the running-container set changes;
+    // presence gates the "Launch Anland Window" button.
+    val anlandSockets = remember { mutableStateMapOf<String, String>() }
+    LaunchedEffect(runningContainers) {
+        anlandSockets.clear()
+        runningContainers.filter { it.enableAnland }.forEach { c ->
+            ContainerManager.getAnlandSocket(c.name)?.let { anlandSockets[c.name] = it }
+        }
+    }
+
     Box(modifier = Modifier.fillMaxSize()) {
         // Show content based on root and backend availability
         // Using when instead of early return to prevent UI glitches during recomposition
@@ -94,6 +107,7 @@ fun ControlPanelScreen(
                         verticalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
                         runningContainers.forEach { container ->
+                            val anlandSock = anlandSockets[container.name]
                             RunningContainerCard(
                                 container = container,
                                 onEnter = {
@@ -101,6 +115,10 @@ fun ControlPanelScreen(
                                 },
                                 onTerminalClick = {
                                     onNavigateToTerminal(container.name)
+                                },
+                                anlandEnabled = container.enableAnland && anlandSock != null,
+                                onLaunchAnland = {
+                                    anlandSock?.let { AnlandUtils.launchWindow(context, container.name, it) }
                                 },
                                 osInfo = containerUsageMap[container.name],
                             )
