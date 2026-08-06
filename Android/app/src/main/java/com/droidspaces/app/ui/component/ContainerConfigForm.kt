@@ -141,8 +141,7 @@ fun ContainerConfigForm(
         ) {
             Surface(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 24.dp)
+                    .fillMaxWidth(0.92f)
                     .imePadding(),
                 shape = RoundedCornerShape(24.dp),
                 color = MaterialTheme.colorScheme.surfaceContainer,
@@ -168,43 +167,19 @@ fun ContainerConfigForm(
                         Text(context.getString(R.string.read_only), style = MaterialTheme.typography.bodyMedium)
                         Switch(checked = roEnabled, onCheckedChange = { roEnabled = it })
                     }
-                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        Surface(
-                            modifier = Modifier.weight(1f).clip(RoundedCornerShape(14.dp)).clickable(onClick = { clearFocus(); showDestDialog = false }),
-                            shape = RoundedCornerShape(14.dp),
-                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.06f),
-                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)),
-                            tonalElevation = 0.dp
-                        ) {
-                            Box(modifier = Modifier.padding(14.dp), contentAlignment = Alignment.Center) {
-                                Text(context.getString(R.string.cancel), style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold)
+                    DialogFooterRow(
+                        dismissLabel = context.getString(R.string.cancel),
+                        confirmLabel = context.getString(R.string.ok),
+                        onDismiss = { clearFocus(); showDestDialog = false },
+                        onConfirm = {
+                            clearFocus()
+                            if (destPath.isNotBlank()) {
+                                onStateChange(state.copy(bindMounts = state.bindMounts + BindMount(tempSrcPath, destPath, roEnabled)))
+                                showDestDialog = false
                             }
-                        }
-                        Surface(
-                            modifier = Modifier.weight(1f).clip(RoundedCornerShape(14.dp)).clickable(
-                                enabled = destPath.startsWith("/"),
-                                onClick = {
-                                    clearFocus()
-                                    if (destPath.isNotBlank()) {
-                                        onStateChange(state.copy(bindMounts = state.bindMounts + BindMount(tempSrcPath, destPath, roEnabled)))
-                                        showDestDialog = false
-                                    }
-                                }
-                            ),
-                            shape = RoundedCornerShape(14.dp),
-                            color = if (destPath.startsWith("/")) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f),
-                            tonalElevation = 0.dp
-                        ) {
-                            Box(modifier = Modifier.padding(14.dp), contentAlignment = Alignment.Center) {
-                                Text(
-                                    context.getString(R.string.ok),
-                                    style = MaterialTheme.typography.labelLarge,
-                                    fontWeight = FontWeight.SemiBold,
-                                    color = if (destPath.startsWith("/")) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
-                                )
-                            }
-                        }
-                    }
+                        },
+                        confirmEnabled = destPath.startsWith("/")
+                    )
                 }
             }
         }

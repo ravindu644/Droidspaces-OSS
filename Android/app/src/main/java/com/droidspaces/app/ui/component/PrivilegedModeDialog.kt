@@ -76,7 +76,7 @@ fun PrivilegedModeDialog(
     ) {
         Surface(
             modifier = Modifier
-                .fillMaxWidth(0.95f)
+                .fillMaxWidth(0.92f)
                 .wrapContentHeight(),
             shape = RoundedCornerShape(24.dp),
             color = MaterialTheme.colorScheme.surfaceContainer,

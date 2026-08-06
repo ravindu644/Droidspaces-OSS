@@ -12,6 +12,7 @@ output/
 .claude
 Android/app/src/main/assets/binaries/
 Android/app/src/main/assets/supported_locales.txt
+md3/
 
 # Keystores
 *.keystore

@@ -49,6 +49,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import androidx.compose.runtime.rememberCoroutineScope
 import com.droidspaces.app.ui.util.showSuccess
+import com.droidspaces.app.ui.util.LoadingIndicator
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -522,9 +523,8 @@ private fun CheckRequirementsButton(
             horizontalArrangement = Arrangement.Center
         ) {
             if (isRunning) {
-                CircularProgressIndicator(
+                LoadingIndicator(
                     modifier = Modifier.size(20.dp),
-                    strokeWidth = 2.dp,
                     color = MaterialTheme.colorScheme.onPrimary
                 )
             } else {

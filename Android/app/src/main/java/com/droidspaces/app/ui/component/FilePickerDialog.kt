@@ -33,6 +33,8 @@ import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
+import com.droidspaces.app.ui.util.LoadingIndicator
+import com.droidspaces.app.ui.util.LoadingSize
 import com.droidspaces.app.ui.theme.JetBrainsMono
 import com.droidspaces.app.R
 import androidx.compose.ui.text.input.ImeAction
@@ -236,7 +238,7 @@ fun FilePickerDialog(
                                 modifier = Modifier.fillMaxSize(),
                                 contentAlignment = Alignment.Center
                             ) {
-                                CircularProgressIndicator()
+                                LoadingIndicator(size = LoadingSize.Medium)
                             }
                         } else {
                             LazyColumn(

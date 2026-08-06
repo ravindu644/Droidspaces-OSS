@@ -498,7 +498,7 @@ fun DroidspacesNavigation(
                     modifier = Modifier.fillMaxSize(),
                     contentAlignment = Alignment.Center
                 ) {
-                    LoadingIndicator()
+                    LoadingIndicator(size = LoadingSize.Medium)
                 }
             } else {
                 containerInfo?.let { container ->

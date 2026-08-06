@@ -45,6 +45,7 @@ import com.droidspaces.app.util.PreferencesManager
 import com.droidspaces.app.util.FilePickerUtils
 import com.droidspaces.app.ui.component.ContainerCard
 import com.droidspaces.app.ui.component.ContainerCardActions
+import com.droidspaces.app.ui.component.DialogFooterRow
 import com.droidspaces.app.ui.component.TerminalDialog
 import com.droidspaces.app.ui.component.EmptyState
 import com.droidspaces.app.ui.component.ErrorState
@@ -84,6 +85,7 @@ fun ContainersScreen(
 
     // UI-only state (dialog triggers / pending pickers).
     var showUninstallConfirmation by remember { mutableStateOf<ContainerInfo?>(null) }
+    var showStopConfirmationFor by remember { mutableStateOf<ContainerInfo?>(null) }
     var pendingSparseOperation by remember { mutableStateOf<SparseOperation?>(null) }
     var pendingExportContainer by remember { mutableStateOf<ContainerInfo?>(null) }
     var showRepoSheet by remember { mutableStateOf(false) }
@@ -198,15 +200,8 @@ fun ContainersScreen(
                                 }
                             },
                             onStop = {
-                                scope.launch {
-                                    opsViewModel.executeOperation(
-                                        container, "stop",
-                                        onRefresh = { containerViewModel.refresh() },
-                                        onClearUsage = { systemStatsViewModel.clearContainerUsage(it) },
-                                        onFailureSnackbar = { msg -> scope.launch { snackbarHostState.showSnackbar(msg, duration = SnackbarDuration.Long) } }
-                                    )
-                                }
-                            },
+                                 showStopConfirmationFor = container
+                             },
                             onRestart = {
                                 scope.launch {
                                     opsViewModel.executeOperation(
@@ -367,6 +362,27 @@ fun ContainersScreen(
             )
         }
 
+        // Stop confirmation dialog
+        showStopConfirmationFor?.let { container ->
+            StopContainerConfirmationDialog(
+                containerName = container.name,
+                onConfirm = {
+                    showStopConfirmationFor = null
+                    scope.launch {
+                        opsViewModel.executeOperation(
+                            container, "stop",
+                            onRefresh = { containerViewModel.refresh() },
+                            onClearUsage = { systemStatsViewModel.clearContainerUsage(it) },
+                            onFailureSnackbar = { msg -> scope.launch { snackbarHostState.showSnackbar(msg, duration = SnackbarDuration.Long) } }
+                        )
+                    }
+                },
+                onDismiss = {
+                    showStopConfirmationFor = null
+                }
+            )
+        }
+
         // Uninstall progress dialog
         (opsViewModel.uninstallState as? UninstallState.InProgress)?.let { state ->
             ProgressDialog(
@@ -462,37 +478,13 @@ private fun SparseSizeDialog(
                     )
                 )
 
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    Surface(
-                        modifier = Modifier.weight(1f).clip(RoundedCornerShape(14.dp)).clickable(onClick = onDismiss),
-                        shape = RoundedCornerShape(14.dp),
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.06f),
-                        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)),
-                        tonalElevation = 0.dp
-                    ) {
-                        Box(modifier = Modifier.padding(14.dp), contentAlignment = Alignment.Center) {
-                            Text(context.getString(R.string.cancel), style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold)
-                        }
-                    }
-                    Surface(
-                        modifier = Modifier.weight(1f).clip(RoundedCornerShape(14.dp)).clickable(enabled = isValid, onClick = { size?.let { onConfirm(it) } }),
-                        shape = RoundedCornerShape(14.dp),
-                        color = if (isValid) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f),
-                        tonalElevation = 0.dp
-                    ) {
-                        Box(modifier = Modifier.padding(14.dp), contentAlignment = Alignment.Center) {
-                            Text(
-                                context.getString(R.string.continue_button),
-                                style = MaterialTheme.typography.labelLarge,
-                                fontWeight = FontWeight.SemiBold,
-                                color = if (isValid) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
-                            )
-                        }
-                    }
-                }
+                DialogFooterRow(
+                    dismissLabel = context.getString(R.string.cancel),
+                    confirmLabel = context.getString(R.string.continue_button),
+                    onDismiss = onDismiss,
+                    onConfirm = { size?.let { onConfirm(it) } },
+                    confirmEnabled = isValid
+                )
             }
         }
     }
@@ -570,37 +562,73 @@ private fun UninstallConfirmationDialog(
                         )
                     )
                 }
+                DialogFooterRow(
+                    dismissLabel = context.getString(R.string.cancel),
+                    confirmLabel = context.getString(R.string.uninstall),
+                    onDismiss = onDismiss,
+                    onConfirm = onConfirm,
+                    confirmEnabled = isConfirmed,
+                    confirmColor = MaterialTheme.colorScheme.error,
+                    confirmContentColor = MaterialTheme.colorScheme.onError
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun StopContainerConfirmationDialog(
+    containerName: String,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    val context = LocalContext.current
+    val dialogShape = RoundedCornerShape(24.dp)
+
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth = false)
+    ) {
+        Surface(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 24.dp),
+            shape = dialogShape,
+            color = MaterialTheme.colorScheme.surfaceContainer,
+            border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f)),
+            tonalElevation = 0.dp
+        ) {
+            Column(modifier = Modifier.padding(24.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    Surface(
-                        modifier = Modifier.weight(1f).clip(RoundedCornerShape(14.dp)).clickable(onClick = onDismiss),
-                        shape = RoundedCornerShape(14.dp),
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.06f),
-                        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)),
-                        tonalElevation = 0.dp
-                    ) {
-                        Box(modifier = Modifier.padding(14.dp), contentAlignment = Alignment.Center) {
-                            Text(context.getString(R.string.cancel), style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold)
-                        }
-                    }
-                    Surface(
-                        modifier = Modifier.weight(1f).clip(RoundedCornerShape(14.dp)).clickable(enabled = isConfirmed, onClick = onConfirm),
-                        shape = RoundedCornerShape(14.dp),
-                        color = if (isConfirmed) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f),
-                        tonalElevation = 0.dp
-                    ) {
-                        Box(modifier = Modifier.padding(14.dp), contentAlignment = Alignment.Center) {
-                            Text(
-                                context.getString(R.string.uninstall),
-                                style = MaterialTheme.typography.labelLarge,
-                                fontWeight = FontWeight.Bold,
-                                color = if (isConfirmed) MaterialTheme.colorScheme.onError else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
-                            )
-                        }
-                    }
+                    Icon(
+                        imageVector = androidx.compose.material.icons.Icons.Default.Warning,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.error,
+                        modifier = Modifier.size(24.dp)
+                    )
+                    Text(
+                        text = "Stop Container?",
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold
+                    )
                 }
+                Text(
+                    text = "Are you sure you want to stop the container \"$containerName\"?",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                DialogFooterRow(
+                    dismissLabel = context.getString(android.R.string.no),
+                    confirmLabel = context.getString(android.R.string.yes),
+                    onDismiss = onDismiss,
+                    onConfirm = onConfirm,
+                    confirmEnabled = true,
+                    confirmColor = MaterialTheme.colorScheme.error,
+                    confirmContentColor = MaterialTheme.colorScheme.onError
+                )
             }
         }
     }

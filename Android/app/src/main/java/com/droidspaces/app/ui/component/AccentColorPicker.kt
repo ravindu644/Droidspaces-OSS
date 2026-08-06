@@ -60,10 +60,11 @@ fun AccentColorPicker(
         LazyRow(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(bottom = 8.dp),
+                .padding(bottom = 20.dp),
             contentPadding = PaddingValues(horizontal = 16.dp),
             horizontalArrangement = Arrangement.spacedBy(12.dp),
-            verticalAlignment = Alignment.CenterVertically
+            verticalAlignment = Alignment.CenterVertically,
+            userScrollEnabled = false
         ) {
             items(
                 items = ThemePalette.entries.toList(),

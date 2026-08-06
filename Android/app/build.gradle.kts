@@ -302,6 +302,7 @@ dependencies {
     implementation("androidx.compose.ui:ui-tooling-preview")
     implementation("androidx.compose.material3:material3")
     implementation("androidx.compose.material:material-icons-extended")
+    implementation("androidx.graphics:graphics-shapes:1.0.1")
 
     // Core Android
     implementation("androidx.core:core-ktx:1.12.0")
