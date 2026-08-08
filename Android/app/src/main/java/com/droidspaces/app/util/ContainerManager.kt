@@ -25,11 +25,23 @@ data class PortForward(
     val proto: String = "tcp"
 )
 
+data class DirectL2Capabilities(
+    val ipvlanSupported: Boolean = false,
+    val macvlanSupported: Boolean = false
+)
+
 data class ContainerInfo(
     val name: String,
     val hostname: String,
     val rootfsPath: String,
     val netMode: String = Constants.DEFAULT_NET_MODE,
+    val netParent: String = "",
+    val netMac: String = "",
+    val netIpam: String = "dhcp",
+    val hostAccess: String = "none",
+    val hostAccessPtpCidr: String = "",
+    val netAddress: String = "",
+    val netGateway: String = "",
     val disableIPv6: Boolean = false,
     val enableAndroidStorage: Boolean = false,
     val enableHwAccess: Boolean = false,
@@ -75,6 +87,19 @@ data class ContainerInfo(
         appendLine("hostname=$hostname")
         appendLine("rootfs_path=$rootfsPath")
         appendLine("net_mode=$netMode")
+        if (netMode == "ipvlan" || netMode == "macvlan") {
+            appendLine("net_parent=$netParent")
+            if (netMode == "macvlan" && netMac.isNotBlank()) appendLine("net_mac=$netMac")
+            appendLine("net_ipam=$netIpam")
+            appendLine("host_access=$hostAccess")
+            if (hostAccess == "ptp" && hostAccessPtpCidr.isNotBlank()) {
+                appendLine("host_access_ptp_cidr=$hostAccessPtpCidr")
+            }
+            if (netIpam == "static") {
+                appendLine("net_address=$netAddress")
+                appendLine("net_gateway=$netGateway")
+            }
+        }
         appendLine("disable_ipv6=${if (disableIPv6) "1" else "0"}")
         appendLine("enable_android_storage=${if (enableAndroidStorage) "1" else "0"}")
         appendLine("enable_hw_access=${if (enableHwAccess) "1" else "0"}")
@@ -319,6 +344,13 @@ object ContainerManager {
                     getRootfsPath(containerName)
                 },
                 netMode = configMap["net_mode"] ?: Constants.DEFAULT_NET_MODE,
+                netParent = configMap["net_parent"] ?: "",
+                netMac = configMap["net_mac"] ?: "",
+                netIpam = configMap["net_ipam"] ?: "dhcp",
+                hostAccess = configMap["host_access"] ?: "none",
+                hostAccessPtpCidr = configMap["host_access_ptp_cidr"] ?: "",
+                netAddress = configMap["net_address"] ?: "",
+                netGateway = configMap["net_gateway"] ?: "",
                 disableIPv6 = configMap["disable_ipv6"] == "1",
                 enableAndroidStorage = configMap["enable_android_storage"] == "1",
                 enableHwAccess = configMap["enable_hw_access"] == "1",
@@ -447,6 +479,24 @@ object ContainerManager {
             }
         } catch (e: Exception) {
             emptyList()
+        }
+    }
+
+    /** Query live kernel support using the backend's temporary Netlink probes. */
+    suspend fun getDirectL2Capabilities(): DirectL2Capabilities = withContext(Dispatchers.IO) {
+        try {
+            val result = Shell.cmd("\"${Constants.DROIDSPACES_BINARY_PATH}\" --format check 2>/dev/null").exec()
+            if (!result.isSuccess) return@withContext DirectL2Capabilities()
+            val values = result.out.mapNotNull { line ->
+                val parts = line.trim().split("=", limit = 2)
+                if (parts.size == 2) parts[0] to parts[1] else null
+            }.toMap()
+            DirectL2Capabilities(
+                ipvlanSupported = values["CONFIG_IPVLAN"] == "1",
+                macvlanSupported = values["CONFIG_MACVLAN"] == "1"
+            )
+        } catch (_: Exception) {
+            DirectL2Capabilities()
         }
     }
 

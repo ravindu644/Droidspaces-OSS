@@ -145,6 +145,34 @@ static int check_veth_support(void) {
   return (ret == 0);
 }
 
+/* Probe direct-L2 link types against real host interfaces.  A live NEWLINK
+ * roundtrip detects both built-in (=y) and loadable (=m) implementations and
+ * also catches kernels where the feature exists but cannot actually be used
+ * by the runtime. */
+static int check_direct_l2_support(const char *kind) {
+  if (!is_root)
+    return 0;
+
+  char ifaces[64][IFNAMSIZ];
+  ds_nl_ctx_t *ctx = ds_nl_open();
+  if (!ctx)
+    return 0;
+  int count = ds_nl_list_ifaces(ctx, ifaces, 64);
+  ds_nl_close(ctx);
+  if (count < 0)
+    return 0;
+
+  for (int i = 0; i < count; i++) {
+    if (strcmp(ifaces[i], "lo") == 0 || strncmp(ifaces[i], "ds-", 3) == 0)
+      continue;
+    char reason[256];
+    if (ds_nl_probe_parent_capability(ifaces[i], kind, reason,
+                                      sizeof(reason)) == 0)
+      return 1;
+  }
+  return 0;
+}
+
 static int check_kernel_version_supported(void) {
   int major = 0, minor = 0;
   if (get_kernel_version(&major, &minor) < 0)
@@ -400,6 +428,12 @@ int check_requirements_detailed(void) {
   print_ds_check("Veth pair support",
                  "Required for --net=nat; no fallback exists if absent",
                  check_veth_support(), "OPT");
+  print_ds_check("IPvlan support",
+                 "CONFIG_IPVLAN; required for --net=ipvlan",
+                 check_direct_l2_support("ipvlan"), "OPT");
+  print_ds_check("Macvlan support",
+                 "CONFIG_MACVLAN; required for --net=macvlan",
+                 check_direct_l2_support("macvlan"), "OPT");
   print_ds_check("User namespace",
                  "CONFIG_USER_NS; enable per container with --allow-userns. "
                  "Needed by Docker on some kernels, by sandboxed apps "
@@ -426,5 +460,14 @@ int check_requirements_detailed(void) {
   fwrite(check_buf, 1, check_buf_pos, stdout);
   fflush(stdout);
 
+  return 0;
+}
+
+int check_requirements_format(void) {
+  check_root();
+  printf("CONFIG_USER_NS=%d\n",
+         access("/proc/self/ns/user", F_OK) == 0 ? 1 : 0);
+  printf("CONFIG_IPVLAN=%d\n", check_direct_l2_support("ipvlan"));
+  printf("CONFIG_MACVLAN=%d\n", check_direct_l2_support("macvlan"));
   return 0;
 }

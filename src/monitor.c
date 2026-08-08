@@ -456,6 +456,7 @@ reboot_loop:;
       }
       close(cfg->net_ready_pipe[0]);
 
+      int net_setup_status = 0;
       if (cfg->net_mode == DS_NET_NAT) {
         if (setup_veth_host_side(cfg, netns_pid) < 0) {
           ds_warn("[NET] Monitor: setup_veth_host_side failed - "
@@ -469,6 +470,18 @@ reboot_loop:;
         if (setup_gateway_veth_side(cfg, netns_pid) < 0) {
           ds_warn("[NET] Monitor: setup_gateway_veth_side failed - "
                   "container will remain isolated");
+        }
+      } else if (cfg->net_mode == DS_NET_IPVLAN ||
+                 cfg->net_mode == DS_NET_MACVLAN) {
+        net_setup_status = setup_parent_link_host_side(cfg, netns_pid);
+        if (net_setup_status < 0)
+          ds_warn("[NET] Monitor: direct L2 link setup failed: %s",
+                  strerror(-net_setup_status));
+        else if (cfg->host_access != DS_HOST_ACCESS_NONE) {
+          int ha_ret = ds_host_access_setup(cfg, netns_pid);
+          if (ha_ret < 0)
+            ds_warn("[NET] Monitor: host access setup deferred: %s",
+                    strerror(-ha_ret));
         }
       }
 
@@ -491,6 +504,7 @@ reboot_loop:;
       /* Send handshake to init */
       struct ds_net_handshake hs;
       ds_net_derive_handshake(netns_pid, cfg, &hs);
+      hs.status = net_setup_status;
       if (cfg->net_mode == DS_NET_GATEWAY)
         ds_log("[NET] Monitor: sending DONE (gateway mode: eth0 is wired "
                "host-side, IP comes from the gateway's DHCP)");
@@ -546,6 +560,7 @@ reboot_loop:;
     sigaddset(&mask, SIGCHLD);
     sigprocmask(SIG_BLOCK, &mask, NULL);
     int sfd = signalfd(-1, &mask, SFD_NONBLOCK | SFD_CLOEXEC);
+    unsigned int host_access_ticks = 0;
 
     while (1) {
       pid_t r = waitpid(mid_pid, &status, WNOHANG);
@@ -570,6 +585,13 @@ reboot_loop:;
       }
 
       ds_virtualize_update(cfg);
+      if ((cfg->net_mode == DS_NET_IPVLAN ||
+           cfg->net_mode == DS_NET_MACVLAN) &&
+          cfg->host_access != DS_HOST_ACCESS_NONE &&
+          ++host_access_ticks >= 10) {
+        ds_host_access_refresh(cfg, cfg->container_pid);
+        host_access_ticks = 0;
+      }
 
       /* Poll the signalfd and, in background mode, the console PTY master.
        * poll() wakes immediately when the master becomes readable, so draining

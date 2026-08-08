@@ -184,18 +184,17 @@ EOF
         $PRINTF "[Unit]\nConditionPathIsReadWrite=\n" > "$ROOTFS_PATH/etc/systemd/system/${unit}.d/99-readonly-fix.conf"
     done
 
-    # 06. Limit specific network services to NAT and gateway modes only
-    # Both need an in-container DHCP client (NAT: lease from Droidspaces; gateway:
-    # lease from the gateway container, e.g. OpenWRT). Host/none modes still skip
-    # them to prevent cellular network breakage.
-    log "Applying NAT/gateway mode guards to network services..."
+    # 06. Limit network services to modes where the guest owns DHCP. Direct-L2
+    # static mode is configured by the runtime, so DHCP managers must not race
+    # it. Host/none modes still skip them to protect Android host interfaces.
+    log "Applying network-mode guards to guest network services..."
     for unit in NetworkManager.service dhcpcd.service systemd-resolved.service systemd-networkd.service; do
         if $TEST -f "$ROOTFS_PATH/$GUEST_SYSTEMD_PATH/$unit" || $TEST -f "$ROOTFS_PATH/etc/systemd/system/multi-user.target.wants/$unit"; then
             $MKDIR -p "$ROOTFS_PATH/etc/systemd/system/${unit}.d"
             $CAT > "$ROOTFS_PATH/etc/systemd/system/${unit}.d/99-netmode-limit.conf" << 'EOF'
 [Service]
 ExecCondition=
-ExecCondition=/bin/sh -c "grep -qE 'net_mode=(nat|gateway)' /run/droidspaces/container.config"
+ExecCondition=/bin/sh -c "grep -qE 'net_mode=(nat|gateway)' /run/droidspaces/container.config || { grep -qE 'net_mode=(ipvlan|macvlan)' /run/droidspaces/container.config && ! grep -q 'net_ipam=static' /run/droidspaces/container.config; }"
 EOF
         fi
     done
@@ -212,8 +211,10 @@ DHCP=yes
 IPv6AcceptRA=yes
 
 [DHCPv4]
+ClientIdentifier=duid
 UseDNS=yes
 UseDomains=yes
+RequestBroadcast=yes
 RouteMetric=100
 EOF
 
@@ -223,13 +224,13 @@ fi
 
 # --- 3. Alpine/OpenRC & dhcpcd-Specific Fixes ---
 
-# Replace dhcpcd init script to only start in NAT or gateway network mode
+# Replace dhcpcd init script to start only when the guest owns DHCP
 # This is the OpenRC equivalent of systemd's ExecCondition - if the container
 # is running in host network mode, dhcpcd is cleanly skipped at boot to prevent
 # cellular network breakage and kernel panics on Android interfaces. Gateway
 # mode needs it too: the DHCP lease comes from the gateway container.
 if $TEST -f "$ROOTFS_PATH/etc/init.d/dhcpcd"; then
-    log "Alpine/OpenRC dhcpcd service detected, applying NAT/gateway mode limitation..."
+    log "Alpine/OpenRC dhcpcd service detected, applying network-mode limitation..."
     $CAT > "$ROOTFS_PATH/etc/init.d/dhcpcd" << 'INITEOF'
 #!/sbin/openrc-run
 
@@ -249,9 +250,11 @@ depend() {
 }
 
 start_pre() {
-	# Only start in NAT or gateway mode - prevents cellular network breakage in host network mode
-	if ! grep -qE 'net_mode=(nat|gateway)' /run/droidspaces/container.config 2>/dev/null; then
-		einfo "Skipping dhcpcd: not in NAT or gateway network mode"
+	# Direct-L2 DHCP is guest-owned; direct-L2 static is runtime-owned.
+	if ! grep -qE 'net_mode=(nat|gateway)' /run/droidspaces/container.config 2>/dev/null &&
+	   ! { grep -qE 'net_mode=(ipvlan|macvlan)' /run/droidspaces/container.config 2>/dev/null &&
+	       ! grep -q 'net_ipam=static' /run/droidspaces/container.config 2>/dev/null; }; then
+		einfo "Skipping dhcpcd: network mode is not guest-managed DHCP"
 		return 1
 	fi
 	checkpath -d /run/dhcpcd

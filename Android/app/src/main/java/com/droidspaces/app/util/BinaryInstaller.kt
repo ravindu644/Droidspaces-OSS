@@ -63,9 +63,9 @@ object BinaryInstaller {
             val droidspacesBinaryName = getDroidspacesBinaryName()
             val busyboxBinaryName = getBusyboxBinaryName()
 
-            // Always install to the canonical path. The daemon's g_self_path fix
-            // means this is safe even while the daemon is running - the mv is
-            // atomic and the daemon automatically re-execs the new binary.
+            // Always install to the canonical path. The move is atomic, so an
+            // already-running daemon can keep using its old inode until the app
+            // restarts the daemon after the swap.
             val droidspacesTargetPath = Constants.DROIDSPACES_BINARY_PATH
             val busyboxTargetPath = Constants.BUSYBOX_BINARY_PATH
 
@@ -176,16 +176,61 @@ object BinaryInstaller {
     }
 
     /**
-     * After a live binary swap, send SIGUSR2 to the running daemon
-     * so it acknowledges the update (used for logging).
+     * Restart the complete daemon tree after an atomic backend update.
+     *
+     * Re-executed CLI sessions already resolve the new canonical binary, but
+     * the daemon's embedded socketd bridge stays mapped to the old inode. If a
+     * release changes an internal request/config layout, mixing that old bridge
+     * with the new CLI can reinterpret unrelated flags. Restarting the parent
+     * also terminates its bridge through PR_SET_PDEATHSIG, so both processes
+     * come back from the same binary.
      */
-    suspend fun signalDaemon(): Unit = withContext(Dispatchers.IO) {
-        val pidResult = Shell.cmd("cat ${Constants.DAEMON_PID_FILE} 2>/dev/null").exec()
-        if (pidResult.isSuccess && pidResult.out.isNotEmpty()) {
-            val pid = pidResult.out[0].trim()
-            if (pid.isNotEmpty()) {
-                Shell.cmd("kill -USR2 $pid 2>/dev/null").exec()
+    suspend fun restartDaemon(): Result<Unit> = withContext(Dispatchers.IO) {
+        try {
+            val oldPid = Shell.cmd("cat ${Constants.DAEMON_PID_FILE} 2>/dev/null")
+                .exec().out.firstOrNull()?.trim()?.toIntOrNull()
+
+            if (oldPid != null && oldPid > 1) {
+                Shell.cmd("kill -TERM $oldPid 2>/dev/null").exec()
+
+                var alive = true
+                for (attempt in 0 until 30) {
+                    alive = Shell.cmd("kill -0 $oldPid 2>/dev/null").exec().isSuccess
+                    if (!alive) break
+                    Thread.sleep(100)
+                }
+                if (alive) {
+                    Shell.cmd("kill -KILL $oldPid 2>/dev/null").exec()
+                    Thread.sleep(100)
+                }
             }
+
+            // Preserve the daemon SELinux entrypoint label used by the module.
+            Shell.cmd(
+                "chcon u:object_r:droidspacesd_exec:s0 ${Constants.DROIDSPACES_BINARY_PATH} 2>/dev/null"
+            ).exec()
+
+            val launch = Shell.cmd("${Constants.DROIDSPACES_BINARY_PATH} daemon 2>&1").exec()
+            if (!launch.isSuccess) {
+                return@withContext Result.failure(
+                    Exception("Failed to restart Droidspaces daemon: ${launch.err.joinToString()}")
+                )
+            }
+
+            repeat(30) {
+                val pid = Shell.cmd("cat ${Constants.DAEMON_PID_FILE} 2>/dev/null")
+                    .exec().out.firstOrNull()?.trim()?.toIntOrNull()
+                if (pid != null && pid > 1 &&
+                    Shell.cmd("kill -0 $pid 2>/dev/null").exec().isSuccess
+                ) {
+                    return@withContext Result.success(Unit)
+                }
+                Thread.sleep(100)
+            }
+
+            Result.failure(Exception("Droidspaces daemon did not become ready after update"))
+        } catch (error: Exception) {
+            Result.failure(error)
         }
     }
 

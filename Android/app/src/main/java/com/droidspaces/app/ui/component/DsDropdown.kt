@@ -30,7 +30,8 @@ fun <T> DsDropdown(
     leadingIcon: ImageVector? = null,
     isError: Boolean = false,
     supportingText: String? = null,
-    enabled: Boolean = true
+    enabled: Boolean = true,
+    isOptionEnabled: (T) -> Boolean = { true }
 ) {
     var expanded by remember { mutableStateOf(false) }
     val focusManager = LocalFocusManager.current
@@ -95,8 +96,10 @@ fun <T> DsDropdown(
                     )
             ) {
                 options.forEach { option ->
+                    val optionEnabled = isOptionEnabled(option)
                     DropdownMenuItem(
                         text = { Text(displayName(option), fontWeight = FontWeight.Medium) },
+                        enabled = optionEnabled,
                         onClick = {
                             onSelect(option)
                             expanded = false
@@ -108,7 +111,8 @@ fun <T> DsDropdown(
                                     Icons.Default.Check,
                                     contentDescription = null,
                                     modifier = Modifier.size(18.dp),
-                                    tint = MaterialTheme.colorScheme.primary
+                                    tint = if (optionEnabled) MaterialTheme.colorScheme.primary
+                                    else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
                                 )
                             }
                         } else null

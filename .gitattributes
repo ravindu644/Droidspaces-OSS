@@ -1,0 +1,4 @@
+# Shell scripts are executed directly on Android/Linux.  CRLF would append a
+# carriage return to the shebang interpreter path and make the scripts fail
+# with "No such file or directory" when an APK is built from Windows.
+*.sh text eol=lf

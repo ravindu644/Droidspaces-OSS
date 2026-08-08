@@ -121,6 +121,10 @@ CONFIG_IP_NF_NAT=y
 # Disable this on older kernels to make internet work
 CONFIG_ANDROID_PARANOID_NETWORK=n
 
+# Optional direct L2 network modes
+CONFIG_IPVLAN=y
+CONFIG_MACVLAN=y
+
 # Fix for docker unsafe procfs error
 CONFIG_USER_NS=y
 ```
@@ -250,6 +254,10 @@ CONFIG_NETFILTER_XT_MATCH_ADDRTYPE=y
 # Fix for docker unsafe procfs error
 CONFIG_USER_NS=y
 
+# Direct L2 network modes
+CONFIG_IPVLAN=y
+CONFIG_MACVLAN=y
+
 # UFW support
 CONFIG_NETFILTER_XT_TARGET_REJECT=y
 CONFIG_NETFILTER_XT_TARGET_LOG=y
@@ -308,6 +316,7 @@ This checks for:
 - devtmpfs support
 - OverlayFS support (optional, for volatile mode)
 - VETH and Bridge support (optional, for NAT mode)
+- IPVLAN and MACVLAN support (optional, for direct L2 modes)
 - PTY/devpts support
 - Loop device support
 - ext4 support
@@ -333,6 +342,7 @@ This checks for:
 | OverlayFS | `CONFIG_OVERLAY_FS` | Volatile mode unavailable. |
 | Network namespace | `CONFIG_NET_NS=y` | NAT and None modes unavailable. |
 | VETH / Bridge | `CONFIG_VETH` / `CONFIG_BRIDGE` | NAT mode unavailable. |
+| IPVLAN / MACVLAN | `CONFIG_IPVLAN` / `CONFIG_MACVLAN` | The corresponding direct L2 mode is unavailable. |
 | Seccomp | `CONFIG_SECCOMP=y` | Seccomp shield disabled. Security risk. |
 
 ---

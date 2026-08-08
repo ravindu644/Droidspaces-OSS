@@ -217,7 +217,15 @@ class AppStateViewModel(application: Application) : AndroidViewModel(application
         binaryResult.fold(
             onSuccess = {
                 if (wasDaemon) {
-                    BinaryInstaller.signalDaemon()
+                    val daemonRestart = BinaryInstaller.restartDaemon()
+                    if (daemonRestart.isFailure) {
+                        installErrorMessage = daemonRestart.exceptionOrNull()?.message
+                            ?: context.getString(R.string.binary_installation_failed)
+                        isInstalling = false
+                        resetForPostInstallation()
+                        forceRefresh()
+                        return@fold
+                    }
                 }
                 // Step 3: Install module
                 isInstallingModule = true

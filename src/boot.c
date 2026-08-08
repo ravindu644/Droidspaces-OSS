@@ -9,6 +9,284 @@
 #include <linux/capability.h>
 #include <sys/prctl.h>
 
+static int ds_hex_value(unsigned char c) {
+  if (c >= '0' && c <= '9')
+    return (int)(c - '0');
+  if (c >= 'a' && c <= 'f')
+    return (int)(c - 'a') + 10;
+  if (c >= 'A' && c <= 'F')
+    return (int)(c - 'A') + 10;
+  return -1;
+}
+
+static int ds_file_contains_bytes(const char *path, const char *needle) {
+  unsigned char buffer[4096 + 64];
+  const size_t needle_len = strlen(needle);
+  size_t carry = 0;
+  int found = 0;
+  int fd = open(path, O_RDONLY | O_CLOEXEC);
+  if (fd < 0 || needle_len == 0 || needle_len > 64) {
+    if (fd >= 0)
+      close(fd);
+    return 0;
+  }
+
+  for (;;) {
+    ssize_t n = read(fd, buffer + carry, sizeof(buffer) - carry);
+    if (n < 0 && errno == EINTR)
+      continue;
+    if (n <= 0)
+      break;
+
+    size_t total = carry + (size_t)n;
+    for (size_t i = 0; i + needle_len <= total; i++) {
+      if (memcmp(buffer + i, needle, needle_len) == 0) {
+        found = 1;
+        break;
+      }
+    }
+    if (found)
+      break;
+
+    carry = total < needle_len - 1 ? total : needle_len - 1;
+    memmove(buffer, buffer + total - carry, carry);
+  }
+
+  close(fd);
+  return found;
+}
+
+static int ds_networkd_supports_foreign_nexthops(void) {
+  static const char setting[] = "ManageForeignNextHops";
+  return ds_file_contains_bytes("usr/lib/systemd/systemd-networkd", setting) ||
+         ds_file_contains_bytes("lib/systemd/systemd-networkd", setting);
+}
+
+/* Build a stable DHCP identity for direct-L2 links.
+ *
+ * ipvlan shares its lower device's MAC, so ClientIdentifier=mac would make
+ * every ipvlan container (and Android itself) look like the same DHCP client.
+ * Use the container UUID as a DUID-UUID instead.  Legacy configs without a
+ * valid UUID get a deterministic fallback derived from the container name;
+ * the identity must never change merely because the container restarts.
+ *
+ * The DHCP hostname gets a stable numeric suffix so cloned/common hostnames
+ * remain distinguishable without causing a fresh lease on every boot. */
+static void ds_build_direct_dhcp_identity(const struct ds_config *cfg,
+                                          char duid_raw[48], uint32_t *iaid,
+                                          char dhcp_hostname[64],
+                                          char ipv6_ra_token[46]) {
+  uint8_t id[16] = {0};
+  int valid_uuid = cfg->uuid[0] != '\0' && strlen(cfg->uuid) == DS_UUID_LEN;
+
+  if (valid_uuid) {
+    for (size_t i = 0; i < sizeof(id); i++) {
+      int hi = ds_hex_value((unsigned char)cfg->uuid[i * 2]);
+      int lo = ds_hex_value((unsigned char)cfg->uuid[i * 2 + 1]);
+      if (hi < 0 || lo < 0) {
+        valid_uuid = 0;
+        break;
+      }
+      id[i] = (uint8_t)((hi << 4) | lo);
+    }
+  }
+
+  if (!valid_uuid) {
+    const char *seed = cfg->container_name[0] ? cfg->container_name
+                                              : cfg->hostname;
+    uint64_t h1 = UINT64_C(1469598103934665603);
+    uint64_t h2 = UINT64_C(1099511628211) ^ UINT64_C(0x9e3779b97f4a7c15);
+    for (const unsigned char *p = (const unsigned char *)seed; *p; p++) {
+      h1 ^= *p;
+      h1 *= UINT64_C(1099511628211);
+      h2 ^= (uint64_t)(*p + 0x9dU);
+      h2 *= UINT64_C(14029467366897019727);
+    }
+    for (size_t i = 0; i < 8; i++) {
+      id[i] = (uint8_t)(h1 >> (i * 8));
+      id[i + 8] = (uint8_t)(h2 >> (i * 8));
+    }
+  }
+
+  snprintf(duid_raw, 48,
+           "%02x:%02x:%02x:%02x:%02x:%02x:%02x:%02x:"
+           "%02x:%02x:%02x:%02x:%02x:%02x:%02x:%02x",
+           id[0], id[1], id[2], id[3], id[4], id[5], id[6], id[7], id[8],
+           id[9], id[10], id[11], id[12], id[13], id[14], id[15]);
+  snprintf(ipv6_ra_token, 46,
+           "prefixstable,"
+           "%02x%02x%02x%02x%02x%02x%02x%02x"
+           "%02x%02x%02x%02x%02x%02x%02x%02x",
+           id[0], id[1], id[2], id[3], id[4], id[5], id[6], id[7], id[8],
+           id[9], id[10], id[11], id[12], id[13], id[14], id[15]);
+
+  *iaid = ((uint32_t)id[12] << 24) | ((uint32_t)id[13] << 16) |
+          ((uint32_t)id[14] << 8) | (uint32_t)id[15];
+  if (*iaid == 0)
+    *iaid = 1;
+
+  uint32_t suffix = 2166136261U;
+  for (size_t i = 0; i < sizeof(id); i++) {
+    suffix ^= id[i];
+    suffix *= 16777619U;
+  }
+  suffix %= 100000U;
+
+  const char *source = cfg->hostname[0] ? cfg->hostname : cfg->container_name;
+  size_t used = 0;
+  const size_t base_limit = 57; /* '-' + five digits + NUL => max 63 chars */
+  for (const unsigned char *p = (const unsigned char *)source;
+       *p && used < base_limit; p++) {
+    unsigned char c = (unsigned char)tolower(*p);
+    if (isalnum(c)) {
+      dhcp_hostname[used++] = (char)c;
+    } else if (used > 0 && dhcp_hostname[used - 1] != '-') {
+      dhcp_hostname[used++] = '-';
+    }
+  }
+  while (used > 0 && dhcp_hostname[used - 1] == '-')
+    used--;
+  if (used == 0) {
+    memcpy(dhcp_hostname, "droidspace", sizeof("droidspace") - 1);
+    used = sizeof("droidspace") - 1;
+  }
+  snprintf(dhcp_hostname + used, 64 - used, "-%05u", suffix);
+}
+
+/* Per-boot network-service policy.  /run overrides stale rootfs drop-ins, so
+ * old images immediately learn about ipvlan/macvlan without being re-extracted.
+ * Host/none and direct-L2 static must keep guest managers stopped; NAT,
+ * gateway, and direct-L2 DHCP let the guest own eth0 configuration. */
+static void ds_write_guest_network_policy(const struct ds_config *cfg) {
+  if (!cfg)
+    return;
+
+  int direct_dhcp =
+      (cfg->net_mode == DS_NET_IPVLAN || cfg->net_mode == DS_NET_MACVLAN) &&
+      cfg->net_ipam == DS_NET_IPAM_DHCP;
+  int allow_guest = cfg->net_mode == DS_NET_NAT ||
+                    cfg->net_mode == DS_NET_GATEWAY || direct_dhcp;
+
+  mkdir("run/systemd", 0755);
+  mkdir("run/systemd/system", 0755);
+  const char *units[] = {"NetworkManager.service", "dhcpcd.service",
+                         "systemd-networkd.service",
+                         "systemd-resolved.service", NULL};
+  const char *allow = "[Service]\nExecCondition=\n";
+  const char *block = "[Service]\nExecCondition=\nExecCondition=/bin/false\n";
+  for (size_t i = 0; units[i]; i++) {
+    char dir[PATH_MAX];
+    char file[PATH_MAX];
+    snprintf(dir, sizeof(dir), "run/systemd/system/%s.d", units[i]);
+    if (mkdir(dir, 0755) < 0 && errno != EEXIST) {
+      ds_warn("[NET] Cannot create systemd network policy directory %s: %s",
+              dir, strerror(errno));
+      continue;
+    }
+    snprintf(file, sizeof(file), "%s/zz-droidspaces-netmode.conf", dir);
+    if (write_file(file, allow_guest ? allow : block) < 0)
+      ds_warn("[NET] Cannot write systemd network policy %s", file);
+  }
+
+  /* dshost0 is a runtime-owned point-to-point control link.  The backend
+   * assigns both ends before init starts; guest managers must leave it alone
+   * while continuing to manage the direct-L2 eth0 normally. */
+  if (cfg->host_access == DS_HOST_ACCESS_PTP) {
+    mkdir("run/systemd/network", 0755);
+    if (write_file("run/systemd/network/05-droidspaces-host-access.network",
+                   "[Match]\nName=dshost0\n\n[Link]\nUnmanaged=yes\n") < 0)
+      ds_warn("[NET] Cannot write dshost0 systemd-networkd policy");
+
+    mkdir("run/NetworkManager", 0755);
+    mkdir("run/NetworkManager/conf.d", 0755);
+    if (write_file("run/NetworkManager/conf.d/"
+                   "05-droidspaces-host-access.conf",
+                   "[keyfile]\nunmanaged-devices=interface-name:dshost0\n") < 0)
+      ds_warn("[NET] Cannot write dshost0 NetworkManager policy");
+  }
+
+  if (direct_dhcp) {
+    mkdir("run/systemd/network", 0755);
+
+    /* systemd-networkd 257+ represents RA gateways as kernel nexthop objects.
+     * Android kernels commonly lack the nexthop netlink API (RTM_NEWNEXTHOP),
+     * which makes IPv6 RA fail with EOPNOTSUPP.  Keep the traditional direct
+     * gateway route representation when networkd advertises the compatibility
+     * setting; older releases remain untouched. */
+    if (cfg->net_mode == DS_NET_IPVLAN && !cfg->disable_ipv6 &&
+        ds_networkd_supports_foreign_nexthops()) {
+      mkdir("run/systemd/networkd.conf.d", 0755);
+      if (write_file("run/systemd/networkd.conf.d/"
+                     "zz-droidspaces-kernel-compat.conf",
+                     "[Network]\nManageForeignNextHops=no\n") < 0)
+        ds_warn("[NET] Cannot write systemd-networkd kernel compatibility "
+                "configuration");
+    }
+
+    char network[2048];
+    char duid_raw[48];
+    char dhcp_hostname[64];
+    char ipv6_ra_token[46];
+    char client_identity[256];
+    char ipv6_ra[128];
+    uint32_t iaid;
+    ds_build_direct_dhcp_identity(cfg, duid_raw, &iaid, dhcp_hostname,
+                                  ipv6_ra_token);
+
+    if (cfg->net_mode == DS_NET_IPVLAN) {
+      snprintf(client_identity, sizeof(client_identity),
+               "ClientIdentifier=duid\n"
+               "DUIDType=uuid\n"
+               "DUIDRawData=%s\n"
+               "IAID=%u\n",
+               duid_raw, iaid);
+    } else {
+      snprintf(client_identity, sizeof(client_identity),
+               "ClientIdentifier=mac\n");
+    }
+
+    const char *ipv6_link = cfg->disable_ipv6
+                                ? "IPv6AcceptRA=no\nLinkLocalAddressing=no\n"
+                                : "IPv6AcceptRA=yes\n"
+                                  "LinkLocalAddressing=ipv6\n";
+    if (cfg->disable_ipv6) {
+      ipv6_ra[0] = '\0';
+    } else if (cfg->net_mode == DS_NET_IPVLAN) {
+      snprintf(ipv6_ra, sizeof(ipv6_ra),
+               "\n[IPv6AcceptRA]\nToken=%s\nUseDNS=yes\n", ipv6_ra_token);
+    } else {
+      snprintf(ipv6_ra, sizeof(ipv6_ra),
+               "\n[IPv6AcceptRA]\nUseDNS=yes\n");
+    }
+    snprintf(network, sizeof(network),
+             "[Match]\n"
+             "Name=eth0\n\n"
+             "[Network]\n"
+             "DHCP=ipv4\n"
+             "%s\n"
+             "[DHCPv4]\n"
+             "%s"
+             "SendHostname=yes\n"
+             "Hostname=%s\n"
+             "UseDNS=yes\n"
+             "UseDomains=yes\n"
+             "RequestBroadcast=yes\n"
+             "RouteMetric=100\n"
+             "%s",
+             ipv6_link, client_identity, dhcp_hostname, ipv6_ra);
+    if (write_file("run/systemd/network/10-droidspaces-eth0.network",
+                   network) < 0)
+      ds_warn("[NET] Cannot write direct-L2 systemd-networkd configuration");
+    else
+      ds_log("[NET] DHCP identity: %s (%s)", dhcp_hostname,
+             cfg->net_mode == DS_NET_IPVLAN ? "DUID-UUID" : "MAC");
+  }
+
+  ds_log("[NET] Guest network services: %s (mode=%d, ipam=%s)",
+         allow_guest ? "enabled" : "blocked", cfg->net_mode,
+         cfg->net_ipam == DS_NET_IPAM_STATIC ? "static" : "dhcp");
+}
+
 /*
  * ds_apply_capability_hardening()
  *
@@ -144,9 +422,18 @@ int internal_boot(struct ds_config *cfg) {
       }
     }
 
+    if ((cfg->net_mode == DS_NET_IPVLAN ||
+         cfg->net_mode == DS_NET_MACVLAN) &&
+        hs.status < 0)
+      ds_die("Direct L2 network setup failed: %s", strerror(-hs.status));
+
     /* Configure our side of the veth (or just loopback for DS_NET_NONE) */
     if (cfg->net_mode == DS_NET_NAT || cfg->net_mode == DS_NET_GATEWAY) {
       setup_veth_child_side_named(cfg, hs.peer_name, hs.ip_str);
+    } else if (cfg->net_mode == DS_NET_IPVLAN ||
+               cfg->net_mode == DS_NET_MACVLAN) {
+      if (setup_parent_link_child_side(cfg, hs.peer_name) < 0)
+        ds_die("Failed to configure direct L2 interface inside container");
     } else {
       /* DS_NET_NONE: just bring up loopback */
       ds_nl_ctx_t *nlctx = ds_nl_open();
@@ -480,6 +767,8 @@ int internal_boot(struct ds_config *cfg) {
   if (ds_config_save("run/droidspaces/container.config", cfg) < 0) {
     ds_warn("Boot: Failed to save internal configuration backup");
   }
+
+  ds_write_guest_network_policy(cfg);
 
   write_file("run/droidspaces/name", cfg->container_name);
 

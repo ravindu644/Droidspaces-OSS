@@ -93,11 +93,28 @@ fun InstallationSummaryScreen(
                     SummaryItem(stringResource(R.string.hostname), config.hostname, Icons.Default.Computer)
                     SummaryItem(
                         stringResource(R.string.network_mode),
-                        stringResource(when (config.netMode) { "nat" -> R.string.network_mode_nat; "none" -> R.string.network_mode_none; else -> R.string.network_mode_host }),
+                        stringResource(when (config.netMode) { "nat" -> R.string.network_mode_nat; "none" -> R.string.network_mode_none; "gateway" -> R.string.network_mode_gateway; "ipvlan" -> R.string.network_mode_ipvlan; "macvlan" -> R.string.network_mode_macvlan; else -> R.string.network_mode_host }),
                         Icons.Default.Public
                     )
                     if (config.netMode == "nat" && config.staticNatIp.isNotEmpty()) {
                         SummaryItem(stringResource(R.string.static_ip_address), config.staticNatIp, Icons.Default.NetworkCheck)
+                    }
+                    if (config.netMode == "ipvlan" || config.netMode == "macvlan") {
+                        SummaryItem(stringResource(R.string.net_parent), config.netParent, Icons.Default.Public)
+                        SummaryItem(
+                            stringResource(R.string.net_ipam),
+                            stringResource(if (config.netIpam == "static") R.string.net_ipam_static else R.string.net_ipam_dhcp),
+                            Icons.Default.NetworkCheck
+                        )
+                        SummaryItem(
+                            stringResource(R.string.host_access),
+                            stringResource(when (config.hostAccess) {
+                                "ptp" -> R.string.host_access_ptp
+                                "shim" -> R.string.host_access_shim
+                                else -> R.string.host_access_none
+                            }),
+                            Icons.Default.SettingsEthernet
+                        )
                     }
                     if (config.useSparseImage && config.sparseImageSizeGB != null) {
                         SummaryItem(stringResource(R.string.storage_configuration), "${stringResource(R.string.sparse_image_configuration)} (${config.sparseImageSizeGB}GB)", Icons.Default.Storage)

@@ -111,7 +111,7 @@ struct DS_SOCKETD_PACKED ds_socketd_container_record {
   char nat_ip[INET_ADDRSTRLEN]; /* empty string if not NAT mode */
   char custom_init[DS_SOCKETD_RECORD_PATH_MAX]; /* empty = /sbin/init */
   int32_t pid_be;     /* host-view PID 1; 0 = stopped */
-  uint8_t net_mode;   /* 0=host 1=nat 2=none */
+  uint8_t net_mode;   /* ds_net_mode wire value: host/nat/none/gateway/ipv/mac */
   uint8_t port_count; /* entries used in ports[] */
   uint8_t _pad[2];
   struct ds_socketd_port_record ports[DS_SOCKETD_RECORD_PORTS_MAX];
@@ -171,7 +171,7 @@ struct DS_SOCKETD_PACKED ds_socketd_inspect_container_record_v1 {
   int64_t pids_limit_be;   /* 0 = unlimited */
   int32_t privileged_mask_be;
 
-  uint8_t net_mode; /* 0=host 1=nat 2=none */
+  uint8_t net_mode; /* ds_net_mode wire value */
   uint8_t foreground;
   uint8_t volatile_mode;
   uint8_t force_cgroupv1;

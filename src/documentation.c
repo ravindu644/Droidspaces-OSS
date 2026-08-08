@@ -288,7 +288,18 @@ static void print_page(int page, const char *bin) {
     p_printf("  --net=none     No network access (air-gapped)\n");
     p_printf("  --net=nat      Isolated namespace with internet access\n");
     p_printf("  --net=gateway  LAN delegated to another container "
-             "(e.g. OpenWRT)\n\n");
+             "(e.g. OpenWRT)\n");
+    p_printf("  --net=ipvlan   Direct L2 child of an Android host interface\n");
+    p_printf("  --net=macvlan  Direct L2 child with its own MAC address\n\n");
+
+    p_printf("%sDirect L2 Configuration:%s\n", bold, reset);
+    p_printf("  --net-parent=IFACE                 Parent, e.g. wlan0/eth0\n");
+    p_printf("  --net-ipam=dhcp                    Guest network manager uses "
+             "upstream DHCP\n");
+    p_printf("  --host-access=none|ptp|shim        Optional host/container "
+             "reachability\n");
+    p_printf("  --net-ipam=static --net-address=A/P --net-gateway=G\n");
+    p_printf("  No Droidspaces bridge, NAT, or embedded DHCP server is used.\n\n");
 
     p_printf("%sNAT Mode Configuration:%s\n", bold, reset);
     p_printf("  %s --name=mycontainer --rootfs=/path/to/rootfs --net=nat "

@@ -369,12 +369,49 @@ int ds_config_load(const char *config_path, struct ds_config *cfg) {
       } else if (strcmp(val, "gateway") == 0 ||
                  strcmp(val, "delegated-gateway") == 0) {
         cfg->net_mode = DS_NET_GATEWAY;
+      } else if (strcmp(val, "ipvlan") == 0) {
+        cfg->net_mode = DS_NET_IPVLAN;
+      } else if (strcmp(val, "macvlan") == 0) {
+        cfg->net_mode = DS_NET_MACVLAN;
       } else {
         ds_warn(
             "Unknown network mode '%s' in config file. Defaulting to 'host'.",
             val);
         cfg->net_mode = DS_NET_HOST;
       }
+    } else if (strcmp(key, "net_ipam") == 0) {
+      if (strcmp(val, "static") == 0)
+        cfg->net_ipam = DS_NET_IPAM_STATIC;
+      else if (strcmp(val, "dhcp") == 0)
+        cfg->net_ipam = DS_NET_IPAM_DHCP;
+      else
+        ds_warn("config: unknown net_ipam '%s'; using dhcp", val);
+    } else if (strcmp(key, "host_access") == 0) {
+      if (strcmp(val, "ptp") == 0)
+        cfg->host_access = DS_HOST_ACCESS_PTP;
+      else if (strcmp(val, "shim") == 0)
+        cfg->host_access = DS_HOST_ACCESS_SHIM;
+      else if (strcmp(val, "none") == 0)
+        cfg->host_access = DS_HOST_ACCESS_NONE;
+      else
+        ds_warn("config: unknown host_access '%s'; using none", val);
+    } else if (strcmp(key, "host_access_ptp_cidr") == 0) {
+      safe_strncpy(cfg->host_access_ptp_cidr, val,
+                   sizeof(cfg->host_access_ptp_cidr));
+    } else if (strcmp(key, "net_parent") == 0) {
+      if (strlen(val) < IFNAMSIZ)
+        safe_strncpy(cfg->net_parent, val, sizeof(cfg->net_parent));
+      else
+        ds_warn("config: ignoring too-long net_parent '%s'", val);
+    } else if (strcmp(key, "net_mac") == 0) {
+      if (strlen(val) < sizeof(cfg->net_mac))
+        safe_strncpy(cfg->net_mac, val, sizeof(cfg->net_mac));
+      else
+        ds_warn("config: ignoring too-long net_mac '%s'", val);
+    } else if (strcmp(key, "net_address") == 0) {
+      safe_strncpy(cfg->net_address, val, sizeof(cfg->net_address));
+    } else if (strcmp(key, "net_gateway") == 0) {
+      safe_strncpy(cfg->net_gateway, val, sizeof(cfg->net_gateway));
     } else if (strcmp(key, "gateway_container") == 0) {
       if (validate_container_name(val))
         safe_strncpy(cfg->gateway_container, val,
@@ -707,8 +744,35 @@ static void ds_config_serialize_known(FILE *f, struct ds_config *cfg) {
     fprintf(f, "net_mode=none\n");
   } else if (cfg->net_mode == DS_NET_GATEWAY) {
     fprintf(f, "net_mode=gateway\n");
+  } else if (cfg->net_mode == DS_NET_IPVLAN) {
+    fprintf(f, "net_mode=ipvlan\n");
+  } else if (cfg->net_mode == DS_NET_MACVLAN) {
+    fprintf(f, "net_mode=macvlan\n");
   } else {
     fprintf(f, "net_mode=host\n");
+  }
+
+  if (cfg->net_mode == DS_NET_IPVLAN || cfg->net_mode == DS_NET_MACVLAN) {
+    if (cfg->net_parent[0])
+      fprintf(f, "net_parent=%s\n", cfg->net_parent);
+    fprintf(f, "net_ipam=%s\n",
+            cfg->net_ipam == DS_NET_IPAM_STATIC ? "static" : "dhcp");
+    fprintf(f, "host_access=%s\n",
+            cfg->host_access == DS_HOST_ACCESS_PTP
+                ? "ptp"
+                : (cfg->host_access == DS_HOST_ACCESS_SHIM ? "shim" :
+                                                               "none"));
+    if (cfg->host_access == DS_HOST_ACCESS_PTP &&
+        cfg->host_access_ptp_cidr[0])
+      fprintf(f, "host_access_ptp_cidr=%s\n", cfg->host_access_ptp_cidr);
+    if (cfg->net_mode == DS_NET_MACVLAN && cfg->net_mac[0])
+      fprintf(f, "net_mac=%s\n", cfg->net_mac);
+    if (cfg->net_ipam == DS_NET_IPAM_STATIC) {
+      if (cfg->net_address[0])
+        fprintf(f, "net_address=%s\n", cfg->net_address);
+      if (cfg->net_gateway[0])
+        fprintf(f, "net_gateway=%s\n", cfg->net_gateway);
+    }
   }
 
   if (cfg->net_mode == DS_NET_GATEWAY) {
@@ -914,6 +978,38 @@ int ds_config_validate(struct ds_config *cfg) {
       errors++;
     else if (strcmp(cfg->gateway_container, cfg->container_name) == 0)
       errors++;
+  }
+
+  if (cfg->net_mode == DS_NET_IPVLAN || cfg->net_mode == DS_NET_MACVLAN) {
+    /* Empty is valid: the active host uplink is resolved at start time. */
+    if (cfg->net_parent[0] &&
+        (strlen(cfg->net_parent) >= IFNAMSIZ ||
+         strchr(cfg->net_parent, '/') ||
+         strpbrk(cfg->net_parent, " \t\r\n")))
+      errors++;
+    if (cfg->net_ipam == DS_NET_IPAM_STATIC) {
+      char address[sizeof(cfg->net_address)];
+      safe_strncpy(address, cfg->net_address, sizeof(address));
+      char *slash = strchr(address, '/');
+      char *end = NULL;
+      long prefix = slash ? strtol(slash + 1, &end, 10) : -1;
+      if (slash)
+        *slash = '\0';
+      struct in_addr parsed;
+      if (!slash || !end || *end || prefix < 0 || prefix > 32 ||
+          inet_pton(AF_INET, address, &parsed) != 1 ||
+          inet_pton(AF_INET, cfg->net_gateway, &parsed) != 1)
+        errors++;
+    }
+    if ((cfg->net_mode == DS_NET_MACVLAN && cfg->net_mac[0] &&
+         ds_parse_mac_address(cfg->net_mac, (uint8_t[6]){0}) < 0) ||
+        (cfg->net_mode == DS_NET_IPVLAN && cfg->net_mac[0]))
+      errors++;
+    if (cfg->host_access < DS_HOST_ACCESS_NONE ||
+        cfg->host_access > DS_HOST_ACCESS_SHIM)
+      errors++;
+  } else if (cfg->host_access != DS_HOST_ACCESS_NONE) {
+    errors++;
   }
 
   return (errors > 0) ? -1 : 0;

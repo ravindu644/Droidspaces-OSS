@@ -236,6 +236,35 @@
     <string name="network_mode_none_short">None</string>
     <string name="network_mode_gateway">Gateway (Virtual Router)</string>
     <string name="network_mode_gateway_short">Gateway</string>
+    <string name="network_mode_ipvlan">IPvlan (Direct LAN)</string>
+    <string name="network_mode_ipvlan_short">IPvlan</string>
+    <string name="network_mode_macvlan">Macvlan (Direct LAN)</string>
+    <string name="network_mode_macvlan_short">Macvlan</string>
+    <string name="direct_l2_settings">Direct LAN settings</string>
+    <string name="direct_l2_explain">Creates a child link on an Android host interface. DHCP is handled inside the container by NetworkManager, networkd, or dhcpcd and answered by the external router; Droidspaces does not run NAT or its embedded DHCP server.</string>
+    <string name="net_parent">Parent interface</string>
+    <string name="net_parent_hint">Automatic (active uplink), or e.g. wlan0</string>
+    <string name="net_parent_auto">Automatic (active uplink)</string>
+    <string name="net_parent_explain">Leave blank to auto-detect the active Android uplink, or enter a parent interface explicitly.</string>
+    <string name="net_parent_error">Enter a Linux interface name shorter than 16 characters.</string>
+    <string name="macvlan_wifi_4addr_warning">Macvlan over Wi-Fi depends on both the wireless router/AP and this phone supporting and enabling 4addr (WDS) mode. Droidspaces will try to enable 4addr on the phone, but cannot enable it on the router.</string>
+    <string name="net_mac">Device MAC (optional)</string>
+    <string name="net_mac_explain">Leave blank to let the kernel choose; enter a unicast MAC to keep a router reservation.</string>
+    <string name="net_mac_error">Enter a valid unicast MAC such as 02:11:22:33:44:55.</string>
+    <string name="net_ipam">Address configuration</string>
+    <string name="net_ipam_dhcp">DHCP (guest network manager)</string>
+    <string name="net_ipam_static">Static</string>
+    <string name="net_address">IPv4 address / prefix</string>
+    <string name="host_access">Host access</string>
+    <string name="host_access_none">None</string>
+    <string name="host_access_ptp">Private PTP (recommended)</string>
+    <string name="host_access_shim">Direct LAN address (shim)</string>
+    <string name="host_access_none_explain">Keep the normal ipvlan/macvlan host isolation.</string>
+    <string name="host_access_ptp_explain">Adds a private dshost0 link for reliable host-to-container access without changing the LAN address.</string>
+    <string name="host_access_shim_explain">Routes the container’s LAN IPv4 through a shared parent shim. DHCP addresses are detected automatically.</string>
+    <string name="net_gateway">Default gateway</string>
+    <string name="net_static_error">Enter a valid IPv4 CIDR and IPv4 gateway.</string>
+    <string name="ipvlan_dhcp_warning">IPvlan shares the parent MAC. Droidspaces asks systemd-networkd to use a DUID client ID, but some routers identify leases only by MAC and may not issue separate leases.</string>
 
     <!-- Gateway networking mode -->
     <string name="gateway_settings">Gateway Settings</string>

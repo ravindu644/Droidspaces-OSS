@@ -55,7 +55,14 @@ void print_usage(void) {
   printf(
       C_BOLD
       "Options (Networking):" C_RESET "\n"
-      "      --net=MODE            Modes: host (default), nat, none, gateway\n"
+      "      --net=MODE            Modes: host, nat, none, gateway, ipvlan, "
+      "macvlan\n"
+      "      --net-parent=IFACE    Parent link; blank config auto-detects uplink\n"
+      "      --net-mac=MAC         Optional macvlan MAC; blank leaves it unmanaged\n"
+      "      --net-ipam=MODE       Addressing: dhcp (default) or static\n"
+      "      --host-access=MODE    Host reachability: none, ptp, or shim\n"
+      "      --net-address=CIDR    Static IPv4 address, e.g. 192.168.1.50/24\n"
+      "      --net-gateway=IP      Static IPv4 default gateway\n"
       "      --gateway=NAME        Gateway container for --net=gateway\n"
       "      --gateway-net=NAME    Gateway LAN name/bridge suffix (default: "
       "lan)\n"
@@ -244,6 +251,50 @@ static int validate_configuration_cli(struct ds_config *cfg) {
     }
   }
 
+  if (cfg->net_mode == DS_NET_IPVLAN || cfg->net_mode == DS_NET_MACVLAN) {
+    /* A blank parent means auto-detect the active uplink at start time. */
+    if (cfg->net_parent[0] &&
+        (strlen(cfg->net_parent) >= IFNAMSIZ ||
+               strchr(cfg->net_parent, '/') ||
+         strpbrk(cfg->net_parent, " \t\r\n"))) {
+      ds_error("Invalid parent interface name: %s", cfg->net_parent);
+      errors++;
+    }
+
+    if (cfg->net_ipam == DS_NET_IPAM_STATIC) {
+      char address[sizeof(cfg->net_address)];
+      safe_strncpy(address, cfg->net_address, sizeof(address));
+      char *slash = strchr(address, '/');
+      char *end = NULL;
+      long prefix = slash ? strtol(slash + 1, &end, 10) : -1;
+      if (slash)
+        *slash = '\0';
+      struct in_addr parsed;
+      if (!slash || !end || *end || prefix < 0 || prefix > 32 ||
+          inet_pton(AF_INET, address, &parsed) != 1) {
+        ds_error("--net-address must be a valid IPv4 CIDR.");
+        errors++;
+      }
+      if (inet_pton(AF_INET, cfg->net_gateway, &parsed) != 1) {
+        ds_error("--net-gateway must be a valid IPv4 address.");
+        errors++;
+      }
+    }
+    if (cfg->net_mode == DS_NET_MACVLAN && cfg->net_mac[0]) {
+      uint8_t mac[6];
+      if (ds_parse_mac_address(cfg->net_mac, mac) < 0) {
+        ds_error("--net-mac must be a unicast MAC such as 02:11:22:33:44:55.");
+        errors++;
+      }
+    } else if (cfg->net_mode == DS_NET_IPVLAN && cfg->net_mac[0]) {
+      ds_error("--net-mac is only valid with --net=macvlan.");
+      errors++;
+    }
+  } else if (cfg->host_access != DS_HOST_ACCESS_NONE) {
+    ds_error("--host-access is only valid with --net=ipvlan or macvlan.");
+    errors++;
+  }
+
   return (errors > 0) ? -1 : 0;
 }
 
@@ -308,12 +359,13 @@ static void enforce_nat_safety(struct ds_config *cfg, int argc, char **argv) {
   }
 
   if (cfg->net_mode == DS_NET_NAT || cfg->net_mode == DS_NET_NONE ||
-      cfg->net_mode == DS_NET_GATEWAY) {
+      cfg->net_mode == DS_NET_GATEWAY || cfg->net_mode == DS_NET_IPVLAN ||
+      cfg->net_mode == DS_NET_MACVLAN) {
     if (!check_ns(CLONE_NEWNET, "net")) {
       printf("\n" C_RED C_BOLD
              "[ FATAL: NETWORK NAMESPACE UNSUPPORTED ]" C_RESET "\n\n");
       ds_error("Kernel does not support CLONE_NEWNET (network namespaces).");
-      ds_log("Cannot use --net=nat, --net=none, or --net=gateway.");
+      ds_log("The selected isolated network mode cannot be used.");
       ds_log("Tip: Use --net=host (default) for shared host networking.");
       exit(EXIT_FAILURE);
     }
@@ -343,6 +395,35 @@ static void enforce_nat_safety(struct ds_config *cfg, int argc, char **argv) {
       exit(1);
     }
     ds_log("[NET] Kernel capability probe passed for --net=gateway.");
+    return;
+  }
+
+  if (cfg->net_mode == DS_NET_IPVLAN || cfg->net_mode == DS_NET_MACVLAN) {
+    char reason[512];
+    const char *kind =
+        cfg->net_mode == DS_NET_IPVLAN ? "ipvlan" : "macvlan";
+    if (ds_net_resolve_parent(cfg, reason, sizeof(reason)) < 0) {
+      printf("\n" C_RED C_BOLD
+             "[ FATAL: DIRECT L2 PARENT UNAVAILABLE ]" C_RESET "\n\n");
+      ds_error("--net=%s could not select a parent interface:\n  %s", kind,
+               reason);
+      ds_log("Connect a host network or set --net-parent explicitly.");
+      exit(1);
+    }
+    ds_log("[NET] %s", reason);
+    int probe = ds_nl_probe_parent_capability(cfg->net_parent, kind, reason,
+                                              sizeof(reason));
+    if (probe < 0) {
+      printf("\n" C_RED C_BOLD
+             "[ FATAL: DIRECT L2 NETWORKING UNSUPPORTED ]" C_RESET "\n\n");
+      ds_error("--net=%s is unavailable:\n  %s", kind, reason);
+      ds_log("Check that CONFIG_%s=y and that parent '%s' supports this link "
+             "type.",
+             cfg->net_mode == DS_NET_IPVLAN ? "IPVLAN" : "MACVLAN",
+             cfg->net_parent);
+      exit(1);
+    }
+    ds_log("[NET] Kernel capability probe passed: %s", reason);
     return;
   }
 
@@ -420,6 +501,12 @@ int main(int argc, char **argv) {
       {"gateway-net", required_argument, 0, 275},
       {"gateway-iface", required_argument, 0, 276},
       {"gateway-bridge", required_argument, 0, 277},
+      {"net-parent", required_argument, 0, 280},
+      {"net-ipam", required_argument, 0, 281},
+      {"net-address", required_argument, 0, 282},
+      {"net-gateway", required_argument, 0, 283},
+      {"net-mac", required_argument, 0, 284},
+      {"host-access", required_argument, 0, 285},
       {"reset", no_argument, 0, 256},
       {"format", no_argument, 0, 265},
       {"memory", required_argument, 0, 266},
@@ -495,6 +582,10 @@ int main(int argc, char **argv) {
       else if (strcmp(optarg, "gateway") == 0 ||
                strcmp(optarg, "delegated-gateway") == 0)
         cfg.net_mode = DS_NET_GATEWAY;
+      else if (strcmp(optarg, "ipvlan") == 0)
+        cfg.net_mode = DS_NET_IPVLAN;
+      else if (strcmp(optarg, "macvlan") == 0)
+        cfg.net_mode = DS_NET_MACVLAN;
       else {
         ds_error("Unknown network mode: '%s'. Valid options: host, nat, none, "
                  "gateway",
@@ -693,6 +784,45 @@ int main(int argc, char **argv) {
     case 277:
       safe_strncpy(cfg.gateway_bridge, optarg, sizeof(cfg.gateway_bridge));
       break;
+    case 280:
+      safe_strncpy(cfg.net_parent, optarg, sizeof(cfg.net_parent));
+      break;
+    case 281:
+      if (strcmp(optarg, "dhcp") == 0)
+        cfg.net_ipam = DS_NET_IPAM_DHCP;
+      else if (strcmp(optarg, "static") == 0)
+        cfg.net_ipam = DS_NET_IPAM_STATIC;
+      else {
+        ds_error("Unknown --net-ipam value '%s' (expected dhcp or static)",
+                 optarg);
+        ret = 1;
+        goto cleanup;
+      }
+      break;
+    case 282:
+      safe_strncpy(cfg.net_address, optarg, sizeof(cfg.net_address));
+      break;
+    case 283:
+      safe_strncpy(cfg.net_gateway, optarg, sizeof(cfg.net_gateway));
+      break;
+    case 284:
+      safe_strncpy(cfg.net_mac, optarg, sizeof(cfg.net_mac));
+      break;
+    case 285:
+      if (strcmp(optarg, "none") == 0)
+        cfg.host_access = DS_HOST_ACCESS_NONE;
+      else if (strcmp(optarg, "ptp") == 0)
+        cfg.host_access = DS_HOST_ACCESS_PTP;
+      else if (strcmp(optarg, "shim") == 0)
+        cfg.host_access = DS_HOST_ACCESS_SHIM;
+      else {
+        ds_error("Unknown --host-access value '%s' (expected none, ptp, or "
+                 "shim)",
+                 optarg);
+        ret = 1;
+        goto cleanup;
+      }
+      break;
     case 'I':
       cfg.disable_ipv6 = 1;
       break;
@@ -766,9 +896,13 @@ int main(int argc, char **argv) {
       else if (strcmp(optarg, "gateway") == 0 ||
                strcmp(optarg, "delegated-gateway") == 0)
         cli_net_mode = DS_NET_GATEWAY;
+      else if (strcmp(optarg, "ipvlan") == 0)
+        cli_net_mode = DS_NET_IPVLAN;
+      else if (strcmp(optarg, "macvlan") == 0)
+        cli_net_mode = DS_NET_MACVLAN;
       else {
         ds_error("Unknown network mode: '%s'. Valid options: host, nat, none, "
-                 "gateway",
+                 "gateway, ipvlan, macvlan",
                  optarg);
         ret = 1;
         goto cleanup;
@@ -1086,7 +1220,8 @@ int main(int argc, char **argv) {
 
   /* Basic info commands */
   if (strcmp(cmd, "check") == 0) {
-    ret = check_requirements_detailed();
+    ret = cfg.format_output ? check_requirements_format()
+                            : check_requirements_detailed();
     goto cleanup;
   }
   if (strcmp(cmd, "version") == 0) {

@@ -121,6 +121,10 @@ CONFIG_IP_NF_NAT=y
 
 # 在旧内核上禁用此选项以使互联网正常工作
 CONFIG_ANDROID_PARANOID_NETWORK=n
+
+# 可选的直连二层网络模式
+CONFIG_IPVLAN=y
+CONFIG_MACVLAN=y
 ```
 
 <a id="additional-kernel-configuration-for-ufwfail2ban"></a>
@@ -246,6 +250,10 @@ CONFIG_NETFILTER_XT_MATCH_ADDRTYPE=y
 
 # --- 以下配置为可选但建议开启 ---
 
+# 直连二层网络模式
+CONFIG_IPVLAN=y
+CONFIG_MACVLAN=y
+
 # UFW 支持
 CONFIG_NETFILTER_XT_TARGET_REJECT=y
 CONFIG_NETFILTER_XT_TARGET_LOG=y
@@ -304,6 +312,7 @@ su -c droidspaces check
 - devtmpfs 支持
 - OverlayFS 支持（可选，用于易失模式）
 - VETH 和 Bridge 支持（可选，用于 NAT 模式）
+- IPVLAN 和 MACVLAN 支持（可选，用于直连二层模式）
 - PTY/devpts 支持
 - Loop 设备支持
 - ext4 支持
@@ -329,6 +338,7 @@ su -c droidspaces check
 | OverlayFS | `CONFIG_OVERLAY_FS` | 易失模式不可用。 |
 | 网络命名空间 | `CONFIG_NET_NS=y` | NAT 和 None 模式不可用。 |
 | VETH / Bridge | `CONFIG_VETH` / `CONFIG_BRIDGE` | NAT 模式不可用。 |
+| IPVLAN / MACVLAN | `CONFIG_IPVLAN` / `CONFIG_MACVLAN` | 对应的直连二层模式不可用。 |
 | Seccomp | `CONFIG_SECCOMP=y` | Seccomp 防护盾已禁用。存在安全风险。 |
 
 ---

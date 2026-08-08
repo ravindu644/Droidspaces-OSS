@@ -408,6 +408,89 @@ int ds_nl_create_veth(ds_nl_ctx_t *ctx, const char *host, const char *peer) {
   return ds_nl_talk(ctx, &req.n);
 }
 
+/* Create an ipvlan L2 or macvlan bridge link attached to a real host link.
+ * The link is deliberately created in the host namespace first so Android's
+ * parent ifindex can be referenced, then the caller moves it into the guest. */
+int ds_nl_create_parent_link(ds_nl_ctx_t *ctx, const char *parent,
+                             const char *name, const char *kind) {
+  int parent_idx = ds_nl_get_ifindex(ctx, parent);
+  if (parent_idx <= 0)
+    return -ENODEV;
+  if (strcmp(kind, "ipvlan") != 0 && strcmp(kind, "macvlan") != 0)
+    return -EINVAL;
+
+  struct {
+    struct nlmsghdr n;
+    struct ifinfomsg i;
+    char buf[1024];
+  } req;
+  memset(&req, 0, sizeof(req));
+  req.n.nlmsg_len = NLMSG_LENGTH(sizeof(struct ifinfomsg));
+  req.n.nlmsg_type = RTM_NEWLINK;
+  req.n.nlmsg_flags = NLM_F_REQUEST | NLM_F_CREATE | NLM_F_EXCL | NLM_F_ACK;
+  req.i.ifi_family = AF_UNSPEC;
+
+  nl_addattr(&req.n, (int)sizeof(req), IFLA_LINK, &parent_idx,
+             (int)sizeof(parent_idx));
+  nl_addattr(&req.n, (int)sizeof(req), IFLA_IFNAME, name,
+             (int)strlen(name) + 1);
+
+  struct rtattr *linfo = nl_nest_begin(&req.n, (int)sizeof(req), IFLA_LINKINFO);
+  nl_addattr(&req.n, (int)sizeof(req), IFLA_INFO_KIND, kind,
+             (int)strlen(kind) + 1);
+  struct rtattr *ldata =
+      nl_nest_begin(&req.n, (int)sizeof(req), IFLA_INFO_DATA);
+  if (strcmp(kind, "ipvlan") == 0) {
+    uint16_t mode = IPVLAN_MODE_L2;
+    nl_addattr(&req.n, (int)sizeof(req), IFLA_IPVLAN_MODE, &mode,
+               (int)sizeof(mode));
+  } else {
+    uint32_t mode = MACVLAN_MODE_BRIDGE;
+    nl_addattr(&req.n, (int)sizeof(req), IFLA_MACVLAN_MODE, &mode,
+               (int)sizeof(mode));
+  }
+  nl_nest_end(&req.n, ldata);
+  nl_nest_end(&req.n, linfo);
+  return ds_nl_talk(ctx, &req.n);
+}
+
+int ds_nl_probe_parent_capability(const char *parent, const char *kind,
+                                  char *reason, size_t rsz) {
+  if (!parent || !parent[0] || !kind) {
+    snprintf(reason, rsz, "A parent interface is required.");
+    return -EINVAL;
+  }
+
+  ds_nl_ctx_t *ctx = ds_nl_open();
+  if (!ctx) {
+    snprintf(reason, rsz, "Failed to open NETLINK_ROUTE socket: %s",
+             strerror(errno));
+    return -errno;
+  }
+  if (ds_nl_get_ifindex(ctx, parent) <= 0) {
+    snprintf(reason, rsz, "Parent interface '%s' does not exist.", parent);
+    ds_nl_close(ctx);
+    return -ENODEV;
+  }
+
+  char probe[IFNAMSIZ];
+  snprintf(probe, sizeof(probe), "%s%x",
+           strcmp(kind, "ipvlan") == 0 ? "ds-ci" : "ds-cm",
+           (unsigned int)getpid());
+  int ret = ds_nl_create_parent_link(ctx, parent, probe, kind);
+  if (ret == 0)
+    ds_nl_del_link(ctx, probe);
+  ds_nl_close(ctx);
+
+  if (ret < 0) {
+    snprintf(reason, rsz, "%s on parent '%s' failed: %s", kind, parent,
+             strerror(-ret));
+    return ret;
+  }
+  snprintf(reason, rsz, "OK (%s on %s)", kind, parent);
+  return 0;
+}
+
 /* ---------------------------------------------------------------------------
  * Attach an interface to a bridge (IFLA_MASTER)
  * ---------------------------------------------------------------------------*/
@@ -589,6 +672,96 @@ int ds_nl_add_addr4(ds_nl_ctx_t *ctx, const char *ifname, uint32_t ip_be,
   return ds_nl_talk(ctx, &req.n);
 }
 
+int ds_nl_del_addr4(ds_nl_ctx_t *ctx, const char *ifname, uint32_t ip_be,
+                    uint8_t prefix) {
+  if (prefix > 32)
+    return -EINVAL;
+  int idx = ds_nl_get_ifindex(ctx, ifname);
+  if (idx <= 0)
+    return 0;
+  struct {
+    struct nlmsghdr n;
+    struct ifaddrmsg ifa;
+    char buf[128];
+  } req;
+  memset(&req, 0, sizeof(req));
+  req.n.nlmsg_len = NLMSG_LENGTH(sizeof(struct ifaddrmsg));
+  req.n.nlmsg_type = RTM_DELADDR;
+  req.n.nlmsg_flags = NLM_F_REQUEST | NLM_F_ACK;
+  req.ifa.ifa_family = AF_INET;
+  req.ifa.ifa_prefixlen = prefix;
+  req.ifa.ifa_index = (unsigned int)idx;
+  nl_addattr(&req.n, (int)sizeof(req), IFA_LOCAL, &ip_be, 4);
+  nl_addattr(&req.n, (int)sizeof(req), IFA_ADDRESS, &ip_be, 4);
+  int ret = ds_nl_talk(ctx, &req.n);
+  return ret == -EADDRNOTAVAIL ? 0 : ret;
+}
+
+int ds_nl_get_addr4(ds_nl_ctx_t *ctx, const char *ifname, uint32_t *ip_be,
+                    uint8_t *prefix) {
+  int target = ds_nl_get_ifindex(ctx, ifname);
+  if (target <= 0)
+    return -ENODEV;
+
+  struct {
+    struct nlmsghdr n;
+    struct ifaddrmsg ifa;
+  } req;
+  memset(&req, 0, sizeof(req));
+  req.n.nlmsg_len = NLMSG_LENGTH(sizeof(struct ifaddrmsg));
+  req.n.nlmsg_type = RTM_GETADDR;
+  req.n.nlmsg_flags = NLM_F_REQUEST | NLM_F_DUMP;
+  req.ifa.ifa_family = AF_INET;
+  req.n.nlmsg_seq = ++ctx->seq;
+  req.n.nlmsg_pid = (uint32_t)ctx->pid;
+  if (send(ctx->fd, &req, req.n.nlmsg_len, 0) < 0)
+    return -errno;
+
+  int found = -ENOENT;
+  uint8_t buf[NL_BUFSIZE];
+  for (;;) {
+    ssize_t n = recv(ctx->fd, buf, sizeof(buf), 0);
+    if (n < 0) {
+      if (errno == EINTR)
+        continue;
+      return -errno;
+    }
+    struct nlmsghdr *h = (struct nlmsghdr *)buf;
+    for (; NLMSG_OK(h, (uint32_t)n); h = NLMSG_NEXT(h, n)) {
+      if (h->nlmsg_seq != req.n.nlmsg_seq)
+        continue;
+      if (h->nlmsg_type == NLMSG_DONE)
+        return found;
+      if (h->nlmsg_type == NLMSG_ERROR) {
+        struct nlmsgerr *err = NLMSG_DATA(h);
+        return err->error ? err->error : found;
+      }
+      if (h->nlmsg_type != RTM_NEWADDR)
+        continue;
+      struct ifaddrmsg *ifa = NLMSG_DATA(h);
+      if (ifa->ifa_family != AF_INET || (int)ifa->ifa_index != target)
+        continue;
+      struct rtattr *rta = IFA_RTA(ifa);
+      int len = (int)IFA_PAYLOAD(h);
+      uint32_t candidate = 0;
+      for (; RTA_OK(rta, len); rta = RTA_NEXT(rta, len)) {
+        if (rta->rta_type == IFA_LOCAL ||
+            (rta->rta_type == IFA_ADDRESS && candidate == 0))
+          candidate = nl_rta_u32(rta);
+      }
+      if (candidate != 0) {
+        if (ip_be)
+          *ip_be = candidate;
+        if (prefix)
+          *prefix = ifa->ifa_prefixlen;
+        found = 0;
+        if (!(ifa->ifa_flags & IFA_F_SECONDARY))
+          return 0;
+      }
+    }
+  }
+}
+
 /* ---------------------------------------------------------------------------
  * Add an IPv4 route
  * dst_be=0 + dst_len=0 → default route.
@@ -620,6 +793,33 @@ int ds_nl_add_route4(ds_nl_ctx_t *ctx, uint32_t dst_be, uint8_t dst_len,
   nl_addattr(&req.n, (int)sizeof(req), RTA_OIF, &oif_idx, (int)sizeof(int));
 
   return ds_nl_talk(ctx, &req.n);
+}
+
+int ds_nl_del_route4(ds_nl_ctx_t *ctx, uint32_t dst_be, uint8_t dst_len,
+                     uint32_t gw_be, int oif_idx) {
+  struct {
+    struct nlmsghdr n;
+    struct rtmsg r;
+    char buf[256];
+  } req;
+  memset(&req, 0, sizeof(req));
+  req.n.nlmsg_len = NLMSG_LENGTH(sizeof(struct rtmsg));
+  req.n.nlmsg_type = RTM_DELROUTE;
+  req.n.nlmsg_flags = NLM_F_REQUEST | NLM_F_ACK;
+  req.r.rtm_family = AF_INET;
+  req.r.rtm_dst_len = dst_len;
+  req.r.rtm_table = RT_TABLE_MAIN;
+  req.r.rtm_protocol = RTPROT_BOOT;
+  req.r.rtm_scope = (gw_be == 0) ? RT_SCOPE_LINK : RT_SCOPE_UNIVERSE;
+  req.r.rtm_type = RTN_UNICAST;
+  if (dst_len > 0)
+    nl_addattr(&req.n, (int)sizeof(req), RTA_DST, &dst_be, 4);
+  if (gw_be)
+    nl_addattr(&req.n, (int)sizeof(req), RTA_GATEWAY, &gw_be, 4);
+  if (oif_idx > 0)
+    nl_addattr(&req.n, (int)sizeof(req), RTA_OIF, &oif_idx, (int)sizeof(int));
+  int ret = ds_nl_talk(ctx, &req.n);
+  return ret == -ESRCH || ret == -ENOENT ? 0 : ret;
 }
 
 /* ---------------------------------------------------------------------------

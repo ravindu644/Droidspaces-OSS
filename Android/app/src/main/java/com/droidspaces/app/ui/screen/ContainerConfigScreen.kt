@@ -44,6 +44,7 @@ import com.droidspaces.app.ui.util.ClearFocusOnClickOutside
 import com.droidspaces.app.util.ContainerConfigState
 import com.droidspaces.app.util.ContainerInfo
 import com.droidspaces.app.util.ValidationUtils
+import com.droidspaces.app.util.isDirectNetworkValid
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -72,7 +73,8 @@ fun ContainerConfigScreen(
         else installedContainers.find { it.name != containerName && it.staticNatIp == state.staticNatIp }
     }
 
-    val canProceed = (state.netMode != "gateway" || gatewayErrors.isValid) && collisionContainer == null
+    val canProceed = (state.netMode != "gateway" || gatewayErrors.isValid) &&
+        state.isDirectNetworkValid() && collisionContainer == null
 
     Scaffold(
         topBar = {

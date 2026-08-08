@@ -16,6 +16,12 @@ package com.droidspaces.app.util
  */
 data class ContainerConfigState(
     val netMode: String = "nat",
+    val netParent: String = "",
+    val netMac: String = "",
+    val netIpam: String = "dhcp",
+    val hostAccess: String = "none",
+    val netAddress: String = "",
+    val netGateway: String = "",
     val disableIPv6: Boolean = false,
     val enableAndroidStorage: Boolean = false,
     val enableHwAccess: Boolean = false,
@@ -48,6 +54,12 @@ data class ContainerConfigState(
 /** Extract the editable config fields from an existing container. */
 fun ContainerInfo.toConfigState(): ContainerConfigState = ContainerConfigState(
     netMode = netMode,
+    netParent = netParent,
+    netMac = netMac,
+    netIpam = netIpam,
+    hostAccess = hostAccess,
+    netAddress = netAddress,
+    netGateway = netGateway,
     disableIPv6 = disableIPv6,
     enableAndroidStorage = enableAndroidStorage,
     enableHwAccess = enableHwAccess,
@@ -84,6 +96,12 @@ fun ContainerInfo.toConfigState(): ContainerConfigState = ContainerConfigState(
  */
 fun ContainerInfo.withConfig(state: ContainerConfigState): ContainerInfo = copy(
     netMode = state.netMode,
+    netParent = state.netParent,
+    netMac = state.netMac,
+    netIpam = state.netIpam,
+    hostAccess = state.hostAccess,
+    netAddress = state.netAddress,
+    netGateway = state.netGateway,
     disableIPv6 = state.disableIPv6,
     enableAndroidStorage = state.enableAndroidStorage,
     enableHwAccess = state.enableHwAccess,
@@ -112,3 +130,37 @@ fun ContainerInfo.withConfig(state: ContainerConfigState): ContainerInfo = copy(
     gatewayIface = state.gatewayIface,
     gatewayBridge = state.gatewayBridge,
 )
+
+private fun String.isValidIpv4(): Boolean {
+    val octets = split('.')
+    return octets.size == 4 && octets.all {
+        it.isNotEmpty() && it.length <= 3 && it.all(Char::isDigit) &&
+            (it.toIntOrNull() ?: -1) in 0..255
+    }
+}
+
+private fun String.isValidUnicastMac(): Boolean {
+    val octets = split(':')
+    if (octets.size != 6 || octets.any { it.length != 2 || it.toIntOrNull(16) == null }) return false
+    val bytes = octets.map { it.toInt(16) }
+    return bytes.any { it != 0 } && (bytes[0] and 1) == 0
+}
+
+fun ContainerConfigState.isNetMacValid(): Boolean =
+    netMode != "macvlan" || netMac.isBlank() || netMac.isValidUnicastMac()
+
+/** Validation shared by create/edit action gating and the direct-L2 form. */
+fun ContainerConfigState.isDirectNetworkValid(): Boolean {
+    if (netMode != "ipvlan" && netMode != "macvlan") return true
+    // Blank selects the backend's Android-aware active-uplink detection.
+    if (netParent.isNotBlank() && (netParent.length >= 16 ||
+        netParent.any { it.isWhitespace() || it == '/' })) return false
+    if (!isNetMacValid()) return false
+    if (netIpam == "dhcp") return true
+    if (netIpam != "static") return false
+    val parts = netAddress.split('/', limit = 2)
+    val prefix = parts.getOrNull(1)?.toIntOrNull()
+    return parts.size == 2 && parts[0].isValidIpv4() && prefix != null &&
+        prefix in 0..32 &&
+        netGateway.isValidIpv4()
+}

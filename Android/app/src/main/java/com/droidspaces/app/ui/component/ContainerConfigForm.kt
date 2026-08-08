@@ -44,11 +44,15 @@ import androidx.compose.material.icons.filled.NetworkCheck
 import androidx.compose.material.icons.filled.PowerSettingsNew
 import androidx.compose.material.icons.filled.Public
 import androidx.compose.material.icons.filled.Security
+import androidx.compose.material.icons.filled.SettingsEthernet
 import androidx.compose.material.icons.filled.Storage
 import androidx.compose.material.icons.filled.Terminal
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material.ripple.rememberRipple
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -81,8 +85,11 @@ import com.droidspaces.app.util.BindMount
 import com.droidspaces.app.util.Constants
 import com.droidspaces.app.util.ContainerConfigState
 import com.droidspaces.app.util.ContainerInfo
+import com.droidspaces.app.util.ContainerManager
 import com.droidspaces.app.util.GatewayErrors
 import com.droidspaces.app.util.ValidationUtils
+import com.droidspaces.app.util.isDirectNetworkValid
+import com.droidspaces.app.util.isNetMacValid
 
 /**
  * The single, shared container-configuration form used by both the Create wizard
@@ -117,6 +124,21 @@ fun ContainerConfigForm(
     var showEnvDialog by remember { mutableStateOf(false) }
     var showPrivilegedDialog by remember { mutableStateOf(false) }
     var showHwAccessDialog by remember { mutableStateOf(false) }
+    var parentInterfaceMenuExpanded by remember { mutableStateOf(false) }
+    var availableParentInterfaces by remember { mutableStateOf<List<String>>(emptyList()) }
+    var directL2Capabilities by remember { mutableStateOf<com.droidspaces.app.util.DirectL2Capabilities?>(null) }
+
+    LaunchedEffect(Unit) {
+        directL2Capabilities = ContainerManager.getDirectL2Capabilities()
+    }
+
+    LaunchedEffect(state.netMode) {
+        if (state.netMode == "ipvlan" || state.netMode == "macvlan") {
+            availableParentInterfaces = ContainerManager.listUpstreamInterfaces()
+        } else {
+            parentInterfaceMenuExpanded = false
+        }
+    }
 
     val modernFieldShape = RoundedCornerShape(16.dp)
     val modernFieldColors = DsTextFieldDefaults.colors()
@@ -261,13 +283,20 @@ fun ContainerConfigForm(
         DsDropdown(
             label = context.getString(R.string.network_mode),
             selected = state.netMode,
-            options = listOf("nat", "host", "none", "gateway"),
-            displayName = { context.getString(when (it) { "nat" -> R.string.network_mode_nat; "none" -> R.string.network_mode_none; "gateway" -> R.string.network_mode_gateway; else -> R.string.network_mode_host }) },
+            options = listOf("nat", "host", "none", "gateway", "ipvlan", "macvlan"),
+            displayName = { context.getString(when (it) { "nat" -> R.string.network_mode_nat; "none" -> R.string.network_mode_none; "gateway" -> R.string.network_mode_gateway; "ipvlan" -> R.string.network_mode_ipvlan; "macvlan" -> R.string.network_mode_macvlan; else -> R.string.network_mode_host }) },
             onSelect = { mode ->
                 clearFocus()
-                onStateChange(state.copy(netMode = mode, disableIPv6 = if (mode != "host") false else state.disableIPv6))
+                onStateChange(state.copy(netMode = mode, disableIPv6 = if (mode == "nat" || mode == "none") true else state.disableIPv6))
             },
-            leadingIcon = Icons.Default.Public
+            leadingIcon = Icons.Default.Public,
+            isOptionEnabled = { mode ->
+                when (mode) {
+                    "ipvlan" -> directL2Capabilities?.ipvlanSupported == true
+                    "macvlan" -> directL2Capabilities?.macvlanSupported == true
+                    else -> true
+                }
+            }
         )
 
         GatewaySettingsSection(
@@ -283,6 +312,183 @@ fun ContainerConfigForm(
             installedContainers = installedContainers,
             errors = gatewayErrors
         )
+
+        if (state.netMode == "ipvlan" || state.netMode == "macvlan") {
+            val parentError = state.netParent.isNotEmpty() &&
+                (state.netParent.length >= 16 || state.netParent.any { it.isWhitespace() || it == '/' })
+            val staticError = state.netIpam == "static" && !state.isDirectNetworkValid()
+            Column(
+                modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                Text(
+                    text = context.getString(R.string.direct_l2_settings),
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.primary
+                )
+                Text(
+                    text = context.getString(R.string.direct_l2_explain),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                ExposedDropdownMenuBox(
+                    expanded = parentInterfaceMenuExpanded,
+                    onExpandedChange = { parentInterfaceMenuExpanded = it },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    OutlinedTextField(
+                        value = state.netParent,
+                        onValueChange = {
+                            onStateChange(state.copy(netParent = it.trim()))
+                            parentInterfaceMenuExpanded = true
+                        },
+                        label = { Text(context.getString(R.string.net_parent)) },
+                        placeholder = { Text(context.getString(R.string.net_parent_auto)) },
+                        supportingText = {
+                            Text(context.getString(if (parentError) R.string.net_parent_error else R.string.net_parent_explain))
+                        },
+                        isError = parentError,
+                        modifier = Modifier.menuAnchor().fillMaxWidth(),
+                        singleLine = true,
+                        shape = modernFieldShape,
+                        colors = modernFieldColors,
+                        leadingIcon = { Icon(Icons.Default.Public, contentDescription = null) },
+                        trailingIcon = {
+                            ExposedDropdownMenuDefaults.TrailingIcon(
+                                expanded = parentInterfaceMenuExpanded
+                            )
+                        }
+                    )
+                    ExposedDropdownMenu(
+                        expanded = parentInterfaceMenuExpanded,
+                        onDismissRequest = { parentInterfaceMenuExpanded = false }
+                    ) {
+                        DropdownMenuItem(
+                            text = { Text(context.getString(R.string.net_parent_auto)) },
+                            onClick = {
+                                onStateChange(state.copy(netParent = ""))
+                                parentInterfaceMenuExpanded = false
+                                clearFocus()
+                            }
+                        )
+                        availableParentInterfaces
+                            .filter { it.length < 16 && it.none { ch -> ch.isWhitespace() || ch == '/' } }
+                            .distinct()
+                            .forEach { iface ->
+                                DropdownMenuItem(
+                                    text = { Text(iface) },
+                                    onClick = {
+                                        onStateChange(state.copy(netParent = iface))
+                                        parentInterfaceMenuExpanded = false
+                                        clearFocus()
+                                    }
+                                )
+                            }
+                    }
+                }
+                if (state.netMode == "macvlan") {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.Top
+                    ) {
+                        Icon(
+                            Icons.Default.Warning,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.tertiary,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Text(
+                            text = context.getString(R.string.macvlan_wifi_4addr_warning),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.tertiary
+                        )
+                    }
+                }
+                if (state.netMode == "macvlan") {
+                    val macError = !state.isNetMacValid()
+                    OutlinedTextField(
+                        value = state.netMac,
+                        onValueChange = { onStateChange(state.copy(netMac = it.trim())) },
+                        label = { Text(context.getString(R.string.net_mac)) },
+                        placeholder = { Text("02:11:22:33:44:55") },
+                        supportingText = {
+                            Text(context.getString(if (macError) R.string.net_mac_error else R.string.net_mac_explain))
+                        },
+                        isError = macError,
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true,
+                        shape = modernFieldShape,
+                        colors = modernFieldColors,
+                        leadingIcon = { Icon(Icons.Default.SettingsEthernet, contentDescription = null) }
+                    )
+                }
+                DsDropdown(
+                    label = context.getString(R.string.net_ipam),
+                    selected = state.netIpam,
+                    options = listOf("dhcp", "static"),
+                    displayName = { context.getString(if (it == "static") R.string.net_ipam_static else R.string.net_ipam_dhcp) },
+                    onSelect = { onStateChange(state.copy(netIpam = it)) },
+                    leadingIcon = Icons.Default.NetworkCheck
+                )
+                DsDropdown(
+                    label = context.getString(R.string.host_access),
+                    selected = state.hostAccess,
+                    options = listOf("none", "ptp", "shim"),
+                    displayName = {
+                        context.getString(when (it) {
+                            "ptp" -> R.string.host_access_ptp
+                            "shim" -> R.string.host_access_shim
+                            else -> R.string.host_access_none
+                        })
+                    },
+                    onSelect = { onStateChange(state.copy(hostAccess = it)) },
+                    leadingIcon = Icons.Default.SettingsEthernet
+                )
+                Text(
+                    text = context.getString(when (state.hostAccess) {
+                        "ptp" -> R.string.host_access_ptp_explain
+                        "shim" -> R.string.host_access_shim_explain
+                        else -> R.string.host_access_none_explain
+                    }),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                if (state.netIpam == "static") {
+                    OutlinedTextField(
+                        value = state.netAddress,
+                        onValueChange = { onStateChange(state.copy(netAddress = it.trim())) },
+                        label = { Text(context.getString(R.string.net_address)) },
+                        placeholder = { Text("192.168.1.50/24") },
+                        isError = state.netAddress.isNotEmpty() && staticError,
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                        shape = modernFieldShape,
+                        colors = modernFieldColors
+                    )
+                    OutlinedTextField(
+                        value = state.netGateway,
+                        onValueChange = { onStateChange(state.copy(netGateway = it.trim())) },
+                        label = { Text(context.getString(R.string.net_gateway)) },
+                        placeholder = { Text("192.168.1.1") },
+                        supportingText = { if (staticError) Text(context.getString(R.string.net_static_error)) },
+                        isError = state.netGateway.isNotEmpty() && staticError,
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                        shape = modernFieldShape,
+                        colors = modernFieldColors
+                    )
+                } else if (state.netMode == "ipvlan") {
+                    Text(
+                        text = context.getString(R.string.ipvlan_dhcp_warning),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.tertiary
+                    )
+                }
+            }
+        }
 
         if (state.netMode == "nat") {
             Column(
@@ -441,7 +647,7 @@ fun ContainerConfigForm(
             leadingIcon = { Icon(Icons.Default.Dns, contentDescription = null) }
         )
 
-        val ipv6IsForced = state.netMode != "host"
+        val ipv6IsForced = state.netMode == "nat" || state.netMode == "none"
         ToggleCard(
             icon = Icons.Default.NetworkCheck,
             title = context.getString(R.string.disable_ipv6),

@@ -42,6 +42,7 @@ SRCS = $(SRC_DIR)/main.c \
        $(SRC_DIR)/mount.c \
        $(SRC_DIR)/cgroup.c \
        $(SRC_DIR)/net/network.c \
+       $(SRC_DIR)/net/host_access.c \
        $(SRC_DIR)/terminal.c \
        $(SRC_DIR)/console.c \
        $(SRC_DIR)/pid.c \
@@ -64,6 +65,7 @@ SRCS = $(SRC_DIR)/main.c \
 
 # Compiler flags - hardened warning set, all warnings are errors
 CFLAGS  = -Wall -Wextra -Wpedantic -Werror -O2 -flto=auto -std=gnu99 -I$(SRC_DIR)/include -no-pie -pthread
+CFLAGS += -MMD -MP
 CFLAGS += -Wformat=2 -Wformat-security -Wformat-overflow=2 -Wformat-truncation=2
 CFLAGS += -Wnull-dereference -Wcast-qual -Wlogical-op -Wshadow -Wdouble-promotion -Wundef
 CFLAGS += -Wduplicated-cond -Wduplicated-branches -Wimplicit-fallthrough=3
@@ -84,6 +86,7 @@ ARCH := $(shell $(CC) -dumpmachine 2>/dev/null | cut -d'-' -f1 | \
 # Per-arch object directory - prevents collisions when building multiple archs
 OBJ_DIR = $(OUT_DIR)/.obj/$(ARCH)
 OBJS    = $(SRCS:$(SRC_DIR)/%.c=$(OBJ_DIR)/%.o)
+DEPS    = $(OBJS:.o=.d)
 
 # Cross-compiler helper
 HOME_VAR := $(shell echo $$HOME)
@@ -141,6 +144,10 @@ $(OBJ_DIR)/%.o: $(SRC_DIR)/%.c | $(OBJ_DIR)
 	$(msg_cc)
 	$(Q)mkdir -p $(dir $@)
 	$(Q)$(CC) $(CFLAGS) -c $< -o $@
+
+# Rebuild every translation unit whose included project header changed. This
+# prevents stale objects from silently using an older struct layout.
+-include $(DEPS)
 
 # Link step
 $(BINARY_NAME): $(OBJS) | $(OUT_DIR)

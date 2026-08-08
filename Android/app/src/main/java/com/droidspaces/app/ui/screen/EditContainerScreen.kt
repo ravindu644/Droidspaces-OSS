@@ -64,6 +64,7 @@ import com.droidspaces.app.util.SystemInfoManager
 import com.droidspaces.app.util.ValidationUtils
 import com.droidspaces.app.util.toConfigState
 import com.droidspaces.app.util.withConfig
+import com.droidspaces.app.util.isDirectNetworkValid
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -170,7 +171,8 @@ fun EditContainerScreen(
         bottomBar = {
             val btnShape = RoundedCornerShape(20.dp)
             val isReadyToSave = !isSaving && !isSaved && hasChanges && hostnameError == null &&
-                (state.netMode != "gateway" || gatewayErrors.isValid) && collisionContainer == null
+                (state.netMode != "gateway" || gatewayErrors.isValid) &&
+                state.isDirectNetworkValid() && collisionContainer == null
             val targetBtnColor = when {
                 isSaved -> MaterialTheme.colorScheme.primaryContainer
                 isSaving || isReadyToSave -> MaterialTheme.colorScheme.primary

@@ -46,8 +46,31 @@ static void veth_host_name(const struct ds_config *cfg, pid_t pid, char *buf,
  * Gateway clients use "ds-q" to match the distinct host-side prefix. */
 static void veth_peer_name(const struct ds_config *cfg, pid_t pid, char *buf,
                            size_t sz) {
-  const char *p = (cfg && cfg->net_mode == DS_NET_GATEWAY) ? "ds-q" : "ds-p";
+  const char *p = "ds-p";
+  if (cfg && cfg->net_mode == DS_NET_GATEWAY)
+    p = "ds-q";
+  else if (cfg && cfg->net_mode == DS_NET_IPVLAN)
+    p = "ds-i";
+  else if (cfg && cfg->net_mode == DS_NET_MACVLAN)
+    p = "ds-m";
   snprintf(buf, sz, "%s%d", p, (int)pid);
+}
+
+/* Android devices which expose nl80211 normally ship iw in /system/bin.
+ * Keep this optional: macvlan still works on Ethernet, while Wi-Fi also
+ * depends on driver/firmware and AP-side four-address/WDS support. */
+static int try_enable_wifi_4addr(char *ifname) {
+  static char *const iw_paths[] = {
+      "/system/bin/iw", "/vendor/bin/iw", "/usr/sbin/iw", "/usr/bin/iw"};
+
+  for (size_t i = 0; i < sizeof(iw_paths) / sizeof(iw_paths[0]); i++) {
+    if (access(iw_paths[i], X_OK) != 0)
+      continue;
+    char *const argv[] = {iw_paths[i], "dev", ifname, "set",
+                          "4addr", "on", NULL};
+    return run_command_log(argv);
+  }
+  return 127;
 }
 
 /* Derive a deterministic IP from a PID (avoids sequential collisions) */
@@ -327,6 +350,7 @@ static int uplink_name_excluded(const char *ifname) {
 
 void ds_net_derive_handshake(pid_t init_pid, struct ds_config *cfg,
                              struct ds_net_handshake *hs) {
+  memset(hs, 0, sizeof(*hs));
   veth_peer_name(cfg, init_pid, hs->peer_name, sizeof(hs->peer_name));
   /* Use the already-resolved static IP - not the PID-hash fallback.
    * ip_str is informational on the child side (voided in
@@ -897,6 +921,113 @@ int setup_veth_host_side(struct ds_config *cfg, pid_t child_pid) {
   return 0;
 }
 
+/* Parse a conventional colon-separated unicast MAC address.  All-zero,
+ * multicast, broadcast, truncated, and trailing-junk forms are rejected. */
+int ds_parse_mac_address(const char *text, uint8_t mac[6]) {
+  if (!text || !text[0] || !mac)
+    return -EINVAL;
+
+  unsigned int b[6];
+  char extra;
+  if (sscanf(text, "%2x:%2x:%2x:%2x:%2x:%2x%c", &b[0], &b[1], &b[2],
+             &b[3], &b[4], &b[5], &extra) != 6)
+    return -EINVAL;
+
+  int any = 0;
+  for (size_t i = 0; i < 6; i++) {
+    if (b[i] > 0xff)
+      return -EINVAL;
+    mac[i] = (uint8_t)b[i];
+    any |= mac[i];
+  }
+  if (!any || (mac[0] & 0x01))
+    return -EINVAL;
+  return 0;
+}
+
+/* Create an L2 child of an Android interface and move it into the container.
+ * No bridge, DHCP server, NAT, firewall, address, or route is installed on the
+ * host.  DHCP packets therefore reach the physical LAN unchanged. */
+int setup_parent_link_host_side(struct ds_config *cfg, pid_t child_pid) {
+  const char *kind = cfg->net_mode == DS_NET_IPVLAN ? "ipvlan" : "macvlan";
+  char peer[IFNAMSIZ];
+  veth_peer_name(cfg, child_pid, peer, sizeof(peer));
+
+  /* A Wi-Fi STA normally transports only its own source MAC.  macvlan needs
+   * 802.11 four-address/WDS operation so frames carrying the guest MAC can
+   * cross the wireless link.  This is best-effort: both the phone driver and
+   * AP must support/enable it, and some Android drivers reject the request.
+   * ipvlan shares the parent MAC and does not need this. */
+  if (cfg->net_mode == DS_NET_MACVLAN &&
+      strncmp(cfg->net_parent, "wlan", 4) == 0) {
+    int four_addr = try_enable_wifi_4addr(cfg->net_parent);
+    if (four_addr == 0)
+      ds_log("[NET] Enabled 4addr/WDS on Wi-Fi parent %s",
+             cfg->net_parent);
+    else if (four_addr == 127)
+      ds_warn("[NET] Could not enable 4addr/WDS on Wi-Fi parent %s: iw "
+              "is unavailable; macvlan traffic requires phone and AP support",
+              cfg->net_parent);
+    else
+      ds_warn("[NET] Could not enable 4addr/WDS on Wi-Fi parent %s (iw exit "
+              "%d); macvlan traffic requires phone and AP support",
+              cfg->net_parent, four_addr);
+  }
+
+  ds_nl_ctx_t *ctx = ds_nl_open();
+  if (!ctx)
+    return -errno;
+
+  ds_nl_del_link(ctx, peer);
+  int ret = ds_nl_create_parent_link(ctx, cfg->net_parent, peer, kind);
+  if (ret < 0) {
+    ds_warn("[NET] Failed to create %s link %s on %s: %s", kind, peer,
+            cfg->net_parent, strerror(-ret));
+    ds_nl_close(ctx);
+    return ret;
+  }
+
+  /* A user-specified macvlan identity is optional.  When blank, do not touch
+   * the kernel-assigned address.  ipvlan shares its parent's MAC. */
+  if (cfg->net_mode == DS_NET_MACVLAN && cfg->net_mac[0]) {
+    uint8_t mac[6];
+    if (ds_parse_mac_address(cfg->net_mac, mac) < 0) {
+      ds_nl_del_link(ctx, peer);
+      ds_nl_close(ctx);
+      return -EINVAL;
+    }
+    ret = ds_nl_set_mac(ctx, peer, mac);
+    if (ret < 0) {
+      ds_warn("[NET] Could not set requested MAC %s on %s: %s", cfg->net_mac,
+              peer, strerror(-ret));
+      ds_nl_del_link(ctx, peer);
+      ds_nl_close(ctx);
+      return ret;
+    }
+    ds_log("[NET] Set macvlan MAC to %s", cfg->net_mac);
+  }
+
+  char netns_path[PATH_MAX];
+  snprintf(netns_path, sizeof(netns_path), "/proc/%d/ns/net", child_pid);
+  int netns_fd = open(netns_path, O_RDONLY | O_CLOEXEC);
+  if (netns_fd < 0) {
+    ret = -errno;
+    ds_nl_del_link(ctx, peer);
+    ds_nl_close(ctx);
+    return ret;
+  }
+  ret = ds_nl_move_to_netns(ctx, peer, netns_fd);
+  close(netns_fd);
+  if (ret < 0)
+    ds_nl_del_link(ctx, peer);
+  ds_nl_close(ctx);
+
+  if (ret == 0)
+    ds_log("[NET] Attached %s to parent %s; guest owns IP configuration", kind,
+           cfg->net_parent);
+  return ret;
+}
+
 /* ---------------------------------------------------------------------------
  * Gateway segment lock
  *
@@ -1463,6 +1594,74 @@ int setup_veth_child_side_named(struct ds_config *cfg, const char *peer_name,
   return 0;
 }
 
+int setup_parent_link_child_side(struct ds_config *cfg, const char *peer_name) {
+  ds_nl_ctx_t *ctx = ds_nl_open();
+  if (!ctx)
+    return -errno;
+
+  if (peer_name && peer_name[0] && strcmp(peer_name, "eth0") != 0) {
+    int ret = ds_nl_rename(ctx, peer_name, "eth0");
+    if (ret < 0) {
+      ds_warn("[NET] Child: failed to rename %s to eth0: %s", peer_name,
+              strerror(-ret));
+      ds_nl_close(ctx);
+      return ret;
+    }
+  }
+  ds_nl_link_up(ctx, "lo");
+  int ret = ds_nl_link_up(ctx, "eth0");
+  if (ret < 0) {
+    ds_nl_close(ctx);
+    return ret;
+  }
+
+  /* Enforce the configured IPv6 policy on the direct-L2 interface itself.
+   * all/default may already have the desired value, but a guest network
+   * manager can otherwise re-enable IPv6 while applying its link profile. */
+  if (write_file("/proc/sys/net/ipv6/conf/eth0/disable_ipv6",
+                 cfg->disable_ipv6 ? "1" : "0") < 0)
+    ds_warn("[NET] Child: failed to apply IPv6 policy on eth0");
+
+  if (cfg->net_ipam == DS_NET_IPAM_STATIC) {
+    char cidr[sizeof(cfg->net_address)];
+    safe_strncpy(cidr, cfg->net_address, sizeof(cidr));
+    char *slash = strchr(cidr, '/');
+    if (!slash) {
+      ds_nl_close(ctx);
+      return -EINVAL;
+    }
+    *slash++ = '\0';
+    char *end = NULL;
+    long prefix = strtol(slash, &end, 10);
+    struct in_addr addr, gateway;
+    if (!end || *end || prefix < 0 || prefix > 32 ||
+        inet_pton(AF_INET, cidr, &addr) != 1 ||
+        inet_pton(AF_INET, cfg->net_gateway, &gateway) != 1) {
+      ds_nl_close(ctx);
+      return -EINVAL;
+    }
+    ret = ds_nl_add_addr4(ctx, "eth0", addr.s_addr, (uint8_t)prefix);
+    if (ret < 0 && ret != -EEXIST) {
+      ds_nl_close(ctx);
+      return ret;
+    }
+    int ifindex = ds_nl_get_ifindex(ctx, "eth0");
+    ret = ds_nl_add_route4(ctx, 0, 0, gateway.s_addr, ifindex);
+    if (ret < 0 && ret != -EEXIST) {
+      ds_nl_close(ctx);
+      return ret;
+    }
+    ds_log("[NET] Child: static address %s via %s configured on eth0",
+           cfg->net_address, cfg->net_gateway);
+  } else {
+    ds_log("[NET] Child: eth0 UP; guest NetworkManager/networkd will request "
+           "DHCP from the external network");
+  }
+
+  ds_nl_close(ctx);
+  return 0;
+}
+
 /* Compatibility wrapper */
 
 /* ---------------------------------------------------------------------------
@@ -1491,7 +1690,10 @@ static void setup_resolv_conf(struct ds_config *cfg) {
    * dnsmasq), advertised in the DHCP lease.  Droidspaces must NOT write a
    * static resolv.conf or it would bypass the gateway's DNS filtering/caching.
    */
-  if (cfg->net_mode == DS_NET_GATEWAY && !cfg->dns_servers[0]) {
+  if ((cfg->net_mode == DS_NET_GATEWAY ||
+       ((cfg->net_mode == DS_NET_IPVLAN || cfg->net_mode == DS_NET_MACVLAN) &&
+        cfg->net_ipam == DS_NET_IPAM_DHCP)) &&
+      !cfg->dns_servers[0]) {
     if (is_systemd_rootfs("/")) {
       /* systemd-resolved consumes the lease and publishes the real resolver. */
       target = "/run/systemd/resolve/resolv.conf";
@@ -1500,8 +1702,7 @@ static void setup_resolv_conf(struct ds_config *cfg) {
        * which writes the gateway-supplied nameserver from the lease.  Writing a
        * hardcoded 1.1.1.1/8.8.8.8 here would silently defeat the gateway's DNS
        * (adblock, split-horizon, etc.).  Pass --dns to override. */
-      ds_log("[NET] Gateway: leaving /etc/resolv.conf to the container's DHCP "
-             "client (gateway owns DNS)");
+      ds_log("[NET] Leaving /etc/resolv.conf to the container's DHCP client");
       return;
     }
   } else {
@@ -1541,7 +1742,8 @@ int fix_networking_rootfs(struct ds_config *cfg) {
    * Gateway mode is policy-owned by OpenWrt, so IPv6 RA/DHCPv6 should be able
    * to operate inside the application container netns. */
   int ipv6_enabled =
-      ((cfg->net_mode == DS_NET_HOST || cfg->net_mode == DS_NET_GATEWAY) &&
+      ((cfg->net_mode == DS_NET_HOST || cfg->net_mode == DS_NET_GATEWAY ||
+        cfg->net_mode == DS_NET_IPVLAN || cfg->net_mode == DS_NET_MACVLAN) &&
        !cfg->disable_ipv6);
   if (ipv6_enabled) {
     snprintf(hosts_content, sizeof(hosts_content),
@@ -1816,6 +2018,55 @@ static int find_active_uplink(ds_nl_ctx_t *ctx, char *iface_out,
 
   log_no_uplink();
   return -ENOENT;
+}
+
+/* Resolve the parent for direct-L2 modes.  A configured value is a strict
+ * override; an empty value follows the same Android-aware active-uplink
+ * detection used by NAT (netd default rule, main table, then whitelist).
+ * The resolved name lives only in this start request, so container.config can
+ * remain blank and be re-evaluated after Wi-Fi/mobile handoffs. */
+int ds_net_resolve_parent(struct ds_config *cfg, char *reason,
+                          size_t reason_size) {
+  if (!cfg || (cfg->net_mode != DS_NET_IPVLAN &&
+               cfg->net_mode != DS_NET_MACVLAN)) {
+    if (reason && reason_size)
+      snprintf(reason, reason_size, "Direct-L2 network mode is not selected.");
+    return -EINVAL;
+  }
+
+  if (cfg->net_parent[0]) {
+    if (reason && reason_size)
+      snprintf(reason, reason_size, "Using configured parent '%s'.",
+               cfg->net_parent);
+    return 0;
+  }
+
+  ds_nl_ctx_t *ctx = ds_nl_open();
+  if (!ctx) {
+    int err = errno ? errno : EIO;
+    if (reason && reason_size)
+      snprintf(reason, reason_size, "Cannot open route netlink: %s",
+               strerror(err));
+    return -err;
+  }
+
+  char iface[IFNAMSIZ] = {0};
+  int table = 0;
+  int ret = find_active_uplink(ctx, iface, &table);
+  ds_nl_close(ctx);
+  if (ret < 0 || !iface[0]) {
+    if (reason && reason_size)
+      snprintf(reason, reason_size,
+               "No active host uplink with an IPv4 default route was found.");
+    return ret < 0 ? ret : -ENOENT;
+  }
+
+  safe_strncpy(cfg->net_parent, iface, sizeof(cfg->net_parent));
+  if (reason && reason_size)
+    snprintf(reason, reason_size,
+             "Auto-detected parent '%s' from active route table %d.", iface,
+             table);
+  return 0;
 }
 
 /* Re-probe which uplink is active and update the ip rule if needed. */
@@ -2171,6 +2422,12 @@ void ds_net_cleanup(struct ds_config *cfg, pid_t container_pid) {
    * host-side veth pins its orphan peer netns).  No-op when nobody delegates
    * to us, so it is safe to run for every stopping container. */
   ds_net_gateway_teardown(cfg->container_name);
+
+  if ((cfg->net_mode == DS_NET_IPVLAN || cfg->net_mode == DS_NET_MACVLAN) &&
+      cfg->host_access != DS_HOST_ACCESS_NONE) {
+    ds_host_access_cleanup(cfg, container_pid);
+    return;
+  }
 
   if (cfg->net_mode == DS_NET_GATEWAY) {
     ds_nl_ctx_t *ctx = ds_nl_open();

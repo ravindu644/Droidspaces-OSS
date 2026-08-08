@@ -159,6 +159,12 @@ android {
             isMinifyEnabled = false
             isDebuggable = true
             signingConfig = signingConfigs.getByName("debug")
+
+            // Allow locally signed test builds to coexist with an installed release build.
+            // Example: -PDROIDSPACES_APP_ID_SUFFIX=.dev
+            providers.gradleProperty("DROIDSPACES_APP_ID_SUFFIX").orNull
+                ?.takeIf { it.isNotBlank() }
+                ?.let { applicationIdSuffix = it }
         }
     }
 
