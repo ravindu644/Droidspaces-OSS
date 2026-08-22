@@ -129,8 +129,13 @@ int console_monitor_loop(int master_fd, pid_t monitor_pid,
             running = 0;
             break;
           }
-        } else if (n == 0) {
-          /* EOF on stdin */
+        } else if (n == 0 || (n < 0 && errno != EINTR)) {
+          /* Stdin EOF (redirected input ran out) or terminal died (EIO on a
+           * hung-up pty). Without this the level-triggered epoll re-fires
+           * forever on the dead fd; the container stays up under the monitor
+           * either way. */
+          running = 0;
+          break;
         }
       } else if (fd == master_fd) {
         /* Container output -> User stdout */

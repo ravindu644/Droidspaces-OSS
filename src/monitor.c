@@ -70,11 +70,7 @@ void ds_monitor_run(struct ds_config *cfg, int sync_pipe_write) {
    * Ignore common termination signals to prevent Android's process manager
    * from ending the supervisor prematurely. Monitor must only die via
    * SIGKILL or successful container exit. */
-  signal(SIGTERM, SIG_IGN);
-  signal(SIGINT, SIG_IGN);
-  signal(SIGQUIT, SIG_IGN);
-  signal(SIGHUP, SIG_IGN);
-  signal(SIGPIPE, SIG_IGN);
+  ds_ignore_common_signals(1);
   signal(SIGUSR1, SIG_IGN);
   signal(SIGUSR2, SIG_IGN);
 

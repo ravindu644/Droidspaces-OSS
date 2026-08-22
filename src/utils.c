@@ -976,6 +976,10 @@ static int internal_run(char *const argv[], int quiet) {
     return -1;
 
   if (pid == 0) {
+    /* Leave the terminal's foreground process group: Ctrl+C is delivered to
+     * the whole group, and a helper (iptables, losetup, e2fsck) dying mid
+     * transaction corrupts it even when the CLI itself defers the signal. */
+    setpgid(0, 0);
     if (quiet) {
       int devnull = open("/dev/null", O_RDWR);
       if (devnull >= 0) {
@@ -1015,6 +1019,8 @@ int run_command_log(char *const argv[]) {
   }
 
   if (pid == 0) {
+    /* Same foreground-group escape as internal_run, see comment there. */
+    setpgid(0, 0);
     close(pipefd[0]);
     dup2(pipefd[1], STDOUT_FILENO);
     dup2(pipefd[1], STDERR_FILENO);
@@ -2487,13 +2493,71 @@ void ds_oom_protect(void) {
   }
 }
 
-void ds_daemon_child_preamble(void) {
-  /* Ignore hangups, keyboard interrupts, and broken pipes so the helper
-   * survives terminal disconnects (SIGTERM remains the shutdown signal). */
+/* Shared SIG_IGN set for anything that must outlive its terminal. SIGTERM is
+ * opt-in because several daemons keep it as their shutdown signal. */
+void ds_ignore_common_signals(int with_sigterm) {
   signal(SIGHUP, SIG_IGN);
   signal(SIGINT, SIG_IGN);
   signal(SIGQUIT, SIG_IGN);
   signal(SIGPIPE, SIG_IGN);
+  if (with_sigterm)
+    signal(SIGTERM, SIG_IGN);
+}
+
+/* A state transition (start/stop/restart) is a transaction: Ctrl+C, terminal
+ * close, or the daemon killing an abandoned worker must not abort it halfway.
+ * Ignore the terminal signals for the duration. Known ceiling: a daemon-mode
+ * worker whose client died mid-operation writes into an undrained pty/pipe
+ * and would stall if it emits more than the kernel buffer; real operations
+ * emit a couple of KB at most. Upgrade path if that ever changes: drain
+ * instead of blocking in handle_session's disconnect path.
+ *
+ * Brackets nest: restart wraps stop + start, each of which brackets itself.
+ * Only the outermost end() restores, so Ctrl+C cannot land in the gap
+ * between the two inner transactions.
+ *
+ * end() restores the dispositions saved by the outermost begin(), it does
+ * not flatten to SIG_DFL. The socketd bridge is a long-lived forked process
+ * that runs these transactions in-process and must keep its own SIGPIPE
+ * ignore afterwards, or a client vanishing before the reply would kill the
+ * whole bridge. */
+static int uninterruptible_depth;
+static const int uninterruptible_sigs[] = {SIGINT, SIGHUP, SIGQUIT, SIGTERM,
+                                           SIGPIPE};
+static struct sigaction uninterruptible_saved[5];
+
+void ds_uninterruptible_begin(void) {
+  if (uninterruptible_depth++ > 0)
+    return;
+  struct sigaction ign;
+  memset(&ign, 0, sizeof(ign));
+  ign.sa_handler = SIG_IGN;
+  for (size_t i = 0; i < 5; i++)
+    sigaction(uninterruptible_sigs[i], &ign, &uninterruptible_saved[i]);
+}
+
+void ds_uninterruptible_end(void) {
+  if (uninterruptible_depth > 0)
+    uninterruptible_depth--;
+  if (uninterruptible_depth > 0)
+    return;
+  /* Never-begun case is safe too: the saved array is zeroed BSS = SIG_DFL. */
+  for (size_t i = 0; i < 5; i++)
+    sigaction(uninterruptible_sigs[i], &uninterruptible_saved[i], NULL);
+}
+
+/* Unconditional unwind, however deep the nesting. Used before the console
+ * attach (the -F session must behave like a normal interactive attach, with
+ * terminal close fatal to the CLI again) and by ds_spawn_daemon children
+ * that outlive the start transaction. */
+void ds_uninterruptible_reset(void) {
+  uninterruptible_depth = 0;
+  ds_uninterruptible_end();
+}
+
+void ds_daemon_child_preamble(void) {
+  /* Survive terminal disconnects; SIGTERM remains the shutdown signal. */
+  ds_ignore_common_signals(0);
   /* Protect from the OOM killer while still root, before any privilege drop. */
   ds_oom_protect();
 }
@@ -2585,13 +2649,8 @@ void ds_spawn_log_relay(int pipe_read_fd, const char *log_file,
                         const char *tag) {
   pid_t relay = fork();
   if (relay == 0) {
-    /* Ignore hangups, keyboard interrupts, broken pipes, and SIGTERM.
-     * The relay should only exit when the child process closes the pipe. */
-    signal(SIGHUP, SIG_IGN);
-    signal(SIGINT, SIG_IGN);
-    signal(SIGQUIT, SIG_IGN);
-    signal(SIGPIPE, SIG_IGN);
-    signal(SIGTERM, SIG_IGN);
+    /* The relay should only exit when the child process closes the pipe. */
+    ds_ignore_common_signals(1);
 
     /* Make log relay unkillable */
     ds_oom_protect();
@@ -2683,6 +2742,11 @@ pid_t ds_spawn_daemon(ds_child_fn child_fn, void *user_data,
     return -1;
   }
   if (child == 0) {
+    /* These daemons are spawned inside the start transaction and outlive it.
+     * SIG_IGN survives execv, so without this SIGTERM would be permanently
+     * ignored and SIGKILL the only way to stop them. The preamble re-ignores
+     * the disconnect signals it actually wants. */
+    ds_uninterruptible_reset();
     close(pipefd[0]);
     close(readyfd[0]);
     dup2(pipefd[1], STDOUT_FILENO);

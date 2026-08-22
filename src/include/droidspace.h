@@ -522,6 +522,10 @@ void ds_oom_protect(void);
  * ignore terminal-disconnect signals so it outlives the launching session and
  * protect it from the OOM killer.  Must run while still root. */
 void ds_daemon_child_preamble(void);
+void ds_ignore_common_signals(int with_sigterm);
+void ds_uninterruptible_begin(void);
+void ds_uninterruptible_end(void);
+void ds_uninterruptible_reset(void);
 /* Return 1 if peer_pid shares this process's PID namespace (or if it cannot be
  * determined), 0 only on a positive mismatch.  Used by the abstract-socket
  * authorizers to reject host-net container peers. */

@@ -327,6 +327,8 @@ int start_rootfs(struct ds_config *cfg) {
   int has_side_effects = 0;
   int lock_acquired = 0;
 
+  ds_uninterruptible_begin();
+
   /* 0. Early restart detection: check for external lock from previous stop
    *    command to detect a preserved mount for reuse. */
   if (cfg->container_name[0]) {
@@ -480,6 +482,7 @@ int start_rootfs(struct ds_config *cfg) {
                init_bin);
       if (cfg->is_img_mount)
         unmount_rootfs_img(cfg->img_mount_point, cfg->foreground);
+      ds_uninterruptible_end();
       return -1;
     }
     /* Absolute symlinks resolve correctly inside the container after
@@ -489,6 +492,7 @@ int start_rootfs(struct ds_config *cfg) {
       ds_error("Ensure it has executable permissions.");
       if (cfg->is_img_mount)
         unmount_rootfs_img(cfg->img_mount_point, cfg->foreground);
+      ds_uninterruptible_end();
       return -1;
     }
 
@@ -732,6 +736,15 @@ int start_rootfs(struct ds_config *cfg) {
       lock_acquired = 0;
     }
 
+    /* The transaction is over. Unwind BEFORE the console attach so the -F
+     * session behaves like a normal interactive attach again (terminal close
+     * must be fatal to the CLI; the container survives under the monitor).
+     * Ctrl+C itself is unaffected either way: the console clears ISIG and
+     * relays 0x03 as a byte, and the signalfd's mask is blocked before
+     * creation, so even a SIG_IGN'd signal would still reach it. Reset, not
+     * end: a foreground restart still holds its outer bracket here. */
+    ds_uninterruptible_reset();
+
     int ret = console_monitor_loop(cfg->console.master, monitor_pid, cfg);
     free_config_env_vars(cfg);
     return ret;
@@ -780,6 +793,7 @@ int start_rootfs(struct ds_config *cfg) {
     release_external_lock(cfg->container_name);
   ds_config_free(cfg);
 
+  ds_uninterruptible_end();
   return 0;
 
 cleanup:
@@ -803,6 +817,7 @@ cleanup:
     close(sync_pipe[1]);
 
   ds_config_free(cfg);
+  ds_uninterruptible_end();
   return -1;
 }
 
@@ -811,12 +826,15 @@ int stop_rootfs_with_timeout(struct ds_config *cfg, int skip_unmount,
   if (timeout_seconds < 0)
     timeout_seconds = DS_STOP_TIMEOUT;
 
+  ds_uninterruptible_begin();
+
   /* Acquire external command lock FIRST */
   if (acquire_external_lock(cfg->container_name) != 0) {
     ds_error("Cannot stop '%s': another command is managing this container",
              cfg->container_name);
     ds_error("Wait for the other operation to complete, or use 'droidspaces "
              "show' to check status");
+    ds_uninterruptible_end();
     return -1;
   }
 
@@ -824,6 +842,7 @@ int stop_rootfs_with_timeout(struct ds_config *cfg, int skip_unmount,
   if (!is_container_running(cfg, &pid) || pid <= 0) {
     ds_error("Container '%s' is not running or invalid.", cfg->container_name);
     release_external_lock(cfg->container_name);
+    ds_uninterruptible_end();
     return -1;
   }
 
@@ -988,6 +1007,7 @@ int stop_rootfs_with_timeout(struct ds_config *cfg, int skip_unmount,
     release_external_lock(cfg->container_name);
   }
 
+  ds_uninterruptible_end();
   return 0;
 }
 
@@ -1999,7 +2019,11 @@ int restart_rootfs_with_timeout(struct ds_config *cfg, int timeout_seconds) {
     return -1;
   }
   ds_log("Restarting container %s...", cfg->container_name);
+  /* Outer bracket over stop + start so Ctrl+C cannot land between them,
+   * leaving the container stopped when the user asked for a restart. */
+  ds_uninterruptible_begin();
   if (stop_rootfs_with_timeout(cfg, 1, timeout_seconds) < 0) {
+    ds_uninterruptible_end();
     return -1;
   }
   /* The stop above tore down using the booted snapshot (loaded while the
@@ -2012,7 +2036,11 @@ int restart_rootfs_with_timeout(struct ds_config *cfg, int timeout_seconds) {
   ds_config_load_by_name(cfg->container_name, cfg);
   putchar('\n');
   print_ds_banner();
-  return start_rootfs(cfg);
+  int ret = start_rootfs(cfg);
+  /* No-op after a foreground start: the pre-console reset already unwound
+   * the whole stack. end() clamps at zero, so this is safe either way. */
+  ds_uninterruptible_end();
+  return ret;
 }
 
 int restart_rootfs(struct ds_config *cfg) {
