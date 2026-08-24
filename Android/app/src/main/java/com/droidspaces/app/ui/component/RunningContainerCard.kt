@@ -131,10 +131,12 @@ fun RunningContainerCard(
             )
 
 
-            // Resource usage row, only shown when we have real data
-            val ramUsedKb = ((osInfo?.ramUsageMb ?: 0L) * 1024L)
+            // Resource usage row, only shown when we have real data. Null is the
+            // only "no data" signal: a container idling under 1MB reads as 0 and
+            // still deserves its chip.
+            val ramUsageMb = osInfo?.ramUsageMb
             val cpuPercent = osInfo?.cpuUsage ?: -1.0
-            if (ramUsedKb > 0 || cpuPercent >= 0.0) {
+            if (ramUsageMb != null || cpuPercent >= 0.0) {
                 Surface(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(10.dp),
@@ -169,7 +171,7 @@ fun RunningContainerCard(
                                 )
                             }
                         }
-                        if (ramUsedKb > 0) {
+                        if (ramUsageMb != null) {
                             Row(
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.spacedBy(4.dp)
@@ -180,9 +182,8 @@ fun RunningContainerCard(
                                     modifier = Modifier.size(16.dp),
                                     tint = MaterialTheme.colorScheme.secondary
                                 )
-                                val ramMb = osInfo?.ramUsageMb ?: 0L
                                 Text(
-                                    text = "${context.getString(R.string.ram)} ${context.getString(R.string.ram_percent_label, ramMb.toInt(), osInfo?.ramPercent ?: 0.0)}",
+                                    text = "${context.getString(R.string.ram)} ${context.getString(R.string.ram_percent_label, ramUsageMb.toInt(), osInfo?.ramPercent ?: 0.0)}",
                                     style = MaterialTheme.typography.labelSmall,
                                     fontWeight = FontWeight.Medium,
                                     color = MaterialTheme.colorScheme.secondary
