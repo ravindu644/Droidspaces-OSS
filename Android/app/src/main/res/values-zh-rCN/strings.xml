@@ -538,4 +538,10 @@
     <string name="applying_override">正在应用覆盖配置…</string>
     <string name="fetching_distros">正在从 rootfs 仓库中获取发行版……</string>
     <string name="resize_same_as_current">当前已为 %1$d GB，请输入其他容量大小。</string>
+    <string name="storage_location">存储位置</string>
+    <string name="storage_location_default">内部存储（默认）</string>
+    <string name="storage_location_custom">选择一个文件夹</string>
+    <string name="storage_location_pick">选择存储文件夹</string>
+    <string name="storage_location_change_hint">单击重新选择文件夹</string>
+    <string name="sparse_image_section">稀疏镜像</string>
 </resources>

@@ -533,4 +533,19 @@
     <string name="terminal_dark_theme_description">僅在終端頁面使用深色。</string>
     <string name="fetching_distros">從rootfs倉庫獲取發行版本...</string>
     <string name="resize_same_as_current">已使用 %1$d GB。輸入不同的大小以調整大小。</string>
+    <string name="next_summary">下一步：摘要</string>
+    <string name="storage_title">儲存空間</string>
+    <string name="storage_location">儲存空間位置</string>
+    <string name="storage_location_default">內部 (預設)</string>
+    <string name="storage_location_default_description">將 rootfs 保持在 %1$s 下</string>
+    <string name="storage_location_custom">選擇一個資料夾</string>
+    <string name="storage_location_custom_description">將 rootfs存放在SD卡，USB設備或其資料夾</string>
+    <string name="storage_location_pick">選擇儲存空間資料夾</string>
+    <string name="storage_location_change_hint">點選以選擇一個不同的資料夾</string>
+    <string name="storage_location_checking">正在檢查此路徑...</string>
+    <string name="storage_location_free">%1$s, %2$d GB 可用</string>
+    <string name="storage_location_fs_only">%1$s</string>
+    <string name="storage_location_image_forced">此處需要稀疏映像檔</string>
+    <string name="sparse_image_section">稀疏映像檔</string>
+    <string name="storage_location_needs_space">這裡至少需要 %1$d GB 的可用空間。</string>
 </resources>
