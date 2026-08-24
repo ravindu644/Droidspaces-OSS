@@ -537,8 +537,14 @@
     <string name="resize_same_as_current">当前已为 %1$d GB，请输入其他容量大小。</string>
     <string name="storage_location">存储位置</string>
     <string name="storage_location_default">内部存储（默认）</string>
-    <string name="storage_location_custom">选择一个文件夹</string>
+    <string name="storage_location_custom">自定义存储目录</string>
     <string name="storage_location_pick">选择存储文件夹</string>
     <string name="storage_location_change_hint">单击重新选择文件夹</string>
     <string name="sparse_image_section">稀疏镜像</string>
+    <string name="storage_location_custom_description">将rootfs放在SD卡、U盘或其它目录中</string>
+    <string name="storage_title">存储</string>
+    <string name="next_summary">下一步：安装概览</string>
+    <string name="storage_location_default_description">将rootfs保存在 %1$s</string>
+    <string name="storage_location_checking">检查存储位置……</string>
+    <string name="storage_location_free">%1$s, %2$d GB 空闲</string>
 </resources>
