@@ -183,7 +183,7 @@ fun RunningContainerCard(
                                     tint = MaterialTheme.colorScheme.secondary
                                 )
                                 Text(
-                                    text = "${context.getString(R.string.ram)} ${context.getString(R.string.ram_percent_label, ramUsageMb.toInt(), osInfo?.ramPercent ?: 0.0)}",
+                                    text = "${context.getString(R.string.ram)} ${context.getString(R.string.ram_percent_label, ramUsageMb.toInt(), osInfo.ramPercent ?: 0.0)}",
                                     style = MaterialTheme.typography.labelSmall,
                                     fontWeight = FontWeight.Medium,
                                     color = MaterialTheme.colorScheme.secondary
