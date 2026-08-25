@@ -1,11 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <plurals name="commit_count">
-        <item quantity="one">커밋 %d개</item>
         <item quantity="other">커밋 %d개</item>
     </plurals>
     <plurals name="notification_sessions_running">
-        <item quantity="one">세션 %d개 실행 중</item>
         <item quantity="other">세션 %d개 실행 중</item>
     </plurals>
 </resources>

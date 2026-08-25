@@ -1,8 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <!-- App Info -->
-    <string name="app_name">Droidspaces</string>
-
+    <string name="app_name" translatable="false">Droidspaces</string>
     <!-- Welcome Screen -->
     <string name="welcome_tagline">리눅스 컨테이너. 네이티브. 오버헤드 없음.</string>
     <string name="get_started">시작하기</string>
@@ -23,7 +22,6 @@
     <string name="feat_privileged_desc">고급 사용자를 위해 특권 모드로 보안 장벽을 완화합니다.</string>
     <string name="feat_autoboot_title">전원 켜짐 시 자동 부팅</string>
     <string name="feat_autoboot_desc">화면이 잠겨 있고 데이터가 암호화된 상태에서도 부팅 시 컨테이너를 자동으로 시작합니다.</string>
-
     <!-- Root Check Screen -->
     <string name="root_check_title">루트 액세스 확인</string>
     <string name="checking_root">루트 액세스 확인 중...</string>
@@ -35,7 +33,6 @@
     <string name="root_available_message">이제 Droidspaces를 사용할 수 있습니다</string>
     <string name="skip">건너뛰기</string>
     <string name="continue_button">계속</string>
-
     <!-- Navigation -->
     <string name="home_title">홈</string>
     <string name="containers">컨테이너</string>
@@ -45,11 +42,9 @@
     <string name="close">닫기</string>
     <string name="refresh">새로고침</string>
     <string name="search">검색</string>
-
     <!-- Main Tab Screen -->
     <string name="container_singular">컨테이너</string>
     <string name="running">실행 중</string>
-
     <!-- Backend Status Card -->
     <string name="backend_checking">백엔드: 확인 중...</string>
     <string name="backend_installed">백엔드: 설치됨</string>
@@ -62,7 +57,6 @@
     <string name="update_available_message">백엔드 업데이트가 있습니다. 여기를 눌러 업데이트하세요</string>
     <string name="backend_attention_required">백엔드: 조치 필요</string>
     <string name="tap_to_fix_system">눌러서 시스템 설정 수정</string>
-
     <!-- Settings Screen -->
     <string name="backend_section">백엔드</string>
     <string name="reinstall_backend">백엔드 재설치</string>
@@ -94,7 +88,7 @@
     <string name="about_droidspaces">Droidspaces 정보</string>
     <string name="about_description">Android용 LXC 스타일 컨테이너 관리자</string>
     <string name="developers">개발자</string>
-    <string name="developer_ravindu644">ravindu644</string>
+    <string name="developer_ravindu644" translatable="false">ravindu644</string>
     <string name="developer_ravindu644_role">메인테이너</string>
     <string name="telegram_channel">텔레그램 채널</string>
     <string name="contributors">기여자</string>
@@ -104,7 +98,6 @@
     <string name="generate_bug_report_description">디버깅을 위한 시스템 정보 및 로그 수집</string>
     <string name="bug_report_title">버그 리포트</string>
     <string name="ok">확인</string>
-
     <!-- Containers Screen -->
     <string name="no_containers_installed">설치된 컨테이너가 없습니다</string>
     <string name="install_container_description">아래 버튼을 사용하여 컨테이너를 설치하세요</string>
@@ -128,7 +121,6 @@
     <string name="view_logs">로그 보기</string>
     <string name="edit_container_configuration">컨테이너 설정 편집</string>
     <string name="uninstall_container_menu">컨테이너 제거</string>
-
     <!-- Container Card -->
     <string name="status_running">실행 중</string>
     <string name="status_stopped">중지됨</string>
@@ -158,11 +150,9 @@
     <string name="installation_path_label">설치 경로</string>
     <string name="no_options_enabled">활성화된 추가 옵션이 없습니다</string>
     <string name="options">옵션</string>
-
     <!-- Running Container Card -->
     <string name="uptime_label">%1$s: %2$s</string>
     <string name="ip_address_label">%1$s: %2$s</string>
-
     <!-- Container Details Screen -->
     <string name="container_info">컨테이너 정보</string>
     <string name="distribution">배포판</string>
@@ -178,7 +168,6 @@
     <string name="checking">확인 중</string>
     <string name="not_available">사용 불가</string>
     <string name="manage">관리</string>
-
     <!-- Edit Container Screen -->
     <string name="edit_container_title">컨테이너 편집: %1$s</string>
     <string name="container_is_running">컨테이너가 실행 중입니다</string>
@@ -217,9 +206,7 @@
     <string name="force_cgroupv1">Cgroup V1 강제 사용</string>
     <string name="force_cgroupv1_description">레거시 Cgroup V1 계층 구조 강제 사용</string>
     <string name="manual_deadlock_shield">수동 데드락 방지</string>
-    <string name="manual_deadlock_shield_description">중첩된 네임스페이스 생성을 차단하여 레거시 커널(예: 4.14.x)에서 커널 수준 VFS 데드락을 방지합니다.
-\n\n경고: 이 옵션을 활성화하면 컨테이너 내부의 Docker, Podman, LXC, Systemd 샌드박싱 지원이 차단됩니다.</string>
-
+    <string name="manual_deadlock_shield_description">중첩된 네임스페이스 생성을 차단하여 레거시 커널(예: 4.14.x)에서 커널 수준 VFS 데드락을 방지합니다. \n\n경고: 이 옵션을 활성화하면 컨테이너 내부의 Docker, Podman, LXC, Systemd 샌드박싱 지원이 차단됩니다.</string>
     <!-- Config Categories and Network Mode -->
     <string name="cat_networking">네트워킹</string>
     <string name="cat_integration">통합 및 하드웨어</string>
@@ -234,7 +221,6 @@
     <string name="network_mode_none_short">없음</string>
     <string name="network_mode_gateway">게이트웨이(가상 라우터)</string>
     <string name="network_mode_gateway_short">게이트웨이</string>
-
     <!-- Gateway networking mode -->
     <string name="gateway_settings">게이트웨이 설정</string>
     <string name="gateway_settings_description">라우터 역할을 하는 다른 컨테이너(예: OpenWRT)를 통해 이 컨테이너를 라우팅합니다. 해당 게이트웨이가 먼저 실행 중이어야 합니다.</string>
@@ -311,7 +297,6 @@
     <string name="key_label">KEY</string>
     <string name="value_label">VALUE</string>
     <string name="add_variable">변수 추가</string>
-
     <!-- Custom Init -->
     <string name="custom_init_label">사용자 지정 init 바이너리</string>
     <string name="custom_init_placeholder">/sbin/init(기본값)</string>
@@ -319,22 +304,19 @@
     <string name="custom_init_error_absolute">경로는 절대 경로여야 합니다(/로 시작)</string>
     <string name="custom_init_warning">정확히 무엇을 하는지 모른다면 이 값을 변경하지 마세요. 잘못된 init 바이너리를 설정하면 컨테이너가 부팅되지 않습니다.</string>
     <string name="custom_init_option">사용자 지정 init</string>
-
     <!-- Container Name Screen -->
     <string name="container_setup">컨테이너 설정</string>
     <string name="container_information">컨테이너 정보</string>
     <string name="container_name_label">컨테이너 이름 *</string>
-    <string name="container_name_placeholder">my-container</string>
+    <string name="container_name_placeholder" translatable="false">my-container</string>
     <string name="hostname_placeholder">기본값을 사용하려면 비워두세요</string>
     <string name="hostname_hint">비워두면 컨테이너 이름을 호스트명으로 사용합니다</string>
     <string name="container_name_exists">이 이름의 컨테이너가 이미 존재합니다</string>
     <string name="next_configuration">다음: 구성</string>
-
     <!-- Container Config Screen -->
     <string name="configuration_title">구성</string>
     <string name="container_options">컨테이너 옵션</string>
     <string name="next_storage">다음: 저장소</string>
-
     <!-- Installation Screen -->
     <string name="installing_container">컨테이너 설치 중</string>
     <string name="installation_complete">설치 완료</string>
@@ -357,23 +339,19 @@
     <string name="installing_binary">바이너리 설치 중: %1$s</string>
     <string name="granting_permissions">권한 부여 중...</string>
     <string name="preparing_installation">설치 준비 중...</string>
-
     <!-- File Picker Screen -->
     <string name="filter_absolute_path_hint">필터링하거나 절대 경로 입력…</string>
     <string name="no_matches">일치하는 항목 없음</string>
     <string name="empty_directory">빈 디렉터리</string>
     <string name="select_folder">폴더 선택</string>
-
     <!-- Protocols -->
     <string name="cpu">CPU:</string>
     <string name="ram">RAM:</string>
-
     <string name="terminal_logs">터미널 로그</string>
     <string name="installation_logs">설치 로그</string>
     <string name="terminal_label">터미널</string>
     <string name="default_size_gb_hint">8</string>
     <string name="size_range_4_512_hint">4-512</string>
-
     <!-- Control Panel Screen -->
     <string name="no_containers_running">실행 중인 컨테이너가 없습니다</string>
     <string name="start_container_first">여기에 표시하려면 먼저 컨테이너를 시작하세요</string>
@@ -383,7 +361,6 @@
     <string name="ram_percent_label">%1$d MB(%2$.1f%%)</string>
     <string name="sessions_running_plural">%1$d개 세션 실행 중 · 탭하여 복원</string>
     <string name="session_running_singular">1개 세션 실행 중 · 탭하여 복원</string>
-
     <!-- Systemd Screen -->
     <string name="systemd_services">Systemd 서비스</string>
     <string name="openwrt_services">OpenWrt 서비스</string>
@@ -394,7 +371,6 @@
     <string name="init_system_not_available">Systemd/OpenWrt/OpenRC 사용 불가</string>
     <string name="init_system_not_available_desc">이 컨테이너에는 systemd, OpenWrt/procd 또는 OpenRC가 설치되어 있지 않습니다</string>
     <string name="fetching_services">서비스 가져오는 중...</string>
-
     <string name="search_services">서비스 검색...</string>
     <string name="enabled_legend">활성화됨</string>
     <string name="disabled_legend">비활성화됨</string>
@@ -441,9 +417,9 @@
     <string name="action_successful">%1$s %2$s 성공</string>
     <string name="failed_to_action">%2$s %1$s 실패</string>
     <string name="error_unknown">오류: %1$s</string>
-    <string name="actioning_service">%2$s %1$s 중...</string>
+    <string name="actioning_service" translatable="false">%2$s %1$s 중...</string>
     <string name="no_services_found">서비스를 찾을 수 없습니다</string>
-    <string name="repo_not_found_in_repo">저장소에서 &quot;%1$s&quot;를 찾을 수 없습니다</string>
+    <string name="repo_not_found_in_repo">저장소에서 %1$s를 찾을 수 없습니다</string>
     <string name="no_running_services">실행 중인 서비스가 없습니다</string>
     <string name="no_enabled_services">활성화된 서비스가 없습니다</string>
     <string name="no_disabled_services">비활성화된 서비스가 없습니다</string>
@@ -451,7 +427,6 @@
     <string name="no_abnormal_services">비정상 서비스가 없습니다</string>
     <string name="no_unknown_services">상태를 알 수 없는 서비스가 없습니다</string>
     <string name="no_masked_services">마스킹된 서비스가 없습니다</string>
-
     <!-- System Info Card -->
     <string name="kernel">커널</string>
     <string name="selinux_status">SELinux 상태</string>
@@ -459,19 +434,16 @@
     <string name="architecture">아키텍처</string>
     <string name="supported_abis">지원되는 ABI</string>
     <string name="loading">로드 중...</string>
-
     <!-- Empty State -->
     <string name="backend_not_available">백엔드 사용 불가</string>
     <string name="backend_not_available_description">Droidspaces 백엔드가 설치되어 있지 않거나 손상되었습니다. 먼저 설치하세요.</string>
     <string name="root_access_not_available">루트 액세스 사용 불가</string>
     <string name="root_access_not_available_description">루트 액세스를 사용할 수 없어 이 페이지가 비활성화되었습니다</string>
-
     <!-- Dialog Utils -->
     <string name="operation_failed_title">작업 실패</string>
     <string name="no_output_available">출력 없음</string>
     <string name="dismiss">닫기</string>
     <string name="please_wait_hint">요청을 처리하는 동안 기다려 주세요...</string>
-
     <!-- Container Users Card -->
     <string name="available_users">사용 가능한 사용자</string>
     <string name="login_command_copied">사용자 %1$s의 로그인 명령이 복사되었습니다</string>
@@ -479,13 +451,11 @@
     <string name="no_local_users_found">로컬 사용자를 찾을 수 없습니다</string>
     <string name="select_user">사용자 선택</string>
     <string name="copy_login">로그인 복사</string>
-
     <!-- Process List Screen -->
 
     <!-- Common -->
     <string name="comma">,</string>
     <string name="gb_size">%1$dGB</string>
-
     <!-- Sparse Image Config Screen -->
     <string name="storage_configuration">저장소 구성</string>
     <string name="about_sparse_images">스파스 이미지 정보</string>
@@ -500,17 +470,14 @@
     <string name="maximum_size_512gb">최대 크기는 512GB입니다</string>
     <string name="size_gb">크기(GB)</string>
     <string name="enter_size_between_4_512_gb">4에서 512GB 사이의 크기를 입력하세요</string>
-
     <!-- Container Log Viewer -->
     <string name="logs_title">로그: %1$s</string>
     <string name="clear_logs">로그 지우기</string>
     <string name="copy_logs">로그 복사</string>
-
     <!-- Validation Error Messages -->
     <string name="error_container_name_empty">컨테이너 이름은 비워둘 수 없습니다</string>
     <string name="error_container_name_invalid">컨테이너 이름에는 문자, 숫자, 하이픈(-), 밑줄(_), 마침표(.), 공백만 사용할 수 있습니다</string>
     <string name="error_hostname_invalid">호스트명에는 문자, 숫자, 대시(-)만 사용할 수 있습니다</string>
-
     <!-- Process List -->
 
     <!-- Requirements -->
@@ -520,9 +487,7 @@
     <string name="requirements_check_completed_successfully">요구 사항 확인이 성공적으로 완료되었습니다</string>
     <string name="requirements_check_completed_with_errors">요구 사항 확인이 오류와 함께 완료되었습니다</string>
     <string name="kernel_requirements_copied">커널 요구 사항이 클립보드에 복사되었습니다</string>
-
     <string name="logs_copied">로그가 클립보드에 복사되었습니다</string>
-
     <!-- Terminal -->
     <string name="terminal">터미널</string>
     <string name="restore">복원</string>
@@ -530,11 +495,9 @@
     <string name="open">열기</string>
     <string name="open_terminal">터미널 열기</string>
     <string name="select_user_to_enter">컨테이너에 진입할 사용자를 선택하세요:</string>
-
     <!-- Notification Permission -->
     <string name="notification_permission_title">알림 권한</string>
     <string name="notification_permission_rationale">Droidspaces는 백그라운드에서 터미널 세션을 계속 실행하기 위해 지속적인 알림을 표시해야 합니다. 이 권한이 없으면 Android(특히 삼성 기기)가 터미널 서비스를 예기치 않게 종료할 수 있습니다.</string>
-
     <!-- Terminal Session Notification -->
     <string name="notification_title">Droidspaces 터미널</string>
     <string name="notification_action_exit">종료</string>
@@ -542,7 +505,6 @@
     <string name="notification_wakelock_off">웨이크락: 꺼짐</string>
     <string name="notification_channel_name">터미널 세션</string>
     <string name="notification_channel_desc">활성 컨테이너 터미널 세션</string>
-
     <!-- Sparse Image Management -->
     <string name="migrate_to_sparse_image">스파스 이미지로 마이그레이션</string>
     <string name="resize_sparse_image">스파스 이미지 크기 조정</string>
@@ -557,7 +519,7 @@
     <string name="starting_resizing">크기 조정 작업 시작 중...</string>
     <string name="help_card_title">Droidspaces가 처음이신가요?</string>
     <string name="help_card_message">첫 번째 리눅스 컨테이너를 설정하는 방법을 알아보려면 여기를 누르세요!</string>
-    <string name="help_card_url">https://github.com/ravindu644/Droidspaces-OSS/blob/main/Documentation/Installation-Android.md</string>
+    <string name="help_card_url" translatable="false">https://github.com/ravindu644/Droidspaces-OSS/blob/main/Documentation/Installation-Android.md</string>
     <string name="privileged_mode">특권 모드</string>
     <string name="privileged_mode_description">중첩 가상화 또는 고급 하드웨어 액세스를 위한 세밀한 보안 완화를 구성합니다.</string>
     <string name="privileged_nomask_desc">jail 마스크를 비활성화하여 /proc 및 /sys에 쓰기 액세스를 허용합니다. 참고: 하드웨어 액세스도 활성화되지 않는 한 /sys는 읽기 전용으로 유지됩니다.</string>
@@ -572,13 +534,12 @@
     <string name="i_understand_caps">I WON\'T REPORT ANY BUGS</string>
     <string name="reboot_recommended">SELinux 규칙을 적용하고 부팅 시 데몬을 시작하려면 재부팅을 권장합니다.</string>
     <string name="hw_access_disclaimer">Droidspaces v6.1.0부터 udevd는 USB, 블록, 입력, TTY, 네트워크 서브시스템에 대한 실질적인 접근 권한을 갖습니다. 컨테이너가 Android가 현재 사용 중인 하드웨어를 가져갈 수 있습니다.\n\n컨테이너를 실행한 후 키보드, SD 카드 또는 USB 장치가 Android에서 작동하지 않는다면 - 이는 버그가 아닙니다. 컨테이너가 이를 가져간 것입니다. 전체 하드웨어 액세스를 요청하신 것입니다.\n\n이 모드 사용 중 발생한 하드웨어 충돌이나 커널 패닉 문제는 신고하지 마세요.</string>
-
     <!-- Rootfs repository -->
     <string name="repo_title">Rootfs 저장소</string>
     <string name="repo_fab_label">저장소</string>
     <string name="repo_refresh">새로고침</string>
     <string name="repo_banner_text">\"Droidspaces developers\" 하위의 rootfs tarball은 오픈 소스이며 투명합니다. 이 카드를 눌러 저희의 변경 사항을 직접 다운로드하거나 확인할 수 있습니다.</string>
-    <string name="repo_banner_url">https://github.com/Droidspaces/Droidspaces-rootfs-builder</string>
+    <string name="repo_banner_url" translatable="false">https://github.com/Droidspaces/Droidspaces-rootfs-builder</string>
     <string name="repo_failed_to_load">저장소를 불러오지 못했습니다</string>
     <string name="repo_download">다운로드</string>
     <string name="repo_cancel">취소</string>
