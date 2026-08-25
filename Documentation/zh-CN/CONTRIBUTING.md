@@ -1,3 +1,5 @@
+[English](../../CONTRIBUTING.md) | 简体中文
+
 # 参与 Droidspaces 贡献
 
 ## 理念
@@ -676,4 +678,4 @@ libsu 的全局配置在 `DroidspacesApplication.kt` 中，那是唯一应该设
 
 本项目没有正式的 CLA。提交 PR 即表示你同意你的贡献可以按项目现有许可证分发。
 
-在本仓库工作的 AI Agent 请阅读 [AGENTS.md](./AGENTS.md)，那是上述规则的精简版。
+在本仓库工作的 AI Agent 请阅读 [AGENTS.md](../../AGENTS.md)，那是上述规则的精简版。
