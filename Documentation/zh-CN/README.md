@@ -1,9 +1,9 @@
-[English](./README.md) | 简体中文
+[English](../../README.md) | 简体中文
 
 ---
 
 [![Latest release](https://img.shields.io/github/v/release/ravindu644/Droidspaces-OSS?label=Latest%20Release&style=for-the-badge)](https://github.com/ravindu644/Droidspaces-OSS/releases/latest)
-[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg?style=for-the-badge)](./LICENSE)
+[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg?style=for-the-badge)](../../LICENSE)
 [![Telegram channel](https://img.shields.io/badge/Telegram-Channel-2CA5E0?style=for-the-badge&logo=telegram&logoColor=white)](https://t.me/Droidspaces)
 [![Android support](https://img.shields.io/badge/-Android-3DDC84?style=for-the-badge&logo=android&logoColor=white)](#a-android-devices)
 [![Linux desktop](https://img.shields.io/badge/-Linux-FCC624?style=for-the-badge&logo=linux&logoColor=black)](#b-linux-desktop)
@@ -25,7 +25,7 @@ Droidspaces 的独特之处在于其对 Android 和 Linux 本身**零依赖**、
 **Android** + **Linux Namespaces** = **Droidspaces**。由于 Android 基于 Linux 内核构建，Droidspaces 同样能在 Linux 桌面端无缝运行。两个平台都有同等的支持与维护。
 
 > [!TIP]
-> 查看[社区支持的 Android 设备](./Documentation/zh-CN/community-supported-devices.md)，了解已知可运行 Droidspaces 的手机列表。
+> 查看[社区支持的 Android 设备](./community-supported-devices.md)，了解已知可运行 Droidspaces 的手机列表。
 
 <details>
 <summary><b>项目截图展示 (Linux & Android)</b></summary>
@@ -145,8 +145,8 @@ Droidspaces 的独特之处在于其对 Android 和 Linux 本身**零依赖**、
 - [显示、音频与桌面](#display-audio-desktop)
 - [安全与隔离的理念](#security-model)
 - [更多文档](#additional-documentation)
-- [疑难解答](./Documentation/zh-CN/Troubleshooting.md)
-- [社区支持的 Android 设备](./Documentation/zh-CN/community-supported-devices.md)
+- [疑难解答](./Troubleshooting.md)
+- [社区支持的 Android 设备](./community-supported-devices.md)
 - [参与贡献](#contribution)
 - [致谢](#credits)
 
@@ -173,12 +173,12 @@ Droidspaces 的设计目标是原生运行在任何搭载 Linux 内核的设备�
 | 功能 | 描述 |
 |---------|-------------|
 | **初始化系统支持** | 以 PID 1 运行 systemd、OpenRC 或任何其他初始化系统。完整的服务程序管理和规范的启动/关机/重启流程。 |
-| **深度 Android 集成** | 支持两种守护进程模式：**原生 init.rc**（最底层的集成方式，自动生成/不可被终止的持久性）和**用户空间守护进程**（应用内可切换，通过 `post-fs-data.sh` 启动，无需修改镜像）。**两种模式均绕过 root 域 seccomp 限制，确保容器生命周期稳定** [[init.rc 开发者指南](./init/README_CN.md)]。 |
+| **深度 Android 集成** | 支持两种守护进程模式：**原生 init.rc**（最底层的集成方式，自动生成/不可被终止的持久性）和**用户空间守护进程**（应用内可切换，通过 `post-fs-data.sh` 启动，无需修改镜像）。**两种模式均绕过 root 域 seccomp 限制，确保容器生命周期稳定** [[init.rc 开发者指南](../../init/README_CN.md)]。 |
 | **命名空间隔离** | 通过 PID、MNT、UTS、IPC 以及 Cgroup 命名空间实现完全隔离。每个容器拥有自己的进程树、挂载表、主机名、IPC 资源和 cgroup 层级。 |
 | **网络隔离** | **4 种网络模式（主机模式、NAT 模式、无网络模式、网关模式）**。通过 `CLONE_NEWNET` 实现纯网络隔离（NAT 模式、无网络模式和网关模式）或共享宿主机网络（主机模式）。NAT 模式会自动检测活跃上行链路（也可用 `--upstream` 手动固定）；网关模式可将 LAN/DHCP/防火墙委托给 OpenWRT 等另一个容器。在 Android 和 Linux 上均可使用。 |
-| **Android 显示与 GPU** | 三种加速模式：**llvmpipe**（软件渲染，适用所有设备）、**VirGL**（Mali/PowerVR）和 **Turnip**（原生高通/Adreno）。自 v6.3.0 起，X 服务器和 VirGL 服务器在容器启动时自动拉起，无需任何 Termux 命令。环境变量（`DISPLAY=:5`、`GALLIUM_DRIVER=virpipe`）自动注入。[[更多信息](./Documentation/zh-CN/Graphics-and-Audio.md)] |
-| **Android 音效** | PulseAudio 守护进程以 Termux 用户身份在宿主机上运行，使 Android 音频 HAL 授予其设备访问权限。套接字以绑定挂载方式挂载到容器的 `/tmp/.pulse-socket`，`PULSE_SERVER` 自动注入，音效开箱即用。[[更多信息](./Documentation/zh-CN/Graphics-and-Audio.md#pulseaudio)] |
-| **Linux GPU 加速** | 在 Linux 桌面端上无需额外配置 AMD 和 Intel GPU 硬件加速。[[更多信息](./Documentation/zh-CN/Graphics-and-Audio.md)] |
+| **Android 显示与 GPU** | 三种加速模式：**llvmpipe**（软件渲染，适用所有设备）、**VirGL**（Mali/PowerVR）和 **Turnip**（原生高通/Adreno）。自 v6.3.0 起，X 服务器和 VirGL 服务器在容器启动时自动拉起，无需任何 Termux 命令。环境变量（`DISPLAY=:5`、`GALLIUM_DRIVER=virpipe`）自动注入。[[更多信息](./Graphics-and-Audio.md)] |
+| **Android 音效** | PulseAudio 守护进程以 Termux 用户身份在宿主机上运行，使 Android 音频 HAL 授予其设备访问权限。套接字以绑定挂载方式挂载到容器的 `/tmp/.pulse-socket`，`PULSE_SERVER` 自动注入，音效开箱即用。[[更多信息](./Graphics-and-Audio.md#pulseaudio)] |
+| **Linux GPU 加速** | 在 Linux 桌面端上无需额外配置 AMD 和 Intel GPU 硬件加速。[[更多信息](./Graphics-and-Audio.md)] |
 | **端口转发** | 在 NAT 模式下将宿主机端口转发到容器（例如 `--port 22:22`）。支持 TCP 和 UDP，以及端口范围如 `1-500:1-500`。 |
 | **易失模式** | 使用 OverlayFS 的临时容器。所有更改存储在内存中，退出后丢弃。非常适合用于测试和开发。 |
 | **自定义绑定挂载** | 将宿主机目录映射到容器中的任意挂载点。支持链式语法（`-B a:b -B c:d`）和逗号分隔语法（`-B a:b,c:d`）。 |
@@ -190,7 +190,7 @@ Droidspaces 的设计目标是原生运行在任何搭载 Linux 内核的设备�
 | **PTY/终端支持** | 完整的 PTY 隔离。前台模式提供交互式终端，支持正确的终端尺寸调整处理（仅限使用 `-f` 标志的二进制模式）。 |
 | **多 DNS 支持** | 配置自定义 DNS 服务器（逗号分隔），绕过宿主机的默认 DNS 查询。若不指定任何 DNS 服务器，则回退到 ISP 的默认 DNS。 |
 | **SELinux 宽容模式** | 可在容器启动时根据需要选择将 SELinux 设为宽容模式。 |
-| **Rootfs 镜像 / 直接块设备支持** | 支持从 ext4 `.img` 文件启动容器，支持自动 loop 挂载、文件系统检查以及 SELinux 上下文加固（如需要）。CLI 模式下也支持挂载分区、SD 卡等块设备！**Android 应用同样支持以 rootfs.img 模式创建可移植容器** [ [如何手动创建 ext4 rootfs.img？](./Documentation/zh-CN/Installation-Linux.md#option-b-create-an-ext4-image-recommended)] |
+| **Rootfs 镜像 / 直接块设备支持** | 支持从 ext4 `.img` 文件启动容器，支持自动 loop 挂载、文件系统检查以及 SELinux 上下文加固（如需要）。CLI 模式下也支持挂载分区、SD 卡等块设备！**Android 应用同样支持以 rootfs.img 模式创建可移植容器** [ [如何手动创建 ext4 rootfs.img？](./Installation-Linux.md#option-b-create-an-ext4-image-recommended)] |
 | **自动恢复** | 自动清理残留的 PID 文件，扫描容器中的孤立进程，以及通过 `/run/droidspaces` 的内存元数据同步实现强大的配置恢复。 |
 | **Cgroup 隔离 (v1/v2)** | 每个容器都有独立的 cgroup 层级（`/sys/fs/cgroup/droidspaces/<name>`），完全兼容 systemd。同时支持旧版 v1 和现代 v2 层级。 |
 | **自适应安全与死锁护盾** | 内核感知的 BPF 过滤器可在旧内核上自动解决 FBE 密钥环冲突。提供手动**死锁护盾**切换开关，用于修复受影响旧内核设备（例如内核 4.14.113）上特定的 VFS `grab_super()` 死锁问题。护盾禁用时（默认），Droidspaces 授予完整的命名空间自由，可在所有内核上原生启用**嵌套容器/Docker** 等功能。 |
@@ -245,7 +245,7 @@ Droidspaces 支持运行 Linux 内核 **3.10 及以上**版本的 Android 设备
 | 内核版本 | 支持级别 | 说明 |
 |----------------|---------------|-------|
 | 3.10 | 已支持 | **旧版。** 最低要求。基本的命名空间支持。基于 systemd 的发行版可能不稳定；推荐使用 **Alpine**。 |
-| 4.4 - 4.19 | 稳定 | **加固。** [完整支持 systemd 版本低于 v258 的现代发行版](./Documentation/zh-CN/Troubleshooting.md#modern-distros)。原生支持嵌套容器（Docker/Podman）。如果在特定内核（如 4.14.113）上遇到因 VFS 死锁 bug 导致的 systemd 挂起，请手动启用**死锁护盾** [[更多信息](./Documentation/zh-CN/Features.md#vfs-deadlock)]。 |
+| 4.4 - 4.19 | 稳定 | **加固。** [完整支持 systemd 版本低于 v258 的现代发行版](./Troubleshooting.md#modern-distros)。原生支持嵌套容器（Docker/Podman）。如果在特定内核（如 4.14.113）上遇到因 VFS 死锁 bug 导致的 systemd 挂起，请手动启用**死锁护盾** [[更多信息](./Features.md#vfs-deadlock)]。 |
 | 5.4 - 5.10 | 推荐 | **主线。** 完整功能支持，包括嵌套容器和 Cgroup v2。 |
 | 5.15+ | 旗舰 | **完全。** 最佳性能和与现代发行版的最大兼容性。 |
 
@@ -283,17 +283,17 @@ Android 内核通常经过大量修改，关键的容器功能可能被禁用。
 
 ##### Non-GKI（旧内核）
 适用于内核：**3.10, 3.18, 4.4, 4.9, 4.14, 4.19**。添加所需的配置片段后，这些内核即可即插即用。
-参见：[旧内核配置](./Documentation/zh-CN/Kernel-Configuration.md#non-gki)
+参见：[旧内核配置](./Kernel-Configuration.md#non-gki)
 
 <a id="GKI"></a>
 
 ##### GKI（现代内核）
 适用于内核：**5.4, 5.10, 5.15, 6.1+**。这些内核需要额外步骤来处理因配置更改导致的 ABI 破坏。
-参见：[现代 GKI 内核配置](./Documentation/zh-CN/Kernel-Configuration.md#gki)
+参见：[现代 GKI 内核配置](./Kernel-Configuration.md#gki)
 
 **内核支持的后续步骤：**
 - **自动检查**：使用 Android 应用内置的需求检查器（**设置** -> **需求**）。
-- **完整技术指南**：[内核配置指南](./Documentation/zh-CN/Kernel-Configuration.md)
+- **完整技术指南**：[内核配置指南](./Kernel-Configuration.md)
 
 > [!TIP]
 >
@@ -323,8 +323,8 @@ sudo ./droidspaces check
 
 ## 安装指南
 
-- [Android 安装指南](./Documentation/zh-CN/Installation-Android.md)
-- [Linux 安装指南](./Documentation/zh-CN/Installation-Linux.md)
+- [Android 安装指南](./Installation-Android.md)
+- [Linux 安装指南](./Installation-Linux.md)
 
 ---
 
@@ -332,8 +332,8 @@ sudo ./droidspaces check
 
 ## 使用指南
 
-- [Android App 使用指南](./Documentation/zh-CN/Usage-Android-App.md)
-- [Linux CLI 使用指南](./Documentation/zh-CN/Linux-CLI.md)
+- [Android App 使用指南](./Usage-Android-App.md)
+- [Linux CLI 使用指南](./Linux-CLI.md)
 
 ---
 
@@ -343,9 +343,9 @@ sudo ./droidspaces check
 
 自 v6.3.0 起，Droidspaces 在容器启动时会自动拉起 Termux:X11 X 服务器、VirGL 服务器和 PulseAudio 守护进程（对应开关已启用时）。环境变量 `DISPLAY=:5`、`GALLIUM_DRIVER=virpipe` 和 `PULSE_SERVER` 均通过 `/run/droidspaces.env` 在 init 系统完成启动前注入容器，显示、GPU 加速和音效无需手动配置即可正常使用。
 
-我们的官方 XFCE rootfs 压缩包已预置 **XFCE 自动启动**配置：启用 Termux:X11 后启动容器，XFCE 会自动启动并出现在 Termux:X11 应用中，无需任何终端命令。从 [Rootfs 仓库](./Documentation/zh-CN/Usage-Android-App.md#rootfs-仓库)（搜索"XFCE"）下载，或直接从 [Droidspaces Rootfs Builder Releases](https://github.com/Droidspaces/Droidspaces-rootfs-builder/releases/latest) 下载。
+我们的官方 XFCE rootfs 压缩包已预置 **XFCE 自动启动**配置：启用 Termux:X11 后启动容器，XFCE 会自动启动并出现在 Termux:X11 应用中，无需任何终端命令。从 [Rootfs 仓库](./Usage-Android-App.md#rootfs-仓库)（搜索"XFCE"）下载，或直接从 [Droidspaces Rootfs Builder Releases](https://github.com/Droidspaces/Droidspaces-rootfs-builder/releases/latest) 下载。
 
-GPU 加速方式、音效配置、桌面环境自动启动原理以及 Linux 桌面配置，请参阅 **[显示、音频与桌面指南](./Documentation/zh-CN/Graphics-and-Audio.md)**。
+GPU 加速方式、音效配置、桌面环境自动启动原理以及 Linux 桌面配置，请参阅 **[显示、音频与桌面指南](./Graphics-and-Audio.md)**。
 
 ---
 
@@ -386,11 +386,11 @@ GPU 加速方式、音效配置、桌面环境自动启动原理以及 Linux 桌
 
 | 文档 | 描述 |
 |----------|-------------|
-| [功能深度解析](./Documentation/zh-CN/Features.md) | 每个主要功能的详细说明。 |
-| [从零开始的网络基础](./Documentation/zh-CN/Networking-From-Zero.md) | 面向初学者解释 Droidspaces 背后的网络概念——NAT、自动上行检测、`--upstream` 固定以及基于 OpenWRT 的网关模式。 |
-| [显示、音频与桌面指南](./Documentation/zh-CN/Graphics-and-Audio.md) | Android 和 Linux 上的 GPU 加速、PulseAudio 音效与桌面环境自动启动。 |
-| [你可以做的酷炫事情（Tailscale、Docker 等）](./Documentation/zh-CN/Cool-things-you-can-do.md) | 在容器内运行 Tailscale、Docker 等工具的实用配置方案。 |
-| [卸载指南](./Documentation/zh-CN/Uninstallation.md) | 如何从系统中移除 Droidspaces。 |
+| [功能深度解析](./Features.md) | 每个主要功能的详细说明。 |
+| [从零开始的网络基础](./Networking-From-Zero.md) | 面向初学者解释 Droidspaces 背后的网络概念——NAT、自动上行检测、`--upstream` 固定以及基于 OpenWRT 的网关模式。 |
+| [显示、音频与桌面指南](./Graphics-and-Audio.md) | Android 和 Linux 上的 GPU 加速、PulseAudio 音效与桌面环境自动启动。 |
+| [你可以做的酷炫事情（Tailscale、Docker 等）](./Cool-things-you-can-do.md) | 在容器内运行 Tailscale、Docker 等工具的实用配置方案。 |
+| [卸载指南](./Uninstallation.md) | 如何从系统中移除 Droidspaces。 |
 
 ---
 
@@ -428,7 +428,7 @@ Droidspaces 建立在开源社区的杰出工作之上。特别感谢以下项�
 
 ## 许可证
 
-Droidspaces 基于 [GNU General Public License v3.0](./LICENSE) 许可。
+Droidspaces 基于 [GNU General Public License v3.0](../../LICENSE) 许可。
 
 Copyright (C) 2026 [ravindu644](https://github.com/ravindu644) 和贡献者。
 

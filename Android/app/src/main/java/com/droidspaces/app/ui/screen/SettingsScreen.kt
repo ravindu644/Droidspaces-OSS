@@ -40,6 +40,7 @@ import com.droidspaces.app.ui.component.DsDialog
 import com.droidspaces.app.R
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.droidspaces.app.ui.component.DialogCloseButton
 import com.droidspaces.app.ui.component.DialogFooterRow
 import com.droidspaces.app.ui.component.SectionHeader
 import com.droidspaces.app.ui.component.AccentColorPicker
@@ -554,29 +555,34 @@ fun SettingsScreen(
 private fun AboutDialog(onDismiss: () -> Unit) {
     val context = LocalContext.current
 
+    // Deviates from the full-width dismiss rule: About is an info page, not a
+    // decision, so it closes from the header like the terminal log viewer,
+    // pinned above the scrolling body. scrollableContent = false because the
+    // header must not scroll away with it.
     DsDialog(
         onDismiss = onDismiss,
         modifier = Modifier.fillMaxHeight(0.85f),
-        // Deviates from the full-width dismiss rule: About is an info page, not a
-        // decision, and the big button read as one. The quiet end-aligned OK it
-        // always had, still in the footer slot so it never scrolls away.
-        footer = {
-            Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.CenterEnd) {
-                TextButton(onClick = onDismiss) {
-                    Text(context.getString(R.string.ok))
-                }
-            }
-        }
+        scrollableContent = false
     ) {
-            // Title
-            Text(
-                text = context.getString(R.string.app_name),
-                style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.Bold,
-                modifier = Modifier.padding(bottom = 16.dp)
-            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = context.getString(R.string.app_name),
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.Bold
+                )
+                DialogCloseButton(onClick = onDismiss)
+            }
 
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Column(
+                modifier = Modifier
+                    .weight(1f, fill = false)
+                    .verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
             Text(
                 text = context.getString(R.string.about_description),
                 style = MaterialTheme.typography.bodyMedium,

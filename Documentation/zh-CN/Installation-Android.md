@@ -12,7 +12,7 @@ Droidspaces 在 Android 上旨在提供"零终端"体验。从首次安装到运
 
 ## 前提条件
 
-1. **已 Root 的设备**，使用[此处](../../README_CN.md#rooting-requirements)列出的受支持的 Root 方案
+1. **已 Root 的设备**，使用[此处](./README.md#rooting-requirements)列出的受支持的 Root 方案
 2. **兼容的内核**，已启用 Droidspaces 支持（请参阅[内核配置指南](./Kernel-Configuration.md)）
 
 ## 第 1 步：安装应用
