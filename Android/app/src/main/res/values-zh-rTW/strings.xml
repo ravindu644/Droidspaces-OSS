@@ -545,4 +545,22 @@
     <string name="storage_location_image_forced">此處需要稀疏映像檔</string>
     <string name="sparse_image_section">稀疏映像檔</string>
     <string name="storage_location_needs_space">這裡至少需要 %1$d GB 的可用空間。</string>
+    <string name="terminal_appearance_summary">暗黑模式，字型大小及自定義字型</string>
+    <string name="terminal_font_size">字型大小</string>
+    <string name="terminal_font_size_description">新終端會話的初始文字大小。雙指縮放操作會單獨調整各個會話。</string>
+    <string name="terminal_font">字型</string>
+    <string name="terminal_font_family">字型家族</string>
+    <string name="terminal_section_theme">佈景主題</string>
+    <string name="terminal_section_misc">其他</string>
+    <string name="terminal_font_description">適用於新的終端會話。可匯入任意等寬字體的 .ttf 或 .otf 檔案。</string>
+    <string name="terminal_font_default">JetBrains Mono (預設)</string>
+    <string name="terminal_font_import">匯入自定義字型</string>
+    <string name="terminal_font_import_error">不是一個有效的字型檔案: %1$s</string>
+    <string name="terminal_font_delete">移除字型</string>
+    <string name="terminal_confirm_close">關閉前確認</string>
+    <string name="terminal_confirm_close_description">關閉終端標籤頁時請求確認</string>
+    <string name="terminal_close_tab_title">關閉會話？</string>
+    <string name="terminal_close_tab_message">在此標籤頁中運行的 Shell 將會結束。</string>
+    <string name="allow">允許</string>
+    <string name="not_now">不是現在</string>
 </resources>
