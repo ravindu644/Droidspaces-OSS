@@ -552,4 +552,20 @@
     <string name="storage_location_default_description">将rootfs保存在 %1$s</string>
     <string name="storage_location_checking">检查存储位置……</string>
     <string name="storage_location_free">%1$s, %2$d GB 空闲</string>
+    <string name="terminal_appearance_summary">深色模式，字体大小和自定义字体</string>
+    <string name="terminal_font_size">字体大小</string>
+    <string name="terminal_font_size_description">新终端会话的默认字体大小。你可以双指捏合来独立缩放每个终端会话的字体大小。</string>
+    <string name="terminal_font">字体</string>
+    <string name="terminal_font_family">字体系列</string>
+    <string name="terminal_section_theme">主题</string>
+    <string name="terminal_section_misc">其他</string>
+    <string name="terminal_font_description">将应用于新的终端会话。导入任意等宽.ttf或.otf字体文件。</string>
+    <string name="terminal_font_default">JetBrains Mono（默认）</string>
+    <string name="terminal_font_import">导入自定义字体</string>
+    <string name="terminal_font_import_error">无效的字体文件：%1$s</string>
+    <string name="terminal_font_delete">删除字体</string>
+    <string name="terminal_confirm_close">确认关闭提示</string>
+    <string name="terminal_confirm_close_description">关闭终端标签页时提示确认</string>
+    <string name="terminal_close_tab_title">关闭会话？</string>
+    <string name="terminal_close_tab_message">将关闭此标签页中运行的 Shell。</string>
 </resources>
