@@ -563,4 +563,9 @@
     <string name="terminal_close_tab_message">在此標籤頁中運行的 Shell 將會結束。</string>
     <string name="allow">允許</string>
     <string name="not_now">不是現在</string>
+    <string name="terminal_tap_keyboard">點擊時打開鍵盤</string>
+    <string name="terminal_tap_keyboard_description">點擊終端機即可調出鍵盤。在編輯器中可將其關閉，此時點選僅移動遊標，改用螢幕上的按鈕進行操作</string>
+    <string name="terminal_keyboard_left">左側的鍵盤按鍵</string>
+    <string name="terminal_keyboard_left_description">將鍵盤按鈕移至左下角，以便左手使用。</string>
+    <string name="terminal_toggle_keyboard">切換鍵盤</string>
 </resources>

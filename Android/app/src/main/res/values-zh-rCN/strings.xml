@@ -568,4 +568,9 @@
     <string name="terminal_confirm_close_description">关闭终端标签页时提示确认</string>
     <string name="terminal_close_tab_title">关闭会话？</string>
     <string name="terminal_close_tab_message">将关闭此标签页中运行的 Shell。</string>
+    <string name="terminal_tap_keyboard">轻触即可打开键盘</string>
+    <string name="terminal_tap_keyboard_description">轻触终端即可打开键盘。若在编辑器中关闭此功能，轻触操作就只会移动光标或者触发屏幕上的按钮</string>
+    <string name="terminal_keyboard_left">左侧的键盘按键</string>
+    <string name="terminal_keyboard_left_description">将键盘按钮移动到左下角，以便左撇子使用</string>
+    <string name="terminal_toggle_keyboard">切换键盘</string>
 </resources>
