@@ -567,4 +567,13 @@
     <string name="terminal_keyboard_left">左側的鍵盤按鍵</string>
     <string name="terminal_keyboard_left_description">將鍵盤按鈕移至左下角，以便左手使用。</string>
     <string name="terminal_toggle_keyboard">切換鍵盤</string>
+    <string name="easter_egg_warning">後端沒問題，無須頻繁發送請求 🙂</string>
+    <string name="easter_egg_reward">這是你自找的 🎵</string>
+    <string name="experimental_section">實驗性</string>
+    <string name="treat_as_64bit">使用64位元後端</string>
+    <string name="treat_as_64bit_description">您的作業系統是 32 位元的，但核心是 64 位元的。請安裝 64 位元後端，並改為列出 64 位元 rootfs 映像檔。</string>
+    <string name="app_update_message">Droidspaces %1$s 已就緒。點擊以在 GitHub 上開啟正式版本。</string>
+    <string name="updates_section">更新</string>
+    <string name="check_app_updates">檢查應用程式更新</string>
+    <string name="check_app_updates_description">應用程式啟動時，檢查 GitHub 上是否有新版本發布</string>
 </resources>
