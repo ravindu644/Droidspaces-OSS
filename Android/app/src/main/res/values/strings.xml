@@ -173,9 +173,8 @@
     <string name="selinux_permissive_option">SELinux Permissive</string>
     <string name="volatile_option">Volatile</string>
     <string name="cgroup_v1_option">Cgroup V1</string>
-    <string name="deadlock_shield_option">Deadlock Shield</string>
     <string name="privileged_option">Privileged</string>
-    <string name="userns_option">User Namespaces</string>
+    <string name="userns_option">Sandboxing</string>
     <string name="installation_setup_summary">Installation Summary</string>
     <string name="review_configuration">Review Configuration</string>
     <string name="tarball_label">Tarball</string>
@@ -229,9 +228,9 @@
     <string name="virgl_extra_flags_placeholder">e.g. --multi-clients --angle-vulkan</string>
     <string name="selinux_permissive">SELinux Permissive</string>
     <string name="selinux_permissive_description">Set SELinux permissive</string>
-    <string name="allow_userns">Allow User Namespaces</string>
-    <string name="allow_userns_description">Allow unprivileged user namespaces, which Flatpak/bwrap/Firefox requires. However, you may be vulnerable to certain exploits like Fragnesia without a patched kernel</string>
-    <string name="allow_userns_description_not_supported">Not supported. CONFIG_USER_NS is not enabled in the kernel</string>
+    <string name="allow_userns">Allow Sandboxing</string>
+    <string name="allow_userns_description">Lets unprivileged Docker, Podman, Flatpak, bwrap and browser sandboxes run inside the container. This weakens isolation, so enable it only for containers you trust.</string>
+    <string name="allow_userns_description_not_supported">Not available. This kernel has no user namespace support (CONFIG_USER_NS).</string>
     <string name="run_at_boot">Run at Boot</string>
     <string name="run_at_boot_description">Start container on boot</string>
     <string name="auto_boot_priority">Auto Boot Priority</string>
@@ -241,9 +240,6 @@
     <string name="reorder_handle">Drag to reorder</string>
     <string name="force_cgroupv1">Force Cgroup V1</string>
     <string name="force_cgroupv1_description">Force use of legacy Cgroup V1 hierarchy</string>
-    <string name="manual_deadlock_shield">Manual Deadlock Shield</string>
-    <string name="manual_deadlock_shield_description">Prevents kernel-level VFS deadlocks on legacy kernels (e.g., 4.14.x) by blocking nested namespace creation.
-\n\nWARNING: Enabling this will block Docker, Podman, LXC, and Systemd sandboxing support inside the container.</string>
 
     <!-- Config Categories and Network Mode -->
     <string name="cat_networking">Networking</string>
@@ -332,10 +328,8 @@
     <string name="environment_variables">Environment Variables</string>
     <string name="environment_variables_configured">%1$d variable(s) configured</string>
     <string name="not_configured">Not configured</string>
-    <string name="env_hint_row">Each row is one KEY=VALUE pair</string>
-    <string name="key_label">KEY</string>
-    <string name="value_label">VALUE</string>
-    <string name="add_variable">Add variable</string>
+    <string name="env_placeholder">KEY=VALUE, one per line. Lines starting with # are ignored.</string>
+    <string name="env_lines_skipped">%1$d line(s) are not in KEY=VALUE form</string>
 
     <!-- Custom Init -->
     <string name="custom_init_label">Custom Init Binary</string>

@@ -136,6 +136,7 @@ Delegate a container's LAN to another running container (e.g. OpenWRT), which th
 | `--hw-access` | `-H` | Expose host hardware (GPU, USB, etc.). Auto-detects GPU group IDs and creates matching groups inside the container. Mounts X11 socket for GUI apps (Termux X11 on Android, `/tmp/.X11-unix` on Linux). See [Safety Warning](Features.md#hardware-access-mode). |
 | `--gpu` | | Exclusively enable GPU acceleration. Scans the host `/dev` for known GPU nodes and securely maps only them into the container without exposing other host hardware. (Ignored if `-H` is passed). |
 | `--allow-vts` | | With `--hw-access`, leave the host's virtual terminals (`/dev/tty1`-`tty6`) visible. By default they are masked with `/dev/null` so a systemd container's `getty` does not take over the host console. No effect without `-H`. |
+| `--allow-sandboxing` | | Let unprivileged Docker, Podman, Flatpak, bwrap and browser sandboxes run inside the container. Weakens isolation. See [Sandboxing](Features.md#sandboxing). |
 | `--termux-x11`| `-X` | Mount X11 socket for Termux-X11 display (Android only). |
 | `--enable-android-storage`| | Mount `/storage/emulated/0` (Android only). |
 | `--selinux-permissive` | | Set host SELinux to permissive for the container session. |

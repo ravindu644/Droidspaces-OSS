@@ -124,8 +124,6 @@
     <string name="run_at_boot_description">ඇන්ඩ්‍රොයිඩ් පද්ධතිය පණගැන්වූ පසු ස්වයංක්‍රීයව කන්ටේනර ක්‍රියාත්මක කරන්න</string>
     <string name="force_cgroupv1">Force Cgroup V1</string>
     <string name="force_cgroupv1_description">Cgroup V2 වෙනුවට, පැරණි Cgroup V1 ධුරාවලිය භාවිතා කරන්න</string>
-    <string name="manual_deadlock_shield">ඩෙඩ්ලොක් ආරක්ෂණය</string>
-    <string name="manual_deadlock_shield_description">පැරණි කර්නල්වල (උදා: 4.14.x) Nested namespace සෑදීම අවහිර කිරීම මගින් කර්නල් මට්ටමේ VFS ඩෙඩ්ලොක් ඇතිවීම වළක්වයි.\n\nඅවවාදයයි: මෙය සක්‍රීය කිරීමෙන් කන්ටේනරය තුළ Docker, Podman, LXC සහ Systemd sandboxing සහාය අවහිර කරනු ඇත.</string>
     <string name="cat_networking">ජාලකරනය</string>
     <string name="cat_integration">ඒකාබද්ධ කිරීම සහ දෘඩාංග</string>
     <string name="cat_security">ආරක්ෂාව සහ පද්ධති පණගැන්වීම</string>

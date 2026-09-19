@@ -114,8 +114,6 @@
     <string name="run_at_boot_description">系统启动时自动启动容器</string>
     <string name="force_cgroupv1">强制 Cgroup V1</string>
     <string name="force_cgroupv1_description">强制使用旧版 Cgroup V1 层级结构</string>
-    <string name="manual_deadlock_shield">手动死锁防护</string>
-    <string name="manual_deadlock_shield_description">通过阻止嵌套命名空间的创建，防止旧版内核（如 4.14.x）上出现内核级 VFS 死锁。\n\n警告：启用此项将屏蔽容器内对 Docker、Podman、LXC 及 Systemd 沙盒功能的支持。</string>
     <string name="reinstall_backend_description">重新安装二进制文件和模块</string>
     <string name="copy">复制</string>
     <string name="unknown">未知</string>
@@ -359,14 +357,9 @@
     <string name="selinux_permissive_option">SELinux 宽容模式</string>
     <string name="volatile_option">易失模式</string>
     <string name="cgroup_v1_option">Cgroup V1</string>
-    <string name="deadlock_shield_option">死锁防护</string>
     <string name="privileged_option">特权</string>
     <string name="uptime_label">%1$s: %2$s</string>
     <string name="ip_address_label">%1$s: %2$s</string>
-    <string name="env_hint_row">每行代表一组“KEY=VALUE”对</string>
-    <string name="key_label">KEY</string>
-    <string name="value_label">VALUE</string>
-    <string name="add_variable">添加变量</string>
     <string name="installing_container">正在安装容器</string>
     <string name="done">完成</string>
     <string name="filter_absolute_path_hint">筛选或输入绝对路径…</string>

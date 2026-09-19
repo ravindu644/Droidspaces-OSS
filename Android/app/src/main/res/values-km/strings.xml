@@ -125,7 +125,6 @@
     <string name="selinux_permissive_option">SELinux របៀប Permissive</string>
     <string name="volatile_option">បណ្តោះអាសន្ន</string>
     <string name="cgroup_v1_option">Cgroup ជំនាន់ទី១ (V1)</string>
-    <string name="deadlock_shield_option">ប្រព័ន្ធការពារការគាំងជាប់ (Deadlock Shield)</string>
     <string name="privileged_option">មានសិទ្ធិពេញលេញ</string>
     <string name="installation_setup_summary">សេចក្តីសង្ខេបនៃការដំឡើង</string>
     <string name="review_configuration">ពិនិត្យមើលការកំណត់រចនាសម្ព័ន្ធ</string>
@@ -167,8 +166,6 @@
     <string name="run_at_boot_description">ចាប់ផ្ដើមកុងតឺន័រនៅពេលចាប់ផ្ដើម</string>
     <string name="force_cgroupv1">កម្លាំង Cgroup V1</string>
     <string name="force_cgroupv1_description">បង្ខំឱ្យប្រើប្រាស់ឋានានុក្រម Cgroup V1 ចាស់</string>
-    <string name="manual_deadlock_shield">របាំងការពារការជាប់គាំងដោយដៃ</string>
-    <string name="manual_deadlock_shield_description">ការពារការជាប់គាំង VFS កម្រិតខឺណែលលើខឺណែលចាស់ (ឧ. 4.14.x) ដោយរារាំងការបង្កើត namespace ដែលដាក់ជាស្រទាប់ៗ។\n\nការព្រមាន៖ ការបើកដំណើរការនេះនឹងរារាំងការគាំទ្រ sandboxing Docker, Podman, LXC និង Systemd នៅខាងក្នុងកុងតឺន័រ។</string>
     <string name="cat_networking">បណ្តាញ</string>
     <string name="cat_integration">ការរួមបញ្ចូល និងផ្នែករឹង</string>
     <string name="cat_security">សុវត្ថិភាព និង ការចាប់ផ្ដើមប្រព័ន្ធ</string>
@@ -227,10 +224,6 @@
     <string name="environment_variables">អថេរបរិស្ថាន</string>
     <string name="environment_variables_configured">អថេរ %1$d ត្រូវបានកំណត់រចនាសម្ព័ន្ធ</string>
     <string name="not_configured">មិនត្រូវបានកំណត់រចនាសម្ព័ន្ធទេ</string>
-    <string name="env_hint_row">ជួរនីមួយៗមានគូ KEY=VALUE មួយគូ</string>
-    <string name="key_label">លេខសម្ងាត់</string>
-    <string name="value_label">តម្លៃ</string>
-    <string name="add_variable">បន្ថែមអថេរ</string>
     <string name="custom_init_label">គោលពីរ Init ផ្ទាល់ខ្លួន</string>
     <string name="custom_init_placeholder">/sbin/init (default)</string>
     <string name="custom_init_hint">ទុក​ឲ្យ​ទទេ​ដើម្បី​ប្រើ init លំនាំដើម (/sbin/init)</string>

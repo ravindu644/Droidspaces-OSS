@@ -14,7 +14,6 @@
     <string name="review_configuration">查看配置</string>
     <string name="developer_ravindu644_role">維護者</string>
     <string name="save_changes">儲存變更</string>
-    <string name="manual_deadlock_shield_description">透過阻止嵌套命名空間的創建，防止舊版核心（如4.14.x）上出現核心級VFS 死鎖。. \n\n警告：啟用此項目將屏蔽容器內對Docker、Podman、LXC 及Systemd 沙盒功能的支援。</string>
     <string name="view_logs">查看日誌</string>
     <string name="hostname_placeholder">留空以使用預設值</string>
     <string name="error_ip_collision">此IP 已指派給“%1$s ”</string>
@@ -171,7 +170,6 @@
     <string name="container_options">容器選項</string>
     <string name="reinstall_backend">重新安裝後端</string>
     <string name="failure_in_operation">%2$s 容器 %1$s 失敗</string>
-    <string name="manual_deadlock_shield">手動死鎖防護</string>
     <string name="dns_servers_placeholder">例如：1.1.1.1,8.8.8.8（可選）</string>
     <string name="backend_not_available_description">Droidspaces 後端未安裝或已損壞。請先安裝。</string>
     <string name="status_running">正在運行</string>
@@ -291,10 +289,6 @@
     <string name="ip_address_label">%1$s: %2$s</string>
     <string name="backend_attention_required">後端：需要執行操作</string>
     <string name="tap_to_fix_system">點擊修復系統配置</string>
-    <string name="env_hint_row">每行為一組KEY=VALUE</string>
-    <string name="key_label">KEY</string>
-    <string name="value_label">VALUE</string>
-    <string name="add_variable">添加變數</string>
     <string name="installing_container">正在安裝容器</string>
     <string name="done">完成</string>
     <string name="filter_absolute_path_hint">篩選或輸入絕對路徑…</string>
@@ -385,7 +379,6 @@
     <string name="selinux_permissive_option">SELinux 寬容模式</string>
     <string name="volatile_option">揮發模式</string>
     <string name="cgroup_v1_option">Cgroup V1</string>
-    <string name="deadlock_shield_option">死鎖防護</string>
     <string name="privileged_option">特權模式</string>
     <string name="network_mode_host_short">主機</string>
     <string name="network_mode_nat_short">NAT</string>

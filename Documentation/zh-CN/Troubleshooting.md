@@ -23,7 +23,6 @@ keywords: droidspaces, 故障排除, systemd, 挂起, 修复, 网络, 问题, se
 - [DNS / 域名解析问题](#dns--name-resolution-issues)
 - [WiFi/移动数据断连](#wifimobile-data-disconnects)
 - [SELinux 导致的 Rootfs 损坏](#selinux-induced-rootfs-corruption-directory-mode)
-- [Systemd 服务沙箱冲突](#systemd-service-sandboxing-conflicts-legacy-kernels)
 - [回收存储空间（稀疏镜像）](#reclaim-storage)
 - [WiFi `Power save: on` 导致 Android 网络体验卡顿](#nuke-wifi-powersave)
 - [获取帮助](#getting-help)
@@ -138,7 +137,7 @@ droidspaces --name=test --rootfs-img=/data/rootfs.img --volatile start
 
 **原因：** systemd 的服务沙箱功能（`PrivateTmp=yes`、`ProtectSystem=yes`）在旧内核的 VFS `grab_super` 路径中触发竞态条件。
 
-**解决方案：** 尝试在应用中启用"死锁防护盾"/在 CLI 中使用 `--block-nested-namespaces`，硬重启设备，然后重试。
+**解决方案：** 这是内核缺陷（4.14.113 及相近版本的 `grab_super()`），Droidspaces 无法绕过。请使用包含修复的内核。
 
 ---
 
@@ -149,7 +148,7 @@ droidspaces --name=test --rootfs-img=/data/rootfs.img --volatile start
 
 **原因：** 与[Systemd 在旧内核上挂起](#systemd-hangs-on-older-kernels)完全相同的原因。
 
-**解决方案：** 尝试在应用中启用"死锁防护盾"/在 CLI 中使用 `--block-nested-namespaces`，硬重启设备，然后重试。
+**解决方案：** 这是内核缺陷（4.14.113 及相近版本的 `grab_super()`），Droidspaces 无法绕过。请使用包含修复的内核。
 
 ---
 
@@ -250,41 +249,6 @@ chcon u:object_r:vold_data_file:s0 /path/to/rootfs.img
 
 > [!WARNING]
 > 虽然切换到 `permissive` （宽容）模式似乎可以解决此问题，但**不建议**将其作为永久解决方案。如果 rootfs 已因 SELinux 拒绝操作而损坏，通常这种损坏是永久性的，无法仅通过更改模式来撤消。
-
----
-
-<a id="systemd-service-sandboxing-conflicts-legacy-kernels"></a>
-## Systemd 服务沙箱冲突（旧内核）
-
-**症状：** 像 `redis`、`mysql` 或 `apache` 这样的服务启动失败，并报 `exit-code` 或 `status=226/NAMESPACE` 错误，即使相同的配置在其他地方可以正常工作。
-
-**原因：** 现代服务文件通常使用高级 systemd 沙箱指令（`PrivateTmp`、`ProtectSystem`、`RestrictNamespaces`）。在旧内核（3.18 - 4.19）上，Droidspaces 的**自适应 Seccomp 防护盾**会拦截这些与命名空间相关的系统调用并返回 `EPERM` 以防止内核死锁。然而，某些发行版的 systemd 版本将这些错误视为致命错误，并拒绝启动服务。
-
-**解决方案：** 创建服务覆盖文件以禁用冲突的沙箱功能：
-
-1.  **确定服务**：例如 `redis-server`
-2.  **创建覆盖文件**：
-    ```bash
-    sudo systemctl edit <service-name>
-    ```
-3.  **添加以下行**（在编辑器提供的空白区域）：
-    ```ini
-    [Service]
-    # 禁用有问题的安全沙箱功能
-    PrivateTmp=no
-    PrivateDevices=no
-    ProtectSystem=no
-    ProtectHome=no
-    RestrictNamespaces=no
-    MemoryDenyWriteExecute=no
-    NoNewPrivileges=no
-    CapabilityBoundingSet=
-    ```
-4.  **重新加载并重启**：
-    ```bash
-    sudo systemctl daemon-reload
-    sudo systemctl restart <service-name>
-    ```
 
 ---
 

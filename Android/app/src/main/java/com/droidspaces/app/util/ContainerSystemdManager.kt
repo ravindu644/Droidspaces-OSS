@@ -3,6 +3,7 @@ package com.droidspaces.app.util
 import android.content.Context
 import android.util.Base64
 import android.util.Log
+import com.droidspaces.app.util.ContainerCommandBuilder.quote
 import com.topjohnwu.superuser.Shell
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
@@ -286,6 +287,15 @@ object ContainerSystemdManager {
         }
     }
 
+    private fun getScriptBase64(context: Context): String {
+        return try {
+            val script = context.assets.open("dumpJournald.sh").bufferedReader().readText()
+            Base64.encodeToString(script.toByteArray(), Base64.NO_WRAP)
+        } catch (_: Exception) {
+            ""
+        }
+    }
+
     /**
      * Filter services - each category is mutually exclusive (except ALL).
      */
@@ -332,8 +342,21 @@ object ContainerSystemdManager {
     suspend fun unmaskService(containerName: String, serviceName: String) =
         runSystemctl(containerName, "unmask", serviceName)
 
-    // ── Unit inspection ──────────────────────────────────────────────────────
+    suspend fun dumpJournal(
+        containerName: String,
+        unitName: String,
+        context: Context,
+        lines: Int = 100
+    ): List<String> =
+        withContext(Dispatchers.IO) {
+        if (!ServiceManagerBase.isSafeServiceName((unitName))) return@withContext emptyList()
+            val scriptB64 = getScriptBase64(context)
+            val cmd = "${Constants.DROIDSPACES_BINARY_PATH} --name=${quote(containerName)} " +
+                    "run 'echo $scriptB64 | base64 -d | sh -s -- ${quote(unitName)} $lines'"
 
+            val result = Shell.cmd(cmd).exec()
+            result.out
+        }
     /**
      * Inspect a single unit: key properties (via `systemctl show -p`), the raw
      * `systemctl status` text, and its dependency tree. Returns null if the

@@ -181,7 +181,7 @@ struct DS_SOCKETD_PACKED ds_socketd_inspect_container_record_v1 {
   uint8_t hw_access;
   uint8_t gpu_mode;
   uint8_t termux_x11;
-  uint8_t block_nested_ns;
+  uint8_t reserved0; /* was block_nested_ns, kept so the layout holds */
   uint8_t is_img_mount;
 
   uint16_t env_count_be;        /* entries serialized in env[] */

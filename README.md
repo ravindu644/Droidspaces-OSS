@@ -194,7 +194,7 @@ The entire runtime is a **single static binary** under 400KB, compiled against m
 | **Rootfs Image / Direct block device Support** | Boot containers from ext4 `.img` files with automatic loop mounting, filesystem checks, and SELinux context hardening if needed. Mounting block devices like partitions, sdcards are supported too in CLI ! **The Android app also supports creating portable containers in rootfs.img mode** [ [How to create an ext4 rootfs.img manually ? ](./Documentation/Installation-Linux.md#option-b-create-an-ext4-image-recommended)] |
 | **Auto-Recovery** | Automatic stale PID file cleanup, container scanning for orphaned processes, and robust config resurrection via in-memory metadata syncing from `/run/droidspaces`. |
 | **Cgroup Isolation (v1/v2)** | Per-container cgroup hierarchies (`/sys/fs/cgroup/droidspaces/<name>`) with full systemd compatibility. Supports both legacy v1 and modern v2 hierarchies. |
-| **Adaptive Security & Deadlock Shield** | Kernel-aware BPF filters resolve FBE keyring conflicts automatically on legacy kernels. A manual **Deadlock Shield** toggle is available to fix the specific VFS `grab_super()` deadlock on affected legacy devices (e.g., kernel 4.14.113). When the shield is disabled (default), Droidspaces grants full namespace freedom enabling features like **nested containers/Docker** natively on all kernels. |
+| **Adaptive Security** | Kernel-aware BPF filters resolve FBE keyring conflicts automatically on legacy kernels. Droidspaces grants full namespace freedom, enabling features like **nested containers/Docker** natively on all kernels. |
 | **Privileged Mode** | Gain full access with the `--privileged` flag! Use with caution: do not report bugs when using this flag as it relaxes several security barriers for features like Flatpak/Bwrap/K3S. |
 
 ---
@@ -246,7 +246,7 @@ Droidspaces supports Android devices running Linux kernel **3.10 and above**:
 | Kernel Version | Support Level | Notes |
 |----------------|---------------|-------|
 | 3.10 | Supported | **Legacy.** Minimum floor. Basic namespace support. systemd-based distros may be unstable; **Alpine** is recommended. |
-| 4.4 - 4.19 | Stable | **Hardened.** [Full support upto modern distros with systemd older than v258](./Documentation/Troubleshooting.md#modern-distros). Nested containers (Docker/Podman) are natively supported. If you encounter systemd hangs on specific kernels (like 4.14.113) due to the VFS deadlock bug, manually enable the **Deadlock Shield** [[more info](./Documentation/Features.md#vfs-deadlock)]. |
+| 4.4 - 4.19 | Stable | **Hardened.** [Full support upto modern distros with systemd older than v258](./Documentation/Troubleshooting.md#modern-distros). Nested containers (Docker/Podman) are natively supported. |
 | 5.4 - 5.10 | Recommended | **Mainline.** Full feature support including nested containers and Cgroup v2. |
 | 5.15+ | Premium | **Full.** Best performance and maximum compatibility with all modern distributions. |
 

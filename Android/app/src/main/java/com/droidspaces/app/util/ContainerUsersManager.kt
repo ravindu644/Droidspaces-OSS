@@ -31,21 +31,15 @@ object ContainerUsersManager {
                 "${Constants.DROIDSPACES_BINARY_PATH} --name=${ContainerCommandBuilder.quote(containerName)} run 'awk -F: \"\\\$3 >= 1000 && \\\$3 < 65534 && \\\$1 !~ /^(nixbld)/ {print \\\$1}\" /etc/passwd 2>/dev/null | tr \"\\n\" \",\" | sed \"s/,\\$//\"'"
             ).exec()
 
-            if (!result.isSuccess || result.out.isEmpty()) {
-                return@withContext emptyList()
-            }
+            if (!result.isSuccess) return@withContext emptyList()
 
-            val usersString = result.out.joinToString("").trim()
-            if (usersString.isEmpty()) {
-                return@withContext emptyList()
-            }
-
-            // Split by comma and filter empty strings
-            val users = usersString.split(",")
+            // A container with only root yields an empty list. Cache that too, or a
+            // stale entry from a previous container of the same name outlives refresh.
+            val users = result.out.joinToString("").trim()
+                .split(",")
                 .map { it.trim() }
                 .filter { it.isNotEmpty() }
 
-            // Cache the result
             cache[containerName] = users
             users
         } catch (e: Exception) {

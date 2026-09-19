@@ -57,6 +57,7 @@ import androidx.activity.ComponentActivity
 import android.net.Uri
 import androidx.navigation.NavType
 import androidx.navigation.navArgument
+import com.droidspaces.app.ui.screen.JournaldScreen
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -97,6 +98,10 @@ sealed class Screen(val route: String) {
     }
     data object Systemd : Screen("systemd/{containerName}") {
         fun createRoute(containerName: String) = "systemd/${Uri.encode(containerName)}"
+    }
+    data object JournaldDump : Screen("journald-dump/{containerName}/{unitName}") {
+        fun createRoute(containerName: String, unitName: String) =
+            "journald-dump/${Uri.encode(containerName)}/${Uri.encode(unitName)}"
     }
     data object UnitDetail : Screen("unit-detail/{containerName}/{unitName}") {
         fun createRoute(containerName: String, unitName: String) =
@@ -643,7 +648,26 @@ fun DroidspacesNavigation(
                 containerName = containerName,
                 onNavigateBack = { navController.popBackStack() },
                 onInspectUnit = { unitName -> navController.navigate(Screen.UnitDetail.createRoute(containerName, unitName)) },
-                onEditOverride = { unitName -> navController.navigate(Screen.OverrideEditor.createRoute(containerName, unitName)) }
+                onEditOverride = { unitName -> navController.navigate(Screen.OverrideEditor.createRoute(containerName, unitName)) },
+                onViewLogs = { unitName -> navController.navigate(Screen.JournaldDump.createRoute(containerName, unitName)) }
+            )
+        }
+
+        composable(
+            route = Screen.JournaldDump.route,
+            arguments = listOf(
+                navArgument("containerName") { type = NavType.StringType },
+                navArgument("unitName") { type = NavType.StringType }
+            ),
+            enterTransition = defaultEnterTransition,
+            exitTransition = defaultExitTransition
+        ) { backStackEntry ->
+            val containerName = backStackEntry.arguments?.getString("containerName") ?: ""
+            val unitName = backStackEntry.arguments?.getString("unitName") ?: ""
+            JournaldScreen(
+                containerName = containerName,
+                unitName = unitName,
+                onNavigateBack = { navController.popBackStack() }
             )
         }
 
@@ -662,7 +686,8 @@ fun DroidspacesNavigation(
                 containerName = containerName,
                 unitName = unitName,
                 onNavigateBack = { navController.popBackStack() },
-                onEditOverride = { navController.navigate(Screen.OverrideEditor.createRoute(containerName, unitName)) }
+                onEditOverride = { navController.navigate(Screen.OverrideEditor.createRoute(containerName, unitName)) },
+                onViewLogs = { navController.navigate(Screen.JournaldDump.createRoute(containerName, unitName)) }
             )
         }
 

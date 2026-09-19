@@ -15,6 +15,7 @@ import com.droidspaces.app.util.ContainerCommandBuilder
 import com.droidspaces.app.util.ContainerInfo
 import com.droidspaces.app.util.ContainerManager
 import com.droidspaces.app.util.ContainerOSInfoManager
+import com.droidspaces.app.util.ContainerUsersManager
 import com.droidspaces.app.util.ContainerOperationExecutor
 import com.droidspaces.app.util.PreferencesManager
 import com.droidspaces.app.util.SystemInfoManager
@@ -210,6 +211,7 @@ class ContainerOperationsViewModel(app: Application) : AndroidViewModel(app) {
                 onRefresh()
             } else {
                 ContainerOSInfoManager.clearCache(container.name, appContext)
+                ContainerUsersManager.clearCache(container.name)
                 onSuccess(string(R.string.container_uninstalled_success, container.name))
                 onRefresh()
             }

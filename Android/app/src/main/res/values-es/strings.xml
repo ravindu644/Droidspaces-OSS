@@ -265,7 +265,6 @@
     <string name="selinux_permissive_option">SELinux Permisivo</string>
     <string name="volatile_option">Volátil</string>
     <string name="cgroup_v1_option">Cgroup V1</string>
-    <string name="deadlock_shield_option">Escudo de punto muerto</string>
     <string name="privileged_option">Privilegiado</string>
     <string name="userns_option">Espacios de nombres de usuario</string>
     <string name="installation_setup_summary">Resumen de instalación</string>

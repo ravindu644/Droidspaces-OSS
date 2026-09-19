@@ -902,16 +902,23 @@ member_done:
 
 /* Per-interface route table lookup
  *
- * Finds the routing table that holds the IPv4 default route for a specific
- * named interface. This is the core primitive used by the uplink monitor:
+ * Finds the routing table that carries a specific named interface's IPv4
+ * egress routes. This is the core primitive used by the uplink monitor:
  * rather than guessing the active internet table from all routes (which is
  * ambiguous on Android where multiple interfaces can have simultaneous
  * default routes in separate per-interface tables), we ask directly:
  * "what table does wlan0 / rmnet0 / ccmni1 use?"
  *
+ * The route with the shortest prefix wins. A real default route (/0) always
+ * does, but split-tunnel VPNs on Android (NordVPN, Tailscale, WireGuard with
+ * the LAN excluded) never install one: their netd table holds 0.0.0.0/5,
+ * 8.0.0.0/7 and so on instead. Insisting on a /0 left --upstream=tun0 with no
+ * table at all (issue #310). Connected subnets are never wider than /8, so
+ * anything wider than that is treated as internet-bearing.
+ *
  * Returns 0 and fills *table_out on success.
  * Returns -ENODEV if the interface doesn't exist.
- * Returns -ENOENT if no default route is found for that interface. */
+ * Returns -ENOENT if no unicast route is found for that interface. */
 int ds_nl_get_iface_table(ds_nl_ctx_t *ctx, const char *ifname,
                           int *table_out) {
   unsigned int target_idx = if_nametoindex(ifname);
@@ -935,7 +942,14 @@ int ds_nl_get_iface_table(ds_nl_ctx_t *ctx, const char *ifname,
 
   uint8_t buf[NL_BUFSIZE];
   int found_table = 0;
+  /* Only prefixes wider than any connected subnet count. Carriers hand out a
+   * /8, Wi-Fi a /24, and neither reaches the internet on its own, so an
+   * interface with nothing wider stays "no uplink" and a pinned list falls
+   * through to its next entry exactly as it did before split-tunnel support. */
+  int best_len = 8;
 
+  /* Read the whole dump: returning early would leave unread messages on the
+   * socket for the next request to trip over. */
   for (;;) {
     ssize_t n = recv(ctx->fd, buf, sizeof(buf), 0);
     if (n <= 0)
@@ -949,8 +963,8 @@ int ds_nl_get_iface_table(ds_nl_ctx_t *ctx, const char *ifname,
         continue;
 
       struct rtmsg *r = NLMSG_DATA(h);
-      /* Only IPv4 default routes */
-      if (r->rtm_family != AF_INET || r->rtm_dst_len != 0)
+      if (r->rtm_family != AF_INET || r->rtm_type != RTN_UNICAST ||
+          r->rtm_dst_len >= best_len)
         continue;
 
       int r_table = r->rtm_table;
@@ -967,7 +981,7 @@ int ds_nl_get_iface_table(ds_nl_ctx_t *ctx, const char *ifname,
 
       if ((unsigned int)r_oif == target_idx) {
         found_table = r_table;
-        goto iface_table_done;
+        best_len = r->rtm_dst_len;
       }
     }
   }

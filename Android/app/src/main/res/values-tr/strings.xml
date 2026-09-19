@@ -135,8 +135,6 @@
     <string name="run_at_boot_description">Sistem başlatıldığında konteyneri başlat</string>
     <string name="force_cgroupv1">\"Cgroup V1\" Özelliğini Zorla</string>
     <string name="force_cgroupv1_description">Eski Cgroup V1 hiyerarşisinin kullanımını zorla</string>
-    <string name="manual_deadlock_shield">Manuel Kilitlenme Koruması</string>
-    <string name="manual_deadlock_shield_description">İç içe geçmiş ad alanı oluşturulmasını engelleyerek eski çekirdeklerde (ör. 4.14.x) çekirdek düzeyinde VFS kilitlenmelerini önler.\n\nUYARI: Bu seçeneği etkinleştirmek, konteyner içindeki Docker, Podman, LXC ve Systemd sanal ortam desteğini engelleyecektir.</string>
     <string name="cat_networking">Ağ</string>
     <string name="cat_integration">Entegrasyon ve Donanım</string>
     <string name="cat_security">Güvenlik ve Önyükleme</string>

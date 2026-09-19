@@ -1687,7 +1687,7 @@ static void log_no_uplink(void) {
 
 /* Tier 3 (last resort): scan all interfaces against the built-in uplink
  * whitelist in priority order; return the first that is RUNNING and has
- * an IPv4 default route in some table. */
+ * an IPv4 route in some table. */
 static int scan_uplink_whitelist(ds_nl_ctx_t *ctx, char *iface_out,
                                  int *table_out) {
   char all_ifaces[64][IFNAMSIZ];
@@ -1714,7 +1714,7 @@ static int scan_uplink_whitelist(ds_nl_ctx_t *ctx, char *iface_out,
 }
 
 /* Manual override: resolve the user-pinned --upstream list in priority order.
- * The first entry that is RUNNING and has an IPv4 default route wins.  Literal
+ * The first entry that is RUNNING and has an IPv4 route wins.  Literal
  * entries are checked directly; wildcard entries (containing * or ?) are
  * matched with fnmatch() against the live interface list (handles dynamic names
  * like rmnet_dataX or v4-rmnet_dataX whose number changes across reconnects).

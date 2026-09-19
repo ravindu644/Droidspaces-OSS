@@ -387,11 +387,12 @@ int check_requirements_detailed(void) {
   print_ds_check("Veth pair support",
                  "Required for --net=nat; no fallback exists if absent",
                  check_veth_support(), "OPT");
-  print_ds_check("User namespace",
-                 "CONFIG_USER_NS; enable per container with --allow-userns. "
-                 "Needed by Docker on some kernels, by sandboxed apps "
-                 "(Flatpak, Bubblewrap, browsers) and by desktop environments",
-                 access("/proc/self/ns/user", F_OK) == 0, "OPT");
+  print_ds_check("Sandboxing (user namespaces)",
+                 "CONFIG_USER_NS; enable per container with "
+                 "--allow-sandboxing. Needed by unprivileged Docker and "
+                 "Podman, by sandboxed apps (Flatpak, Bubblewrap, browsers) "
+                 "and by desktop environments",
+                 check_ns(CLONE_NEWUSER, "user"), "OPT");
 
   /* FINAL SUMMARY */
   check_append("\n" C_BOLD "Summary:" C_RESET "\n\n");

@@ -147,8 +147,6 @@
     <string name="run_at_boot_description">Avvia il contenitore all\'avvio del sistema</string>
     <string name="force_cgroupv1">Forza Cgroup V1</string>
     <string name="force_cgroupv1_description">Forza l\'uso della gerarchia legacy Cgroup V1</string>
-    <string name="manual_deadlock_shield">Deadlock Shield Manuale</string>
-    <string name="manual_deadlock_shield_description">Previene i deadlock VFS a livello kernel sui kernel legacy (es. 4.14.x) bloccando la creazione di namespace annidati. \n\nATTENZIONE: Abilitare questo bloccherà il supporto a Docker, Podman, LXC e Systemd sandboxing all\'interno del contenitore.</string>
     <!-- Config Categories and Network Mode -->
     <string name="cat_networking">Rete</string>
     <string name="cat_integration">Integrazione &amp; Hardware</string>
@@ -369,10 +367,6 @@
     <string name="install">Installa</string>
     <string name="uptime_label">%1$s: %2$s</string>
     <string name="ip_address_label">%1$s: %2$s</string>
-    <string name="env_hint_row">Ogni riga è una coppia CHIAVE=VALORE</string>
-    <string name="key_label">KEY</string>
-    <string name="value_label">VALUE</string>
-    <string name="add_variable">Aggiungi variabile</string>
     <string name="installing_container">Installazione Contenitore</string>
     <string name="done">Fatto</string>
     <string name="filter_absolute_path_hint">Filtra o digita il percorso assoluto…</string>
@@ -421,7 +415,6 @@
     <string name="selinux_permissive_option">SELinux Permissive</string>
     <string name="volatile_option">Volatile</string>
     <string name="cgroup_v1_option">Cgroup V1</string>
-    <string name="deadlock_shield_option">Scudo di blocco</string>
     <string name="privileged_option">Privilegiato</string>
     <string name="custom_init_warning">Non modificare questo valore a meno che non si sappia esattamente cosa si sta facendo. L\'impostazione di un binario init errato impedirà l\'avvio del contenitore.</string>
     <string name="repo_dl_error_cannot_resume">Impossibile riprendere il download</string>
