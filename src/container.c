@@ -1141,11 +1141,10 @@ int enter_rootfs(struct ds_config *cfg, const char *user) {
      * the ioctl needs the [ksu_driver] fd that the magic reboot() installs,
      * and the seccomp filter below denies that very magic reboot. */
     ds_ksu_neutralize_root_escape();
-    ds_seccomp_apply_minimal(cfg->privileged_mask, cfg->userns_allowed);
-    android_seccomp_setup(
-        0, cfg->block_nested_ns && !(cfg->privileged_mask & DS_PRIV_NOSEC),
-        cfg->privileged_mask);
-    ds_apply_capability_hardening(cfg->hw_access, cfg->privileged_mask);
+    ds_seccomp_apply_minimal(cfg->privileged_mask, cfg->sandboxing_allowed);
+    android_seccomp_setup(cfg->privileged_mask);
+    ds_apply_capability_hardening(cfg->hw_access, cfg->privileged_mask,
+                                  cfg->sandboxing_allowed);
     ds_log_silent = 0;
 
     /* LXC-STYLE SESSION SETUP - intermediate becomes session leader
@@ -1362,11 +1361,10 @@ int run_in_rootfs(struct ds_config *cfg, int argc, char **argv,
      * the ioctl needs the [ksu_driver] fd that the magic reboot() installs,
      * and the seccomp filter below denies that very magic reboot. */
     ds_ksu_neutralize_root_escape();
-    ds_seccomp_apply_minimal(cfg->privileged_mask, cfg->userns_allowed);
-    android_seccomp_setup(
-        0, cfg->block_nested_ns && !(cfg->privileged_mask & DS_PRIV_NOSEC),
-        cfg->privileged_mask);
-    ds_apply_capability_hardening(cfg->hw_access, cfg->privileged_mask);
+    ds_seccomp_apply_minimal(cfg->privileged_mask, cfg->sandboxing_allowed);
+    android_seccomp_setup(cfg->privileged_mask);
+    ds_apply_capability_hardening(cfg->hw_access, cfg->privileged_mask,
+                                  cfg->sandboxing_allowed);
     ds_log_silent = 0;
 
     pid_t cmd_pid = fork();
@@ -1610,8 +1608,7 @@ int show_info(struct ds_config *cfg, int trust_cfg_pid) {
 
     ds_json_int("volatile_mode", cfg->volatile_mode, &first);
     ds_json_int("force_cgroup_v1", cfg->force_cgroupv1, &first);
-    ds_json_int("deadlock_shield", cfg->block_nested_ns, &first);
-    ds_json_int("userns_allowed", cfg->userns_allowed, &first);
+    ds_json_int("sandboxing_allowed", cfg->sandboxing_allowed, &first);
     ds_json_int("vts_allowed", cfg->allow_vts, &first);
     ds_json_int("foreground_mode", cfg->foreground, &first);
     ds_json_str("dns_servers", cfg->dns_servers, &first);
@@ -1816,15 +1813,9 @@ int show_info(struct ds_config *cfg, int trust_cfg_pid) {
       feat_count++;
     }
 
-    /* 13. Deadlock Shield (block_nested_ns) */
-    if (cfg->block_nested_ns) {
-      printf("  " C_RED "Deadlock Shield:" C_RESET " enabled\n");
-      feat_count++;
-    }
-
-    /* 14. User namespaces */
-    if (cfg->userns_allowed) {
-      printf("  " C_RED "User namespaces:" C_RESET " enabled\n");
+    /* 14. Sandboxing (user namespaces) */
+    if (cfg->sandboxing_allowed) {
+      printf("  " C_RED "Sandboxing:" C_RESET " enabled\n");
       feat_count++;
     }
 

@@ -403,7 +403,7 @@ When entering a container with `enter` or `run`, the process must be in the cont
 
 ---
 
-## Adaptive Security & Deadlock Shield
+## Adaptive Security
 
 Droidspaces includes sophisticated BPF-based seccomp filters to resolve critical Android kernel conflicts:
 
@@ -412,23 +412,43 @@ Android's File-Based Encryption stores filesystem keys in the kernel's session k
 
 **Solution:** On legacy kernels (< 5.0), Droidspaces *automatically* intercepts keyring syscalls (`keyctl`, `add_key`, `request_key`) returning `ENOSYS`, forcing systemd to use the existing keyring.
 
-<a id="vfs-deadlock"></a>
-
-### 2. VFS Namespace Deadlock (Manual Opt-in)
-On certain devices with legacy kernels (notably 4.14.113, common on 2019-2020 Android devices), systemd's service sandboxing triggers a race condition in the kernel's VFS layer (`grab_super()` bug). This causes systemd to hang, `systemctl` to freeze, and potential device lockups. 4.9 and 4.19 kernels are largely unaffected.
-
-**The Fix:** You can manually enable the **Deadlock Shield** (in the Android App config or via `--block-nested-namespaces` CLI). This intercepts `unshare` and `clone` namespace requests with `EPERM`, preventing systemd from triggering the deadlock.
-
-### Nested Containers (Docker, Podman, LXC)
-
-Because the Deadlock Shield is now strictly an **opt-in toggle** rather than a hard-coded blanket ban:
-- **Native Support:** Users on all kernels can now run Docker, Podman, and LXC natively out-of-the-box.
-- **The Trade-off:** If your device requires the Deadlock Shield to boot systemd, enabling it will intentionally block the namespace creations required by Docker/Podman.
-
 > [!TIP]
 >
 > **Legacy Kernel Networking:** When running Docker/Podman inside Droidspaces on legacy kernels, modern `nftables` may fail to route traffic. We recommend using Droidspaces' NAT mode and switching your container's networking stack to `iptables-legacy` and `ip6tables-legacy`.
 
+
+<a id="sandboxing"></a>
+
+## Sandboxing (`--allow-sandboxing`)
+
+Off by default. Turn it on when something inside the container needs to build its own sandbox: unprivileged Docker or Podman (`userns-remap`, rootless), Flatpak, bwrap, Firefox and Chromium. All of them create a user namespace and then mount their own `proc` and `sysfs` inside it, and a stock Droidspaces container blocks both steps.
+
+### What it changes
+
+1. **User namespaces are allowed.** The seccomp filter stops returning `EPERM` for `unshare(CLONE_NEWUSER)` and `clone(CLONE_NEWUSER)`, and `clone3` is no longer hidden.
+2. **A pristine `proc` and a read-only `sysfs` are mounted under `/run/droidspaces/`.** The kernel lets a child user namespace mount `proc` or `sysfs` only if some instance of that filesystem in the mount namespace is "fully visible": the root of the filesystem, nothing bind-mounted over a real file inside it, and not read-only when the new mount is read-write. The container's own `/proc` and `/sys` never qualify, because the jail masks and the virtualized `uptime`, `loadavg`, `meminfo` and friends are exactly such bind mounts. Any instance anywhere satisfies the rule, so Droidspaces adds one out of the way. LXC does the same in `nesting.conf` with `/dev/.lxc/proc` and `/dev/.lxc/sys`. The masks and the virtualized files stay where they were.
+3. **`CAP_SYS_PTRACE` stays in the bounding set.** runc opens `/proc/<pid>/ns/net` and `/proc/<pid>/ns/mnt` of a container init that has already switched to the remapped uid, and root only gets that read on another uid's process through this capability.
+
+### What it costs
+
+The pristine `proc` has to be writable and unmasked, or the kernel would not count it. So `/run/droidspaces/proc/sys/` is the live host sysctl tree and `/run/droidspaces/proc/sysrq-trigger` is real. Nothing writes there by accident, `/proc/sys` at its normal path is still read-only, but root in the container can reach it on purpose. Treat the toggle as trusting the container's root user. The `sysfs` copy is read-only and exposes nothing new.
+
+### Usage
+
+```bash
+droidspaces --name=mycontainer --rootfs=/path/to/rootfs --allow-sandboxing start
+```
+
+In the app it is the **Allow Sandboxing** toggle under Security. It is greyed out when the kernel was built without `CONFIG_USER_NS`, which `droidspaces check` reports as "Sandboxing (user namespaces)". `--allow-userns` and the `allow_userns=` config key are the old names and still work.
+
+Quick check from inside a running container:
+
+```bash
+grep CapBnd /proc/1/status          # bit 19 set
+bwrap --unshare-user --proc /proc --dev /dev --ro-bind / / true
+```
+
+For Docker, add `{"userns-remap": "default"}` to `/etc/docker/daemon.json`, restart the daemon, and `docker run --rm alpine cat /proc/self/uid_map` should print `0 100000 65536`.
 
 ---
 

@@ -132,8 +132,6 @@
     <string name="run_at_boot_description">Jalankan kontainer saat sistem dinyalakan</string>
     <string name="force_cgroupv1">Paksa Cgroup V1</string>
     <string name="force_cgroupv1_description">Memaksa penggunaan hierarki Cgroup V1 versi lama</string>
-    <string name="manual_deadlock_shield">Perisai Deadlock Manual</string>
-    <string name="manual_deadlock_shield_description">Mencegah terjadinya deadlock VFS di tingkat kernel pada kernel versi lama (misalnya, 4.14.x) dengan memblokir pembuatan namespace bersarang. \n\nPERINGATAN: Mengaktifkan opsi ini akan memblokir dukungan Docker, Podman, LXC, dan Systemd sandboxing di dalam kontainer.</string>
     <string name="cat_networking">Jaringan</string>
     <string name="cat_integration">Integrasi &amp; Hardware</string>
     <string name="cat_security">Keamanan &amp; Boot</string>
@@ -346,17 +344,12 @@
     <string name="selinux_permissive_option">SELinux Permisif</string>
     <string name="volatile_option">Volatile</string>
     <string name="cgroup_v1_option">Cgroup V1</string>
-    <string name="deadlock_shield_option">Perisai Deadlock</string>
     <string name="privileged_option">Privileged</string>
     <string name="uptime_label">%1$s: %2$s</string>
     <string name="ip_address_label">%1$s: %2$s</string>
     <string name="systemd">Systemd</string>
     <string name="selinux_permissive">SELinux Permisif</string>
     <string name="octet_label">Oktet %1$d</string>
-    <string name="env_hint_row">Setiap baris adalah satu pasangan KEY=VALUE</string>
-    <string name="key_label">KEY</string>
-    <string name="value_label">VALUE</string>
-    <string name="add_variable">Tambah variabel</string>
     <string name="installing_container">Memasang Container</string>
     <string name="done">Selesai</string>
     <string name="filter_absolute_path_hint">Saring atau ketik jalur absolut…</string>

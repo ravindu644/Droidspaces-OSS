@@ -287,8 +287,9 @@ int ds_config_load(const char *config_path, struct ds_config *cfg) {
       cfg->pulseaudio = parse_bool(val);
     } else if (strcmp(key, "selinux_permissive") == 0) {
       cfg->selinux_permissive = parse_bool(val);
-    } else if (strcmp(key, "allow_userns") == 0) {
-      cfg->userns_allowed = parse_bool(val);
+    } else if (strcmp(key, "allow_sandboxing") == 0 ||
+               strcmp(key, "allow_userns") == 0) { /* old key */
+      cfg->sandboxing_allowed = parse_bool(val);
     } else if (strcmp(key, "allow_vts") == 0) {
       cfg->allow_vts = parse_bool(val);
     } else if (strcmp(key, "volatile_mode") == 0) {
@@ -296,7 +297,8 @@ int ds_config_load(const char *config_path, struct ds_config *cfg) {
     } else if (strcmp(key, "force_cgroupv1") == 0) {
       cfg->force_cgroupv1 = parse_bool(val);
     } else if (strcmp(key, "block_nested_ns") == 0) {
-      cfg->block_nested_ns = parse_bool(val);
+      /* Deadlock Shield was removed; swallow the key so old files shed it on
+       * the next save instead of carrying it forever as an unknown line. */
     } else if (strcmp(key, "memory_limit") == 0) {
       long long v = parse_ll_positive(val);
       if (v > 0)
@@ -652,11 +654,10 @@ static void ds_config_serialize_known(FILE *f, struct ds_config *cfg) {
   fprintf(f, "enable_hw_access=%d\n", cfg->hw_access);
   fprintf(f, "enable_gpu_mode=%d\n", cfg->gpu_mode);
   fprintf(f, "selinux_permissive=%d\n", cfg->selinux_permissive);
-  fprintf(f, "allow_userns=%d\n", cfg->userns_allowed);
+  fprintf(f, "allow_sandboxing=%d\n", cfg->sandboxing_allowed);
   fprintf(f, "allow_vts=%d\n", cfg->allow_vts);
   fprintf(f, "volatile_mode=%d\n", cfg->volatile_mode);
   fprintf(f, "force_cgroupv1=%d\n", cfg->force_cgroupv1);
-  fprintf(f, "block_nested_ns=%d\n", cfg->block_nested_ns);
   if (cfg->memory_limit > 0)
     fprintf(f, "memory_limit=%lld\n", cfg->memory_limit);
   if (cfg->cpu_quota > 0)
@@ -998,7 +999,6 @@ void ds_config_reset_defaults(struct ds_config *cfg) {
   int save_existed = cfg->config_file_existed;
   struct ds_config_line *save_head = cfg->unknown_head;
   struct ds_config_line *save_tail = cfg->unknown_tail;
-  int save_block_nested_ns = cfg->block_nested_ns;
 
   safe_strncpy(save_name, cfg->container_name, sizeof(save_name));
   safe_strncpy(save_rootfs, cfg->rootfs_path, sizeof(save_rootfs));
@@ -1030,7 +1030,6 @@ void ds_config_reset_defaults(struct ds_config *cfg) {
   cfg->config_file_existed = save_existed;
   cfg->unknown_head = save_head;
   cfg->unknown_tail = save_tail;
-  cfg->block_nested_ns = save_block_nested_ns;
 }
 
 void apply_reset_config(struct ds_config *cfg, int cli_net_mode_set,

@@ -239,7 +239,6 @@
     <string name="selinux_permissive">SELinux 記録のみ</string>
     <string name="selinux_permissive_description">SELinuxを記録のみ(permissive)に設定する</string>
     <string name="force_cgroupv1_description">旧来のCgroup V1階層構造の利用を強制する</string>
-    <string name="manual_deadlock_shield">手動デッドロック防止措置</string>
     <string name="enter_manually">あるいは手動で入力してください(ワイルドカードも利用できます):</string>
     <string name="interface_name_hint">インタフェース名 (wlan0、 v4-rmnet_data*など)</string>
     <string name="about_description">Androidの為のLXC風コンテナマネージャ</string>
@@ -319,7 +318,6 @@
     <string name="available_users">利用可能なユーザ</string>
     <string name="login_command_copied">「%1$s」というユーザの為のログイン・コマンドがコピーされました</string>
     <string name="copy_login">ログインをコピー</string>
-    <string name="manual_deadlock_shield_description">名前空間が入れ子で生成される事を阻止する事で旧式な(例えば4.14系)カーネルにおいてカーネルレベルの仮想ファイルシステムのデッドロックを予防します。\n\n警告: これを有効化するとコンテナ内でDocker、Podman、LXCや Systemd のサンドボックス化が使えなくなります。</string>
     <string name="notification_permission_rationale">ドロイドスペースはターミナルのセッションをバックグラウンドで維持するため、永続通知の表示が必要です。これが無いと(特にサムスン電子製の機器では)Androidが予期せずターミナル・サービスを強制終了するかもしれません。</string>
     <string name="welcome_tagline">Linuxコンテナ。ネイティブ。付加処理無し。</string>
     <string name="feat_containers_title">本物のLinuxコンテナ</string>
@@ -332,10 +330,6 @@
     <string name="gpu_option">画像処理装置</string>
     <string name="uptime_label">%1$s: %2$s</string>
     <string name="ip_address_label">%1$s: %2$s</string>
-    <string name="env_hint_row">KEY=VALUE は各行に一対です</string>
-    <string name="key_label">キー</string>
-    <string name="value_label">値</string>
-    <string name="add_variable">変数を追加</string>
     <string name="installing_container">コンテナをインストールしています</string>
     <string name="done">完了</string>
     <string name="feat_hardware_title">ハードウェア/GPUを全て利用</string>
@@ -348,7 +342,6 @@
     <string name="kernel_requirements_nongki">非GKI カーネルの要件 (4.19以下)</string>
     <string name="kernel_requirements_gki">GKI カーネルの要件(5.4以上)</string>
     <string name="cgroup_v1_option">Cgroup バージョン1</string>
-    <string name="deadlock_shield_option">デッドロック予防措置</string>
     <string name="privileged_option">特権あり</string>
     <string name="network_mode_nat_short">NAT</string>
     <string name="network_mode_none_short">無し</string>

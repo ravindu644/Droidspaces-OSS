@@ -72,13 +72,22 @@ object ValidationUtils {
             .trim('-')
     }
 
-    /** Count non-comment `key=value` lines in an env-file body. */
-    fun countEnvVars(content: String?): Int {
-        if (content.isNullOrBlank()) return 0
-        return content.lines()
-            .map { it.trim() }
-            .count { it.isNotEmpty() && !it.startsWith("#") && it.contains("=") }
+    /**
+     * Key of a `KEY=VALUE` env-file line, null if the backend would skip it.
+     * Mirrors parse_env_file_to_config() in src/environment.c: blank and `#`
+     * lines are ignored, an `export ` prefix is tolerated, and the key must be
+     * `[A-Za-z_][A-Za-z0-9_]*`.
+     */
+    fun envLineKey(line: String): String? {
+        val l = line.trim().removePrefix("export ")
+        if (l.isEmpty() || l.startsWith("#")) return null
+        return ENV_LINE.matchEntire(l)?.groupValues?.get(1)
     }
+    private val ENV_LINE = Regex("([A-Za-z_][A-Za-z0-9_]*)=.*")
+
+    /** Count the env-file lines the backend will actually apply. */
+    fun countEnvVars(content: String?): Int =
+        content?.lines()?.count { envLineKey(it) != null } ?: 0
 
     /**
      * Reject line breaks / control characters in the single-line container-config

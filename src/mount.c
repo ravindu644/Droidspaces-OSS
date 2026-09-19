@@ -785,6 +785,16 @@ int setup_custom_binds(struct ds_config *cfg, const char *rootfs) {
   sort_bind_mounts(cfg);
 
   for (int i = 0; i < cfg->bind_count; i++) {
+    /* Handing the container the whole host filesystem defeats isolation.
+     * realpath() so "//", "/.." and "/x/.." cannot dodge the check. */
+    char real_src[PATH_MAX];
+    if (realpath(cfg->binds[i].src, real_src) && strcmp(real_src, "/") == 0) {
+      ds_error("Security Violation: Bind source / (host root) is not allowed, "
+               "skipping %s!",
+               cfg->binds[i].dest);
+      continue;
+    }
+
     char tgt[PATH_MAX * 2];
     int n = snprintf(tgt, sizeof(tgt), "%s%s", rootfs, cfg->binds[i].dest);
     if (n < 0 || (size_t)n >= sizeof(tgt)) {

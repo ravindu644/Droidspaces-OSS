@@ -375,7 +375,10 @@ static void print_page(int page, const char *bin) {
     p_printf("%sSystem Integration:%s\n", bold, reset);
     p_printf("  --selinux-permissive      Set host SELinux to permissive\n");
     p_printf("  --force-cgroupv1          Force legacy cgroup hierarchy\n");
-    p_printf("  --block-nested-namespaces  Shield against VFS deadlocks\n");
+    p_printf("  --allow-sandboxing        Let unprivileged Docker, Podman, "
+             "Flatpak and bwrap run inside.\n"
+             "                            Weakens isolation, see "
+             "Documentation/Features.md#sandboxing\n");
     break;
 
   case 5: /* Advanced Features */
@@ -385,7 +388,8 @@ static void print_page(int page, const char *bin) {
 
     p_printf("%sPrivileged Mode (--privileged):%s\n", bold, reset);
     p_printf("  Relax security with comma-separated tags:\n");
-    p_printf("  nomask        Allow write access to /proc and /sys\n");
+    p_printf("  nomask        No /proc and /sys jail masks. /sys itself stays "
+             "read-only unless --hw-access\n");
     p_printf("  nocaps        Keep all Linux Capabilities (full root)\n");
     p_printf("  noseccomp     Disable syscall filtering (useful for "
              "flatpak,bwrap and other unprivileged sandboxes)\n");

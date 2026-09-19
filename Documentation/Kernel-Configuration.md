@@ -343,7 +343,7 @@ This checks for:
 | Version | Support | Notes |
 |---------|---------|-------|
 | 3.18 | Legacy | Minimum supported version. Basic namespace support only. Modern distros are unstable or may not boot at all. |
-| 4.4 - 4.19 | Stable | Full support. Nested containers (Docker/Podman) work natively. If you hit systemd hangs on kernels like 4.14.113 due to the VFS deadlock bug, try enabling the "Deadlock Shield" in the app or passing `--block-nested-namespaces` in the CLI, then hard reboot and try again. |
+| 4.4 - 4.19 | Stable | Full support. Nested containers (Docker/Podman) work natively. |
 | 5.4 - 5.10 | Recommended | Full feature support including nested containers and modern cgroup v2. |
 | 5.15+ | Ideal | All features, best performance, and the widest compatibility. |
 
@@ -357,8 +357,6 @@ Droidspaces supports running Docker, Podman, or LXC inside a container out of th
 ### Legacy Kernel Considerations (4.19 and below)
 
 Legacy kernels may present some challenges for modern nested container tools:
-
-- **Deadlock Shield trade-off**: If your device is affected by the 4.14.113 `grab_super()` VFS deadlock and requires the Deadlock Shield to boot systemd, enabling the shield will also block the namespace syscalls that Docker, LXC, and Podman need. You cannot use nested containers while the shield is active.
 
 - **Networking incompatibilities**: Modern Docker, LXC, and Podman rely on `nftables`. Legacy kernels often lack full `nftables` support. To work around this, use Droidspaces in NAT mode and switch your container's iptables alternative to `iptables-legacy` and `ip6tables-legacy`.
 

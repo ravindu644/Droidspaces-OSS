@@ -128,7 +128,6 @@
     <string name="selinux_permissive_option">Permisivní režim SELinuxu</string>
     <string name="volatile_option">Nestálý režim</string>
     <string name="cgroup_v1_option">cgroup v1</string>
-    <string name="deadlock_shield_option">Ochrana před deadlockem</string>
     <string name="privileged_option">Privilegovaný režim</string>
     <string name="userns_option">Uživatelské jmenné prostory</string>
     <string name="installation_setup_summary">Souhrn instalace</string>
@@ -190,8 +189,6 @@
     <string name="reorder_handle">Přetažením změníte pořadí</string>
     <string name="force_cgroupv1">Vynutit cgroup v1</string>
     <string name="force_cgroupv1_description">Vynutí použití starší hierarchie cgroup v1</string>
-    <string name="manual_deadlock_shield">Ruční ochrana před deadlockem</string>
-    <string name="manual_deadlock_shield_description">Blokováním vytváření vnořených jmenných prostorů brání deadlockům VFS na úrovni jádra ve starších jádrech (např. 4.14.x).\n\nVAROVÁNÍ: Zapnutí této možnosti zablokuje uvnitř kontejneru podporu sandboxingu Dockeru, Podmanu, LXC a systemd.</string>
     <string name="cat_networking">Síť</string>
     <string name="cat_integration">Integrace a hardware</string>
     <string name="cat_security">Zabezpečení a spouštění</string>
@@ -276,10 +273,6 @@
     <string name="environment_variables">Proměnné prostředí</string>
     <string name="environment_variables_configured">Nastavené proměnné: %1$d</string>
     <string name="not_configured">Nenastaveno</string>
-    <string name="env_hint_row">Každý řádek obsahuje jednu dvojici KLÍČ=HODNOTA</string>
-    <string name="key_label">KLÍČ</string>
-    <string name="value_label">HODNOTA</string>
-    <string name="add_variable">Přidat proměnnou</string>
     <string name="custom_init_label">Vlastní binární soubor init</string>
     <string name="custom_init_placeholder">/sbin/init (výchozí)</string>
     <string name="custom_init_hint">Chcete-li použít výchozí init (/sbin/init), ponechte pole prázdné</string>

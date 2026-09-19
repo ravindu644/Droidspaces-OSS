@@ -405,7 +405,7 @@ Droidspaces 支持两种 cgroup 版本：
 
 ---
 
-## 自适应安全与死锁防护盾
+## 自适应安全
 
 Droidspaces 包含基于 BPF 的复杂 seccomp 过滤器，以解决关键的 Android 内核冲突：
 
@@ -413,19 +413,6 @@ Droidspaces 包含基于 BPF 的复杂 seccomp 过滤器，以解决关键的 An
 Android 的文件级加密将文件系统密钥存储在内核会话密钥环中。当 systemd 尝试创建新的会话密钥环时，进程失去对宿主加密密钥的访问权限，导致 `ENOKEY` 错误。
 
 **解决方案：** 在旧内核（< 5.0）上，Droidspaces *自动*拦截密钥环系统调用（`keyctl`、`add_key`、`request_key`），返回 `ENOSYS`，强制 systemd 使用现有的密钥环。
-
-<a id="vfs-deadlock"></a>
-
-### 2. VFS 命名空间死锁（手动启用）
-在某些使用旧内核（特别是 4.14.113，常见于 2019-2020 年的 Android 设备）的设备上，systemd 的服务沙箱功能会触发内核 VFS 层中的竞态条件（`grab_super()` 缺陷）。这会导致 systemd 挂起、`systemctl` 冻结以及潜在的设备死锁。4.9 和 4.19 内核基本不受影响。
-
-**修复方法：** 您可以手动启用**死锁防护盾**（在 Android 应用配置中或通过 `--block-nested-namespaces` CLI 参数）。这会拦截 `unshare` 和 `clone` 命名空间请求并返回 `EPERM`，阻止 systemd 触发死锁。
-
-### 嵌套容器（Docker、Podman、LXC）
-
-由于死锁防护盾现在严格作为**可选开关**而不是硬编码的全面禁止：
-- **原生支持：** 所有内核上的用户现在都可以开箱即用地原生运行 Docker、Podman 和 LXC。
-- **权衡取舍：** 如果您的设备需要死锁防护盾来启动 systemd，启用它将有意阻止 Docker/Podman 所需的命名空间创建。
 
 > [!TIP]
 >

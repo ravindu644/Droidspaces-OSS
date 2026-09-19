@@ -19,7 +19,8 @@
  * In Hardware Mode (hw_access=1), we preserve most to ensure full
  * low-level hardware access (USB, Serial, Bluetooth, Flashing).
  */
-void ds_apply_capability_hardening(int hw_access, int privileged_mask) {
+void ds_apply_capability_hardening(int hw_access, int privileged_mask,
+                                   int sandboxing) {
   if (privileged_mask & DS_PRIV_NOCAPS) {
     ds_log("[SEC] --privileged=nocaps: skipping capability drops.");
     return;
@@ -67,6 +68,11 @@ void ds_apply_capability_hardening(int hw_access, int privileged_mask) {
       -1};
 
   for (int i = 0; caps_to_drop[i] != -1; i++) {
+    /* runc opens the ns links under /proc/<pid> of an init that already
+     * switched uid, and root only gets ptrace-read on another uid's process
+     * through this cap. */
+    if (sandboxing && caps_to_drop[i] == CAP_SYS_PTRACE)
+      continue;
     if (prctl(PR_CAPBSET_DROP, caps_to_drop[i], 0, 0, 0) < 0) {
       if (errno != EINVAL) {
         ds_warn("[SEC] Failed to drop cap %d: %s", caps_to_drop[i],
@@ -78,6 +84,35 @@ void ds_apply_capability_hardening(int hw_access, int privileged_mask) {
   }
 
   ds_log("[SEC] Bounding set hardened (dropped %d caps).", total_dropped);
+}
+
+/* A child user namespace may mount a fresh proc or sysfs only if some
+ * instance of it in this mount namespace is "fully visible": the root of the
+ * filesystem, no locked child mount covering a non-empty file, and not locked
+ * read-only when the new mount is read-write (mnt_already_visible in
+ * fs/namespace.c).  Every jail mask and every vproc bind disqualifies /proc
+ * and /sys, so runc and bwrap fail with EPERM.  The kernel accepts any
+ * instance anywhere, so give it one under /run/droidspaces, the same trick
+ * as LXC's nesting.conf.
+ *
+ * Rules that must hold or the check fails again: never bind anything on top
+ * of these two; no MS_NOATIME or MS_STRICTATIME, the atime mode must equal
+ * what runc asks for (relatime); proc stays read-write because runc mounts
+ * /proc rw.  sysfs can be read-only, Docker and Podman mount /sys ro and
+ * bwrap does not mount it at all.
+ *
+ * The proc instance is unmasked, so container root can reach the host
+ * sysctls through /run/droidspaces/proc.  That is the price of
+ * --allow-sandboxing and the help text says so. */
+static void mount_pristine_proc_sys(void) {
+  mkdir("run/droidspaces/proc", 0755);
+  mkdir("run/droidspaces/sys", 0755);
+  if (domount("proc", "run/droidspaces/proc", "proc",
+              MS_NOSUID | MS_NODEV | MS_NOEXEC, NULL) < 0)
+    ds_warn("[SEC] pristine proc for sandboxing failed: %s", strerror(errno));
+  if (domount("sysfs", "run/droidspaces/sys", "sysfs",
+              MS_RDONLY | MS_NOSUID | MS_NODEV | MS_NOEXEC, NULL) < 0)
+    ds_warn("[SEC] pristine sysfs for sandboxing failed: %s", strerror(errno));
 }
 
 int internal_boot(struct ds_config *cfg) {
@@ -469,6 +504,8 @@ int internal_boot(struct ds_config *cfg) {
   /* 20b. Write identity markers for PID discovery (AFTER logs to ensure CLI
    * parent sees them before exiting background mode). */
   mkdir("run/droidspaces", 0755);
+  if (cfg->sandboxing_allowed)
+    mount_pristine_proc_sys();
   if (cfg->uuid[0] != '\0') {
     char marker_path[PATH_MAX];
     snprintf(marker_path, sizeof(marker_path), "run/droidspaces/%s", cfg->uuid);
@@ -533,13 +570,11 @@ int internal_boot(struct ds_config *cfg) {
    * installs, and the seccomp filter below denies that very magic reboot.
    * Best-effort, silent no-op on non-KSU kernels. */
   ds_ksu_neutralize_root_escape();
-  ds_seccomp_apply_minimal(cfg->privileged_mask, cfg->userns_allowed);
-  android_seccomp_setup(is_systemd,
-                        cfg->block_nested_ns &&
-                            !(cfg->privileged_mask & DS_PRIV_NOSEC),
-                        cfg->privileged_mask);
+  ds_seccomp_apply_minimal(cfg->privileged_mask, cfg->sandboxing_allowed);
+  android_seccomp_setup(cfg->privileged_mask);
 
-  ds_apply_capability_hardening(cfg->hw_access, cfg->privileged_mask);
+  ds_apply_capability_hardening(cfg->hw_access, cfg->privileged_mask,
+                                cfg->sandboxing_allowed);
 
   /* 24. Redirect standard I/O to /dev/console */
   int console_fd = open("/dev/console", O_RDWR);

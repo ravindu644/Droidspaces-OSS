@@ -42,7 +42,7 @@
  * Blocks direct host kernel takeover vectors (module loading, kexec).
  * Applied unconditionally to all kernels and all modes.
  */
-int ds_seccomp_apply_minimal(int privileged_mask, int userns_allowed) {
+int ds_seccomp_apply_minimal(int privileged_mask, int sandboxing_allowed) {
   /* noseccomp: skip everything, 32-bit binaries must work */
   if (privileged_mask & DS_PRIV_NOSEC)
     return 0;
@@ -111,7 +111,7 @@ int ds_seccomp_apply_minimal(int privileged_mask, int userns_allowed) {
         (struct sock_filter)BPF_STMT(BPF_RET | BPF_K, SECCOMP_RET_KILL_PROCESS);
 #endif
 
-    if (!userns_allowed) {
+    if (!sandboxing_allowed) {
 #ifdef __NR_clone3
       /* 6. Block clone3 */
       filter[curr++] = (struct sock_filter)BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K,
@@ -277,29 +277,19 @@ void ds_ksu_neutralize_root_escape(void) {
   close(fd);
 }
 
-/**
+/*
  * android_seccomp_setup()
  *
- * Applies a seccomp BPF filter for Android compatibility.
- *
- * 1. Keyring compat (ENOSYS): Applied on legacy kernels (< 5.0) to avoid
- *    traversing missing systems.
- * 2. Deadlock Shield (EPERM): Blocks namespace creation (unshare/clone).
- *    Applied ONLY if block_nested_ns is true (manual override).
+ * Kernels below 5.0 store Android FBE keys in the session keyring, and systemd
+ * loses them when it creates its own keyring.  Return ENOSYS for keyctl so it
+ * keeps using the one it inherited.  Nothing to do on newer kernels.
  */
-int android_seccomp_setup(int is_systemd, int block_nested_ns,
-                          int privileged_mask) {
-  (void)is_systemd;
+int android_seccomp_setup(int privileged_mask) {
   if (privileged_mask & DS_PRIV_NOSEC)
     return 0;
   int major = 0, minor = 0;
   get_kernel_version(&major, &minor);
-
-  /* ns_mask covers: CLONE_NEWNS|CLONE_NEWCGROUP|CLONE_NEWUTS|CLONE_NEWIPC|
-   *                 CLONE_NEWUSER|CLONE_NEWPID|CLONE_NEWNET */
-  const uint32_t ns_mask = 0x7E020000;
-
-  if (!block_nested_ns && major >= 5)
+  if (major >= 5)
     return 0;
 
   /* Define base filter (arch check + load nr) */
@@ -326,25 +316,12 @@ int android_seccomp_setup(int is_systemd, int block_nested_ns,
       BPF_STMT(BPF_RET | BPF_K,
                SECCOMP_RET_ERRNO | (ENOSYS & SECCOMP_RET_DATA))};
 
-  struct sock_filter filter_ns[] = {
-      BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, __NR_unshare, 1, 0),
-      BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, __NR_clone, 0, 3),
-      BPF_STMT(BPF_LD | BPF_W | BPF_ABS,
-               offsetof(struct seccomp_data, args[0])),
-      BPF_JUMP(BPF_JMP | BPF_JSET | BPF_K, ns_mask, 0, 1),
-      BPF_STMT(BPF_RET | BPF_K,
-               SECCOMP_RET_ERRNO | (EPERM & SECCOMP_RET_DATA))};
-
   struct sock_filter filter_allow[] = {
       BPF_STMT(BPF_RET | BPF_K, SECCOMP_RET_ALLOW)};
 
-  /* Combine filters based on conditions */
-  int filter_len = sizeof(filter_base) / sizeof(struct sock_filter);
-  if (major < 5)
-    filter_len += sizeof(filter_keyring) / sizeof(struct sock_filter);
-  if (block_nested_ns)
-    filter_len += sizeof(filter_ns) / sizeof(struct sock_filter);
-  filter_len += sizeof(filter_allow) / sizeof(struct sock_filter);
+  int filter_len = sizeof(filter_base) / sizeof(struct sock_filter) +
+                   sizeof(filter_keyring) / sizeof(struct sock_filter) +
+                   sizeof(filter_allow) / sizeof(struct sock_filter);
 
   struct sock_filter *final_filter =
       malloc(filter_len * sizeof(struct sock_filter));
@@ -355,17 +332,8 @@ int android_seccomp_setup(int is_systemd, int block_nested_ns,
   memcpy(final_filter + curr, filter_base, sizeof(filter_base));
   curr += sizeof(filter_base) / sizeof(struct sock_filter);
 
-  if (major < 5) {
-    memcpy(final_filter + curr, filter_keyring, sizeof(filter_keyring));
-    curr += sizeof(filter_keyring) / sizeof(struct sock_filter);
-  }
-
-  if (block_nested_ns) {
-    ds_log(
-        "[SEC] --block-nested-namespaces: force blocking namespace syscalls.");
-    memcpy(final_filter + curr, filter_ns, sizeof(filter_ns));
-    curr += sizeof(filter_ns) / sizeof(struct sock_filter);
-  }
+  memcpy(final_filter + curr, filter_keyring, sizeof(filter_keyring));
+  curr += sizeof(filter_keyring) / sizeof(struct sock_filter);
 
   memcpy(final_filter + curr, filter_allow, sizeof(filter_allow));
 

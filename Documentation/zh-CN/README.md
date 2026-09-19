@@ -193,7 +193,7 @@ Droidspaces 的设计目标是原生运行在任何搭载 Linux 内核的设备�
 | **Rootfs 镜像 / 直接块设备支持** | 支持从 ext4 `.img` 文件启动容器，支持自动 loop 挂载、文件系统检查以及 SELinux 上下文加固（如需要）。CLI 模式下也支持挂载分区、SD 卡等块设备！**Android 应用同样支持以 rootfs.img 模式创建可移植容器** [ [如何手动创建 ext4 rootfs.img？](./Installation-Linux.md#option-b-create-an-ext4-image-recommended)] |
 | **自动恢复** | 自动清理残留的 PID 文件，扫描容器中的孤立进程，以及通过 `/run/droidspaces` 的内存元数据同步实现强大的配置恢复。 |
 | **Cgroup 隔离 (v1/v2)** | 每个容器都有独立的 cgroup 层级（`/sys/fs/cgroup/droidspaces/<name>`），完全兼容 systemd。同时支持旧版 v1 和现代 v2 层级。 |
-| **自适应安全与死锁护盾** | 内核感知的 BPF 过滤器可在旧内核上自动解决 FBE 密钥环冲突。提供手动**死锁护盾**切换开关，用于修复受影响旧内核设备（例如内核 4.14.113）上特定的 VFS `grab_super()` 死锁问题。护盾禁用时（默认），Droidspaces 授予完整的命名空间自由，可在所有内核上原生启用**嵌套容器/Docker** 等功能。 |
+| **自适应安全** | 内核感知的 BPF 过滤器可在旧内核上自动解决 FBE 密钥环冲突。Droidspaces 授予完整的命名空间自由，可在所有内核上原生启用**嵌套容器/Docker** 等功能。 |
 | **特权模式** | 使用 `--privileged` 标志获取完全访问权限！请谨慎使用：启用此标志会放宽多项安全保护以支持 Flatpak/Bwrap/K3S 等功能，启用此模式时请勿提交 bug 报告。 |
 
 ---
@@ -245,7 +245,7 @@ Droidspaces 支持运行 Linux 内核 **3.10 及以上**版本的 Android 设备
 | 内核版本 | 支持级别 | 说明 |
 |----------------|---------------|-------|
 | 3.10 | 已支持 | **旧版。** 最低要求。基本的命名空间支持。基于 systemd 的发行版可能不稳定；推荐使用 **Alpine**。 |
-| 4.4 - 4.19 | 稳定 | **加固。** [完整支持 systemd 版本低于 v258 的现代发行版](./Troubleshooting.md#modern-distros)。原生支持嵌套容器（Docker/Podman）。如果在特定内核（如 4.14.113）上遇到因 VFS 死锁 bug 导致的 systemd 挂起，请手动启用**死锁护盾** [[更多信息](./Features.md#vfs-deadlock)]。 |
+| 4.4 - 4.19 | 稳定 | **加固。** [完整支持 systemd 版本低于 v258 的现代发行版](./Troubleshooting.md#modern-distros)。原生支持嵌套容器（Docker/Podman）。 |
 | 5.4 - 5.10 | 推荐 | **主线。** 完整功能支持，包括嵌套容器和 Cgroup v2。 |
 | 5.15+ | 旗舰 | **完全。** 最佳性能和与现代发行版的最大兼容性。 |
 

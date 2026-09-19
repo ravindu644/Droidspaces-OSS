@@ -1296,15 +1296,6 @@ void print_ds_banner(void) {
   fflush(stdout);
 }
 
-void print_privileged_warning(int privileged_mask) {
-  if (privileged_mask <= 0)
-    return;
-
-  printf(C_BOLD C_RED "WARNING: PRIVILEGED MODE ACTIVE - DEVICE SECURITY "
-                      "COMPROMISED" C_RESET "\r\n\r\n");
-  fflush(stdout);
-}
-
 int is_systemd_rootfs(const char *path) {
   if (!path)
     return 0;

@@ -35,7 +35,6 @@ import androidx.compose.material.icons.filled.Cyclone
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Devices
 import androidx.compose.material.icons.filled.Dns
-import androidx.compose.material.icons.filled.GppBad
 import androidx.compose.material.icons.filled.GppMaybe
 import androidx.compose.material.icons.filled.Groups
 import androidx.compose.material.icons.filled.Layers
@@ -128,7 +127,9 @@ fun ContainerConfigForm(
                 tempSrcPath = path
                 showFilePicker = false
                 showDestDialog = true
-            }
+            },
+            // Bind mounting the host root hands the container the whole host filesystem.
+            allowRoot = false
         )
     }
 
@@ -491,9 +492,8 @@ fun ContainerConfigForm(
 
         LaunchedEffect(isSeccompDisabled, usernsSupported) {
             var s = state
-            if (isSeccompDisabled) s = s.copy(blockNestedNs = false)
-            if (isSeccompDisabled && usernsSupported) s = s.copy(allowUserns = true)
-            if (!usernsSupported) s = s.copy(allowUserns = false)
+            if (isSeccompDisabled && usernsSupported) s = s.copy(allowSandboxing = true)
+            if (!usernsSupported) s = s.copy(allowSandboxing = false)
             if (s != state) onStateChange(s)
         }
 
@@ -501,8 +501,8 @@ fun ContainerConfigForm(
             icon = Icons.Default.Groups,
             title = context.getString(R.string.allow_userns),
             description = if (usernsSupported) context.getString(R.string.allow_userns_description) else context.getString(R.string.allow_userns_description_not_supported),
-            checked = state.allowUserns,
-            onCheckedChange = { clearFocus(); onStateChange(state.copy(allowUserns = it)) },
+            checked = state.allowSandboxing,
+            onCheckedChange = { clearFocus(); onStateChange(state.copy(allowSandboxing = it)) },
             enabled = !isSeccompDisabled && usernsSupported
         )
 
@@ -520,15 +520,6 @@ fun ContainerConfigForm(
             description = context.getString(R.string.force_cgroupv1_description),
             checked = state.forceCgroupv1,
             onCheckedChange = { clearFocus(); onStateChange(state.copy(forceCgroupv1 = it)) }
-        )
-
-        ToggleCard(
-            icon = Icons.Default.GppBad,
-            title = context.getString(R.string.manual_deadlock_shield),
-            description = context.getString(R.string.manual_deadlock_shield_description),
-            checked = if (isSeccompDisabled) false else state.blockNestedNs,
-            onCheckedChange = { clearFocus(); onStateChange(state.copy(blockNestedNs = it)) },
-            enabled = !isSeccompDisabled
         )
 
         SettingsRowCard(

@@ -114,8 +114,6 @@
     <string name="run_at_boot_description">Pornește container-ul odată cu telefonul</string>
     <string name="force_cgroupv1">Forțează Cgroup V1</string>
     <string name="force_cgroupv1_description">Forțează utlizarea ierarhiei Cgroup V1 învechite</string>
-    <string name="manual_deadlock_shield">Scut deadlock manual</string>
-    <string name="manual_deadlock_shield_description">Previne deadlock-uri la nivel de kernel pe versiuni învechite ale acestuia (de exemplu, 4.14.x) prin blocarea creării unui namespace aflat în altul.\n\nATENȚIE: Activarea acestei opțiuni va bloca capacitatea de izolare a Docker, Podman, LXC, și Systemd în container.</string>
     <string name="cat_integration">Integrare &amp; Hardware</string>
     <string name="cat_security">Securitate &amp; execuție</string>
     <string name="cat_advanced">Opțiuni avansate</string>
@@ -324,7 +322,6 @@
     <string name="failure_in_operation">Eroare în %1$s la containerul %2$s</string>
     <string name="selinux_permissive_option">SELinux Permisiv</string>
     <string name="volatile_option">Volatil</string>
-    <string name="deadlock_shield_option">Scut Deadlock</string>
     <string name="privileged_option">Privilegiat</string>
     <string name="options">Opțiuni</string>
     <string name="gpu_access">Acces la GPU</string>
@@ -332,10 +329,6 @@
     <string name="network_mode_host_short">Gazda</string>
     <string name="network_mode_none_short">Niciunul</string>
     <string name="bind_mounts">Mount-uri de tip bind</string>
-    <string name="env_hint_row">Fiecare rând este o pereche CHEIE=VALOARE</string>
-    <string name="key_label">CHEIE</string>
-    <string name="value_label">VALOARE</string>
-    <string name="add_variable">Adaugă o variabilă</string>
     <string name="custom_init_label">Executabil Init customizat</string>
     <string name="custom_init_placeholder">/sbin/init (implicit)</string>
     <string name="custom_init_hint">Lasă gol dacă vrei să folosești init-ul implicit (/sbin/init)</string>

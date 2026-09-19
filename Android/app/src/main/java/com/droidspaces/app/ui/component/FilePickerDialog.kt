@@ -95,7 +95,8 @@ fun FilePickerDialog(
     onDismiss: () -> Unit,
     onConfirm: (String) -> Unit,
     title: String = "Select Host Path",
-    showFiles: Boolean = true
+    showFiles: Boolean = true,
+    allowRoot: Boolean = true
 ) {
     var currentPath by remember { mutableStateOf("/") }
     var items by remember { mutableStateOf<List<FileItem>>(emptyList()) }
@@ -155,7 +156,8 @@ fun FilePickerDialog(
                 dismissLabel = context.getString(R.string.cancel),
                 confirmLabel = context.getString(R.string.select_folder),
                 onDismiss = onDismiss,
-                onConfirm = { clearFocus(); onConfirm(currentPath) }
+                onConfirm = { clearFocus(); onConfirm(currentPath) },
+                confirmEnabled = allowRoot || currentPath != "/"
             )
         }
     ) {

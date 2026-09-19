@@ -21,9 +21,7 @@
     <string name="developer_ravindu644_role">பராமரிப்பாளர்</string>
     <string name="save_changes">மாற்றங்களைச் சேமிக்கவும்</string>
     <string name="migrate_dialog_message">\"%1$s\" ஐ ஒரு சிறிய படத்திற்கு மாற்றுவது ஒரு பிரத்யேக ext4 கோப்பு முறைமையை உருவாக்கும். இந்த செயல்பாடு குறுக்கிடப்பட்டால் அழிவுகரமானது. உங்கள் தரவை காப்புப் பிரதி எடுக்கவும்.</string>
-    <string name="add_variable">மாறியைச் சேர்க்கவும்</string>
     <string name="help_card_title">Droidspacesக்கு புதியதா?</string>
-    <string name="manual_deadlock_shield_description">உள்ளமை பெயர்வெளி உருவாக்கத்தைத் தடுப்பதன் மூலம் மரபு கர்னல்களில் (எ.கா., 4.14.x) கர்னல்-நிலை VFS முட்டுக்கட்டைகளைத் தடுக்கிறது. \n\nஎச்சரிக்கை: இதை இயக்குவது கொள்கலனுக்குள் Docker, Podman, LXC மற்றும் Systemd சாண்ட்பாக்சிங் ஆதரவைத் தடுக்கும்.</string>
     <string name="repo_custom_remove">அகற்று</string>
     <string name="backend_attention_required">பின்தளம்: நடவடிக்கை தேவை</string>
     <string name="unknown_legend">தெரியவில்லை</string>
@@ -217,7 +215,6 @@
     <string name="operation_completed_success">அறுவை மருத்தீடு வெற்றிகரமாக முடிந்தது!</string>
     <string name="status_stopped">நிறுத்தப்பட்டது</string>
     <string name="reinstall_backend_description">பைனரிகள் மற்றும் துவக்க தொகுதியை மீண்டும் நிறுவவும்</string>
-    <string name="deadlock_shield_option">டெட்லாக் சீல்ட்</string>
     <string name="gpu_option">GPU</string>
     <string name="resize_dialog_title">ச்பார்ச் படத்தின் அளவை மாற்றவும்</string>
     <string name="stop">நிறுத்து</string>
@@ -287,7 +284,6 @@
     <string name="tx11_extra_flags_label">Termux:X11 கூடுதல் கொடிகள்</string>
     <string name="disable_service">முடக்கு</string>
     <string name="network_mode_gateway">கேட்வே (மெய்நிகர் திசைவி)</string>
-    <string name="env_hint_row">ஒவ்வொரு வரிசையும் ஒரு KEY=VALUE இணை</string>
     <string name="notification_wakelock_on">வேக் லாக்: ஆன்</string>
     <string name="starting_export">ஏற்றுமதியைத் தொடங்குகிறது...</string>
     <string name="dynamic_color">கணினியின் இயல்புநிலை வண்ணத் தட்டுகளைப் பயன்படுத்தவும்</string>
@@ -304,7 +300,6 @@
     <string name="terminal_logs">டெர்மினல் பதிவுகள்</string>
     <string name="feat_isolation_title">முழுமையான தனிமைப்படுத்தல்</string>
     <string name="repo_title">ரூட்ஃப்ச் களஞ்சியம்</string>
-    <string name="manual_deadlock_shield">மேனுவல் டெட்லாக் சீல்டு</string>
     <string name="privileged_mode">சலுகை பெற்ற பயன்முறை</string>
     <string name="repo_dl_error_too_many_redirects">பல வழிமாற்றுகள்</string>
     <string name="dns_servers_placeholder">எ.கா. 1.1.1.1,8.8.8.8 (விரும்பினால்)</string>
@@ -328,7 +323,6 @@
     <string name="dark_theme">இருண்ட கருப்பொருள்</string>
     <string name="cancel">ரத்துசெய்</string>
     <string name="unmask">முகமூடியை அவிழ்த்து விடுங்கள்</string>
-    <string name="key_label">முக்கிய</string>
     <string name="selinux_permissive">SELinux இசைவு</string>
     <string name="disable_ipv6">IPv6 ஐ முடக்கு</string>
     <string name="next_storage">அடுத்து: சேமிப்பு</string>
@@ -465,7 +459,6 @@
     <string name="mask_service">முகமூடி பணி</string>
     <string name="leave_blank_for_symmetric">சமச்சீர் மேப்பிங்கிற்கு காலியாக விடவும்</string>
     <string name="repo_dl_error_unknown">அறியப்படாத பிழை</string>
-    <string name="value_label">மதிப்பு</string>
     <string name="logs_copied">இடைநிலைப்பலகைக்கு பதிவுகள் நகலெடுக்கப்பட்டன</string>
     <string name="size_required">அளவு தேவை</string>
     <string name="error_container_name_empty">கொள்கலனின் பெயர் காலியாக இருக்கக்கூடாது</string>

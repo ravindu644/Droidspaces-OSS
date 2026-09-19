@@ -356,13 +356,11 @@ struct ds_config {
   int disable_ipv6;        /* --disable-ipv6 */
   int android_storage;     /* --enable-android-storage */
   int selinux_permissive;  /* --selinux-permissive */
-  int userns_allowed;      /* --allow-userns */
+  int sandboxing_allowed;  /* --allow-sandboxing */
   int allow_vts;           /* --allow-vts: leave host VTs unmasked in hw mode */
   int net_bridgeless;      /* Probe result: no CONFIG_BRIDGE, use PTP NAT */
   int reboot_cycle;        /* 1 if we are in a reboot loop */
   int force_cgroupv1;  /* --force-cgroupv1: use v1 even if v2 is available */
-  int block_nested_ns; /* --block-nested-namespaces: fix VFS deadlock by
-                            blocking nested namespace creation */
   int privileged_mask; /* --privileged bitmask */
   int format_output;   /* --format: JSON output (show, info) */
   char prog_name[64];  /* argv[0] for logging */
@@ -500,7 +498,6 @@ int set_selinux_context(const char *path, const char *context);
 int ds_send_fd(int sock, int fd);
 int ds_recv_fd(int sock);
 void print_ds_banner(void);
-void print_privileged_warning(int privileged_mask);
 int is_systemd_rootfs(const char *path);
 
 ds_init_type_t detect_container_init(const char *path);
@@ -591,9 +588,8 @@ void ds_set_selinux_permissive(int enable);
 int ds_get_selinux_status(void);
 void android_remount_data_suid(void);
 int android_setup_storage(const char *rootfs_path);
-int android_seccomp_setup(int is_systemd, int block_nested_ns,
-                          int privileged_mask);
-int ds_seccomp_apply_minimal(int privileged_mask, int userns_allowed);
+int android_seccomp_setup(int privileged_mask);
+int ds_seccomp_apply_minimal(int privileged_mask, int sandboxing_allowed);
 
 /* KernelSU container-escape hardening: ask KSU to mark the current thread
  * (TIF_KSU_DISABLE_ESCAPE_WITH_ROOT via KSU_IOCTL_DISABLE_ESCAPE_TO_ROOT)
@@ -866,7 +862,8 @@ void write_plain_env_file(const char *src, const char *dst);
 
 /* boot.c */
 
-void ds_apply_capability_hardening(int hw_access, int privileged_mask);
+void ds_apply_capability_hardening(int hw_access, int privileged_mask,
+                                   int sandboxing);
 int internal_boot(struct ds_config *cfg);
 
 /* environment.c */

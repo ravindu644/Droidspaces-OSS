@@ -140,7 +140,6 @@
     <string name="selinux_permissive_option">SELinux 허용 모드</string>
     <string name="volatile_option">휘발성</string>
     <string name="cgroup_v1_option">Cgroup V1</string>
-    <string name="deadlock_shield_option">데드락 방지</string>
     <string name="privileged_option">특권 모드</string>
     <string name="userns_option">사용자 네임스페이스</string>
     <string name="installation_setup_summary">설치 요약</string>
@@ -205,8 +204,6 @@
     <string name="reorder_handle">드래그하여 순서 변경</string>
     <string name="force_cgroupv1">Cgroup V1 강제 사용</string>
     <string name="force_cgroupv1_description">레거시 Cgroup V1 계층 구조 강제 사용</string>
-    <string name="manual_deadlock_shield">수동 데드락 방지</string>
-    <string name="manual_deadlock_shield_description">중첩된 네임스페이스 생성을 차단하여 레거시 커널(예: 4.14.x)에서 커널 수준 VFS 데드락을 방지합니다. \n\n경고: 이 옵션을 활성화하면 컨테이너 내부의 Docker, Podman, LXC, Systemd 샌드박싱 지원이 차단됩니다.</string>
     <!-- Config Categories and Network Mode -->
     <string name="cat_networking">네트워킹</string>
     <string name="cat_integration">통합 및 하드웨어</string>
@@ -293,10 +290,6 @@
     <string name="environment_variables">환경 변수</string>
     <string name="environment_variables_configured">%1$d개 변수가 구성됨</string>
     <string name="not_configured">구성되지 않음</string>
-    <string name="env_hint_row">각 행은 하나의 KEY=VALUE 쌍입니다</string>
-    <string name="key_label">KEY</string>
-    <string name="value_label">VALUE</string>
-    <string name="add_variable">변수 추가</string>
     <!-- Custom Init -->
     <string name="custom_init_label">사용자 지정 init 바이너리</string>
     <string name="custom_init_placeholder">/sbin/init(기본값)</string>
