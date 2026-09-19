@@ -1,3 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    </resources>
+    <plurals name="notification_sessions_running">
+        <item quantity="one">%d සැසිය ක්‍රියාත්මක වෙමින් පවතී</item>
+        <item quantity="other">%d සැසි ක්‍රියාත්මක වෙමින් පවතී</item>
+    </plurals>
+</resources>

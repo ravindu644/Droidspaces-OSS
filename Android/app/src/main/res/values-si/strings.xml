@@ -319,4 +319,14 @@
     <string name="gpu_access_description">සම්පූර්ණ Hardware Passthrough එකක් සිදු නොකර, GPU nodes පමණක් හුදකලා වූ /dev නාමාවලියක නිර්මාණය කිරීම</string>
     <string name="symlink_integration">Droidspaces, system path එකට එකතු කරන්න</string>
     <string name="symlink_integration_description">Android root shell එක හරහා droidspaces විධානය භාවිතා කිරීමට /system/bin තුළ symlink එකක් සාදන්න. අවවාදයයි: ඔබගේ mount පද්ධතිය OverlayFS meta modules මත පදනම් වූවක් නම්, මෙය සක්‍රීය කිරීමෙන් Bootloop ඇති විය හැක. මෙම විකල්පය Magic Mount මත පදනම් වූ mount පද්ධති සඳහා පමණක් භාවිතා කරන්න (Reboot කිරීමක් අවශ්‍ය වේ)</string>
+    <string name="welcome_tagline">Linux කන්ටේනර්. ස්වදේශීය.No overhead.</string>
+    <string name="feat_containers_title">සත්‍ය Linux කන්ටේනර්</string>
+    <string name="feat_containers_desc">Same kernel namespace tech as LXC, Podman and Docker. No emulation, no chroot.</string>
+    <string name="feat_overhead_title">Zero overhead</string>
+    <string name="feat_overhead_desc">Talks to the host Linux kernel directly. No hypervisor, no virtual machine layer.</string>
+    <string name="feat_hardware_title">සම්පූර්ණ දෘඩාංග/GPU access</string>
+    <string name="feat_hardware_desc">සත්කාරක දෘඩාංග (GPU, සංවේදක, USB, බ්ලොක් උපාංග) සෘජුවම ඔබේ කන්ටේනර් (containers) වෙත නිරාවරණය කරන්න.</string>
+    <string name="feat_privileged_title">පූර්ණ වරප්‍රසාද සහිත කන්ටේනර</string>
+    <string name="feat_privileged_desc">උසස් පරිශීලකයින් සඳහා වන විශේෂිත මාදිලිය (privileged mode) මගින් ආරක්ෂක සීමා ලිහිල් කරන්න.</string>
+    <string name="feat_autoboot_title">Auto-boot on power up</string>
 </resources>

@@ -565,4 +565,7 @@
     <string name="terminal_keyboard_left">左侧的键盘按键</string>
     <string name="terminal_keyboard_left_description">将键盘按钮移动到左下角，以便左撇子使用</string>
     <string name="terminal_toggle_keyboard">切换键盘</string>
+    <string name="updates_section">更新</string>
+    <string name="check_app_updates">检查应用更新</string>
+    <string name="check_app_updates_description">打开应用时检查Github最新release</string>
 </resources>
