@@ -10,18 +10,10 @@
     <string name="feat_containers_desc">LXC, Podman, Docker와 동일한 커널 네임스페이스 기술. 에뮬레이션도, chroot도 없습니다.</string>
     <string name="feat_overhead_title">오버헤드 제로</string>
     <string name="feat_overhead_desc">호스트 리눅스 커널과 직접 통신합니다. 하이퍼바이저도, 가상 머신 레이어도 없습니다.</string>
-    <string name="feat_unkillable_title">종료 불가능한 설계</string>
-    <string name="feat_unkillable_desc">네이티브 init.rc 통합과 2계층 유저스페이스 데몬을 지원합니다. 완전히 종료되지 않습니다.</string>
     <string name="feat_init_title">PID 1로 systemd / OpenWrt procd / OpenRC</string>
     <string name="feat_init_desc">완전한 init 시스템 지원. 시뮬레이션 환경이 아닌 실제 서비스 관리입니다.</string>
     <string name="feat_isolation_title">완전한 격리</string>
     <string name="feat_isolation_desc">컨테이너별 독립적인 PID 트리, 마운트 테이블, 호스트명, IPC, cgroup 계층 구조.</string>
-    <string name="feat_hardware_title">전체 하드웨어/GPU 액세스</string>
-    <string name="feat_hardware_desc">호스트 하드웨어(GPU, 센서, USB, 블록 디바이스)를 컨테이너에 직접 노출합니다.</string>
-    <string name="feat_privileged_title">완전 권한 컨테이너</string>
-    <string name="feat_privileged_desc">고급 사용자를 위해 특권 모드로 보안 장벽을 완화합니다.</string>
-    <string name="feat_autoboot_title">전원 켜짐 시 자동 부팅</string>
-    <string name="feat_autoboot_desc">화면이 잠겨 있고 데이터가 암호화된 상태에서도 부팅 시 컨테이너를 자동으로 시작합니다.</string>
     <!-- Root Check Screen -->
     <string name="root_check_title">루트 액세스 확인</string>
     <string name="checking_root">루트 액세스 확인 중...</string>
