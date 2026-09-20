@@ -258,18 +258,10 @@
     <string name="feat_containers_desc">Dieselbe Kernel-Namespace-Technologie wie bei LXC, Podman und Docker. Keine Emulation, kein chroot.</string>
     <string name="feat_overhead_title">Kein Overhead</string>
     <string name="feat_overhead_desc">Kommuniziert direkt mit dem Host Linux-Kernel. Kein Hypervisor, keine Virtualisierungsschicht.</string>
-    <string name="feat_unkillable_title">Von Grund auf unkillbar</string>
-    <string name="feat_unkillable_desc">Unterstützt die native Integration von init.rc und zweistufige Daemons im Userspace. Absolut unkillbar.</string>
     <string name="feat_init_title">systemd / OpenWrt procd / OpenRC mit PID 1</string>
     <string name="feat_init_desc">Vollständige Unterstützung des Init-Systems. Echte Dienstverwaltung, keine simulierte Umgebung.</string>
     <string name="feat_isolation_title">Vollständige Isolation</string>
     <string name="feat_isolation_desc">Privater PID-Baum, Einhängepunkte, Hostname, IPC und cgroup-Hierarchie pro Container.</string>
-    <string name="feat_hardware_title">Voller Hardware/GPU Zugriff</string>
-    <string name="feat_hardware_desc">Host-Hardware (GPU, Sensoren, USB, Blockgeräte) direkt für Ihre Container verfügbar machen.</string>
-    <string name="feat_privileged_title">Container mit vollen Rechten</string>
-    <string name="feat_privileged_desc">Lockerung der Sicherheitsbeschränkungen im Privilegierten Modus für fortgeschrittene Benutzer.</string>
-    <string name="feat_autoboot_title">Automatischer Start beim Einschalten</string>
-    <string name="feat_autoboot_desc">Container beim Systemstart automatisch starten, auch wenn der Bildschirm gesperrt und die Daten verschlüsselt sind.</string>
     <string name="backend_attention_required">Backend: Handlung nötig</string>
     <string name="tap_to_fix_system">Tippen, um Systemkonfiguration zu reparieren</string>
     <string name="kernel_requirements_nongki">Anforderungen an Nicht-GKI-Kernel (&lt;=4.19)</string>

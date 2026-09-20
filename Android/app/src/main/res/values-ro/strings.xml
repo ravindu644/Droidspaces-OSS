@@ -299,18 +299,10 @@
     <string name="feat_containers_desc">Aceeași tehnologie de namespace-uri precum LXC, Podman și Docker. Fără emulare și zero chroot.</string>
     <string name="feat_overhead_title">Zero pierderi de performanță</string>
     <string name="feat_overhead_desc">Vorbește direct cu kernel-ul Linux al gazdei. Niciun hypervisor sau strat de mașină virtuală.</string>
-    <string name="feat_unkillable_title">Făcut să nu poată fi oprit</string>
-    <string name="feat_unkillable_desc">Suportă integrare nativă init.rc și daemoni în userspace în 2 straturi. Imposibil de oprit.</string>
     <string name="feat_init_title">systemd / OpenRC în PID 1</string>
     <string name="feat_init_desc">Suport complet de sistem init. Administrare de servicii adevărată, nu un mediu simulat.</string>
     <string name="feat_isolation_title">Izolare completă</string>
     <string name="feat_isolation_desc">Namespace-urile PID, mount, UTS, IPC și ierarhia cgroup sunt izolate pentru fiecare container.</string>
-    <string name="feat_hardware_title">Acces la hardware/GPU complet</string>
-    <string name="feat_hardware_desc">Expune hardware-ul gazdei (GPU, senzorii, USB, dispozitive block) direct către containerele tale.</string>
-    <string name="feat_privileged_title">Containere total privilegiate</string>
-    <string name="feat_privileged_desc">Redu nivelul de securitate cu acest mod privilegiat pentru utilizatorii avansați.</string>
-    <string name="feat_autoboot_title">Pornește odată cu Android</string>
-    <string name="feat_autoboot_desc">Pornește automat containerele cu Android, chiar dacă ecranul este blocat și datele sunt criptate.</string>
     <string name="backend_attention_required">Backend: Acțiune necesară</string>
     <string name="tap_to_fix_system">Apasă pentru a repara configurația sistemului</string>
     <string name="kernel_requirements_nongki">Necesitățile pentru Kernel-urile non-GKI (&lt;=4.19)</string>

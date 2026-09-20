@@ -219,15 +219,9 @@
     <string name="feat_containers_desc">A mesma tecnologia de namespace do kernel como LXC, Podman e Docker. Sem emulação, sem chroot.</string>
     <string name="feat_overhead_title">Nenhuma sobrecarga</string>
     <string name="feat_overhead_desc">Fala diretamente com o kernel Linux do anfitrião. Sem hipervisor, sem camada de máquina virtual.</string>
-    <string name="feat_unkillable_desc">Apoia a integração nativa de init.rc e daemons de espaço de utilizador de 2 camadas. Completamente imortal.</string>
     <string name="feat_init_title">systemd / OpenRC como PID 1</string>
     <string name="feat_init_desc">Apoio completo do sistema init. Gestão de serviços reais, não um ambiente simulado.</string>
     <string name="feat_isolation_title">Isolamento completo</string>
-    <string name="feat_hardware_title">Acesso completo ao hardware/GPU</string>
-    <string name="feat_hardware_desc">Exponha hardware host (GPU, sensores, USB, dispositivos de bloco) diretamente aos seus recipientes.</string>
-    <string name="feat_privileged_title">Contentores totalmente privilegiados</string>
-    <string name="feat_privileged_desc">Barreiras de segurança relaxadas com modo privilegiado para utilizadores avançados.</string>
-    <string name="feat_autoboot_desc">Inicia automaticamente os contentores na inicialização, mesmo se o ecrã esteja bloqueada e os dados sejam criptografados.</string>
     <string name="containers">Contentores</string>
     <string name="container_singular">Contentor</string>
     <string name="backend_attention_required">Backend: Ação necessária</string>

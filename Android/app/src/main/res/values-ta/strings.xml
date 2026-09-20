@@ -42,7 +42,6 @@
     <string name="termux_x11_description">Termux:X11க்கு X11 சாக்கெட் மவுண்டிங்கை இயக்கு</string>
     <string name="error_container_name_invalid">கொள்கலனில் எழுத்துக்கள், எண்கள், ஐபன்கள் (-), அடிக்கோடுகள் (_), புள்ளிகள் (.) மற்றும் இடைவெளிகள் மட்டுமே இருக்க வேண்டும்</string>
     <string name="backend_installed">பின்தளம்: நிறுவப்பட்டது</string>
-    <string name="feat_hardware_title">முழு வன்பொருள்/சிபியு அணுகல்</string>
     <string name="export_container">கொள்கலனை நாடாகாப்பகபந்து ஆக ஏற்றுமதி செய்யவும்</string>
     <string name="welcome_tagline">லினக்ச் கொள்கலன்கள். பழமை. மேல்நிலை இல்லை.</string>
     <string name="storage_option">சேமிப்பு</string>
@@ -66,7 +65,6 @@
     <string name="privileged_full_desc">அனைத்து சலுகை பெற்ற கொடிகளையும் ஒரே நேரத்தில் இயக்கவும்.</string>
     <string name="resize_sparse_image">அரிதான படத்தின் அளவை மாற்றவும்</string>
     <string name="masked_legend">முகமூடி</string>
-    <string name="feat_hardware_desc">புரவலன் வன்பொருளை (GPU, சென்சார்கள், USB, பிளாக் சாதனங்கள்) நேரடியாக உங்கள் கொள்கலன்களுக்கு வெளிப்படுத்துங்கள்.</string>
     <string name="add_bind_mount">பைண்ட் மவுண்ட்டைச் சேர்க்கவும்</string>
     <string name="daemon_mode">டீமான் பயன்முறை</string>
     <string name="privileged_noseccomp_desc">Seccomp syscall வடிகட்டலை முடக்கவும். இது, உள்ளமை சாண்ட்பாக்சிங்கிற்கு (Bubblewrap, Flatpak) கண்டிப்பாகத் தேவைப்படும் சலுகையற்ற பயனர் பெயர்வெளிகள் போன்ற மேம்பட்ட கர்னல் அம்சங்களை செயல்படுத்துகிறது மற்றும் மரத்திற்கு வெளியே உள்ள கர்னல் தொகுதிகளை ஏற்றவும் அனுமதிக்கிறது.</string>
@@ -107,7 +105,6 @@
     <string name="gateway_net">லேன் பெயர்</string>
     <string name="privileged_mode_description">உள்ளமைக்கப்பட்ட மெய்நிகராக்கம் அல்லது மேம்பட்ட வன்பொருள் அணுகலுக்கான சிறுமணி பாதுகாப்பு தளர்வை உள்ளமைக்கவும்.</string>
     <string name="gpu_access_description">GPU முனைகளை தனிமைப்படுத்தப்பட்ட / dev இல் பிரதிபலிக்கவும் (முழு வன்பொருள் பாச்த்ரூ இல்லை)</string>
-    <string name="feat_privileged_title">முழு சலுகை பெற்ற கொள்கலன்கள்</string>
     <string name="gateway_iface_hint">eth1</string>
     <string name="repo_notification_description">Droidspaces rootfs பதிவிறக்கம்</string>
     <string name="unknown">தெரியவில்லை</string>
@@ -228,7 +225,6 @@
     <string name="backend_section">பின்தளம்</string>
     <string name="pid_label">PID: %1$d</string>
     <string name="auto_boot_priority">தானியங்கு துவக்க முன்னுரிமை</string>
-    <string name="feat_privileged_desc">மேம்பட்ட பயனர்களுக்கு சலுகை பெற்ற பயன்முறையுடன் பாதுகாப்பு தடைகளைத் தளர்த்தவும்.</string>
     <string name="supported_abis">ஆதரிக்கப்படும் ஏபிஐக்கள்</string>
     <string name="about_sparse_images">அரிதான படங்கள் பற்றி</string>
     <string name="next_configuration">அடுத்து: கட்டமைப்பு</string>
@@ -258,7 +254,6 @@
     <string name="network_mode_nat">NAT (இயல்புநிலை)</string>
     <string name="repo_manage_custom">களஞ்சியங்களை நிர்வகிக்கவும்</string>
     <string name="logs_title">பதிவுகள்: %1$s</string>
-    <string name="feat_autoboot_desc">திரை பூட்டப்பட்டிருந்தாலும், தரவு குறியாக்கம் செய்யப்பட்டிருந்தாலும், பூட்டில் கொள்கலன்களைத் தானாகத் தொடங்கவும்.</string>
     <string name="gateway_settings_description">இந்த கொள்கலனை திசைவியாக செயல்படும் மற்றொரு கொள்கலன் வழியாக இயக்கவும் (எ.கா. OpenWRT). அந்த நுழைவாயில் முதலில் இயங்க வேண்டும்.</string>
     <string name="environment_variables">சுற்றுச்சூழல் மாறிகள்</string>
     <string name="repo_dl_error_unhandled_http">எதிர்பாராத HTTP பதில்</string>
@@ -363,7 +358,6 @@
     <string name="host_port_hint">புரவலன் துறைமுகம் (1-65535 அல்லது வரம்பு 100-200)</string>
     <string name="backend_corrupted">பின்பக்கம்: சிதைந்துள்ளது</string>
     <string name="termux_x11">Termux:X11ஐ உள்ளமைக்கவும்</string>
-    <string name="feat_unkillable_desc">நேட்டிவ் init.rc ஒருங்கிணைப்பு மற்றும் 2-லேயர் யூசர்ச்பேச் டெமான்களை ஆதரிக்கிறது. முற்றிலும் அழிக்க முடியாதது.</string>
     <string name="backend_update_available">பின்தளம்: புதுப்பிப்பு உள்ளது</string>
     <string name="cpu">CPU:</string>
     <string name="architecture">கட்டிடக்கலை</string>
@@ -428,7 +422,6 @@
     <string name="installing_container">கொள்கலனை நிறுவுதல்</string>
     <string name="repo_add_custom">தனிப்பயன் களஞ்சியத்தைச் சேர்க்கவும்</string>
     <string name="error_octet_range">வரம்பு: 1-254</string>
-    <string name="feat_autoboot_title">பவர் அப் ஆன் ஆட்டோ பூட்</string>
     <string name="continue_button">தொடரவும்</string>
     <string name="android_storage_description">ஆண்ட்ராய்டு சேமிப்பகத்தை ஏற்றவும்</string>
     <string name="install">நிறுவவும்</string>
@@ -455,7 +448,6 @@
     <string name="installation_setup_summary">நிறுவல் சுருக்கம்</string>
     <string name="checking_root">ரூட் அணுகலைச் சரிபார்க்கிறது...</string>
     <string name="refresh_users">பயனர்களைப் புதுப்பிக்கவும்</string>
-    <string name="feat_unkillable_title">வடிவமைப்பால் அழிக்க முடியாதது</string>
     <string name="mask_service">முகமூடி பணி</string>
     <string name="leave_blank_for_symmetric">சமச்சீர் மேப்பிங்கிற்கு காலியாக விடவும்</string>
     <string name="repo_dl_error_unknown">அறியப்படாத பிழை</string>
