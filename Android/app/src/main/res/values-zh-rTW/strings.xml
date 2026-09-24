@@ -482,10 +482,10 @@
     <string name="disk_usage">磁碟使用情況</string>
     <string name="disk_usage_used_of_total">%1$s / %2$s 已使用</string>
     <string name="disk_usage_calculating">正在計算…</string>
-    <string name="userns_option">使用者命名空間</string>
-    <string name="allow_userns">允許使用者命名空間</string>
-    <string name="allow_userns_description">允許非特權使用者命名空間（Flatpak、bwrap 和 Firefox 均需要此功能）。不過，若內核未打補丁，您可能會面臨諸如 Fragnesia 之類漏洞的攻擊風險</string>
-    <string name="allow_userns_description_not_supported">不支援。核心中未啟用 CONFIG_USER_NS</string>
+    <string name="userns_option">沙盒化</string>
+    <string name="allow_userns">允許沙盒化</string>
+    <string name="allow_userns_description">允許無特權的 Docker、Podman、Flatpak、bwrap 及瀏覽器沙盒在容器內運作。這會削弱隔離性，因此請僅針對您信任的容器啟用此功能。</string>
+    <string name="allow_userns_description_not_supported">不可用。此核心不支援用戶命名空間（CONFIG_USER_NS）。</string>
     <string name="accent_color">強調色</string>
     <string name="type_container_name_to_confirm">請準確輸入容器名稱以進行確認：</string>
     <string name="debugging_section">偵錯</string>
@@ -569,4 +569,12 @@
     <string name="updates_section">更新</string>
     <string name="check_app_updates">檢查應用程式更新</string>
     <string name="check_app_updates_description">應用程式啟動時，檢查 GitHub 上是否有新版本發布</string>
+    <string name="env_placeholder">KEY=VALUE，每行一個。以 # 開頭的行將被忽略。</string>
+    <string name="env_lines_skipped">%1$d 行(s) 不是 KEY=VALUE 的形式</string>
+    <string name="fetching_logs">正在獲取日誌...</string>
+    <string name="journal_load_error_title">無法載入日誌</string>
+    <string name="journal_load_error_message">該單元可能沒有日誌，或者容器可能無法存取。</string>
+    <string name="journal_line_count_custom">自定義…</string>
+    <string name="journal_line_count_title">行數</string>
+    <string name="journal_line_count_label">行</string>
 </resources>
