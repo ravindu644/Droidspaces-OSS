@@ -2,6 +2,7 @@ English | [简体中文](./Documentation/zh-CN/README.md)
 
 ---
 
+[![Website](https://img.shields.io/badge/Website-droidspaces.org-1F6FEB?style=for-the-badge&logo=googlechrome&logoColor=white)](https://www.droidspaces.org)
 [![Latest release](https://img.shields.io/github/v/release/ravindu644/Droidspaces-OSS?label=Latest%20Release&style=for-the-badge)](https://github.com/ravindu644/Droidspaces-OSS/releases/latest)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg?style=for-the-badge)](./LICENSE)
 [![Telegram channel](https://img.shields.io/badge/Telegram-Channel-2CA5E0?style=for-the-badge&logo=telegram&logoColor=white)](https://t.me/Droidspaces)
@@ -23,6 +24,8 @@ What makes Droidspaces unique is its **zero-dependency, native execution** on bo
 - **Beautiful Android app:** manage unlimited containers and do everything the CLI can, all from a clean, intuitive GUI
 
 **Android** + **Linux Namespaces** = **Droidspaces**. Since Android is built on the Linux kernel, Droidspaces works seamlessly on Linux Desktop too. Both platforms are equally supported and maintained.
+
+**Website and documentation:** https://www.droidspaces.org
 
 > [!TIP]
 >
@@ -387,6 +390,7 @@ For GPU acceleration methods, sound setup, DE auto-boot internals, and Linux des
 
 | Document | Description |
 |----------|-------------|
+| [Documentation site](https://www.droidspaces.org/docs/) | Every guide below, rendered and searchable on the website. |
 | [Feature Deep Dives](Documentation/Features.md) | Detailed explanation of each major feature. |
 | [Networking From Zero](Documentation/Networking-From-Zero.md) | Beginner-friendly guide to every networking concept behind Droidspaces - NAT, automatic uplink detection, `--upstream` pinning, and gateway mode with OpenWRT. |
 | [Display, Audio & Desktop Guide](Documentation/Graphics-and-Audio.md) | GPU acceleration, PulseAudio sound, and desktop environment auto-boot on Android and Linux. |
