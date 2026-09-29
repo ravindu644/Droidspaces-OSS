@@ -108,8 +108,17 @@ static void mount_pristine_proc_sys(void) {
   mkdir("run/droidspaces/proc", 0755);
   mkdir("run/droidspaces/sys", 0755);
   if (domount("proc", "run/droidspaces/proc", "proc",
-              MS_NOSUID | MS_NODEV | MS_NOEXEC, NULL) < 0)
+              MS_NOSUID | MS_NODEV | MS_NOEXEC, NULL) < 0) {
     ds_warn("[SEC] pristine proc for sandboxing failed: %s", strerror(errno));
+  } else if (access("run/droidspaces/proc/sys/user", F_OK) == 0 &&
+             access("/proc/sys/user", F_OK) == 0) {
+    /* bwrap opens this path before entering its child user namespace when it
+     * limits further nesting.  The same live sysctls are already reachable
+     * through the pristine proc, so this adds no access for container root. */
+    if (bind_mount("run/droidspaces/proc/sys/user", "/proc/sys/user") < 0)
+      ds_warn("[SEC] proc user sysctls for sandboxing failed: %s",
+              strerror(errno));
+  }
   if (domount("sysfs", "run/droidspaces/sys", "sysfs",
               MS_RDONLY | MS_NOSUID | MS_NODEV | MS_NOEXEC, NULL) < 0)
     ds_warn("[SEC] pristine sysfs for sandboxing failed: %s", strerror(errno));

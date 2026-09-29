@@ -441,11 +441,12 @@ Off by default. Turn it on when something inside the container needs to build it
 
 1. **User namespaces are allowed.** The seccomp filter stops returning `EPERM` for `unshare(CLONE_NEWUSER)` and `clone(CLONE_NEWUSER)`, and `clone3` is no longer hidden.
 2. **A pristine `proc` and a read-only `sysfs` are mounted under `/run/droidspaces/`.** The kernel lets a child user namespace mount `proc` or `sysfs` only if some instance of that filesystem in the mount namespace is "fully visible": the root of the filesystem, nothing bind-mounted over a real file inside it, and not read-only when the new mount is read-write. The container's own `/proc` and `/sys` never qualify, because the jail masks and the virtualized `uptime`, `loadavg`, `meminfo` and friends are exactly such bind mounts. Any instance anywhere satisfies the rule, so Droidspaces adds one out of the way. LXC does the same in `nesting.conf` with `/dev/.lxc/proc` and `/dev/.lxc/sys`. The masks and the virtualized files stay where they were.
-3. **`CAP_SYS_PTRACE` stays in the bounding set.** runc opens `/proc/<pid>/ns/net` and `/proc/<pid>/ns/mnt` of a container init that has already switched to the remapped uid, and root only gets that read on another uid's process through this capability.
+3. **User namespace limits are writable at their standard path.** Bubblewrap opens `/proc/sys/user/max_user_namespaces` before entering its child user namespace when it disables further nesting. Droidspaces binds the corresponding subtree from the pristine `proc` over `/proc/sys/user` so Flatpak and other bubblewrap users can apply that limit.
+4. **`CAP_SYS_PTRACE` stays in the bounding set.** runc opens `/proc/<pid>/ns/net` and `/proc/<pid>/ns/mnt` of a container init that has already switched to the remapped uid, and root only gets that read on another uid's process through this capability.
 
 ### What it costs
 
-The pristine `proc` has to be writable and unmasked, or the kernel would not count it. So `/run/droidspaces/proc/sys/` is the live host sysctl tree and `/run/droidspaces/proc/sysrq-trigger` is real. Nothing writes there by accident, `/proc/sys` at its normal path is still read-only, but root in the container can reach it on purpose. Treat the toggle as trusting the container's root user. The `sysfs` copy is read-only and exposes nothing new.
+The pristine `proc` has to be writable and unmasked, or the kernel would not count it. So `/run/droidspaces/proc/sys/` is the live host sysctl tree and `/run/droidspaces/proc/sysrq-trigger` is real. Nothing writes there by accident. `/proc/sys` at its normal path remains read-only except for `/proc/sys/user`, which exposes the same live sysctls needed by bubblewrap. Root in the container can already reach them through the pristine `proc`. Treat the toggle as trusting the container's root user. The `sysfs` copy is read-only and exposes nothing new.
 
 ### Usage
 
