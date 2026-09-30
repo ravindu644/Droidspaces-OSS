@@ -571,4 +571,10 @@
     <string name="journal_line_count_custom">自定義…</string>
     <string name="journal_line_count_title">行數</string>
     <string name="journal_line_count_label">行</string>
+    <string name="repo_dl_error_storage_permission">儲存權限被拒絕</string>
+    <string name="repo_dl_channel_name">下載 Rootfs</string>
+    <string name="repo_dl_complete">下載完成，點選安裝</string>
+    <string name="repo_storage_permission_title">儲存空間權限</string>
+    <string name="repo_storage_permission_rationale">Rootfs 壓縮包會儲存到您的下載資料夾中；在此 Android 版本上，這需要儲存存取權限。若無此權限，下載將無法開始。</string>
+    <string name="repo_notification_permission_rationale">Droidspaces 會顯示下載進度、取消按鈕以及一則通知；下載完成後，您可以點擊該通知進行安裝。即便不顯示這些內容，下載過程仍會持續進行。</string>
 </resources>
