@@ -322,18 +322,10 @@
     <string name="feat_containers_desc">Teknologi namespace kernel Linux yang sama dengan LXC, Podman, dan Docker. Tanpa emulasi, tanpa chroot.</string>
     <string name="feat_overhead_title">Nol overhead</string>
     <string name="feat_overhead_desc">Berkomunikasi langsung dengan kernel Linux host. Tanpa hypervisor, tanpa lapisan mesin virtual.</string>
-    <string name="feat_unkillable_title">Tidak dapat dihentikan paksa</string>
-    <string name="feat_unkillable_desc">Mendukung integrasi init.rc native dan daemon userspace 2 lapis. Sepenuhnya tidak dapat dihentikan paksa.</string>
     <string name="feat_init_title">systemd / OpenWrt procd / OpenRC sebagai PID 1</string>
     <string name="feat_init_desc">Dukungan sistem init penuh. Manajemen layanan nyata, bukan lingkungan simulasi.</string>
     <string name="feat_isolation_title">Isolasi lengkap</string>
     <string name="feat_isolation_desc">Pohon PID, tabel mount, nama host, IPC, dan hierarki cgroup privat per container.</string>
-    <string name="feat_hardware_title">Akses hardware/GPU penuh</string>
-    <string name="feat_hardware_desc">Paparkan hardware host (GPU, sensor, USB, perangkat blok) langsung ke container Anda.</string>
-    <string name="feat_privileged_title">Container privileged penuh</string>
-    <string name="feat_privileged_desc">Longgarkan hambatan keamanan dengan mode privileged untuk pengguna tingkat lanjut.</string>
-    <string name="feat_autoboot_title">Boot otomatis saat dinyalakan</string>
-    <string name="feat_autoboot_desc">Mulai container secara otomatis saat boot, bahkan jika layar terkunci dan data terenkripsi.</string>
     <string name="backend_attention_required">Backend: Tindakan diperlukan</string>
     <string name="tap_to_fix_system">Ketuk untuk memperbaiki konfigurasi sistem</string>
     <string name="kernel_requirements_nongki">Persyaratan Kernel non-GKI (&lt;=4.19)</string>

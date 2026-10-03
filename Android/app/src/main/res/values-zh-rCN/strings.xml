@@ -335,18 +335,10 @@
     <string name="feat_containers_desc">采用与 LXC、Podman 及 Docker 相同的内核命名空间技术。无需模拟或 chroot。</string>
     <string name="feat_overhead_title">零开销</string>
     <string name="feat_overhead_desc">直接与宿主 Linux 内核交互。无需 Hypervisor，亦无虚拟机层。</string>
-    <string name="feat_unkillable_title">设计上不可终止</string>
-    <string name="feat_unkillable_desc">原生支持 init.rc 集成与双层用户空间守护进程。不会被轻易终止。</string>
     <string name="feat_init_title">以 systemd / OpenWrt procd / OpenRC 作为 PID 1</string>
     <string name="feat_init_desc">支持完整的 Init 系统。具备真实的服务管理能力，并非简单的模拟环境。</string>
     <string name="feat_isolation_title">完全隔离</string>
     <string name="feat_isolation_desc">为每个容器提供独立的 PID 树、挂载表、主机名、IPC 及 cgroup 层级。</string>
-    <string name="feat_hardware_title">完整的硬件及 GPU 访问权限</string>
-    <string name="feat_hardware_desc">将宿主机硬件（GPU、传感器、USB、块设备）直接透传至您的容器。</string>
-    <string name="feat_privileged_title">具备完整特权的容器</string>
-    <string name="feat_privileged_desc">放宽安全限制以满足资深用户需求。</string>
-    <string name="feat_autoboot_title">开机自启动</string>
-    <string name="feat_autoboot_desc">支持开机自动启动容器，即使在屏幕锁定且数据尚未解密的状态下依然有效。</string>
     <string name="backend_attention_required">后端：待处理</string>
     <string name="tap_to_fix_system">点击修复系统配置</string>
     <string name="kernel_requirements_nongki">non-GKI 内核要求 (版本 &lt;=4.19)</string>

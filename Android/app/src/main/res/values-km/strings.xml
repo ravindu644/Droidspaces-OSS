@@ -81,36 +81,28 @@
     <string name="developer_ravindu644" translatable="false">ravindu644</string>
     <string name="backend_attention_required">ផ្នែកខាងក្រោយ៖ ត្រូវការចំណាត់ការ</string>
     <string name="view_logs">មើលកំណត់ហេតុ</string>
-    <string name="feat_hardware_title">ទទួលបានសិទ្ធិប្រើប្រាស់ Hardware និង GPU ទាំងស្រុង</string>
     <string name="welcome_tagline">កុងតឺន័រ Linux។ ដើម (Native)។ គ្មានការចំណាយបន្ថែម។</string>
     <string name="feat_isolation_desc">រចនាសម្ព័ន្ធ PID ឯកជន, Mount Table, Hostname, IPC, និងឋានានុក្រម Cgroup សម្រាប់កុងតឺន័រនីមួយៗ។</string>
     <string name="feat_containers_title">កុងតឺន័រ Linux ពិតប្រាកដ</string>
-    <string name="feat_hardware_desc">បើកសិទ្ធិឱ្យកុងតឺន័ររបស់អ្នក ចូលប្រើប្រាស់ Hardware របស់ម៉ាស៊ីនផ្ទាល់ (GPU, សេនស័រ, USB, ឧបករណ៍ Block) ដោយផ្ទាល់។</string>
     <string name="uninstall_container_menu">លុបកុងតឺន័រចេញ</string>
     <string name="feat_init_title">ប្រើប្រាស់ systemd / OpenWrt procd / OpenRC ជា PID 1</string>
-    <string name="feat_privileged_title">កុងតឺន័រដែលមានសិទ្ធិពេញលេញ</string>
     <string name="tap_to_fix_system">ចុចដើម្បីជួសជុលការកំណត់រចនាសម្ព័ន្ធប្រព័ន្ធ</string>
     <string name="feat_init_desc">គាំទ្រប្រព័ន្ធ Init ពេញលេញ (Full init system support)។ ការគ្រប់គ្រងសេវាកម្មពិតប្រាកដ មិនមែនជាបរិស្ថានធ្វើត្រាប់តាម (Simulated environment) នោះទេ។</string>
     <string name="feat_containers_desc">ប្រើប្រាស់បច្ចេកវិទ្យា Kernel Namespace ដូចគ្នាទៅនឹង LXC, Podman និង Docker។ គ្មានការធ្វើត្រាប់តាម (No emulation) និងមិនមែនត្រឹមតែជា chroot នោះទេ។</string>
     <string name="status_stopped">បានឈប់</string>
     <string name="pid_label">លេខសម្គាល់ដំណើរការ (PID): %1$d</string>
-    <string name="feat_privileged_desc">កាត់បន្ថយរបាំងការពារសន្តិសុខ ដោយប្រើប្រាស់របៀបសិទ្ធិខ្ពស់ (Privileged Mode) ដែលរៀបចំឡើងសម្រាប់អ្នកប្រើប្រាស់កម្រិតខ្ពស់។</string>
     <string name="uninstall">លុបកម្មវិធីចេញ</string>
     <string name="options_label">ជម្រើស៖ %1$s</string>
-    <string name="feat_autoboot_desc">បើកដំណើរការកុងតឺន័រដោយស្វ័យប្រវត្តិនៅពេលបើកឧបករណ៍ (Boot) ទោះបីជាអេក្រង់ត្រូវបានចាក់សោ និងទិន្នន័យត្រូវបានកូដនីយកម្ម (Encrypted) ក៏ដោយ។</string>
     <string name="feat_isolation_title">ការផ្តាច់ចេញទាំងស្រុង</string>
     <string name="status_running">កំពុងដំណើរការ</string>
     <string name="symlink_integration">បញ្ជូល Droidspaces ទៅក្នុង System Path</string>
     <string name="cancel">បោះបង</string>
     <string name="feat_overhead_desc">ទាក់ទងទៅកាន់ Host Linux Kernel ដោយផ្ទាល់។ មិនមានការប្រើប្រាស់ Hypervisor ឬស្រទាប់ម៉ាស៊ីននិម្មិត (Virtual Machine Layer) ឡើយ។</string>
     <string name="feat_overhead_title">គ្មានការចំណាយធនធានលើសកម្រិត (Zero overhead)</string>
-    <string name="feat_unkillable_desc">គាំទ្រការភ្ជាប់ជាមួយ native init.rc និង daemon កម្រិត userspace ចំនួន ២ ជាន់ (2-layer userspace daemons)។ មិនអាចរលត់បានជាដាច់ខាត (Completely unkillable)។</string>
     <string name="edit_container_configuration">កែសម្រួលការកំណត់រចនាសម្ព័ន្ធកុងតឺន័រ</string>
-    <string name="feat_autoboot_title">ចាប់ផ្ដើមដំណើរការដោយស្វ័យប្រវត្តិនៅពេលបើកម៉ាស៊ីន</string>
     <string name="install">តម្លើង</string>
     <string name="hostname_label">ឈ្មោះម៉ាស៊ីន: %1$s</string>
     <string name="symlink_integration_description">បង្កើត Symlink នៅត្រង់ /system/bin ដើម្បីចូលប្រើប្រាស់បញ្ជា (Command) droidspaces នៅក្នុង Android Root Shell។ការព្រមាន៖ ការបើកមុខងារនេះនឹងបង្កឱ្យមានបញ្ហាគាំងបើកឧបករណ៍មិនឡើង (Bootloop) ប្រសិនបើប្រព័ន្ធ Mount របស់អ្នកជាប្រភេទ OverlayFS Meta Modules។ សូមប្រើប្រាស់ជម្រើសនេះ តែក្នុងករណីដែលអ្នកកំពុងប្រើប្រាស់ប្រព័ន្ធ Mount ផ្អែកលើ Magic Mount តែប៉ុណ្ណោះ (តម្រូវឱ្យចាប់ផ្តើមឧបករណ៍ឡើងវិញ)។</string>
-    <string name="feat_unkillable_title">រចនាឡើងមិនអាចបំផ្លាញបាន</string>
     <string name="kernel_requirements_nongki">តម្រូវការខឺណែលមិនមែន GKI (&lt;=4.19)</string>
     <string name="kernel_requirements_gki">តម្រូវការខឺណែល GKI (&gt;=5.4)</string>
     <string name="guide">គោលការណ៍ណែនាំ</string>
