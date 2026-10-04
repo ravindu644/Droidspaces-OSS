@@ -114,7 +114,7 @@
     <string name="daemon_mode">Daemon Mode</string>
     <string name="daemon_mode_description">Run Droidspaces as a persistent system-level daemon to bypass seccomp blocks from Magisk/APatch, GrapheneOS, etc. This enables high-privilege operations by fetching and running commands from userspace (Reboot required).</string>
     <string name="symlink_integration">Integrate Droidspaces to the system path</string>
-    <string name="symlink_integration_description">Create a symlink at /system/bin to access the droidspaces command in Android root shell. WARNING: ENABLING THIS CAUSES BOOTLOOP IF YOUR MOUNT SYSTEM IS OVERLAYFS meta modules. Only use this option when using Magic Mount-based mount system (Reboot required)</string>
+    <string name="symlink_integration_description">Create a symlink at /system/bin to access the droidspaces command in Android root shell. WARNING: ENABLING THIS CAUSES BOOTLOOP IF YOUR MOUNT SYSTEM IS OVERLAYFS meta modules. Only use this option when using Magic Mount-based mount system or kernel based "nomount" mount system (Reboot required)</string>
     <string name="about_section">About</string>
     <string name="about_droidspaces">About Droidspaces</string>
     <string name="about_description">LXC-Style container manager for Android</string>
