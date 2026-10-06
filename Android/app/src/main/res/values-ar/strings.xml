@@ -1,4 +1,46 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="feat_unkillable_title">لا يمكن ان يوقفها اندرويد. وهذا اساسها</string>
+    <string name="feat_unkillable_title">لا يمكن ان يوقفها اندرويد. وهذا من أساسها</string>
+    <string name="welcome_tagline">حاويات لينكس. بدون مشاكل في الأداء.</string>
+    <string name="get_started">ابدأ</string>
+    <string name="feat_containers_title">حاويات لينكس حقيقية</string>
+    <string name="feat_containers_desc">نفس النطاق في النواة كأداة LXC, Podman و Docker. بدون محاكاة.</string>
+    <string name="feat_overhead_title">صفر تكاليف في الأداء</string>
+    <string name="feat_overhead_desc">تتواصل مع نواة النظام مباشرة. بدون برامج أجهزة افتراضية.</string>
+    <string name="feat_unkillable_desc">تدعم اتصال init.rc محلي و طبقتان من عمليات الخلفية في حيز المستخدم. لا يمكن أن تتوقف.</string>
+    <string name="feat_init_desc">دعم كامل لنظام التهيئة (init system). إدارة حقيقية للخدمات، وليس مجرد بيئة محاكاة.</string>
+    <string name="feat_isolation_title">معزولة بالكامل</string>
+    <string name="feat_isolation_desc">شجرة معرفات العمليات الخاصة، وجدول التثبيت، واسم المضيف، وIPC، وتسلسل هرمي لمجموعات التحكم لكل حاوية.</string>
+    <string name="feat_hardware_title">صلاحيات وصول كاملة لعتاد الجهاز و وحدة معالجة الرسوميات</string>
+    <string name="feat_hardware_desc">أتح إمكانية الوصول المباشر إلى عتاد المضيف (وحدة معالجة الرسومات، والمستشعرات، وUSB، وأجهزة التخزين الكتلي) للحاويات الخاصة بك.</string>
+    <string name="feat_privileged_title">حاويات بصلاحيات كاملة</string>
+    <string name="feat_privileged_desc">قلل طبقات الحماية مع وضع الصلاحيات الكاملة للمستخدمين المتقدمين.</string>
+    <string name="feat_autoboot_title">يمكن ان تبدأ عند تشغيل الجهاز</string>
+    <string name="feat_autoboot_desc">بدل تشغيل الحاويات بشكل اوتوماتيكي عند التشغيل حتي لو الشاشة مغلقة والبيانات مشفرة.</string>
+    <string name="root_check_title">التحقق صلاحيات الروت</string>
+    <string name="checking_root">يتم النحقق من صلاحيات الروت...</string>
+    <string name="root_granted">صلاحيات الروت ممنوحة</string>
+    <string name="root_denied">تم رفض صلاحيات الروت</string>
+    <string name="root_required_message">صلاحيات الروت مطلوبة للتحكم في الحاويات.</string>
+    <string name="check_root_access">تحقق من صلاحيات الروت</string>
+    <string name="check_root_access_click">أضغط للتحقق من صلاحيات الروت</string>
+    <string name="root_available_message">يمكنك الأن استخدام Droidspaces</string>
+    <string name="skip">تخطي</string>
+    <string name="continue_button">المتابعة</string>
+    <string name="home_title">التنقل</string>
+    <string name="containers">الحاويات</string>
+    <string name="panel">اللوحة</string>
+    <string name="settings">الأعدادات</string>
+    <string name="back">للخلف</string>
+    <string name="close">أغلاق</string>
+    <string name="refresh">تحديث</string>
+    <string name="search">البحث</string>
+    <string name="container_singular">حاوية</string>
+    <string name="running">تعمل</string>
+    <string name="backend_checking">الخلفية: يتم التحقق...</string>
+    <string name="backend_installed">الخلفية: تم التثبيت</string>
+    <string name="backend_update_available">الخلفية: تحديث متاح</string>
+    <string name="backend_not_installed">الخلفية: غير مثبتة</string>
+    <string name="backend_corrupted">الخلفية: تالفة</string>
+    <string name="unknown">غير معروف</string>
 </resources>

@@ -562,4 +562,26 @@
     <string name="repo_storage_permission_title">儲存空間權限</string>
     <string name="repo_storage_permission_rationale">Rootfs 壓縮包會儲存到您的下載資料夾中；在此 Android 版本上，這需要儲存存取權限。若無此權限，下載將無法開始。</string>
     <string name="repo_notification_permission_rationale">Droidspaces 會顯示下載進度、取消按鈕以及一則通知；下載完成後，您可以點擊該通知進行安裝。即便不顯示這些內容，下載過程仍會持續進行。</string>
+    <string name="disable_ipv6_description_isolated">在此容器中禁用IPv6。</string>
+    <string name="cat_resource_limits">資源限制</string>
+    <string name="limit_memory">限制記憶體</string>
+    <string name="limit_memory_on">上限低於設備總 %1$s</string>
+    <string name="limit_memory_off">無限制，共享所有 %1$s</string>
+    <string name="limit_cpu">限制CPU</string>
+    <string name="limit_cpu_on">上限低於設備總 %1$s</string>
+    <string name="limit_cpu_off">無限制，共享所有 %1$s</string>
+    <string name="limit_pids">限制進程</string>
+    <string name="limit_pids_on">同時運行最多的進程和執行緒</string>
+    <string name="limit_pids_off">無限制</string>
+    <string name="limit_pids_label">PIDs</string>
+    <string name="limit_pids_value">%1$d PIDs</string>
+    <string name="limit_pids_hint">留空即表示無限制</string>
+    <string name="limit_pids_error">最少 %1$d</string>
+    <string name="limit_not_supported">此核心不支援（需要 %1$s）</string>
+    <string name="memory_mb">%1$d MB</string>
+    <string name="memory_gb">%1$s GB</string>
+    <plurals name="cpu_cores">
+        <item quantity="other">%1$s 核心</item>
+    </plurals>
+    <string name="ram_limit_percent_label">%1$d/%2$d MB (%3$.0f%%)</string>
 </resources>

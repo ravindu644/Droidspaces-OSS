@@ -1,3 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <plurals name="notification_sessions_running">
+        <item quantity="zero">لا توجد جلسات تعمل حاليا</item>
+        <item quantity="one">%d جلسة تعمل حاليا</item>
+        <item quantity="two">%d جلستان تعملان حاليا</item>
+        <item quantity="few">%d جلسات تعمل حاليا</item>
+        <item quantity="many">%d جلسات تعمل حاليا</item>
+        <item quantity="other">%d جلسات تعمل حاليا</item>
+    </plurals>
 </resources>
