@@ -359,7 +359,7 @@ Ext4 images solve both. The image file holds a complete ext4 filesystem that is 
 
 When you use `--rootfs-img`:
 
-1. **Filesystem check:** Droidspaces runs `e2fsck -f -y` on the image to ensure integrity
+1. **Filesystem check:** Droidspaces reads the image's superblock and runs `e2fsck -y` only when it says the filesystem needs it: not cleanly unmounted, errors flagged, a journal to replay, or the mount-count or check-interval limit reached. A clean image skips the check
 2. **SELinux context:** On Android, applies the `vold_data_file` SELinux context to prevent silent I/O denials
 3. **Loop mount:** The image is mounted at `/mnt/Droidspaces/<name>`
 4. **Retry logic:** On kernel 4.14, mounts may fail due to stale loop device state. Droidspaces retries up to 3 times with `sync()` and settle delays.

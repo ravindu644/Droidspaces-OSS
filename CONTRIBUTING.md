@@ -534,7 +534,7 @@ influenced, copy the `ds_bind_mount_socket` pattern: open with `O_NOFOLLOW|O_CLO
 | `get_kernel_version`, `check_kernel_recommendation` | Version gating against `DS_MIN_KERNEL_MAJOR` and `DS_MIN_KERNEL_MINOR` |
 | `check_ns(flag, name)` | Probing whether a `CLONE_NEW*` namespace is usable |
 | `ds_cgroup_v2_usable`, `ds_cgroup_kernel_supports_v2`, `ds_cgroup_host_is_v2` | cgroup generation gates |
-| `ds_nl_probe_nat_capability(reason, size)` | Kernel bridge, veth, and NAT capability. Fork free. Run before any NAT setup |
+| `ds_nl_probe_nat_capability(reason, size)` | Kernel bridge, veth, and NAT capability. Fork free. Run before any NAT setup. A full pass is remembered for the boot in `Net/nat_caps`, keyed by boot_id; anything less is probed again |
 | `ds_get_selinux_status()`, `is_systemd_rootfs(path)` | SELinux mode, and rootfs flavour |
 
 ### C backend: config
