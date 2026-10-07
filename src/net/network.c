@@ -2163,8 +2163,8 @@ static void do_uplink_reprobe(void) {
   install_policy_rules(ctx);
 
   /* The netfilter set is gated behind a fork-free probe of every rule in it:
-   * ds_ipt_ensure_mss_clamp() and the port-forward helpers shell out to the
-   * iptables binary, so they must not run every cycle.  Only 0 means
+   * the port-forward helpers shell out to the iptables binary, so they must
+   * not run every cycle.  Only 0 means
    * "something is definitely missing"; -1 is "tables unreadable", where a
    * blind reinstall through those binary fallbacks would stack duplicates. */
   const char *iface = host_filter_iface();

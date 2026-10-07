@@ -27,6 +27,8 @@
 #include <linux/netfilter.h>
 #include <linux/netfilter/nf_nat.h>
 #include <linux/netfilter/x_tables.h>
+#include <linux/netfilter/xt_TCPMSS.h>
+#include <linux/netfilter/xt_tcpudp.h>
 #include <linux/netfilter_ipv4/ip_tables.h>
 #include <linux/netfilter_ipv6/ip6_tables.h>
 
@@ -110,7 +112,8 @@ struct xt_ent_view {
   char *iniface, *outiface;
   unsigned char *in_mask, *out_mask;
   void *src, *smsk, *dst, *dmsk;
-  uint8_t *invflags;
+  uint16_t *proto;
+  uint8_t *flags, *invflags;
 };
 
 static void entry_view(const struct xt_family *f, void *e,
@@ -125,6 +128,8 @@ static void entry_view(const struct xt_family *f, void *e,
     v->smsk = &ip->smsk;
     v->dst = &ip->dst;
     v->dmsk = &ip->dmsk;
+    v->proto = &ip->proto;
+    v->flags = &ip->flags;
     v->invflags = &ip->invflags;
   } else {
     struct ipt_ip *ip = &((struct ipt_entry *)e)->ip;
@@ -136,6 +141,8 @@ static void entry_view(const struct xt_family *f, void *e,
     v->smsk = &ip->smsk;
     v->dst = &ip->dst;
     v->dmsk = &ip->dmsk;
+    v->proto = &ip->proto;
+    v->flags = &ip->flags;
     v->invflags = &ip->invflags;
   }
 }
@@ -249,12 +256,8 @@ static int bin_rule(const struct xt_family *f, const char *op,
 }
 
 static int bin_ensure(const struct xt_family *f, const char *table,
-                      const char *chain, const char *const spec[],
-                      int present) {
-  /* present: 1 known to be there, 0 known missing, -1 ask the binary. */
-  if (present < 0)
-    present = bin_rule(f, "-C", table, chain, spec) == 0;
-  if (present)
+                      const char *chain, const char *const spec[]) {
+  if (bin_rule(f, "-C", table, chain, spec) == 0)
     return 0;
   /* An exit status is positive and every caller tests for < 0, so a refused
    * rule used to read as success and NAT66 was announced with no MASQUERADE. */
@@ -318,6 +321,8 @@ static int get_table(const struct xt_family *f, int fd, const char *table_name,
 
 #define DS_IPT_MATCH_IN 0x01u
 #define DS_IPT_MATCH_OUT 0x02u
+#define DS_IPT_MATCH_CLAMP 0x04u /* our MSS clamp, see clamp_rule() */
+static int is_our_clamp(const struct xt_family *f, const unsigned char *e);
 
 static int hook_contains_offset(const struct ipt_getinfo *info,
                                 unsigned int hook_id, unsigned int offset) {
@@ -779,6 +784,10 @@ static int remove_matching_rules(const struct xt_family *f, int fd,
           (*v.invflags & IPT_INV_DSTIP))
         is_ours = 1;
 
+      /* Our MSS clamp, and only ours: a foreign TCPMSS rule stays. */
+      if (!is_ours && (iface_flags & DS_IPT_MATCH_CLAMP) && is_our_clamp(f, e))
+        is_ours = 1;
+
       /* ACCEPT on the exact interface/direction we inserted. */
       if (!is_ours && match_iface && match_iface[0] && target_is_accept(t)) {
         if ((iface_flags & DS_IPT_MATCH_IN) &&
@@ -973,27 +982,81 @@ rule_begin(const struct xt_family *f, unsigned char *buf, size_t target_sz) {
   return (struct xt_entry_target *)(buf + hdr);
 }
 
+/* The MSS clamp is [entry][tcp match][TCPMSS target]: the one rule we build
+ * with a match extension. */
+#define DS_XT_CLAMP_MATCH_SZ                                                   \
+  XT_ALIGN(sizeof(struct xt_entry_match) + sizeof(struct xt_tcp))
+#define DS_XT_CLAMP_TARGET_SZ                                                  \
+  XT_ALIGN(sizeof(struct xt_entry_target) + sizeof(struct xt_tcpmss_info))
+#define DS_XT_NAT_TARGET_SZ                                                    \
+  XT_ALIGN(sizeof(struct xt_entry_target) + sizeof(struct nf_nat_range))
+
 /* Big enough for any rule we build, in either family. */
 #define DS_XT_RULE_MAX                                                         \
   (XT_ALIGN(sizeof(struct ip6t_entry)) +                                       \
-   XT_ALIGN(sizeof(struct xt_entry_target) + sizeof(struct nf_nat_range)))
+   (DS_XT_CLAMP_MATCH_SZ + DS_XT_CLAMP_TARGET_SZ > DS_XT_NAT_TARGET_SZ         \
+        ? DS_XT_CLAMP_MATCH_SZ + DS_XT_CLAMP_TARGET_SZ                         \
+        : DS_XT_NAT_TARGET_SZ))
 
-/* Does the built-in chain at hook_id of table carry a rule with this target?
- * unscoped asks for one that is not bound to an interface, so that it applies
- * to our traffic too. One getsockopt pair, no fork. -1 when the table cannot
- * be read. */
-static int hook_has_target(const struct xt_family *f, int fd, const char *table,
-                           unsigned int hook_id, const char *target,
-                           int unscoped) {
-  struct ipt_getinfo info;
-  unsigned char *base = NULL;
-  if (get_table(f, fd, table, &info, &base) < 0)
-    return -1;
-  const char *any = unscoped ? "" : NULL;
-  int present = rule_exists_in_hook(f, &info, ENTRIES_BLOB(base), hook_id, any,
-                                    any, NULL, NULL, target);
-  free(base);
-  return present;
+/* Build "-p tcp --tcp-flags SYN,RST SYN -j TCPMSS --clamp-mss-to-pmtu" in
+ * buf, which must hold DS_XT_RULE_MAX bytes. Returns the rule's size. The
+ * kernel accepts a clamp only on a rule that matches TCP SYNs, which is what
+ * the tcp match says. */
+static unsigned int clamp_rule(const struct xt_family *f, unsigned char *buf) {
+  size_t hdr = XT_ALIGN(f->entry_sz);
+  uint16_t toff = (uint16_t)(hdr + DS_XT_CLAMP_MATCH_SZ);
+  uint16_t next = (uint16_t)(toff + DS_XT_CLAMP_TARGET_SZ);
+
+  memset(buf, 0, next);
+  memcpy(buf + f->off_target, &toff, sizeof(toff));
+  memcpy(buf + f->off_next, &next, sizeof(next));
+
+  struct xt_ent_view v;
+  entry_view(f, buf, &v);
+  *v.proto = IPPROTO_TCP;
+  if (f->af == AF_INET6)
+    *v.flags |= IP6T_F_PROTO; /* ip6t only looks at proto when told to */
+
+  struct xt_entry_match *m = (struct xt_entry_match *)(buf + hdr);
+  m->u.match_size = DS_XT_CLAMP_MATCH_SZ;
+  safe_strncpy(m->u.user.name, "tcp", sizeof(m->u.user.name));
+  struct xt_tcp *tcp = (struct xt_tcp *)m->data;
+  tcp->spts[1] = tcp->dpts[1] = 0xffff; /* any port */
+  tcp->flg_mask = 0x02 | 0x04;          /* SYN,RST */
+  tcp->flg_cmp = 0x02;                  /* SYN */
+
+  struct xt_entry_target *t = (struct xt_entry_target *)(buf + toff);
+  t->u.target_size = DS_XT_CLAMP_TARGET_SZ;
+  safe_strncpy(t->u.user.name, "TCPMSS", sizeof(t->u.user.name));
+  ((struct xt_tcpmss_info *)t->data)->mss = XT_TCPMSS_CLAMP_PMTU;
+  return next;
+}
+
+/* Is this entry the clamp clamp_rule() builds, byte for byte in the parts
+ * that matter? Used by the remover so that only our rule goes, never a VPN's
+ * TCPMSS rule that happens to share the chain. */
+static int is_our_clamp(const struct xt_family *f, const unsigned char *e) {
+  unsigned int toff = ent_target_off(f, e);
+  if (toff != XT_ALIGN(f->entry_sz) + DS_XT_CLAMP_MATCH_SZ)
+    return 0;
+  struct xt_ent_view v;
+  entry_view_ro(f, e, &v);
+  if (*v.proto != IPPROTO_TCP || !iface_empty(v.iniface, v.in_mask) ||
+      !iface_empty(v.outiface, v.out_mask))
+    return 0;
+
+  const struct xt_entry_match *m =
+      (const struct xt_entry_match *)(e + XT_ALIGN(f->entry_sz));
+  const struct xt_tcp *tcp = (const struct xt_tcp *)m->data;
+  if (m->u.match_size != DS_XT_CLAMP_MATCH_SZ ||
+      strcmp(m->u.user.name, "tcp") != 0 || tcp->flg_mask != (0x02 | 0x04) ||
+      tcp->flg_cmp != 0x02 || tcp->invflags != 0)
+    return 0;
+
+  const struct xt_entry_target *t = (const struct xt_entry_target *)(e + toff);
+  return t->u.target_size == DS_XT_CLAMP_TARGET_SZ &&
+         strcmp(t->u.user.name, "TCPMSS") == 0 &&
+         ((const struct xt_tcpmss_info *)t->data)->mss == XT_TCPMSS_CLAMP_PMTU;
 }
 
 /* Public API: ds_ipt_host_rules_present
@@ -1075,11 +1138,18 @@ int ds_ipt_host_rules_present(int family, const char *iface,
     free(base);
   }
 
-  /* mangle: the MSS clamp.  An unreadable mangle table leaves the verdict
+  /* mangle: the MSS clamp, by the installer's own test: a TCPMSS target not
+   * bound to an interface. An unreadable mangle table leaves the verdict
    * untouched rather than failing the probe - see the header comment. */
-  if (present &&
-      hook_has_target(f, fd, "mangle", NF_INET_POST_ROUTING, "TCPMSS", 0) == 0)
-    present = 0;
+  if (present) {
+    base = NULL;
+    if (get_table(f, fd, "mangle", &info, &base) == 0) {
+      present = rule_exists_in_hook(f, &info, ENTRIES_BLOB(base),
+                                    NF_INET_POST_ROUTING, "", "", NULL, NULL,
+                                    "TCPMSS");
+      free(base);
+    }
+  }
 
   close(fd);
   return present ? 1 : 0;
@@ -1206,7 +1276,7 @@ int ds_ipt_ensure_masquerade(int family, const char *src_cidr) {
          f->bin, ret);
   const char *const spec[] = {"-s",     src_cidr, "!",          "-d",
                               src_cidr, "-j",     "MASQUERADE", NULL};
-  return bin_ensure(f, "nat", "POSTROUTING", spec, -1);
+  return bin_ensure(f, "nat", "POSTROUTING", spec);
 }
 
 /* Internal: raw_ensure_iface_accept
@@ -1273,7 +1343,7 @@ static int ensure_iface_accept(const struct xt_family *f, int fd,
          f->bin, chain, is_out ? 'o' : 'i', iface, ret);
   const char *const spec[] = {is_out ? "-o" : "-i", iface, "-j", "ACCEPT",
                               NULL};
-  return bin_ensure(f, "filter", chain, spec, -1);
+  return bin_ensure(f, "filter", chain, spec);
 }
 
 /* Public API: ds_ipt_ensure_forward_accept
@@ -1318,30 +1388,45 @@ int ds_ipt_ensure_input_accept(int family, const char *iface) {
  * bridge + veth path. It matters most on IPv6, where routers never fragment
  * and a mobile uplink is often well under the veth's 1500.
  *
- * The raw socket API for this rule is disproportionately complex because it
- * requires two match extension payloads (xt_tcp + xt_TCPMSS with pmtu flag).
- * The insert goes through the binary. On a host without it the clamp is
- * simply absent and path MTU discovery has to do the job.
- *
- * Whether a clamp is already there is answered from the table blob, the way
- * the route monitor's presence probe asks it: a TCPMSS target in mangle
- * POSTROUTING that is not bound to an interface counts, a VPN's fixed
- * --set-mss included, since it clamps our SYNs just as well; one scoped to
- * its own tunnel does not. Only when the raw socket cannot read the table
- * does the binary's -C ask. */
+ * Raw socket first, like every other rule: a TCPMSS target in mangle
+ * POSTROUTING that is not bound to an interface counts as present, a VPN's
+ * fixed --set-mss included, since it clamps our SYNs just as well; one scoped
+ * to its own tunnel does not. Otherwise clamp_rule() goes in. The binary is
+ * the fallback for kernels without the raw API. */
 
 int ds_ipt_ensure_mss_clamp(int family) {
   const struct xt_family *f = xt_family_of(family);
   ds_log("[IPT] ensure_mss_clamp: %s", f->bin);
 
-  int present = -1;
+  int ret = -ENOTSUP;
   int fd = open_raw_socket(f);
   if (fd >= 0) {
-    present =
-        hook_has_target(f, fd, "mangle", NF_INET_POST_ROUTING, "TCPMSS", 1);
+    struct ipt_getinfo info;
+    unsigned char *base = NULL;
+    ret = get_table(f, fd, "mangle", &info, &base);
+    if (ret == 0) {
+      if (rule_exists_in_hook(f, &info, ENTRIES_BLOB(base),
+                              NF_INET_POST_ROUTING, "", "", NULL, NULL,
+                              "TCPMSS")) {
+        ds_log("[IPT] %s TCPMSS clamp already present - skipping", f->bin);
+      } else {
+        unsigned char rule_buf[DS_XT_RULE_MAX];
+        unsigned int sz = clamp_rule(f, rule_buf);
+        ret = insert_rule_at_hook(f, fd, "mangle", &info, ENTRIES_BLOB(base),
+                                  NF_INET_POST_ROUTING, rule_buf, sz);
+      }
+      free(base);
+    }
     close(fd);
   }
-  return bin_ensure(f, "mangle", "POSTROUTING", k_mss_spec, present);
+  if (ret == 0) {
+    ds_log("[IPT] %s TCPMSS clamp in place via raw socket API", f->bin);
+    return 0;
+  }
+
+  ds_log("[IPT] %s TCPMSS raw path failed (ret=%d), using the binary", f->bin,
+         ret);
+  return bin_ensure(f, "mangle", "POSTROUTING", k_mss_spec);
 }
 
 /* Remove one of our rules: raw first, then the binary.
@@ -1365,7 +1450,10 @@ static void remove_rule(const struct xt_family *f, int fd, const char *table,
       free(base);
     }
   }
-  if (removed <= 0)
+  /* The clamp is the exception: when the raw path could read the table and
+   * found none of ours, there is nothing the binary could find either, and
+   * its spec would match a foreign clamp-to-pmtu rule that was never ours. */
+  if (removed < 0 || (removed == 0 && !(iface_flags & DS_IPT_MATCH_CLAMP)))
     bin_rule(f, "-D", table, chain, spec);
 }
 
@@ -1420,12 +1508,11 @@ int ds_ipt_remove_ds_rules(int family) {
   remove_rule(f, fd, "nat", NF_INET_POST_ROUTING, "POSTROUTING", net, mask,
               NULL, 0, masq_spec);
   remove_iface_accepts(f, fd, DS_NAT_BRIDGE);
+  remove_rule(f, fd, "mangle", NF_INET_POST_ROUTING, "POSTROUTING", NULL, NULL,
+              NULL, DS_IPT_MATCH_CLAMP, k_mss_spec);
 
   if (fd >= 0)
     close(fd);
-
-  /* MSS clamp: binary only, like its install. */
-  bin_rule(f, "-D", "mangle", "POSTROUTING", k_mss_spec);
   return 0;
 }
 
