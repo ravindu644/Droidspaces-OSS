@@ -397,6 +397,7 @@ static int start_rootfs_locked(struct ds_config *cfg, int *lock_fd,
                                int reuse_mount) {
 
   int has_side_effects = 0;
+  pid_t tweaks_pid = -1; /* the android_optimizations(1) helper, see below */
 
   /* 0. Restart: pick the preserved mount back up. If it is gone after all,
    *    this is an ordinary start that mounts the image again. */
@@ -697,6 +698,26 @@ static int start_rootfs_locked(struct ds_config *cfg, int *lock_fd,
     safe_strncpy(cfg->pidfile, global_pidfile, sizeof(cfg->pidfile));
   }
 
+  /* Three binder round trips into system_server. They used to run after the
+   * host-side network setup, in series, with the whole start waiting on them.
+   * Nothing between here and init's exec needs them, so a helper applies them
+   * while the container boots and is reaped after wait_for_boot(), so they
+   * are still in place by the time start returns. The guest may fork its
+   * first services before the phantom process cap is lifted; the cap is
+   * applied by a periodic trim of the app's cgroup, which the container's
+   * processes have left by then, not at fork. Forked before the sync pipe
+   * exists: holding its write end would hold back the EOF that marks init's
+   * exec. */
+  if (is_android()) {
+    tweaks_pid = fork();
+    if (tweaks_pid == 0) {
+      android_optimizations(1);
+      _exit(0);
+    }
+    if (tweaks_pid < 0)
+      android_optimizations(1);
+  }
+
   /* 6. Pipe for synchronization */
   int sync_pipe[2];
   if (pipe(sync_pipe) < 0) {
@@ -712,23 +733,6 @@ static int start_rootfs_locked(struct ds_config *cfg, int *lock_fd,
    * This eliminates the race condition where the child boots and reads
    * DNS before the parent has written it. */
   fix_networking_host(cfg);
-
-  /* Three binder round trips into system_server. They used to run here in
-   * series with the whole start waiting on them. Nothing between here and
-   * init's exec needs them, so a helper applies them while the container
-   * boots and is reaped after wait_for_boot(), so they are still in place by
-   * the time start returns. The helper drops the sync pipe: holding its write
-   * end would hold back the EOF that marks init's exec. */
-  pid_t tweaks_pid = -1;
-  if (is_android()) {
-    tweaks_pid = fork();
-    if (tweaks_pid == 0) {
-      close(sync_pipe[0]);
-      close(sync_pipe[1]);
-      android_optimizations(1);
-      _exit(0);
-    }
-  }
 
   /* Record start time before fork so monitor and virtualize_update share it */
   clock_gettime(CLOCK_BOOTTIME, &cfg->start_time);
@@ -796,15 +800,20 @@ static int start_rootfs_locked(struct ds_config *cfg, int *lock_fd,
   /* Also save init type */
   save_init_type(cfg->pidfile, cfg->init_type);
 
-  /* 11. Foreground or background finish */
+  /* 11. Do not show the info or return until init has exec'd. A command that
+   * returned earlier left init still logging to a terminal nobody was reading
+   * any more, and its last lines, "Booting ..." among them, went missing. */
+  int booted = wait_for_boot(sync_pipe[0], cfg->container_pid);
+  close(sync_pipe[0]);
+  sync_pipe[0] = -1;
+  while (tweaks_pid > 0 && waitpid(tweaks_pid, NULL, 0) < 0 && errno == EINTR)
+    ;
+  tweaks_pid = -1;
+
   if (cfg->foreground) {
     /* We stay attached for the container's whole life, so let go of the lock
      * here, but not before the container is visible as running: a start that
      * raced in before that would not see it and would boot a second one. */
-    wait_for_boot(sync_pipe[0], cfg->container_pid);
-    close(sync_pipe[0]);
-    if (tweaks_pid > 0)
-      waitpid(tweaks_pid, NULL, 0);
     ds_container_unlock(*lock_fd);
     *lock_fd = -1;
 
@@ -812,15 +821,6 @@ static int start_rootfs_locked(struct ds_config *cfg, int *lock_fd,
     free_config_env_vars(cfg);
     return ret;
   } else {
-    /* Do not show the info or return until init has exec'd. A command that
-     * returned earlier left init still logging to a terminal nobody was reading
-     * any more, and its last lines, "Booting ..." among them, went missing. */
-    int booted = wait_for_boot(sync_pipe[0], cfg->container_pid);
-    close(sync_pipe[0]);
-    sync_pipe[0] = -1;
-    if (tweaks_pid > 0)
-      waitpid(tweaks_pid, NULL, 0);
-
     if (!booted) {
       ds_error("Container failed to boot correctly.");
       /* If pid is still alive, we might want to kill it, but monitor usually
@@ -848,6 +848,11 @@ static int start_rootfs_locked(struct ds_config *cfg, int *lock_fd,
   return 0;
 
 cleanup:
+  /* The helper must be done before cleanup's android_optimizations(0), or its
+   * last command would land after the reset. */
+  while (tweaks_pid > 0 && waitpid(tweaks_pid, NULL, 0) < 0 && errno == EINTR)
+    ;
+
   /* Centralized host-side cleanup IF we are returning error.
    * This ensures image mounts and tracking files are reverted on fatal boot
    * errors. Only execute if we successfully crossed the point of creating
