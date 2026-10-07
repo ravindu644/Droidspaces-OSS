@@ -397,7 +397,8 @@ static int start_rootfs_locked(struct ds_config *cfg, int *lock_fd,
                                int reuse_mount) {
 
   int has_side_effects = 0;
-  pid_t tweaks_pid = -1; /* the android_optimizations(1) helper, see below */
+  int sync_pipe[2] = {-1, -1}; /* read by cleanup: set before any goto */
+  pid_t tweaks_pid = -1;       /* the android_optimizations(1) helper */
 
   /* 0. Restart: pick the preserved mount back up. If it is gone after all,
    *    this is an ordinary start that mounts the image again. */
@@ -719,7 +720,6 @@ static int start_rootfs_locked(struct ds_config *cfg, int *lock_fd,
   }
 
   /* 6. Pipe for synchronization */
-  int sync_pipe[2];
   if (pipe(sync_pipe) < 0) {
     ds_error("pipe failed: %s", strerror(errno));
     goto cleanup;
