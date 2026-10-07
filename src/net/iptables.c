@@ -198,7 +198,9 @@ static int fam_parse_cidr(const struct xt_family *f, const char *cidr,
  *
  * The kernel loads a table's module by itself the first time the table is
  * asked for, but only once ip_tables / ip6_tables has registered the sockopt,
- * and nothing autoloads those. Loading the table modules pulls them in. */
+ * and nothing autoloads those. Loading the table modules pulls them in.
+ * Called from get_table() when a table turns out to be missing, so a kernel
+ * that has everything built in never pays for the ten forks. */
 
 static int modules_probed = 0;
 
@@ -273,8 +275,14 @@ static int get_table(const struct xt_family *f, int fd, const char *table_name,
   safe_strncpy(info->name, table_name, sizeof(info->name));
   socklen_t info_len = sizeof(*info);
 
-  if (getsockopt(fd, f->level, IPT_SO_GET_INFO, info, &info_len) < 0) {
+  while (getsockopt(fd, f->level, IPT_SO_GET_INFO, info, &info_len) < 0) {
     int err = errno;
+    /* ENOPROTOOPT: ip_tables itself is not in. ENOENT: this table is not.
+     * Load the modules once and ask again. */
+    if ((err == ENOENT || err == ENOPROTOOPT) && !modules_probed) {
+      probe_iptables_modules();
+      continue;
+    }
     ds_log("[IPT] %s get_table('%s') GET_INFO failed: %s", f->bin, table_name,
            strerror(err));
     return -err;
@@ -943,7 +951,6 @@ static int remove_matching_rules(const struct xt_family *f, int fd,
 /* Internal: open a raw socket (shared across public APIs) */
 
 static int open_raw_socket(const struct xt_family *f) {
-  probe_iptables_modules();
   int fd = socket(f->af, SOCK_RAW | SOCK_CLOEXEC, IPPROTO_RAW);
   if (fd < 0)
     ds_log("[IPT] Failed to open %s raw socket: %s", f->bin, strerror(errno));
@@ -1397,18 +1404,25 @@ int ds_ipt_remove_ds_rules(int family) {
  * Falls back to false if the file is unreadable (e.g. no CONFIG_NETFILTER). */
 
 static int addrtype_available(void) {
-  FILE *f = fopen("/proc/net/ip_tables_matches", "re");
-  if (!f)
-    return 0;
-  char line[64];
-  while (fgets(line, sizeof(line), f)) {
-    if (strncmp(line, "addrtype", 8) == 0) {
-      fclose(f);
-      return 1;
+  /* A match the kernel has not loaded is not listed. Nothing asks the kernel
+   * to load one until a rule names it, so load the module batch once before
+   * giving up, as the old unconditional batch did. */
+  for (int tried = 0;; tried = 1) {
+    FILE *f = fopen("/proc/net/ip_tables_matches", "re");
+    if (!f)
+      return 0;
+    char line[64];
+    while (fgets(line, sizeof(line), f)) {
+      if (strncmp(line, "addrtype", 8) == 0) {
+        fclose(f);
+        return 1;
+      }
     }
+    fclose(f);
+    if (tried || modules_probed)
+      return 0;
+    probe_iptables_modules();
   }
-  fclose(f);
-  return 0;
 }
 
 /* Port-forward state file helpers
