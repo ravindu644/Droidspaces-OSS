@@ -1040,10 +1040,6 @@ int mount_rootfs_img(const char *img_path, char *mount_point, size_t mp_size,
       ds_log("Image checked and repaired successfully.");
   }
 
-  /* Settle time: prevent "device busy" on rapid restarts */
-  sync();
-  usleep(DS_RETRY_DELAY_US);
-
   /* Set SELinux context via xattr directly instead of spawning chcon */
   if (is_android())
     set_selinux_context(img_path, DS_ANDROID_VOLD_CONTEXT);
