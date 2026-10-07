@@ -322,55 +322,6 @@ pid_t find_container_init_pid(const char *uuid) {
   return 0;
 }
 
-int collect_active_uuids(char uuids[][DS_UUID_LEN + 1], int max_uuids) {
-  if (!uuids || max_uuids <= 0)
-    return 0;
-
-  pid_t *pids = NULL;
-  size_t count = 0;
-  char path[PATH_MAX];
-  int found = 0;
-
-  if (collect_pids(&pids, &count) < 0)
-    return 0;
-
-  for (size_t i = 0; i < count && found < max_uuids; i++) {
-    if (build_proc_root_path(pids[i], "/run/droidspaces", path, sizeof(path)) <
-        0)
-      continue;
-    if (access(path, F_OK) != 0)
-      continue;
-
-    DIR *d = opendir(path);
-    if (!d)
-      continue;
-
-    struct dirent *ent;
-    while ((ent = readdir(d)) != NULL && found < max_uuids) {
-      if (strlen(ent->d_name) != DS_UUID_LEN)
-        continue;
-      /* Verify it's all hex chars -- UUID marker files are 32 hex chars */
-      int is_uuid = 1;
-      for (int j = 0; j < DS_UUID_LEN; j++) {
-        char c = ent->d_name[j];
-        if (!((c >= '0' && c <= '9') || (c >= 'a' && c <= 'f'))) {
-          is_uuid = 0;
-          break;
-        }
-      }
-      if (is_uuid) {
-        memcpy(uuids[found], ent->d_name, DS_UUID_LEN);
-        uuids[found][DS_UUID_LEN] = '\0';
-        found++;
-      }
-    }
-    closedir(d);
-  }
-
-  free(pids);
-  return found;
-}
-
 pid_t find_container_by_name(const char *name) {
   if (!name || name[0] == '\0')
     return 0;

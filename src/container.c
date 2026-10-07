@@ -579,21 +579,11 @@ static int start_rootfs_locked(struct ds_config *cfg, int *lock_fd,
     goto cleanup;
   }
 
-  {
-    char active_uuids[DS_MAX_CONTAINERS][DS_UUID_LEN + 1];
-    int uuid_count = collect_active_uuids(active_uuids, DS_MAX_CONTAINERS);
-    int need_new = (cfg->uuid[0] == '\0');
-    if (!need_new) {
-      for (int _i = 0; _i < uuid_count; _i++) {
-        if (strcmp(cfg->uuid, active_uuids[_i]) == 0) {
-          need_new = 1;
-          break;
-        }
-      }
-    }
-    if (need_new)
-      generate_uuid(cfg->uuid, sizeof(cfg->uuid));
-  }
+  /* The uniqueness check above reports the name as in use when a running
+   * container carries this UUID (its deep scan is by UUID marker), so a UUID
+   * is only ever minted here, never replaced. */
+  if (cfg->uuid[0] == '\0')
+    generate_uuid(cfg->uuid, sizeof(cfg->uuid));
 
   /* Resolve and lock in the container's static NAT IP before the first save.
    *

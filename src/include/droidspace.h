@@ -914,7 +914,6 @@ int is_container_init(pid_t pid);
 int ds_metadata_sync(pid_t pid);
 int count_running_containers(char *first_name, size_t size);
 pid_t find_container_init_pid(const char *uuid);
-int collect_active_uuids(char uuids[][DS_UUID_LEN + 1], int max_uuids);
 pid_t find_container_by_name(const char *name);
 int sync_pidfile(const char *src_pidfile, const char *name);
 int show_containers(struct ds_config *cfg);
