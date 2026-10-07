@@ -821,11 +821,12 @@ void ds_virtualize_update(struct ds_config *cfg) {
     snprintf(path, sizeof(path), "/proc/%d/root/" VPROC_PATH "/%s",
              (int)cfg->container_pid, dyn[i].name);
 
+    /* The directory is there but this file is not: the guest is taking its
+     * /run apart on the way down, or this one file never got set up. Nothing
+     * to refresh here and nothing to report, any more than for the directory
+     * itself above; the other files still get theirs. */
     struct stat st;
     if (stat(path, &st) != 0) {
-      write_monitor_debug_log(cfg->container_name,
-                              "[VIRT] vfile missing: %s (%s)", path,
-                              strerror(errno));
       free(buf);
       continue;
     }

@@ -503,6 +503,7 @@ reboot_loop:;
     sigprocmask(SIG_BLOCK, &mask, NULL);
     int sfd = signalfd(-1, &mask, SFD_NONBLOCK | SFD_CLOEXEC);
     int gw_wired = 0, gw_tick = 0;
+    struct timespec last_tick = {0, 0};
 
     while (1) {
       pid_t r = waitpid(mid_pid, &status, WNOHANG);
@@ -526,12 +527,22 @@ reboot_loop:;
         }
       }
 
-      ds_virtualize_update(cfg);
+      /* The poll below returns at once whenever the console has output, so a
+       * chatty guest (a shutdown prints hundreds of lines) would run the
+       * refresh hundreds of times a second. It is meant once per heartbeat. */
+      struct timespec now;
+      clock_gettime(CLOCK_MONOTONIC, &now);
+      long since_ms = (now.tv_sec - last_tick.tv_sec) * 1000 +
+                      (now.tv_nsec - last_tick.tv_nsec) / 1000000;
+      if (since_ms >= 500) {
+        last_tick = now;
+        ds_virtualize_update(cfg);
 
-      /* A gateway client whose gateway was not up yet is still unwired. Look
-       * again every couple of seconds until the cable is in, then stop. */
-      if (cfg->net_mode == DS_NET_GATEWAY && !gw_wired && ++gw_tick % 4 == 0)
-        gw_wired = ds_net_gateway_reconcile(cfg, cfg->container_pid);
+        /* A gateway client whose gateway was not up yet is still unwired.
+         * Look again every couple of seconds until the cable is in. */
+        if (cfg->net_mode == DS_NET_GATEWAY && !gw_wired && ++gw_tick % 4 == 0)
+          gw_wired = ds_net_gateway_reconcile(cfg, cfg->container_pid);
+      }
 
       /* Poll the signalfd and, in background mode, the console PTY master.
        * poll() wakes immediately when the master becomes readable, so draining
