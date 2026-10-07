@@ -1077,9 +1077,24 @@ int setup_veth_host_side(struct ds_config *cfg, pid_t child_pid) {
    * netd flushes the tables out from under us. */
   install_netfilter_rules();
 
-  /* 3. Create veth pair */
-  ds_log("[DEBUG] Creating veth pair %s <-> %s...", veth_host, veth_peer);
-  if (ds_nl_create_veth(ctx, veth_host, veth_peer) < 0) {
+  /* 3. Create the veth pair with the peer born inside the container's netns.
+   * Creating it here and moving it afterwards cost a second netdev
+   * unregister and register, about 50 ms of RCU waits, inside init's wait
+   * for DONE. init has already signalled readiness, so its netns exists. */
+  char netns_path[PATH_MAX];
+  snprintf(netns_path, sizeof(netns_path), "/proc/%d/ns/net", child_pid);
+  int netns_fd = open(netns_path, O_RDONLY | O_CLOEXEC);
+  if (netns_fd < 0) {
+    ds_warn("[NET] Failed to open container netns %s: %s", netns_path,
+            strerror(errno));
+    ds_nl_close(ctx);
+    return -1;
+  }
+  ds_log("[DEBUG] Creating veth pair %s <-> %s (peer in netns of PID %d)...",
+         veth_host, veth_peer, (int)child_pid);
+  int created = ds_nl_create_veth_in(ctx, veth_host, veth_peer, netns_fd, NULL);
+  close(netns_fd);
+  if (created < 0) {
     ds_warn("[NET] Failed to create veth pair (%s, %s)", veth_host, veth_peer);
     ds_nl_close(ctx);
     return -1;
@@ -1132,32 +1147,6 @@ int setup_veth_host_side(struct ds_config *cfg, pid_t child_pid) {
    * rules only when this succeeded. */
   struct in6_addr ra_prefix;
   int nat6 = setup_nat6_host(ctx, cfg, &ra_prefix);
-
-  /* 6. Move peer veth into container's network namespace */
-  char netns_path[PATH_MAX];
-  snprintf(netns_path, sizeof(netns_path), "/proc/%d/ns/net", child_pid);
-
-  /* No retry loop needed; init has already signaled readiness */
-  int netns_fd = open(netns_path, O_RDONLY | O_CLOEXEC);
-  if (netns_fd < 0) {
-    ds_warn("[NET] Failed to open container netns %s: %s", netns_path,
-            strerror(errno));
-    ds_nl_close(ctx);
-    return -1;
-  }
-
-  ds_log("[DEBUG] Moving %s into netns of PID %d using FD %d...", veth_peer,
-         (int)child_pid, netns_fd);
-  int r = ds_nl_move_to_netns(ctx, veth_peer, netns_fd);
-  close(netns_fd);
-
-  if (r < 0) {
-    ds_warn("[NET] Failed to move %s into container netns (ret=%d)", veth_peer,
-            r);
-    ds_nl_close(ctx);
-    return -1;
-  }
-  ds_log("[DEBUG] Successfully moved %s to PID %d", veth_peer, (int)child_pid);
 
   /* Cache the user-pinned upstream list (if any) into the globals that the
    * routing setup and the route monitor read.  Empty list = auto-detect.  This
