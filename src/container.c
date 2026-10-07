@@ -1057,16 +1057,16 @@ static int stop_rootfs_locked(struct ds_config *caller_cfg, int skip_unmount,
            timeout_seconds);
   }
 
-  /* 2. Wait for exit */
+  /* 2. Wait for exit. We are not init's parent, so this is a poll; 20 ms
+   * keeps the overshoot small and fifty kill(2)s a second cost nothing. */
+  const int poll_us = 20000;
   int stopped = 0;
-  for (int i = 0; i < timeout_seconds * 5; i++) {
-    if (kill(pid, 0) < 0) {
-      if (errno == ESRCH) {
-        stopped = 1;
-        break;
-      }
+  for (int i = 0; i < timeout_seconds * (1000000 / poll_us); i++) {
+    if (kill(pid, 0) < 0 && errno == ESRCH) {
+      stopped = 1;
+      break;
     }
-    usleep(DS_RETRY_DELAY_US);
+    usleep(poll_us);
   }
 
   /* 3. Force kill if still running */
