@@ -1861,6 +1861,14 @@ int ds_ipt_remove_portforwards(struct ds_config *cfg) {
     run_command_quiet(del_masq);
   }
 
+  /* Nothing to sweep for a container that was booted without forwards: cfg
+   * is the snapshot it booted with, and both cases the sweep exists for (an
+   * older version that wrote no state file, a crash before the file was
+   * written) leave the forwards in it. Without this every NAT stop paid four
+   * sh pipelines for nothing. */
+  if (!had_state && cfg->port_forward_count == 0)
+    return 0;
+
   /* Pass 3: iptables-save shell sweep (fallback)
    */
   /* Only runs when no state file existed - i.e., the container was started by
