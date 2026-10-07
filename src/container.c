@@ -712,7 +712,23 @@ static int start_rootfs_locked(struct ds_config *cfg, int *lock_fd,
    * This eliminates the race condition where the child boots and reads
    * DNS before the parent has written it. */
   fix_networking_host(cfg);
-  android_optimizations(1);
+
+  /* Three binder round trips into system_server. They used to run here in
+   * series with the whole start waiting on them. Nothing between here and
+   * init's exec needs them, so a helper applies them while the container
+   * boots and is reaped after wait_for_boot(), so they are still in place by
+   * the time start returns. The helper drops the sync pipe: holding its write
+   * end would hold back the EOF that marks init's exec. */
+  pid_t tweaks_pid = -1;
+  if (is_android()) {
+    tweaks_pid = fork();
+    if (tweaks_pid == 0) {
+      close(sync_pipe[0]);
+      close(sync_pipe[1]);
+      android_optimizations(1);
+      _exit(0);
+    }
+  }
 
   /* Record start time before fork so monitor and virtualize_update share it */
   clock_gettime(CLOCK_BOOTTIME, &cfg->start_time);
@@ -787,6 +803,8 @@ static int start_rootfs_locked(struct ds_config *cfg, int *lock_fd,
      * raced in before that would not see it and would boot a second one. */
     wait_for_boot(sync_pipe[0], cfg->container_pid);
     close(sync_pipe[0]);
+    if (tweaks_pid > 0)
+      waitpid(tweaks_pid, NULL, 0);
     ds_container_unlock(*lock_fd);
     *lock_fd = -1;
 
@@ -800,6 +818,8 @@ static int start_rootfs_locked(struct ds_config *cfg, int *lock_fd,
     int booted = wait_for_boot(sync_pipe[0], cfg->container_pid);
     close(sync_pipe[0]);
     sync_pipe[0] = -1;
+    if (tweaks_pid > 0)
+      waitpid(tweaks_pid, NULL, 0);
 
     if (!booted) {
       ds_error("Container failed to boot correctly.");
