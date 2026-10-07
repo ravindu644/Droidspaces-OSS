@@ -249,8 +249,12 @@ static int bin_rule(const struct xt_family *f, const char *op,
 }
 
 static int bin_ensure(const struct xt_family *f, const char *table,
-                      const char *chain, const char *const spec[]) {
-  if (bin_rule(f, "-C", table, chain, spec) == 0)
+                      const char *chain, const char *const spec[],
+                      int present) {
+  /* present: 1 known to be there, 0 known missing, -1 ask the binary. */
+  if (present < 0)
+    present = bin_rule(f, "-C", table, chain, spec) == 0;
+  if (present)
     return 0;
   /* An exit status is positive and every caller tests for < 0, so a refused
    * rule used to read as success and NAT66 was announced with no MASQUERADE. */
@@ -422,11 +426,10 @@ static int rule_exists_in_hook(const struct xt_family *f,
         match = 0;
       }
     }
-    if (match && iface_in && iface_in[0] &&
-        strncmp(v.iniface, iface_in, IFNAMSIZ) != 0)
+    /* NULL: any interface. "": the rule must not be bound to one. */
+    if (match && iface_in && strncmp(v.iniface, iface_in, IFNAMSIZ) != 0)
       match = 0;
-    if (match && iface_out && iface_out[0] &&
-        strncmp(v.outiface, iface_out, IFNAMSIZ) != 0)
+    if (match && iface_out && strncmp(v.outiface, iface_out, IFNAMSIZ) != 0)
       match = 0;
     if (match && src &&
         (memcmp(v.src, src, f->addr_len) != 0 ||
@@ -975,6 +978,24 @@ rule_begin(const struct xt_family *f, unsigned char *buf, size_t target_sz) {
   (XT_ALIGN(sizeof(struct ip6t_entry)) +                                       \
    XT_ALIGN(sizeof(struct xt_entry_target) + sizeof(struct nf_nat_range)))
 
+/* Does the built-in chain at hook_id of table carry a rule with this target?
+ * unscoped asks for one that is not bound to an interface, so that it applies
+ * to our traffic too. One getsockopt pair, no fork. -1 when the table cannot
+ * be read. */
+static int hook_has_target(const struct xt_family *f, int fd, const char *table,
+                           unsigned int hook_id, const char *target,
+                           int unscoped) {
+  struct ipt_getinfo info;
+  unsigned char *base = NULL;
+  if (get_table(f, fd, table, &info, &base) < 0)
+    return -1;
+  const char *any = unscoped ? "" : NULL;
+  int present = rule_exists_in_hook(f, &info, ENTRIES_BLOB(base), hook_id, any,
+                                    any, NULL, NULL, target);
+  free(base);
+  return present;
+}
+
 /* Public API: ds_ipt_host_rules_present
  *
  * Fork-free probe for the whole host-side rule set of one family:
@@ -1056,15 +1077,9 @@ int ds_ipt_host_rules_present(int family, const char *iface,
 
   /* mangle: the MSS clamp.  An unreadable mangle table leaves the verdict
    * untouched rather than failing the probe - see the header comment. */
-  if (present) {
-    base = NULL;
-    if (get_table(f, fd, "mangle", &info, &base) == 0) {
-      present = rule_exists_in_hook(f, &info, ENTRIES_BLOB(base),
-                                    NF_INET_POST_ROUTING, NULL, NULL, NULL,
-                                    NULL, "TCPMSS");
-      free(base);
-    }
-  }
+  if (present &&
+      hook_has_target(f, fd, "mangle", NF_INET_POST_ROUTING, "TCPMSS", 0) == 0)
+    present = 0;
 
   close(fd);
   return present ? 1 : 0;
@@ -1191,7 +1206,7 @@ int ds_ipt_ensure_masquerade(int family, const char *src_cidr) {
          f->bin, ret);
   const char *const spec[] = {"-s",     src_cidr, "!",          "-d",
                               src_cidr, "-j",     "MASQUERADE", NULL};
-  return bin_ensure(f, "nat", "POSTROUTING", spec);
+  return bin_ensure(f, "nat", "POSTROUTING", spec, -1);
 }
 
 /* Internal: raw_ensure_iface_accept
@@ -1258,7 +1273,7 @@ static int ensure_iface_accept(const struct xt_family *f, int fd,
          f->bin, chain, is_out ? 'o' : 'i', iface, ret);
   const char *const spec[] = {is_out ? "-o" : "-i", iface, "-j", "ACCEPT",
                               NULL};
-  return bin_ensure(f, "filter", chain, spec);
+  return bin_ensure(f, "filter", chain, spec, -1);
 }
 
 /* Public API: ds_ipt_ensure_forward_accept
@@ -1305,13 +1320,28 @@ int ds_ipt_ensure_input_accept(int family, const char *iface) {
  *
  * The raw socket API for this rule is disproportionately complex because it
  * requires two match extension payloads (xt_tcp + xt_TCPMSS with pmtu flag).
- * We use the binary exclusively. On a host without it the clamp is simply
- * absent and path MTU discovery has to do the job. */
+ * The insert goes through the binary. On a host without it the clamp is
+ * simply absent and path MTU discovery has to do the job.
+ *
+ * Whether a clamp is already there is answered from the table blob, the way
+ * the route monitor's presence probe asks it: a TCPMSS target in mangle
+ * POSTROUTING that is not bound to an interface counts, a VPN's fixed
+ * --set-mss included, since it clamps our SYNs just as well; one scoped to
+ * its own tunnel does not. Only when the raw socket cannot read the table
+ * does the binary's -C ask. */
 
 int ds_ipt_ensure_mss_clamp(int family) {
   const struct xt_family *f = xt_family_of(family);
   ds_log("[IPT] ensure_mss_clamp: %s", f->bin);
-  return bin_ensure(f, "mangle", "POSTROUTING", k_mss_spec);
+
+  int present = -1;
+  int fd = open_raw_socket(f);
+  if (fd >= 0) {
+    present =
+        hook_has_target(f, fd, "mangle", NF_INET_POST_ROUTING, "TCPMSS", 1);
+    close(fd);
+  }
+  return bin_ensure(f, "mangle", "POSTROUTING", k_mss_spec, present);
 }
 
 /* Remove one of our rules: raw first, then the binary.
