@@ -210,6 +210,26 @@ int ds_nl_probe_nat_capability(char *reason, size_t rsz) {
     return -1;
   }
 
+  /* A full pass creates a bridge and a veth pair and deletes all three, and
+   * every netdev unregister waits out RCU grace periods: 170 ms on a
+   * mid-range phone, on every start. The kernel does not change between
+   * starts, so a pass is remembered for the boot it was made in, by the
+   * boot_id the kernel mints at boot. Only the full verdict is kept: a
+   * degraded or failed one is asked again, so a module loaded later in the
+   * same boot is picked up. One unloaded later in the boot is not: the real
+   * bridge or veth creation in setup_veth_host_side() reports that instead,
+   * with a warning where the probe would have failed or gone bridgeless. */
+  char boot_id[64] = "", seen[64] = "", stamp[PATH_MAX];
+  read_file("/proc/sys/kernel/random/boot_id", boot_id, sizeof(boot_id));
+  snprintf(stamp, sizeof(stamp), "%s/nat_caps", get_net_dir());
+  if (boot_id[0] && read_file(stamp, seen, sizeof(seen)) > 0 &&
+      strcmp(seen, boot_id) == 0) {
+    ds_log("[NET] Kernel capability probe passed: NET_NS + BRIDGE + VETH OK.");
+    if (reason)
+      snprintf(reason, rsz, "OK (Full NAT)");
+    return 0;
+  }
+
   ds_nl_ctx_t *ctx = ds_nl_open();
   if (!ctx) {
     snprintf(reason, rsz, "Failed to open NETLINK_ROUTE socket: %s",
@@ -271,6 +291,8 @@ int ds_nl_probe_nat_capability(char *reason, size_t rsz) {
     ds_log("[NET] Kernel capability probe passed: NET_NS + BRIDGE + VETH OK.");
     if (reason)
       snprintf(reason, rsz, "OK (Full NAT)");
+    if (boot_id[0])
+      write_file(stamp, boot_id);
     return 0;
   } else {
     ds_log(
