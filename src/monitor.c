@@ -185,28 +185,6 @@ reboot_loop:;
     ds_log("[NET] Sync pipes created for net_mode=%d", cfg->net_mode);
   }
 
-  /* First boot only: ensure no stale container with the same name is running
-   */
-  if (!cfg->reboot_cycle) {
-    pid_t existing_pid = 0;
-    if (is_container_running(cfg, &existing_pid)) {
-      if (existing_pid != getpid()) {
-        /*
-         * Crucial Safety: Only kill the process if it's confirmed to be a
-         * Droidspaces container. This prevents killing random processes that
-         * might have recycled the PID after the container died without
-         * cleanup.
-         */
-        if (is_valid_container_pid(existing_pid)) {
-          ds_warn("Killing stale container with same name (PID %d)",
-                  existing_pid);
-          kill(existing_pid, SIGKILL);
-          usleep(100000);
-        }
-      }
-    }
-  }
-
   /* Stdio handling for monitor in background mode (early redirection).
    * We must do this BEFORE forking the intermediate process, otherwise
    * the intermediate inherits the user's stdout/stderr (e.g. a pipe)
