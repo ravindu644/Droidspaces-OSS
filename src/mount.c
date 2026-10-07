@@ -1145,8 +1145,9 @@ int unmount_rootfs_img(const char *mount_point, int silent) {
   char loop_dev[256] = {0};
   get_backing_dev(mount_point, loop_dev, sizeof(loop_dev));
 
-  /* 1. Lazy unmount: detaches the mount even if files are open */
-  sync();
+  /* 1. Lazy unmount: detaches the mount even if files are open. The kernel
+   * writes the filesystem back as the last reference goes, and the stop path
+   * has already run sync() before getting here. */
   umount2(mount_point, MNT_DETACH);
 
   /* 2. Explicitly detach loop device (AUTOCLEAR also handles this, but be safe)
@@ -1154,10 +1155,11 @@ int unmount_rootfs_img(const char *mount_point, int silent) {
   if (loop_dev[0])
     loop_detach(loop_dev);
 
-  /* 3. Settle and force if still mounted (stubborn old kernels) */
-  sync();
-  usleep(DS_RETRY_DELAY_US);
+  /* 3. A mount still there after MNT_DETACH (stubborn old kernels) gets a
+   * settle and a forced detach. The usual case pays nothing. */
   if (is_mountpoint(mount_point)) {
+    sync();
+    usleep(DS_RETRY_DELAY_US);
     umount2(mount_point, MNT_DETACH | MNT_FORCE);
     usleep(DS_RETRY_DELAY_US / 2);
   }
