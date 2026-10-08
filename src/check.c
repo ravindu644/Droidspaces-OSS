@@ -47,14 +47,23 @@ static int check_root(void) {
 }
 
 int check_ns(int flag, const char *name) {
-  /* 1. Fast check for kernel support via /proc */
+  /* The ns file is the kernel's own answer for CONFIG_<name>_NS. */
   char path[PATH_MAX];
   snprintf(path, sizeof(path), "/proc/self/ns/%s", name);
   if (access(path, F_OK) != 0)
     return 0;
 
-  /* 2. Functional check: Try to actually unshare.
-   * We fork because unshare() affects the current process. */
+  /* A network namespace is not probed by creating one. Its teardown holds
+   * net_mutex for dozens of RCU grace periods on kernels before 4.17, and the
+   * real unshare(CLONE_NEWNET) a moment later waits for it: 400 ms on every
+   * NAT, gateway or none start of a 4.14 phone. The real unshare fails loudly
+   * if anything else is wrong. The other namespaces are cheap to tear down,
+   * so they keep the functional test below. */
+  if (flag == CLONE_NEWNET)
+    return 1;
+
+  /* Try to actually unshare, in a child because unshare() would change this
+   * process. */
   pid_t p = fork();
   if (p < 0)
     return 0;

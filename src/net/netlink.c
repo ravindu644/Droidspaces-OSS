@@ -202,7 +202,7 @@ static int ds_nl_talk(ds_nl_ctx_t *ctx, struct nlmsghdr *req) {
 int ds_nl_probe_nat_capability(char *reason, size_t rsz) {
   int ret;
   /* Step 1: CONFIG_NET_NS */
-  if (access("/proc/self/ns/net", F_OK) != 0) {
+  if (!check_ns(CLONE_NEWNET, "net")) {
     snprintf(reason, rsz,
              "CONFIG_NET_NS not compiled in. "
              "Network namespaces are required for --net=nat. "
