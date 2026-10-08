@@ -799,9 +799,6 @@ int ds_nl_add_route6(ds_nl_ctx_t *ctx, const struct in6_addr *dst,
                      uint8_t dst_len, int oif_idx);
 int ds_nl_rule6(ds_nl_ctx_t *ctx, int add, const struct in6_addr *net,
                 uint8_t len, int from_net, int table, int priority);
-int ds_nl_move_to_netns(ds_nl_ctx_t *ctx, const char *ifname, int netns_fd);
-int ds_nl_move_to_netns_named(ds_nl_ctx_t *ctx, const char *ifname,
-                              int netns_fd, const char *newname);
 int ds_nl_get_iface_table(ds_nl_ctx_t *ctx, int family, const char *ifname,
                           int *table_out);
 int ds_nl_get_table_default_oif(ds_nl_ctx_t *ctx, int family, int table,

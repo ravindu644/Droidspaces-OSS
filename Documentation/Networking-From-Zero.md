@@ -534,7 +534,7 @@ Setting it to `0` tells Linux not to run iptables on bridged traffic. OpenWRT's 
 
 ### Start order and automatic self-healing
 
-All wiring for a gateway-mode client is done **from the host side** by one function, `gateway_wire_client()`. It makes sure the bridge and the gateway-side cable exist, creates the client's app veth, and moves and renames the peer into the client's namespace as `eth0` (with a pinned MAC, brought up). The client's own boot code only brings up `lo`. Because the host owns every step, the same function wires a client whether it is starting or already running.
+All wiring for a gateway-mode client is done **from the host side** by one function, `gateway_wire_client()`. It makes sure the bridge and the gateway-side cable exist, then creates the client's app veth with its peer born inside the client's namespace as `eth0` (with a pinned MAC, brought up). The client's own boot code only brings up `lo`. Because the host owns every step, the same function wires a client whether it is starting or already running.
 
 That leads to one simple rule, keyed on **whether the gateway is running**:
 
@@ -545,7 +545,7 @@ So healing is driven by **the gateway**, not the clients. On every boot cycle, t
 
 Wiring nothing while the gateway is down, instead of half-wiring a bridge and a dangling veth, also closes a race. A client started before its gateway can have its gateway and LAN settings (`--gateway-net`, `--host-bridge`, …) edited before the gateway comes up, and the gateway then wires each client from that client's *current* config, never a stale one.
 
-There is exactly **one actor** (the gateway) doing the wiring, so there is nothing to poll and no thundering herd. Wiring is serialised per segment with an advisory file lock, so concurrent client starts and the gateway's re-wire cannot race. Both `eth1` (gateway side) and each `eth0` (client side) keep a **stable MAC** and are moved and renamed into their namespace in one atomic step, so the container's own `netifd`/DHCP sees one persistent device instead of one that keeps being re-created.
+There is exactly **one actor** (the gateway) doing the wiring, so there is nothing to poll and no thundering herd. Wiring is serialised per segment with an advisory file lock, so concurrent client starts and the gateway's re-wire cannot race. Both `eth1` (gateway side) and each `eth0` (client side) keep a **stable MAC** and are created inside their namespace under their final name, in the one request that creates the pair. Nothing is moved or renamed afterwards: a rename is announced by the kernel before the device can be looked up by its new name, and a `netifd` inside the gateway that hears the announcement first fails to claim the device for good (seen on a 4.14 kernel, where that gap is tens of milliseconds).
 
 ### What happens when containers stop
 
@@ -627,7 +627,7 @@ Inside OpenWRT, the `lan` clients arrive on `eth1` and the `vpn` clients on `eth
 
 This sets **the name of the LAN interface inside the gateway container's network namespace**.
 
-When Droidspaces creates the gateway veth for a segment, it moves one end into OpenWRT's netns and renames it from its raw hash name (`ds-hXXXXXXXX`) to the name you pass here (default `eth1`).
+When Droidspaces creates the gateway veth for a segment, the gateway's end is born directly inside OpenWRT's netns under the name you pass here (default `eth1`); only the host end carries a hash name (`ds-gXXXXXXXX`).
 
 **Why it matters:** OpenWRT's configuration is keyed on interface names. If your OpenWRT `/etc/config/network` says:
 

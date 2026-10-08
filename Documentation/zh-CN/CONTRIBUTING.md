@@ -500,9 +500,9 @@ libsu 的全局配置在 `DroidspacesApplication.kt` 中，那是唯一应该设
 | `is_android()` | 每个 Android 专用或 Linux 专用路径的强制守卫，两个方向都要 |
 | `is_running_in_termux()` | Termux 环境 |
 | `get_kernel_version`、`check_kernel_recommendation` | 基于 `DS_MIN_KERNEL_MAJOR` 与 `DS_MIN_KERNEL_MINOR` 的版本判定 |
-| `check_ns(flag, name)` | 探测某个 `CLONE_NEW*` 命名空间是否可用 |
+| `check_ns(flag, name)` | 探测某个 `CLONE_NEW*` 命名空间是否可用。网络命名空间只看 `/proc/self/ns/net` 是否存在：为了探测而创建一个，会让随后真正的 `unshare` 在 4.17 之前的内核上等它拆完 |
 | `ds_cgroup_v2_usable`、`ds_cgroup_kernel_supports_v2`、`ds_cgroup_host_is_v2` | cgroup 版本判定 |
-| `ds_nl_probe_nat_capability(reason, size)` | 内核网桥、veth 与 NAT 能力探测，不 fork。任何 NAT 配置前先跑它 |
+| `ds_nl_probe_nat_capability(reason, size)` | 内核网桥、veth 与 NAT 能力探测，不 fork。任何 NAT 配置前先跑它。完整通过的结果按 boot_id 记在 `Net/nat_caps` 里，本次开机内不再重探；任何不完整的结果都会重探 |
 | `ds_get_selinux_status()`、`is_systemd_rootfs(path)` | SELinux 模式，以及 rootfs 类型 |
 
 ### C 后端：配置
@@ -556,7 +556,7 @@ libsu 的全局配置在 `DroidspacesApplication.kt` 中，那是唯一应该设
 | `ds_nl_open` / `ds_nl_close` | 打开所有链路、地址、路由和规则调用都需要的 netlink 上下文 |
 | `ds_nl_create_bridge`、`ds_nl_create_veth`、`ds_nl_set_master`、`ds_nl_link_up/down`、`ds_nl_del_link`、`ds_nl_rename`、`ds_nl_set_mac` | 链路操作 |
 | `ds_nl_add_addr4`、`ds_nl_add_route4`、`ds_nl_add_addr6`、`ds_nl_add_route6` | 地址与路由。IPv6 路由仅支持链路范围 |
-| `ds_nl_move_to_netns`、`ds_nl_move_to_netns_named` | 把网卡移入命名空间 |
+| `ds_nl_create_veth_in(ctx, host, peer, netns_fd, mac)` | 创建 veth 对，对端直接以最终名字诞生在目标命名空间里。网卡进入容器只有这一种方式：先移入再改名，会和容器里的 netifd 赛跑并输掉 |
 | `ds_nl_add_rule4`、`ds_nl_del_rule4`、`ds_nl_rule6` | FIB 策略路由规则。优先级取自 `DS_RULE_PRIO_TO_SUBNET`、`DS_RULE_PRIO_TETHER`、`DS_RULE_PRIO_FROM_SUBNET`，必须高于 OEM 保留区间、低于 Android 的 VPN 区间 |
 | `ds_nl_get_iface_table`、`ds_nl_get_table_default_oif`、`ds_nl_get_android_default` | 路由表信息读取。三者都需要传入地址族 |
 | `ds_nl_flush_stale_veths`、`ds_nl_list_ifaces`、`ds_nl_count_ifaces_with_prefix` | 枚举与回收 |

@@ -120,13 +120,13 @@ static void gateway_hash_key(struct ds_config *cfg, char *buf, size_t sz) {
   snprintf(buf, sz, "%s:%s", gw, net);
 }
 
-static void gateway_veth_names(struct ds_config *cfg, char *host, size_t hsz,
-                               char *peer, size_t psz) {
+/* The host end of the gateway's LAN cable. Its peer is born inside the
+ * gateway under the LAN interface name, so it never needs a host-side name. */
+static void gateway_veth_host_name(struct ds_config *cfg, char *host,
+                                   size_t hsz) {
   char key[384];
   gateway_hash_key(cfg, key, sizeof(key));
-  uint32_t h = ds_net_hash_string(key);
-  snprintf(host, hsz, "ds-g%08x", h);
-  snprintf(peer, psz, "ds-h%08x", h);
+  snprintf(host, hsz, "ds-g%08x", ds_net_hash_string(key));
 }
 
 static int gateway_ifname_component_ok(const char *s) {
@@ -185,8 +185,8 @@ static int open_container_netns(const char *netns_path) {
   return fd;
 }
 
-static int ds_netns_rename_up(const char *netns_path, const char *old_name,
-                              const char *new_name) {
+/* Bring a link up inside a container's network namespace, from the host. */
+static int ds_netns_link_up(const char *netns_path, const char *ifname) {
   int self_fd = open("/proc/self/ns/net", O_RDONLY | O_CLOEXEC);
   if (self_fd < 0)
     return -errno;
@@ -209,24 +209,8 @@ static int ds_netns_rename_up(const char *netns_path, const char *old_name,
     ret = -errno;
     goto out_restore;
   }
-
-  if (new_name && new_name[0] && ds_nl_link_exists(ctx, new_name)) {
-    /* Already present under its final name inside the gateway - the common,
-     * healthy case: the atomic move+rename created it, or this is an idempotent
-     * re-entry.  Just make sure it is up; the caller logs "uplink ready". */
-    ds_nl_link_up(ctx, new_name);
-  } else if (old_name && old_name[0] && new_name && new_name[0] &&
-             strcmp(old_name, new_name) != 0) {
-    if (ds_nl_rename(ctx, old_name, new_name) < 0) {
-      ds_warn("[NET] Gateway: failed to rename %s to %s", old_name, new_name);
-      ret = -1;
-    } else {
-      ds_nl_link_up(ctx, new_name);
-    }
-  } else if (old_name && old_name[0]) {
-    ds_nl_link_up(ctx, old_name);
-  }
-
+  if (ds_nl_link_up(ctx, ifname) < 0)
+    ret = -1;
   ds_nl_close(ctx);
 
 out_restore:
@@ -1305,9 +1289,9 @@ static int gateway_ensure_lan_uplink_locked(struct ds_config *cfg,
     return -1;
   }
 
-  char bridge[IFNAMSIZ], gw_host[IFNAMSIZ], gw_peer[IFNAMSIZ];
+  char bridge[IFNAMSIZ], gw_host[IFNAMSIZ];
   gateway_bridge_name(cfg, bridge, sizeof(bridge));
-  gateway_veth_names(cfg, gw_host, sizeof(gw_host), gw_peer, sizeof(gw_peer));
+  gateway_veth_host_name(cfg, gw_host, sizeof(gw_host));
 
   ds_nl_ctx_t *ctx = ds_nl_open();
   if (!ctx) {
@@ -1374,23 +1358,40 @@ static int gateway_ensure_lan_uplink_locked(struct ds_config *cfg,
     ds_nl_del_link(ctx, gw_host);
   }
 
-  ds_log("[NET] Gateway: creating gateway veth %s <-> %s", gw_host, gw_peer);
-  if (ds_nl_create_veth(ctx, gw_host, gw_peer) < 0) {
-    ds_warn("[NET] Gateway: failed to create gateway veth pair");
+  /* The peer is born inside the gateway under its final name, in the one
+   * RTM_NEWLINK that creates the pair. Moving a host-side peer in and renaming
+   * it there is a race netifd loses: the kernel announces the new name before
+   * the device can be looked up by it (a grace period sits in between), and
+   * netifd's claim of the hot-plugged eth1 fails for good on a kernel with
+   * slow RCU. With a stable, segment-derived MAC pinned at creation, netifd
+   * sees one persistent device across every re-plug. */
+  if (netns_has_link(gw_netns, gw_if)) {
+    ds_warn("[NET] Gateway: '%s' already has an interface named %s that is "
+            "not this segment's cable - cannot wire %s",
+            cfg->gateway_container, gw_if, bridge);
     ds_nl_close(ctx);
     return -1;
   }
+  int gw_netns_fd = open_container_netns(gw_netns);
+  if (gw_netns_fd < 0) {
+    ds_warn("[NET] Gateway: failed to open %s: %s", gw_netns, strerror(errno));
+    ds_nl_close(ctx);
+    return -1;
+  }
+  char key[384];
+  uint8_t mac[6];
+  gateway_hash_key(cfg, key, sizeof(key));
+  ds_derive_mac(key, "ds-gwmac:", mac);
 
-  /* Pin a stable, segment-derived MAC on the gateway-facing peer (becomes gw_if
-   * inside the gateway) so netifd sees one persistent device across every
-   * re-plug.  Set while down, before the move. */
-  {
-    char key[384];
-    uint8_t mac[6];
-    gateway_hash_key(cfg, key, sizeof(key));
-    ds_derive_mac(key, "ds-gwmac:", mac);
-    if (ds_nl_set_mac(ctx, gw_peer, mac) < 0)
-      ds_warn("[NET] Gateway: failed to pin MAC on %s", gw_peer);
+  ds_log("[NET] Gateway: creating gateway veth %s -> %s inside the gateway",
+         gw_host, gw_if);
+  int created = ds_nl_create_veth_in(ctx, gw_host, gw_if, gw_netns_fd, mac);
+  close(gw_netns_fd);
+  if (created < 0) {
+    ds_warn("[NET] Gateway: failed to create gateway veth pair (%s -> %s): %s",
+            gw_host, gw_if, strerror(-created));
+    ds_nl_close(ctx);
+    return -1;
   }
 
   ds_net_disable_tx_checksum(gw_host);
@@ -1398,37 +1399,10 @@ static int gateway_ensure_lan_uplink_locked(struct ds_config *cfg,
     ds_warn("[NET] Gateway: failed to attach %s to %s", gw_host, bridge);
   if (ds_nl_link_up(ctx, gw_host) < 0)
     ds_warn("[NET] Gateway: failed to bring up %s", gw_host);
-
-  int gw_netns_fd = open_container_netns(gw_netns);
-  if (gw_netns_fd < 0) {
-    ds_warn("[NET] Gateway: failed to open %s: %s", gw_netns, strerror(errno));
-    ds_nl_del_link(ctx, gw_host); /* drop the half-built pair */
-    ds_nl_close(ctx);
-    return -1;
-  }
-
-  /* Atomic move+rename: the peer appears inside the gateway already named
-   * gw_if, so there is no transient raw-name device for netifd to race against
-   * ("device initialization failed").  Fall back to a plain move on failure. */
-  if (ds_nl_move_to_netns_named(ctx, gw_peer, gw_netns_fd, gw_if) != 0) {
-    ds_warn("[NET] Gateway: atomic move+rename of %s failed - falling back",
-            gw_peer);
-    if (ds_nl_move_to_netns(ctx, gw_peer, gw_netns_fd) < 0) {
-      ds_warn("[NET] Gateway: fallback move of %s into gateway netns failed",
-              gw_peer);
-      close(gw_netns_fd);
-      ds_nl_close(ctx);
-      return -1;
-    }
-  }
-  close(gw_netns_fd);
   ds_nl_close(ctx);
 
-  /* Bring it up inside the gateway under its final name (the atomic path
-   * already renamed it; the fallback path renames here). */
-  if (ds_netns_rename_up(gw_netns, gw_peer, gw_if) < 0)
-    ds_warn("[NET] Gateway: moved %s but could not bring it up as %s", gw_peer,
-            gw_if);
+  if (ds_netns_link_up(gw_netns, gw_if) < 0)
+    ds_warn("[NET] Gateway: created %s but could not bring it up", gw_if);
 
   ds_log("[NET] Gateway: LAN uplink ready on %s -> %s (%s)", bridge,
          cfg->gateway_container, gw_if);
@@ -1532,7 +1506,7 @@ static int gateway_wire_client(struct ds_config *cfg, pid_t client_pid,
     ds_warn("[NET] Gateway: failed to bring up %s", app_host);
   ds_nl_close(ctx);
 
-  if (ds_netns_rename_up(netns, "eth0", "eth0") < 0)
+  if (ds_netns_link_up(netns, "eth0") < 0)
     ds_warn("[NET] Gateway: wired '%s' but could not bring up its eth0",
             cfg->container_name);
 
@@ -1701,9 +1675,9 @@ void ds_net_gateway_teardown(const char *gateway_name) {
       continue;
     }
 
-    char bridge[IFNAMSIZ], gw_host[IFNAMSIZ], gw_peer[IFNAMSIZ];
+    char bridge[IFNAMSIZ], gw_host[IFNAMSIZ];
     gateway_bridge_name(&c, bridge, sizeof(bridge));
-    gateway_veth_names(&c, gw_host, sizeof(gw_host), gw_peer, sizeof(gw_peer));
+    gateway_veth_host_name(&c, gw_host, sizeof(gw_host));
 
     int dup = 0;
     for (int i = 0; i < seen_count; i++)
