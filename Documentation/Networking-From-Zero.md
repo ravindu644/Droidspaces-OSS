@@ -364,7 +364,7 @@ In Droidspaces NAT mode:
                      (Android's real network)
 ```
 
-The bridge `ds-br0` holds the gateway IP `172.28.0.1`, which every NAT container uses as its default gateway. The veth pair is named after the container's init process ID: the host side is `ds-v<PID>`, and the container side starts as `ds-p<PID>` and is renamed to `eth0` inside the container.
+The bridge `ds-br0` holds the gateway IP `172.28.0.1`, which every NAT container uses as its default gateway. Its MAC is pinned from its name on every start, because an unpinned bridge borrows the lowest MAC among its ports and would change it whenever that container stops, leaving every other container with a stale ARP entry for the gateway. The veth pair is named after the container's init process ID: the host side is `ds-v<PID>`, and the container side starts as `ds-p<PID>` and is renamed to `eth0` inside the container.
 
 Droidspaces runs a small per-container DHCP server on the container's host-side veth. The whole `172.28.0.0/16` subnet belongs to Droidspaces. The `172.28.0.x` row is reserved for the gateway itself, so containers always get an address from `172.28.1.x` to `172.28.254.x`, and all of it is NATed out through Android's real interface.
 

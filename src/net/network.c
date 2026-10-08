@@ -113,6 +113,19 @@ static void ds_derive_mac(const char *key, const char *salt_prefix,
   mac[5] = (uint8_t)(h2);
 }
 
+/* A bridge with no address of its own borrows the lowest MAC among its ports,
+ * so it changes whenever that port's container stops. Every other container on
+ * the bridge then holds a stale ARP entry for the gateway and loses IPv4 until
+ * the kernel re-probes, up to a minute later. A MAC set from userspace is
+ * exempt from that election, so pin one derived from the bridge name. */
+static void pin_bridge_mac(ds_nl_ctx_t *ctx, const char *bridge) {
+  uint8_t mac[6];
+  ds_derive_mac(bridge, "ds-brmac:", mac);
+  int err = ds_nl_set_mac(ctx, bridge, mac);
+  if (err < 0)
+    ds_warn("[NET] Failed to pin MAC on bridge %s: %d", bridge, err);
+}
+
 static void gateway_hash_key(struct ds_config *cfg, char *buf, size_t sz) {
   const char *gw =
       (cfg && cfg->gateway_container[0]) ? cfg->gateway_container : "gateway";
@@ -1043,9 +1056,10 @@ int setup_veth_host_side(struct ds_config *cfg, pid_t child_pid) {
         ds_warn("[DEBUG] Failed to create bridge %s", DS_NAT_BRIDGE);
     }
 
-    /* Always assert bridge IP/UP/Hardening even if it already exists.
+    /* Always assert bridge MAC/IP/UP/Hardening even if it already exists.
      * This ensures everything is correct after host-side networking changes or
      * crashes. */
+    pin_bridge_mac(ctx, DS_NAT_BRIDGE);
     int err = ds_nl_add_addr4(ctx, DS_NAT_BRIDGE, inet_addr(DS_NAT_GW_IP),
                               DS_NAT_PREFIX);
     if (err < 0 && err != -EEXIST && err != -ENETDOWN) {
@@ -1319,6 +1333,7 @@ static int gateway_ensure_lan_uplink_locked(struct ds_config *cfg,
       return -1;
     }
   }
+  pin_bridge_mac(ctx, bridge);
   /* IP-less has to hold for IPv6 too. Android leaves accept_ra at 2, so the
    * host would otherwise take an address and a default route from the
    * gateway's own router advertisements and sit on the LAN it only switches. */
