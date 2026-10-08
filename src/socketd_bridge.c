@@ -740,8 +740,7 @@ static int socketd_validate_start_config(struct ds_config *cfg) {
   if (check_requirements_hw(cfg->hw_access) < 0)
     return -1;
 
-  if ((cfg->net_mode == DS_NET_NAT || cfg->net_mode == DS_NET_NONE) &&
-      !check_ns(CLONE_NEWNET, "net")) {
+  if (cfg->net_mode != DS_NET_HOST && !check_ns(CLONE_NEWNET, "net")) {
     ds_error("Container '%s' requires network namespaces for its net mode",
              cfg->container_name);
     return -1;
