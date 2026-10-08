@@ -164,13 +164,34 @@ static const char *gateway_lan_ifname(struct ds_config *cfg) {
   return "eth1";
 }
 
+/* Open a container's network namespace for the host side to plug cables
+ * into or act in. Fails closed when the namespace turns out to be our own: a
+ * pid that was recycled, or an init that died before its monitor noticed,
+ * would otherwise have the host create an "eth0" in the host's own namespace,
+ * or wire and query itself. */
+static int open_container_netns(const char *netns_path) {
+  int fd = open(netns_path, O_RDONLY | O_CLOEXEC);
+  if (fd < 0)
+    return -1;
+  struct stat target, self;
+  if (fstat(fd, &target) == 0 && stat("/proc/self/ns/net", &self) == 0 &&
+      target.st_ino == self.st_ino && target.st_dev == self.st_dev) {
+    ds_warn("[NET] %s is the host's own network namespace - refusing to use it",
+            netns_path);
+    close(fd);
+    errno = EPERM;
+    return -1;
+  }
+  return fd;
+}
+
 static int ds_netns_rename_up(const char *netns_path, const char *old_name,
                               const char *new_name) {
   int self_fd = open("/proc/self/ns/net", O_RDONLY | O_CLOEXEC);
   if (self_fd < 0)
     return -errno;
 
-  int target_fd = open(netns_path, O_RDONLY | O_CLOEXEC);
+  int target_fd = open_container_netns(netns_path);
   if (target_fd < 0) {
     int e = -errno;
     close(self_fd);
@@ -229,7 +250,7 @@ static int netns_has_link(const char *netns_path, const char *ifname) {
   int self_fd = open("/proc/self/ns/net", O_RDONLY | O_CLOEXEC);
   if (self_fd < 0)
     return 0;
-  int target_fd = open(netns_path, O_RDONLY | O_CLOEXEC);
+  int target_fd = open_container_netns(netns_path);
   if (target_fd < 0) {
     close(self_fd);
     return 0;
@@ -1083,7 +1104,7 @@ int setup_veth_host_side(struct ds_config *cfg, pid_t child_pid) {
    * for DONE. init has already signalled readiness, so its netns exists. */
   char netns_path[PATH_MAX];
   snprintf(netns_path, sizeof(netns_path), "/proc/%d/ns/net", child_pid);
-  int netns_fd = open(netns_path, O_RDONLY | O_CLOEXEC);
+  int netns_fd = open_container_netns(netns_path);
   if (netns_fd < 0) {
     ds_warn("[NET] Failed to open container netns %s: %s", netns_path,
             strerror(errno));
@@ -1378,7 +1399,7 @@ static int gateway_ensure_lan_uplink_locked(struct ds_config *cfg,
   if (ds_nl_link_up(ctx, gw_host) < 0)
     ds_warn("[NET] Gateway: failed to bring up %s", gw_host);
 
-  int gw_netns_fd = open(gw_netns, O_RDONLY | O_CLOEXEC);
+  int gw_netns_fd = open_container_netns(gw_netns);
   if (gw_netns_fd < 0) {
     ds_warn("[NET] Gateway: failed to open %s: %s", gw_netns, strerror(errno));
     ds_nl_del_link(ctx, gw_host); /* drop the half-built pair */
@@ -1480,7 +1501,7 @@ static int gateway_wire_client(struct ds_config *cfg, pid_t client_pid,
 
   ds_nl_del_link(ctx, app_host); /* drop any stale half from a prior wiring */
 
-  int netns_fd = open(netns, O_RDONLY | O_CLOEXEC);
+  int netns_fd = open_container_netns(netns);
   if (netns_fd < 0) {
     ds_warn("[NET] Gateway: failed to open client netns %s: %s", netns,
             strerror(errno));
