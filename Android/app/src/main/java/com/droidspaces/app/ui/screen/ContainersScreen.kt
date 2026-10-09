@@ -58,7 +58,7 @@ import com.droidspaces.app.util.FilePickerUtils
 import com.droidspaces.app.ui.component.ContainerCard
 import com.droidspaces.app.ui.component.ContainerCardActions
 import com.droidspaces.app.ui.component.DialogFooterRow
-import com.droidspaces.app.ui.component.TerminalDialog
+import com.droidspaces.app.ui.component.LogsSheet
 import com.droidspaces.app.ui.component.EmptyState
 import com.droidspaces.app.ui.component.ErrorState
 import com.droidspaces.app.ui.component.KernelUnsupportedState
@@ -189,21 +189,21 @@ fun ContainersScreen(
                         .padding(horizontal = 16.dp),
                     // The last card scrolls clear of the FAB: its 16 inset, 56 height, 16 gap
                     contentPadding = PaddingValues(top = 8.dp, bottom = 88.dp),
-                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     items(containers, key = { it.name }) { container ->
-                        // Console button is always visible - logs persist for each container
                         val isRunning = opsViewModel.runningOperationContainer == container.name
 
                         // No animateItemPlacement here: a card animates its own height when
-                        // its drawer opens, and a placement animation makes the card below
-                        // chase that edge 200ms behind, so the two overlap all the way down.
+                        // it starts or stops (the PID line comes and goes), and a placement
+                        // animation makes the card below chase that edge behind, so the two
+                        // overlap all the way down.
                         ContainerCard(
                             container = container,
                             isOperationRunning = isRunning,
-                            isExpanded = expandedContainerName == container.name,
+                            isMenuOpen = expandedContainerName == container.name,
                             actions = ContainerCardActions(
-                            onToggleExpand = {
+                            onToggleMenu = {
                                 onExpandedContainerNameChange(if (expandedContainerName == container.name) null else container.name)
                             },
                              onShowLogs = {
@@ -368,7 +368,7 @@ fun ContainersScreen(
             }
             val logs = memoryLogs.ifEmpty { cachedLogs }
             val isBlocking = opsViewModel.runningOperationContainer == containerName // Blocking when operation is running
-            TerminalDialog(
+            LogsSheet(
                 title = context.getString(R.string.logs_title, containerName),
                 logs = logs,
                 onDismiss = {

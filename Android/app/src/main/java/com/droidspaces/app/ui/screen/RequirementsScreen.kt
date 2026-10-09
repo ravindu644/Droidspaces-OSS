@@ -40,7 +40,7 @@ import androidx.compose.foundation.BorderStroke
 import com.droidspaces.app.R
 import com.droidspaces.app.ui.component.DetailPill
 import com.droidspaces.app.ui.component.DsSnackbarHost
-import com.droidspaces.app.ui.component.TerminalDialog
+import com.droidspaces.app.ui.component.LogsSheet
 import com.droidspaces.app.ui.viewmodel.AppStateViewModel
 import com.droidspaces.app.util.Constants
 import com.droidspaces.app.util.DroidspacesBackendStatus
@@ -322,7 +322,7 @@ CONFIG_TMPFS_XATTR=y
 
     // Console viewer dialog
     if (showLogViewer) {
-        TerminalDialog(
+        LogsSheet(
             title = context.getString(R.string.requirements_check_title),
             logs = checkLogs.toList(),
             onDismiss = {

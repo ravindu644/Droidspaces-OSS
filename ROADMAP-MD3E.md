@@ -83,17 +83,17 @@ Tick a box only when the phase is built, on-device verified and committed.
 - [x] Acceptance: Home board 1 matches on device.
 
 ### Phase 4, Containers
-- [ ] `ContainerCard.kt`: 44dp icon tile, name, status chip; divider; PID line when
+- [x] `ContainerCard.kt`: 44dp icon tile, name, status chip; divider; PID line when
       running; comma-joined metadata; option chips; connected button group (Start or Stop
       wide, Restart, Logs with `receipt_long`). No Open button: tap opens details when
       running, the card itself is the affordance.
-- [ ] Manage mode: long press (or tap on a stopped card) outlines the card and opens an
+- [x] Manage mode: long press (or tap on a stopped card) outlines the card and opens an
       anchored `DropdownMenu` with Edit container configuration, Migrate to or Resize
       sparse image, Export container, Uninstall container. Replaces the in-card drawer.
-- [ ] `TerminalDialog.kt` becomes a logs `ModalBottomSheet` for container operation logs;
+- [x] `TerminalDialog.kt` becomes a logs `ModalBottomSheet` for container operation logs;
       Copy logs filled, Clear outlined, title "Logs: <name>" with the receipt icon.
-- [ ] FAB menu unchanged.
-- [ ] Acceptance: boards 2 and 2b.
+- [x] FAB menu unchanged.
+- [x] Acceptance: boards 2 and 2b.
 
 ### Phase 5, Panel
 - [ ] `RunningContainerCard.kt`: header with pretty name and chevron, divider, one
@@ -197,10 +197,10 @@ conversion removes.
 | File | Purpose | Sites | Literals | Fate |
 | --- | --- | --- | --- | --- |
 | AccentColorPicker.kt | palette swatch row | 1 | 0/0/0 | keep, restyle as a segmented row |
-| BugReportDialog.kt | bug report via TerminalDialog | 1 | 0/0/0 | follows TerminalDialog |
+| BugReportDialog.kt | bug report via LogsSheet | 1 | 0/0/0 | done, phase 4 |
 | CardMetrics.kt | shared card numbers | 9 | none | keep, update to 44dp header, 16 padding |
 | ColorPaletteSwatch.kt | canvas swatch | 2 | 0/1/0 | keep |
-| ContainerCard.kt | container list card | 3 | 5/16/0 | rewrite, phase 4 |
+| ContainerCard.kt | container list card | 3 | 5/16/0 | done, phase 4 |
 | ContainerConfigForm.kt | create and edit form | 2 | 4/6/0 | rewrite, phase 7 |
 | ContainerUsersCard.kt | users and copy login | 1 | 2/1/0 | rewrite, phase 6 |
 | DangerousActionConfirm.kt | warning card, phrase field | 4 | 2/2/0 | restyle (errorContainer banner) |
@@ -232,11 +232,11 @@ conversion removes.
 | SettingsCard.kt | bordered card shell | 7 | 1/1/0 | replace with segmented rows |
 | SettingsRowCard.kt | clickable SettingsCard | 4 | 0/2/0 | replace with ListItem rows |
 | SetupHero.kt | setup flow geometry | 16 | 0/0/0 | keep |
-| StatusPill.kt | dot plus label | 4 | 2/2/0 | replace with StatusChip |
+| StatusPill.kt | dot plus label | 4 | 2/2/0 | done, StatusChip in phase 1 |
 | SwitchItem.kt | switch row | 13 | 0/2/0 | keep, drop alpha fades |
 | SystemInfoCard.kt | device info | 2 | 1/2/0 | segmented group, phase 3 |
-| TerminalConsole.kt | ANSI console | 3 | 3/8/0 | restyle on surfaceContainerLowest |
-| TerminalDialog.kt | log viewer | 4 | 2/10/0 | becomes the logs sheet, phase 4 |
+| TerminalConsole.kt | ANSI console | 3 | 3/8/0 | container done in phase 4, line colours left |
+| TerminalDialog.kt | log viewer | 4 | 2/10/0 | done, LogsSheet.kt in phase 4 |
 | TerminalFontDialog.kt | font picker | 1 | 2/8/0 | restyle, phase 9 |
 | ToggleCard.kt | card with a switch | 22 | 0/4/0 | replace with switch rows in a group |
 | UpstreamInterfaceList.kt | upstream list and dialog | 1 | 4/2/0 | board then rewrite, phase 7 |
@@ -247,6 +247,11 @@ which 69 are the theme files, 6 the init-system hues and 1 the terminal keys col
 Compose haptics anywhere.
 
 ## Open questions
+
+- **An Expressive AMOLED mode.** Today's AMOLED blacks out every surface and leans on 1px
+  edges (`amoledCardBorder()`, the segmented group separator) to keep cards and rows apart,
+  which is not how Expressive builds depth. Design a pure black mode that holds its
+  hierarchy without edges, then drop the edge rules. Raised 2026-10-09; boards first.
 
 - **Terminal keys.** The Termux `VirtualKeysView` is a View; replacing it with Compose
   toggle buttons means owning key repeat and modifier latching. Decide in phase 6 after a

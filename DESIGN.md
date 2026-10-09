@@ -369,8 +369,9 @@ misses.
 - **The FAB menu is elevated.** `ToggleFloatingActionButton` and `FloatingActionButtonMenuItem`
   draw the Material shadow and take no elevation parameter. A button floating over a scrolling
   list is the one place a shadow does structural work.
-- **`TerminalDialog` and `ProgressDialog` do not use `DsDialog`.** The first becomes the logs
-  sheet in phase 4; until then it keeps its own header row. The second is not dismissible.
+- **`ProgressDialog` does not use `DsDialog`.** It is not dismissible. Logs are not a dialog
+  at all: `LogsSheet` in `ui/component/LogsSheet.kt` is the logs bottom sheet, and while an
+  operation is still writing to it nothing dismisses it.
 - **The init system status hues** (`statusColorFor()` in `ui/screen/InitServiceScreen.kt`)
   stay a hand picked traffic light rather than theme roles. Six of the seven states can sit in
   the legend row at once, and `primary` and `tertiary` move with dynamic colour, so running

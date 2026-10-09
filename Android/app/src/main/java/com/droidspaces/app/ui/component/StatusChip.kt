@@ -25,7 +25,8 @@ import androidx.compose.ui.unit.dp
  * [active] is the running or healthy state and fills the chip with primaryContainer;
  * everything else sits quietly on surfaceContainerHighest. A chip on a surface that is
  * already primaryContainer (the Home status card) passes [containerColor] instead, or
- * it would vanish into the card. [color] tints only the dot,
+ * it would vanish into the card. A null [color] drops the dot, which makes it an option
+ * chip (Sandboxing, Run at boot). [color] tints only the dot,
  * so a caller with its own hue (the init system traffic light) keeps it without the
  * chip turning into a colour swatch.
  *
@@ -35,7 +36,7 @@ import androidx.compose.ui.unit.dp
 @Composable
 fun StatusChip(
     label: String,
-    color: Color,
+    color: Color?,
     modifier: Modifier = Modifier,
     active: Boolean = false,
     busy: Boolean = false,
@@ -55,7 +56,7 @@ fun StatusChip(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             modifier = Modifier.padding(horizontal = 16.dp)
         ) {
-            if (busy) {
+            if (color != null && busy) {
                 // Not the shared LoadingIndicator: its smallest size is 16.dp and the
                 // morphing shape is unreadable this small. A plain ring still reads as
                 // motion at dot size.
@@ -64,7 +65,7 @@ fun StatusChip(
                     color = color,
                     strokeWidth = 1.5.dp
                 )
-            } else {
+            } else if (color != null) {
                 Box(Modifier.size(6.dp).background(color, CircleShape))
             }
             Text(text = label, style = MaterialTheme.typography.labelMedium)

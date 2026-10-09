@@ -60,7 +60,7 @@ fun BugReportDialog(
         }
     }
 
-    TerminalDialog(
+    LogsSheet(
         title = stringResource(R.string.bug_report_title),
         logs = logs,
         onDismiss = onDismiss,

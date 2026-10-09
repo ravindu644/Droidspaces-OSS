@@ -1,19 +1,13 @@
 package com.droidspaces.app.ui.component
 
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateContentSize
-import androidx.compose.animation.expandVertically
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.ui.draw.clip
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.shape.CornerSize
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ReceiptLong
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
@@ -21,22 +15,18 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.painter.Painter
-import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
-import com.droidspaces.app.util.ResourceLimits
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.graphics.vector.rememberVectorPainter
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.droidspaces.app.R
 import com.droidspaces.app.util.ContainerInfo
 import com.droidspaces.app.util.ContainerOSInfoManager
 import com.droidspaces.app.util.ContainerStatus
 import com.droidspaces.app.util.IconUtils
+import com.droidspaces.app.util.ResourceLimits
 
 /**
  * Per-item callbacks for [ContainerCard], grouped so the call site passes one
@@ -52,48 +42,42 @@ data class ContainerCardActions(
     val onMigrate: () -> Unit = {},
     val onResize: () -> Unit = {},
     val onExport: () -> Unit = {},
-    val onToggleExpand: () -> Unit = {},
+    val onToggleMenu: () -> Unit = {},
     val onShowLogs: () -> Unit = {},
 )
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class, ExperimentalLayoutApi::class)
+/**
+ * A container on the Containers tab. Tapping a running card opens its details; there
+ * is no Open button, the card is the affordance. A long press, or a tap on a stopped
+ * card, opens the manage menu anchored to the card, the same gestures the old in-card
+ * drawer answered to. [isMenuOpen] is hoisted so only one card has its menu open.
+ */
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class, ExperimentalFoundationApi::class, ExperimentalLayoutApi::class)
 @Composable
 fun ContainerCard(
     container: ContainerInfo,
     actions: ContainerCardActions = ContainerCardActions(),
     isOperationRunning: Boolean = false,
-    isExpanded: Boolean = false,
+    isMenuOpen: Boolean = false,
     modifier: Modifier = Modifier
 ) {
-    val onStart = actions.onStart
-    val onStop = actions.onStop
-    val onRestart = actions.onRestart
-    val onEdit = actions.onEdit
-    val onEnter = actions.onEnter
-    val onUninstall = actions.onUninstall
-    val onMigrate = actions.onMigrate
-    val onResize = actions.onResize
-    val onExport = actions.onExport
-    val onToggleExpand = actions.onToggleExpand
-    val onShowLogs = actions.onShowLogs
     val context = LocalContext.current
-    val cardShape = RoundedCornerShape(20.dp)
+    val scheme = MaterialTheme.colorScheme
+    val shape = MaterialTheme.shapes.extraLarge
+    val running = container.isRunning
 
     Surface(
         modifier = modifier
             .fillMaxWidth()
-            .clip(cardShape)
+            .clip(shape)
             .combinedClickable(
-                onClick = {
-                    if (container.isRunning) onEnter() else onToggleExpand()
-                },
-                onLongClick = onToggleExpand,
-                indication = ripple(bounded = true),
-                interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
+                onClick = { if (running) actions.onEnter() else actions.onToggleMenu() },
+                onLongClick = actions.onToggleMenu
             ),
-        shape = cardShape,
-        color = MaterialTheme.colorScheme.surfaceContainer,
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f))
+        shape = shape,
+        color = scheme.surfaceContainer,
+        // The card the menu belongs to gets an outline so the anchor is obvious
+        border = if (isMenuOpen) BorderStroke(2.dp, scheme.primary) else amoledCardBorder()
     ) {
         Column(
             modifier = Modifier
@@ -104,62 +88,58 @@ fun ContainerCard(
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth().height(CardHeaderHeight),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                Row(
-                    modifier = Modifier.weight(1f),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    // Re-read cache whenever iconCacheVersion changes (bumped after prefetch)
-                    val cacheVersion by ContainerOSInfoManager.iconCacheVersion
-                    val cachedOsInfo = remember(container.name, cacheVersion) {
-                        ContainerOSInfoManager.getCachedOSInfo(container.name, context)
-                    }
-                    Icon(
-                        painter = IconUtils.getDistroIcon(cachedOsInfo?.prettyName ?: cachedOsInfo?.name),
-                        contentDescription = null,
-                        modifier = Modifier.size(24.dp),
-                        tint = if (container.isRunning) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
-                    )
-                    Text(
-                        text = container.name,
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.SemiBold,
-                        maxLines = 1
-                    )
+                // Re-read cache whenever iconCacheVersion changes (bumped after prefetch)
+                val cacheVersion by ContainerOSInfoManager.iconCacheVersion
+                val cachedOsInfo = remember(container.name, cacheVersion) {
+                    ContainerOSInfoManager.getCachedOSInfo(container.name, context)
                 }
-
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                Surface(
+                    modifier = Modifier.size(CardHeaderHeight),
+                    shape = MaterialTheme.shapes.medium,
+                    color = if (running) scheme.primaryContainer else scheme.surfaceContainerHighest,
+                    contentColor = if (running) scheme.onPrimaryContainer else scheme.onSurfaceVariant
                 ) {
-                    IconButton(onClick = onShowLogs) {
-                        Icon(Icons.Default.Terminal, context.getString(R.string.view_logs), tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
+                    Box(contentAlignment = Alignment.Center) {
+                        Icon(
+                            painter = IconUtils.getDistroIcon(cachedOsInfo?.prettyName ?: cachedOsInfo?.name),
+                            contentDescription = null,
+                            modifier = Modifier.size(24.dp)
+                        )
                     }
-
-                    val (statusText, statusColor) = when (container.status) {
-                        ContainerStatus.RUNNING -> context.getString(R.string.status_running) to MaterialTheme.colorScheme.primary
-                        ContainerStatus.STOPPED -> context.getString(R.string.status_stopped) to MaterialTheme.colorScheme.onSurfaceVariant
-                    }
-
+                }
+                Text(
+                    text = container.name,
+                    style = MaterialTheme.typography.titleMediumEmphasized,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f)
+                )
+                // The menu shares the chip's box so it anchors to the chip: it opens just
+                // under the header, its right edge on the card's content edge
+                Box {
                     // The label keeps reporting the state; the dot spins while an operation
-                    // runs. Changing the label would change the pill's width and shove the
-                    // logs button around every time a container starts or stops.
+                    // runs, so the chip never changes width mid-operation.
                     StatusChip(
-                        label = statusText,
-                        color = statusColor,
+                        label = context.getString(if (running) R.string.status_running else R.string.status_stopped),
+                        color = if (running) scheme.primary else scheme.onSurfaceVariant,
                         active = container.status == ContainerStatus.RUNNING,
                         busy = isOperationRunning
                     )
+                    ManageMenu(container, actions, expanded = isMenuOpen)
                 }
             }
-            
-            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
+
+            HorizontalDivider()
 
             if (container.pid != null) {
-                Text(context.getString(R.string.pid_label, container.pid), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f))
+                Text(
+                    context.getString(R.string.pid_label, container.pid),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = scheme.onSurfaceVariant
+                )
             }
 
             // Info Rows
@@ -175,7 +155,7 @@ fun ContainerCard(
                 ResourceLimits.cpuLabel(context, container)?.let { add(rememberVectorPainter(Icons.Default.Speed) to it) }
                 ResourceLimits.pidsLabel(context, container)?.let { add(rememberVectorPainter(Icons.Default.Tag) to it) }
             }
-            val infoColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+            val infoColor = MaterialTheme.colorScheme.onSurfaceVariant
             // FlowRow, not Row: six items do not fit one line on a narrow display, so
             // they wrap as whole icon+value units. The comma rides with the item
             // before it, so a wrapped line never starts with one, and a long hostname
@@ -213,194 +193,110 @@ fun ContainerCard(
                 }
             }
             if (options.isNotEmpty()) {
-                Text(context.getString(R.string.options_label, options.joinToString(", ")), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f))
-            }
-
-            // Unified Control Pill
-            Surface(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 4.dp),
-                color = MaterialTheme.colorScheme.surfaceContainerHigh, // Depth for secondary actions
-                // The wrapper sits tighter than the 16.dp buttons inside it on purpose.
-                // Matching the two radii flattens the nested look, do not "fix" it.
-                shape = RoundedCornerShape(12.dp),
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f))
-            ) {
-                Row(modifier = Modifier.fillMaxWidth().padding(4.dp), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                    // Start/Stop
-                    val isStartEnabled = !container.isRunning && !isOperationRunning
-                    val isStopEnabled = container.isRunning && !isOperationRunning
-                    
-                    val btnColor = if (isStopEnabled) MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.4f)
-                                   else if (isStartEnabled) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f)
-                                   else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f)
-                    val accentColor = if (isStopEnabled) MaterialTheme.colorScheme.error
-                                      else if (isStartEnabled) MaterialTheme.colorScheme.primary
-                                      else MaterialTheme.colorScheme.outlineVariant
-
-                    Surface(
-                        onClick = if (container.isRunning) onStop else onStart,
-                        enabled = isStartEnabled || isStopEnabled,
-                        modifier = Modifier.weight(1f).height(48.dp),
-                        shape = RoundedCornerShape(16.dp),
-                        color = btnColor,
-                        border = BorderStroke(1.dp, accentColor.copy(alpha = 0.2f))
-                    ) {
-                        Row(modifier = Modifier.fillMaxSize(), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
-                            Icon(
-                                imageVector = if (container.isRunning) Icons.Default.Stop else Icons.Default.PlayArrow,
-                                null, modifier = Modifier.size(20.dp),
-                                tint = if (container.isRunning) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary
-                            )
-                            Spacer(Modifier.width(8.dp))
-                            Text(
-                                if (container.isRunning) context.getString(R.string.stop) else context.getString(R.string.start),
-                                style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold,
-                                color = if (container.isRunning) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary
-                            )
-                        }
-                    }
-
-                    // Restart (Only show if running)
-                    if (container.isRunning) {
-                        val isRestartEnabled = !isOperationRunning
-                        val restartBtnColor = if (isRestartEnabled) MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.4f) else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f)
-                        val restartAccent = if (isRestartEnabled) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.outlineVariant
-
-                        Surface(
-                            onClick = onRestart,
-                            enabled = isRestartEnabled,
-                            modifier = Modifier.weight(1f).height(48.dp),
-                            shape = RoundedCornerShape(16.dp),
-                            color = restartBtnColor,
-                            border = BorderStroke(1.dp, restartAccent.copy(alpha = 0.2f))
-                        ) {
-                            Row(modifier = Modifier.fillMaxSize(), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
-                                Icon(Icons.Default.Refresh, null, modifier = Modifier.size(20.dp), tint = MaterialTheme.colorScheme.onSecondaryContainer)
-                                Spacer(Modifier.width(8.dp))
-                                Text(
-                                    context.getString(R.string.restart),
-                                    style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold,
-                                    color = MaterialTheme.colorScheme.onSecondaryContainer
-                                )
-                            }
-                        }
-                    }
+                // Option chips: the status chip without a dot. Labels, never buttons.
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    options.forEach { StatusChip(label = it, color = null) }
                 }
             }
 
-            // Integrated Expandable Action Drawer (Sealed & Interactive)
-            AnimatedVisibility(
-                visible = isExpanded,
-                enter = expandVertically(
-                    animationSpec = MaterialTheme.motionScheme.defaultSpatialSpec(),
-                    expandFrom = Alignment.Top
-                ) + fadeIn(),
-                exit = shrinkVertically(
-                    animationSpec = MaterialTheme.motionScheme.defaultSpatialSpec(),
-                    shrinkTowards = Alignment.Top
-                ) + fadeOut()
-            ) {
-                Column(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalArrangement = Arrangement.spacedBy(4.dp)
-                ) {
-                    Spacer(Modifier.height(12.dp))
-                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
-                    Spacer(Modifier.height(12.dp))
-
-                    ActionItem(
-                        icon = Icons.Default.Edit,
-                        label = context.getString(R.string.edit_container_configuration),
-                        tint = MaterialTheme.colorScheme.primary,
-                        onClick = { onEdit() }
-                    )
-
-                    if (!container.useSparseImage) {
-                        ActionItem(
-                            icon = painterResource(id = R.drawable.ic_disk),
-                            label = context.getString(R.string.migrate_to_sparse_image),
-                            tint = MaterialTheme.colorScheme.secondary,
-                            onClick = { onMigrate() }
-                        )
-                    } else {
-                        ActionItem(
-                            icon = painterResource(id = R.drawable.ic_disk),
-                            label = context.getString(R.string.resize_sparse_image),
-                            tint = MaterialTheme.colorScheme.secondary,
-                            onClick = { onResize() }
-                        )
-                    }
-
-                    ActionItem(
-                        icon = Icons.Default.FileDownload,
-                        label = context.getString(R.string.export_container),
-                        tint = MaterialTheme.colorScheme.tertiary,
-                        onClick = { onExport() }
-                    )
-
-                    ActionItem(
-                        icon = Icons.Default.Delete,
-                        label = context.getString(R.string.uninstall_container_menu),
-                        tint = MaterialTheme.colorScheme.error,
-                        isBold = true,
-                        onClick = { onUninstall() }
-                    )
-                }
-            }
+            ActionGroup(running, isOperationRunning, actions)
         }
     }
 }
 
+/**
+ * The card's connected button group: the state action as the wide filled segment,
+ * then Restart (running only) and Logs as 56dp tonal segments. Outer corners are full,
+ * inner ones the theme's small, and each segment morphs to its pressed shape.
+ */
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
-private fun ActionItem(
-    icon: ImageVector,
-    label: String,
-    tint: Color,
-    isBold: Boolean = false,
-    onClick: () -> Unit
-) = ActionItemLayout(label, tint, isBold, onClick) {
-    Icon(icon, null, tint = tint, modifier = Modifier.size(20.dp))
-}
+private fun ActionGroup(running: Boolean, busy: Boolean, actions: ContainerCardActions) {
+    val context = LocalContext.current
+    val scheme = MaterialTheme.colorScheme
+    val inner = MaterialTheme.shapes.small
+    val full = CornerSize(50)
+    val leading = ButtonShapes(inner.copy(topStart = full, bottomStart = full), ButtonGroupDefaults.connectedLeadingButtonPressShape)
+    val middle = ButtonShapes(inner, ButtonGroupDefaults.connectedMiddleButtonPressShape)
+    val trailing = ButtonShapes(inner.copy(topEnd = full, bottomEnd = full), ButtonGroupDefaults.connectedTrailingButtonPressShape)
+    val tonal = ButtonDefaults.buttonColors(containerColor = scheme.secondaryContainer, contentColor = scheme.onSecondaryContainer)
+    // 48, not the 40 button default: every segment is a touch target in its own right
+    val height = Modifier.height(48.dp)
 
-@Composable
-private fun ActionItem(
-    icon: Painter,
-    label: String,
-    tint: Color,
-    isBold: Boolean = false,
-    onClick: () -> Unit
-) = ActionItemLayout(label, tint, isBold, onClick) {
-    Icon(icon, null, tint = tint, modifier = Modifier.size(20.dp))
-}
-
-@Composable
-private fun ActionItemLayout(
-    label: String,
-    tint: Color,
-    isBold: Boolean,
-    onClick: () -> Unit,
-    iconSlot: @Composable () -> Unit
-) {
-    Surface(
-        onClick = onClick,
-        modifier = Modifier.fillMaxWidth().height(52.dp),
-        shape = RoundedCornerShape(12.dp),
-        color = Color.Transparent
-    ) {
-        Row(
-            modifier = Modifier.padding(horizontal = 16.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(16.dp)
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+        Button(
+            onClick = if (running) actions.onStop else actions.onStart,
+            shapes = leading,
+            enabled = !busy,
+            colors = if (running) ButtonDefaults.buttonColors(containerColor = scheme.errorContainer, contentColor = scheme.onErrorContainer)
+                else ButtonDefaults.buttonColors(),
+            modifier = height.weight(1f)
         ) {
-            iconSlot()
-            Text(
-                text = label,
-                style = MaterialTheme.typography.bodyMedium,
-                fontWeight = if (isBold) FontWeight.Bold else FontWeight.Medium,
-                color = if (isBold) tint else MaterialTheme.colorScheme.onSurface
-            )
+            Icon(if (running) Icons.Default.Stop else Icons.Default.PlayArrow, null, Modifier.size(20.dp))
+            Spacer(Modifier.width(8.dp))
+            Text(context.getString(if (running) R.string.stop else R.string.start), style = MaterialTheme.typography.labelLarge)
         }
+        if (running) {
+            Button(
+                onClick = actions.onRestart,
+                shapes = middle,
+                enabled = !busy,
+                colors = tonal,
+                contentPadding = PaddingValues(0.dp),
+                modifier = height.width(56.dp)
+            ) {
+                Icon(Icons.Default.Refresh, context.getString(R.string.restart), Modifier.size(20.dp))
+            }
+        }
+        // Logs stay reachable while an operation runs: that is when they matter
+        Button(
+            onClick = actions.onShowLogs,
+            shapes = trailing,
+            colors = tonal,
+            contentPadding = PaddingValues(0.dp),
+            modifier = height.width(56.dp)
+        ) {
+            Icon(Icons.AutoMirrored.Filled.ReceiptLong, context.getString(R.string.view_logs), Modifier.size(20.dp))
+        }
+    }
+}
+
+/** The per-container actions that used to live in the card's drawer. */
+@Composable
+private fun ManageMenu(container: ContainerInfo, actions: ContainerCardActions, expanded: Boolean) {
+    val context = LocalContext.current
+    DropdownMenu(
+        expanded = expanded,
+        onDismissRequest = actions.onToggleMenu,
+        shape = MaterialTheme.shapes.large,
+        containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
+    ) {
+        DropdownMenuItem(
+            text = { Text(context.getString(R.string.edit_container_configuration)) },
+            leadingIcon = { Icon(Icons.Default.Edit, null) },
+            onClick = actions.onEdit
+        )
+        DropdownMenuItem(
+            text = {
+                Text(context.getString(if (container.useSparseImage) R.string.resize_sparse_image else R.string.migrate_to_sparse_image))
+            },
+            leadingIcon = { Icon(painterResource(R.drawable.ic_disk), null) },
+            onClick = if (container.useSparseImage) actions.onResize else actions.onMigrate
+        )
+        DropdownMenuItem(
+            text = { Text(context.getString(R.string.export_container)) },
+            leadingIcon = { Icon(Icons.Default.FileDownload, null) },
+            onClick = actions.onExport
+        )
+        HorizontalDivider()
+        DropdownMenuItem(
+            text = { Text(context.getString(R.string.uninstall_container_menu)) },
+            leadingIcon = { Icon(Icons.Default.Delete, null) },
+            onClick = actions.onUninstall,
+            colors = MenuDefaults.itemColors(
+                textColor = MaterialTheme.colorScheme.error,
+                leadingIconColor = MaterialTheme.colorScheme.error
+            )
+        )
     }
 }

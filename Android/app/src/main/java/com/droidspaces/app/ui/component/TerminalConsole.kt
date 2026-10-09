@@ -4,12 +4,10 @@ import android.util.Log
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -74,22 +72,17 @@ fun ShimmerAnimation(
         end = Offset(translateAnim, translateAnim)
     )
 
+    // Machine output sits on the lowest container, the console role in DESIGN.md, with
+    // the shimmer brush painted over it while an operation runs
+    val shape = MaterialTheme.shapes.large
     Surface(
         modifier = modifier
-            .clip(RoundedCornerShape(16.dp))
-            // Base background first - Using surfaceContainerHighest for premium field-depth
-            .background(MaterialTheme.colorScheme.surfaceContainerHighest)
-            // Shimmer brush on top
-            .background(brush)
-            .border(
-                width = 1.dp,
-                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f),
-                shape = RoundedCornerShape(16.dp)
-            ),
+            .clip(shape)
+            .background(MaterialTheme.colorScheme.surfaceContainerLowest)
+            .background(brush),
         color = Color.Transparent,
-        shape = RoundedCornerShape(16.dp),
-        tonalElevation = 0.dp,
-        shadowElevation = 0.dp
+        shape = shape,
+        border = amoledCardBorder()
     ) {
         content(ShimmerScope(brush))
     }

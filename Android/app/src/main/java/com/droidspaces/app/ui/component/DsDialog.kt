@@ -59,9 +59,9 @@ fun DsDialog(
         // The activity handles configChanges itself, so a dialog that is open
         // through a rotation keeps its stale window constraints and a bound
         // taken from them dangles off the shorter screen. LocalConfiguration is
-        // live across rotation, the same source TerminalDialog sizes from, so
-        // the shell bounds itself with it: screen height minus the 24.dp gutter
-        // on each side. Caller caps land after it and shrink it further.
+        // live across rotation, so the shell bounds itself with it: screen
+        // height minus the 24.dp gutter on each side. Caller caps land after it
+        // and shrink it further.
         val screenHeight = LocalConfiguration.current.screenHeightDp.dp
         Surface(
             modifier = Modifier

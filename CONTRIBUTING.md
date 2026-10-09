@@ -272,7 +272,7 @@ for the case where nothing here fits and you have to build something new.
 | `EnvironmentVariablesDialog(initialContent, onConfirm, onDismiss, ...)` | `ui/component/EnvironmentVariablesDialog.kt` | Key and value environment editor |
 | `PrivilegedModeDialog`, `HardwareAccessDialog` | `ui/component/` | Opt-in flows that need a typed confirmation phrase |
 | `DangerousWarningCard(title, text)` + `ConfirmPhraseField(value, onValueChange, isError)` | `ui/component/DangerousActionConfirm.kt` | Building a destructive confirmation. Compose these two with `DialogFooterRow` |
-| `TerminalDialog(title, logs, onDismiss, onClear, isBlocking)` | `ui/component/TerminalDialog.kt` | Showing live or streaming command output |
+| `LogsSheet(title, logs, onDismiss, onClear, isBlocking)` | `ui/component/LogsSheet.kt` | Showing live or streaming command output. A bottom sheet that cannot be dismissed while `isBlocking` |
 | `ProgressDialog(message)` / `ErrorLogsDialog(logs)` | `ui/util/DialogUtils.kt` | Blocking spinner, or a failed command's log lines |
 | `RootfsRepoSheet(onDismiss, onInstall)` | `ui/component/RootfsRepoSheet.kt` | The rootfs repo browser, search and repo manager included |
 | `BugReportDialog(onDismiss)` | `ui/component/BugReportDialog.kt` | Bug report capture |
@@ -299,7 +299,7 @@ the language and about dialogs in `ui/screen/SettingsScreen.kt`). Do not import 
 | `SettingsRowCard`, `ToggleCard` | `ui/component/` | Clickable row, or switch row. Both are thin wrappers over `SettingsCard`. `ToggleCard(expandedContent = ...)` opens a body inside the card while the switch is on |
 | `DsSlider(value, onValueChange, valueRange, ...)` | `ui/component/DsSlider.kt` | Any slider. Never restyle a raw `Slider` at the call site |
 | `SwitchItem` | `ui/component/SwitchItem.kt` | Flat `ListItem` switch row, used on the Settings screen. See the duplicates note below |
-| `ContainerCard(container, actions, ...)` + `ContainerCardActions` | `ui/component/ContainerCard.kt` | The expandable container row. Add new actions to `ContainerCardActions`, not as new parameters |
+| `ContainerCard(container, actions, ...)` + `ContainerCardActions` | `ui/component/ContainerCard.kt` | The container card and its anchored manage menu. Add new actions to `ContainerCardActions`, not as new parameters |
 | `RunningContainerCard(container, onEnter, onTerminalClick, osInfo)` | `ui/component/RunningContainerCard.kt` | Compact running container card on the control panel |
 | `DroidspacesStatusCard(status, version, ...)` + `DroidspacesStatus` | `ui/component/DroidspacesStatusCard.kt` | Backend or module status hero card |
 | `SystemInfoCard`, `ContainerUsersCard`, `HelpCard` | `ui/component/` | Host resource card, container user management, getting started block |
