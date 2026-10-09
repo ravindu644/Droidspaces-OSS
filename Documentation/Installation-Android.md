@@ -61,6 +61,25 @@ If you already have a `.tar.xz` or `.tar.gz` rootfs file on the device:
 2. **Select your tarball** from storage.
 3. Follow the same **configuration wizard** steps as above.
 
+An archive can include a regular `container.config` file at its root, alongside `bin/`,
+`etc/` and `usr/`. The app reads its usual `key=value` settings and prefills the wizard.
+The file may contain the complete config from an installed container or only the settings
+you want to recommend. Missing settings use the wizard defaults. You can
+change the loaded values before installing; hardware access and privileged mode keep
+their confirmation dialogs. Recommendations use the existing config parser without
+additional field filtering. Rootfs validation still runs before extraction.
+
+Exporting a container includes its current host-side `container.config` as the first
+archive member, replacing any old copy in the rootfs. This lets the app read exported
+recommendations without decompressing the rest of the archive. If the first member is
+not `container.config` or `./container.config`, the app skips recommendations and opens
+the default configuration wizard. It does not search later entries.
+The new container name and storage location come from the wizard. Environment files
+are not imported. Bind mounts use the existing
+`bind_mounts=source:destination[:ro],...` format and can be reviewed in the wizard.
+A requested user-namespace setting stays checked but disabled when the kernel does
+not support it. The rootfs itself is not modified during export.
+
 > [!NOTE]
 >
 > Both methods end in the same wizard. The only difference is where the tarball comes from.
