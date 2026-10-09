@@ -73,8 +73,8 @@
     <string name="view_logs">Mira el maga log</string>
     <string name="edit_container_configuration">Revisa el Container Configuration</string>
     <string name="uninstall_container_menu">Hace Uninstall el Container</string>
-    <string name="status_running">TA ANDA</string>
-    <string name="status_stopped">PARAO</string>
+    <string name="status_running">Ta anda</string>
+    <string name="status_stopped">Parao</string>
     <string name="pid_label">PID: %1$d</string>
     <string name="options_label">Maga Opcion: %1$s</string>
     <string name="start">Empeza</string>

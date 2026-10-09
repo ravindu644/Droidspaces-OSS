@@ -165,6 +165,7 @@ private fun staticAmoledSchemeFor(palette: ThemePalette): ColorScheme {
     )
 }
 
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun DroidspacesTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
@@ -202,9 +203,10 @@ fun DroidspacesTheme(
         darkMode = darkTheme
     )
 
-    MaterialTheme(
+    MaterialExpressiveTheme(
         colorScheme = colorScheme,
         motionScheme = MotionScheme.expressive(),
+        shapes = Shapes,
         typography = Typography,
         content = content
     )

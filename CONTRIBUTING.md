@@ -209,8 +209,9 @@ change in the wrong place is a second bug.
 
 - State lives in a ViewModel, not in a stateful composable and not in a `util` singleton.
 - Lists render with `LazyColumn` and stable keys.
-- Colors come from `MaterialTheme.colorScheme`, type from `MaterialTheme.typography`, animation
-  timings from `AnimationUtils`. Do not hardcode them. Corner radii, spacing and every other
+- Colors come from `MaterialTheme.colorScheme`, type from `MaterialTheme.typography`, shapes
+  from `MaterialTheme.shapes`, animation specs from `MaterialTheme.motionScheme`. Do not
+  hardcode them. Corner radii, spacing and every other
   visual value come from [DESIGN.md](./DESIGN.md).
 - Any value that reaches a root shell goes through `ContainerCommandBuilder.quote()` or an
   allow-list validator. No exceptions.
@@ -308,9 +309,12 @@ the language and about dialogs in `ui/screen/SettingsScreen.kt`). Do not import 
 
 | Symbol | Path | Use it when |
 | --- | --- | --- |
-| `StatusPill(label, color)` | `ui/component/StatusPill.kt` | Any small status chip or badge |
-| `SectionHeader(text)` | `ui/component/SectionHeader.kt` | Any heading above a group of cards. Spacing goes on the modifier |
-| `CardContentPadding`, `CardHeaderHeight` | `ui/component/CardMetrics.kt` | Any card with a title-and-pill header. Keeps the dividers aligned across tabs, do not retype the values |
+| `StatusChip(label, color, active, busy)` | `ui/component/StatusChip.kt` | Any status chip. `active` is the running or healthy fill, `color` tints the dot |
+| `SectionLabel(text)` | `ui/component/SectionLabel.kt` | Any label above a group of rows or cards. Spacing goes on the modifier |
+| `SegmentedGroup(count) { index, shape -> }` | `ui/component/SegmentedGroup.kt` | Rows that belong together. Hands each row its shape and draws the AMOLED separator |
+| `DetailPill(text, onClick, icon, iconSize)` | `ui/component/DetailPill.kt` | The trailing Open, Manage, Copy pill on a detail row |
+| `rememberHaptics()` | `ui/component/Haptics.kt` | Any haptic. One method per moment in the DESIGN.md table |
+| `CardContentPadding`, `CardHeaderHeight` | `ui/component/CardMetrics.kt` | Any card with a title-and-chip header. Keeps the dividers aligned across tabs, do not retype the values |
 | `LoadingIndicator(size, color, contained)` + `LoadingSize` | `ui/util/LoadingIndicator.kt` | Inline spinners. Pick a `LoadingSize`, never a raw `.size(n.dp)`. `contained` is the primaryContainer bubble for a hero |
 | `FullScreenLoading(message)` | `ui/util/LoadingIndicator.kt` | Whole screen loading state |
 | `LoadingIndicator`, `ContainedLoadingIndicator`, `MaterialShapes` | `androidx.compose.material3` | The Expressive indicators and shapes come from the library; `ui/util/LoadingIndicator.kt` only wraps the sizes |
@@ -326,9 +330,10 @@ the language and about dialogs in `ui/screen/SettingsScreen.kt`). Do not import 
 | `rememberThemeState()` + `ThemeState` | `ui/theme/ThemeStateHolder.kt` | Reading live theme preferences |
 | `ThemePalette` | `ui/theme/Color.kt` | Adding an accent palette. Here and nowhere else |
 | `MaterialTheme.colorScheme.*` | | All colors. `ui/theme/Color.kt` holds only `AMOLED_BLACK` and the palettes now |
-| `MaterialTheme.typography.*`, `JetBrainsMono` | `ui/theme/Type.kt` | All text styles, and the mono font for terminal, log, and code text |
-| Corner radii, spacing, type roles | [DESIGN.md](./DESIGN.md) | Every visual value. There is no shape token object, the numbers live in DESIGN.md |
-| `AnimationUtils` | `util/AnimationUtils.kt` | Durations, easing, and tween specs. Never a literal `tween(300)` |
+| `MaterialTheme.typography.*`, `RobotoFlex`, `JetBrainsMono` | `ui/theme/Type.kt` | All text styles, Emphasized slots included, and the mono font for terminal, log, and code text |
+| `MaterialTheme.shapes.*` | `ui/theme/Shape.kt` | Every corner radius. DESIGN.md names the slot for each element |
+| `MaterialTheme.motionScheme.*` | `MotionScheme.expressive()` in `ui/theme/Theme.kt` | Every animation spec. Never a literal `tween(300)` or a hand-typed spring |
+| Spacing, type roles | [DESIGN.md](./DESIGN.md) | Every other visual value |
 | `AccentColorPicker`, `ColorPaletteSwatch` | `ui/component/` | The palette picker in settings |
 
 There is no spacing token object. Padding is written as literal dp, following the existing

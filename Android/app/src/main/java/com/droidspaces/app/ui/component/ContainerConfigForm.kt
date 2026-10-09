@@ -231,7 +231,7 @@ fun ContainerConfigForm(
         // Null until the first check --format lands or the cache loads; nothing is greyed out before then.
         fun ok(key: String) = caps?.has(key) ?: true
 
-        SectionHeader(
+        SectionLabel(
             text = context.getString(R.string.cat_networking),
             modifier = Modifier.padding(top = 16.dp)
         )
@@ -267,7 +267,7 @@ fun ContainerConfigForm(
                 modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                SectionHeader(text = context.getString(R.string.nat_settings))
+                SectionLabel(text = context.getString(R.string.nat_settings))
 
                 Text(
                     text = context.getString(R.string.static_ip_address),
@@ -432,7 +432,7 @@ fun ContainerConfigForm(
             enabled = !ipv6Forced
         )
 
-        SectionHeader(
+        SectionLabel(
             text = context.getString(R.string.cat_integration),
             modifier = Modifier.padding(top = 16.dp)
         )
@@ -494,7 +494,7 @@ fun ContainerConfigForm(
             enabled = true
         )
 
-        SectionHeader(
+        SectionLabel(
             text = context.getString(R.string.cat_resource_limits),
             modifier = Modifier.padding(top = 16.dp)
         )
@@ -616,7 +616,7 @@ fun ContainerConfigForm(
             }
         )
 
-        SectionHeader(
+        SectionLabel(
             text = context.getString(R.string.cat_security),
             modifier = Modifier.padding(top = 16.dp)
         )
@@ -685,7 +685,7 @@ fun ContainerConfigForm(
             onCheckedChange = { clearFocus(); onStateChange(state.copy(runAtBoot = it)) }
         )
 
-        SectionHeader(
+        SectionLabel(
             text = context.getString(R.string.cat_advanced),
             modifier = Modifier.padding(top = 16.dp)
         )

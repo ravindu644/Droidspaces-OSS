@@ -45,7 +45,6 @@ import com.droidspaces.app.ui.terminal.virtualkeys.VirtualKeysInfo
 import com.droidspaces.app.ui.terminal.virtualkeys.VirtualKeysListener
 import com.droidspaces.app.ui.terminal.virtualkeys.VirtualKeysView
 import android.graphics.Typeface
-import com.droidspaces.app.util.AnimationUtils
 import com.droidspaces.app.util.ContainerOSInfoManager
 import com.droidspaces.app.util.FontInfo
 import com.droidspaces.app.util.PreferencesManager
@@ -397,8 +396,8 @@ private fun TerminalTabView(
 
     AnimatedVisibility(
         visible = isVisible,
-        enter = fadeIn(animationSpec = AnimationUtils.fastSpec()),
-        exit = fadeOut(animationSpec = AnimationUtils.fastSpec()),
+        enter = fadeIn(animationSpec = MaterialTheme.motionScheme.fastEffectsSpec()),
+        exit = fadeOut(animationSpec = MaterialTheme.motionScheme.fastEffectsSpec()),
         modifier = modifier
     ) {
         Column(modifier = Modifier.fillMaxSize()) {

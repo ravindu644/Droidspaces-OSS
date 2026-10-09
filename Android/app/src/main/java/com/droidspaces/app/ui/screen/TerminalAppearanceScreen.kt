@@ -60,7 +60,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.droidspaces.app.R
 import com.droidspaces.app.ui.component.DsSlider
-import com.droidspaces.app.ui.component.SectionHeader
+import com.droidspaces.app.ui.component.SectionLabel
 import com.droidspaces.app.ui.component.SwitchItem
 import com.droidspaces.app.ui.component.TerminalFontDialog
 import com.droidspaces.app.ui.theme.JetBrainsMono
@@ -147,7 +147,7 @@ fun TerminalAppearanceScreen(onBack: () -> Unit) {
         ) {
             Spacer(modifier = Modifier.height(12.dp))
 
-            SectionHeader(
+            SectionLabel(
                 text = context.getString(R.string.terminal_font),
                 modifier = Modifier.padding(start = 24.dp, bottom = 8.dp)
             )
@@ -236,7 +236,7 @@ fun TerminalAppearanceScreen(onBack: () -> Unit) {
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            SectionHeader(
+            SectionLabel(
                 text = context.getString(R.string.terminal_section_theme),
                 modifier = Modifier.padding(start = 24.dp, bottom = 8.dp, top = 8.dp)
             )
@@ -262,7 +262,7 @@ fun TerminalAppearanceScreen(onBack: () -> Unit) {
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            SectionHeader(
+            SectionLabel(
                 text = context.getString(R.string.terminal_section_misc),
                 modifier = Modifier.padding(start = 24.dp, bottom = 8.dp, top = 8.dp)
             )

@@ -52,9 +52,8 @@ import com.droidspaces.app.R
 import com.droidspaces.app.ui.component.DsSnackbarHost
 import com.droidspaces.app.ui.component.dsMenuBorder
 import com.droidspaces.app.ui.component.DsMenuTheme
-import com.droidspaces.app.ui.component.StatusPill
+import com.droidspaces.app.ui.component.StatusChip
 import com.droidspaces.app.ui.util.*
-import com.droidspaces.app.util.AnimationUtils
 import com.droidspaces.app.ui.viewmodel.InitScreenState
 import com.droidspaces.app.ui.viewmodel.InitServiceViewModel
 import kotlinx.coroutines.Job
@@ -284,7 +283,7 @@ private fun InitServiceSearchBar(query: String, onQueryChange: (String) -> Unit)
     val isFocused by interactionSource.collectIsFocusedAsState()
     val borderColor by animateColorAsState(
         targetValue = if (isFocused) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f),
-        animationSpec = AnimationUtils.fastSpec()
+        animationSpec = MaterialTheme.motionScheme.fastEffectsSpec()
     )
 
     Surface(
@@ -397,7 +396,7 @@ private fun InitServiceCard(
     val statusColor = statusColorFor(row.status)
 
     Surface(
-        modifier = Modifier.fillMaxWidth().animateContentSize(AnimationUtils.mediumSpec()),
+        modifier = Modifier.fillMaxWidth().animateContentSize(MaterialTheme.motionScheme.defaultSpatialSpec()),
         shape = RoundedCornerShape(20.dp),
         color = MaterialTheme.colorScheme.surfaceContainer,
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f))
@@ -418,8 +417,8 @@ private fun InitServiceCard(
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
-                StatusPill(
-                    label = context.getString(statusLabelRes(row.status)).uppercase(),
+                StatusChip(
+                    label = context.getString(statusLabelRes(row.status)),
                     color = statusColor
                 )
             }

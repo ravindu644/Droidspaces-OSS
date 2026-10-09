@@ -47,22 +47,22 @@ ledger deletes this file and the AGENTS.md paragraph that points at it.
 Tick a box only when the phase is built, on-device verified and committed.
 
 ### Phase 1, foundation
-- [ ] `ui/theme/Theme.kt`: `MaterialExpressiveTheme` in place of `MaterialTheme`, pass
+- [x] `ui/theme/Theme.kt`: `MaterialExpressiveTheme` in place of `MaterialTheme`, pass
       `shapes`; keep the palette builders and the AMOLED overrides as they are.
-- [ ] `ui/theme/Type.kt`: Roboto Flex, the full `Typography` constructor so every
+- [x] `ui/theme/Type.kt`: Roboto Flex, the full `Typography` constructor so every
       Emphasized slot is real, weights per the DESIGN.md table.
-- [ ] `ui/theme/Shape.kt` (new): the Expressive `Shapes` scale.
-- [ ] Delete `util/AnimationUtils.kt`. Callers to move onto `MaterialTheme.motionScheme`:
+- [x] `ui/theme/Shape.kt` (new): the Expressive `Shapes` scale.
+- [x] Delete `util/AnimationUtils.kt`. Callers to move onto `MaterialTheme.motionScheme`:
       `ui/navigation/DroidspacesNavigation.kt` (8), `ui/component/ContainerCard.kt` (3),
       `ui/component/RunningContainerCard.kt` (1), `ui/screen/ContainerDetailsScreen.kt` (5),
       `ui/screen/InitServiceScreen.kt` (2), `ui/component/ToggleCard.kt` (2),
       `ui/screen/ContainerTerminalScreen.kt` (2).
-- [ ] New shared pieces in `ui/component/`: `DetailPill.kt` (the pill in DESIGN.md),
+- [x] New shared pieces in `ui/component/`: `DetailPill.kt` (the pill in DESIGN.md),
       `StatusChip.kt` (replaces `StatusPill.kt`), `SegmentedGroup.kt` (rows with the 2dp
       gap and the AMOLED separator), `SectionLabel.kt` (replaces the styling in
       `SectionHeader.kt`), `Haptics.kt` (one helper over `LocalHapticFeedback`).
-- [ ] `ui/component/CardMetrics.kt`: header row 44dp, card padding 16 all sides.
-- [ ] Acceptance: the app builds and runs unchanged in look except type and shapes; no
+- [x] `ui/component/CardMetrics.kt`: header row 44dp, card padding 16 all sides.
+- [x] Acceptance: the app builds and runs unchanged in look except type and shapes; no
       file outside `ui/theme/` names a hex colour that was not already a decided exception.
 
 ### Phase 2, app bars and navigation

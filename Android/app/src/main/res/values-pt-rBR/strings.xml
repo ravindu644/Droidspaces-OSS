@@ -81,8 +81,8 @@
     <string name="edit_container_configuration">Editar Configuração do Container</string>
     <string name="uninstall_container_menu">Desinstalar Container</string>
     <!-- Container Card -->
-    <string name="status_running">EM EXECUÇÃO</string>
-    <string name="status_stopped">PARADO</string>
+    <string name="status_running">Em execução</string>
+    <string name="status_stopped">Parado</string>
     <string name="pid_label">PID: %1$d</string>
     <string name="options_label">Opções: %1$s</string>
     <string name="start">Iniciar</string>

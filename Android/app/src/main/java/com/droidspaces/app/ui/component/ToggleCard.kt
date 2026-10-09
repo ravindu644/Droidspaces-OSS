@@ -12,7 +12,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.ui.unit.dp
-import com.droidspaces.app.util.AnimationUtils
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
@@ -51,8 +50,8 @@ fun ToggleCard(
                 AnimatedVisibility(
                     // A disabled card must not leave live controls on screen
                     visible = checked && enabled,
-                    enter = expandVertically(AnimationUtils.slowSpec()) + fadeIn(AnimationUtils.slowSpec()),
-                    exit = shrinkVertically(AnimationUtils.slowSpec()) + fadeOut(AnimationUtils.slowSpec())
+                    enter = expandVertically(MaterialTheme.motionScheme.slowSpatialSpec()) + fadeIn(MaterialTheme.motionScheme.slowEffectsSpec()),
+                    exit = shrinkVertically(MaterialTheme.motionScheme.slowSpatialSpec()) + fadeOut(MaterialTheme.motionScheme.slowEffectsSpec())
                 ) {
                     Column(
                         modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 16.dp),

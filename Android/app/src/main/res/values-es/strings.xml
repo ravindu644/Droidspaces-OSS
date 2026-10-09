@@ -73,8 +73,8 @@
     <string name="view_logs">Ver logs</string>
     <string name="edit_container_configuration">Editar configuración del contenedor</string>
     <string name="uninstall_container_menu">Desinstalar contenedor</string>
-    <string name="status_running">EN EJECUCIÓN</string>
-    <string name="status_stopped">DETENIDO</string>
+    <string name="status_running">En ejecución</string>
+    <string name="status_stopped">Detenido</string>
     <string name="pid_label">PID: %1$d</string>
     <string name="options_label">Opciones: %1$s</string>
     <string name="start">Iniciar</string>

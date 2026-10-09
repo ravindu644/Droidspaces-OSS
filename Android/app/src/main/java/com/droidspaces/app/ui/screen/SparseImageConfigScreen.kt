@@ -1,6 +1,6 @@
 package com.droidspaces.app.ui.screen
 
-import com.droidspaces.app.ui.component.SectionHeader
+import com.droidspaces.app.ui.component.SectionLabel
 import com.droidspaces.app.ui.component.DsTextFieldDefaults
 import com.droidspaces.app.ui.component.FilePickerDialog
 import com.droidspaces.app.ui.component.SettingsCard
@@ -139,7 +139,7 @@ fun SparseImageConfigScreen(
                 fontWeight = FontWeight.Bold
             )
 
-            SectionHeader(context.getString(R.string.storage_location))
+            SectionLabel(context.getString(R.string.storage_location))
 
             // Storage location. Built from SettingsCard so the two options line up with
             // each other and with every other option card in the app; a bare RadioButton
@@ -235,7 +235,7 @@ fun SparseImageConfigScreen(
 
             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
 
-            SectionHeader(context.getString(R.string.sparse_image_section))
+            SectionLabel(context.getString(R.string.sparse_image_section))
 
             // Info card
             Surface(

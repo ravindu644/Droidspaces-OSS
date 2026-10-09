@@ -129,7 +129,13 @@ fun DroidspacesStatusCard(
 
                 // Right side: mode pill
                 if (isWorking && backendMode != null) {
-                    StatusPill(label = backendMode!!.uppercase(), color = accentColor)
+                    // The mode arrives as DAEMON or DIRECT, which AppStateViewModel compares
+                    // against, so only the chip turns it into title case.
+                    StatusChip(
+                        label = backendMode!!.lowercase().replaceFirstChar { it.titlecase() },
+                        color = accentColor,
+                        active = true
+                    )
                 }
             }
 

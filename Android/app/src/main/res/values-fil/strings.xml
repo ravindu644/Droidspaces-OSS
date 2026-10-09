@@ -73,8 +73,8 @@
     <string name="view_logs">Tingnan ang logs</string>
     <string name="edit_container_configuration">I-edit ang Container Configuration</string>
     <string name="uninstall_container_menu">I-uninstall ang Container</string>
-    <string name="status_running">GUMAGANA</string>
-    <string name="status_stopped">HUMINTO</string>
+    <string name="status_running">Gumagana</string>
+    <string name="status_stopped">Huminto</string>
     <string name="pid_label">PID: %1$d</string>
     <string name="options_label">Mga Opsyon: %1$s</string>
     <string name="start">Simulan</string>

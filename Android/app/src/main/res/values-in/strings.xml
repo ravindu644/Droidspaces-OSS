@@ -80,8 +80,8 @@
     <string name="view_logs">Lihat log</string>
     <string name="edit_container_configuration">Edit Konfigurasi Kontainer</string>
     <string name="uninstall_container_menu">Hapus Kontainer</string>
-    <string name="status_running">BERJALAN</string>
-    <string name="status_stopped">BERHENTI</string>
+    <string name="status_running">Berjalan</string>
+    <string name="status_stopped">Berhenti</string>
     <string name="pid_label">PID: %1$d</string>
     <string name="options_label">Opsi: %1$s</string>
     <string name="start">Mulai</string>
@@ -391,9 +391,9 @@
     <string name="repo_dl_error_http_data">Kesalahan data HTTP</string>
     <string name="repo_dl_error_not_found">Berkas tidak ditemukan (404)</string>
     <string name="repo_dl_error_code">Kode kesalahan %1$d</string>
-    <string name="repo_status_ready">SIAP</string>
-    <string name="repo_status_downloading">MENGUNDUH</string>
-    <string name="repo_status_failed">GAGAL</string>
+    <string name="repo_status_ready">Siap</string>
+    <string name="repo_status_downloading">Mengunduh</string>
+    <string name="repo_status_failed">Gagal</string>
     <string name="repo_add_custom">Tambahkan Repositori Kustom</string>
     <string name="repo_manage_custom">Kelola Repositori</string>
     <string name="repo_manager_subtitle">Berlangganan feed rootfs.json kustom.</string>

@@ -21,6 +21,7 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.droidspaces.app.ui.component.DetailPill
 import com.droidspaces.app.ui.component.ContainerUsersCard
 import com.droidspaces.app.ui.component.DsSnackbarHost
 import com.droidspaces.app.util.ContainerInfo
@@ -31,7 +32,6 @@ import com.droidspaces.app.util.ContainerOpenRCManager
 import com.droidspaces.app.util.ContainerDiskUsageManager
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import com.droidspaces.app.util.AnimationUtils
 import com.droidspaces.app.util.IconUtils
 import com.droidspaces.app.ui.util.LoadingIndicator
 import com.droidspaces.app.ui.util.LoadingSize
@@ -387,7 +387,7 @@ private fun TerminalCard(
 
     val alpha by animateFloatAsState(
         targetValue = if (visible) 1f else 0f,
-        animationSpec = AnimationUtils.cardFadeSpec(),
+        animationSpec = MaterialTheme.motionScheme.defaultEffectsSpec(),
         label = "terminal_card_fade"
     )
 
@@ -440,26 +440,11 @@ private fun TerminalCard(
                 }
             }
 
-            Button(
+            DetailPill(
+                text = if (sessionCount > 0) context.getString(R.string.restore) else context.getString(R.string.open),
                 onClick = onOpenTerminal,
-                modifier = Modifier.widthIn(min = 140.dp),
-                shape = RoundedCornerShape(16.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.primary,
-                    contentColor = MaterialTheme.colorScheme.onPrimary
-                )
-            ) {
-                Icon(
-                    if (sessionCount > 0) Icons.Default.Terminal else Icons.Default.ChevronRight,
-                    contentDescription = null,
-                    modifier = Modifier.size(16.dp)
-                )
-                Spacer(Modifier.width(6.dp))
-                Text(
-                    if (sessionCount > 0) context.getString(R.string.restore) else context.getString(R.string.open),
-                    fontWeight = FontWeight.SemiBold
-                )
-            }
+                icon = if (sessionCount > 0) Icons.Default.Terminal else Icons.Default.ChevronRight
+            )
         }
     }
 }
@@ -481,7 +466,7 @@ private fun SparseDiskUsageCard(
 
     val alpha by animateFloatAsState(
         targetValue = if (visible) 1f else 0f,
-        animationSpec = AnimationUtils.cardFadeSpec(),
+        animationSpec = MaterialTheme.motionScheme.defaultEffectsSpec(),
         label = "disk_usage_card_fade"
     )
 
@@ -490,7 +475,7 @@ private fun SparseDiskUsageCard(
     } ?: 0f
     val animatedFraction by animateFloatAsState(
         targetValue = fraction,
-        animationSpec = AnimationUtils.cardFadeSpec(),
+        animationSpec = MaterialTheme.motionScheme.defaultEffectsSpec(),
         label = "disk_usage_progress"
     )
 
@@ -579,7 +564,7 @@ private fun PremiumInitSystemCard(
 
     val alpha by animateFloatAsState(
         targetValue = if (visible) 1f else 0f,
-        animationSpec = AnimationUtils.cardFadeSpec(),
+        animationSpec = MaterialTheme.motionScheme.defaultEffectsSpec(),
         label = "initsystem_fade"
     )
 
@@ -640,7 +625,7 @@ private fun PremiumInitSystemCard(
 
             Crossfade(
                 targetState = state,
-                animationSpec = AnimationUtils.mediumSpec(),
+                animationSpec = MaterialTheme.motionScheme.defaultEffectsSpec(),
                 label = "initsystem_button_transition"
             ) { currentState ->
                 when (currentState) {
@@ -679,19 +664,10 @@ private fun PremiumInitSystemCard(
                         }
                     }
                     is InitSystemCardState.Available -> {
-                        Button(
-                            onClick = { onNavigateToServices(currentState.initSystem) },
-                            modifier = Modifier.widthIn(min = 140.dp),
-                            shape = RoundedCornerShape(16.dp),
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = MaterialTheme.colorScheme.primary,
-                                contentColor = MaterialTheme.colorScheme.onPrimary
-                            )
-                        ) {
-                            Icon(Icons.Default.ChevronRight, contentDescription = null, modifier = Modifier.size(16.dp))
-                            Spacer(Modifier.width(6.dp))
-                            Text(context.getString(R.string.manage), fontWeight = FontWeight.SemiBold)
-                        }
+                        DetailPill(
+                            text = context.getString(R.string.manage),
+                            onClick = { onNavigateToServices(currentState.initSystem) }
+                        )
                     }
                 }
             }

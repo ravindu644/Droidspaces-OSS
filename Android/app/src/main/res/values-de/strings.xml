@@ -83,8 +83,8 @@
     <string name="edit_container_configuration">Container-Konfiguration bearbeiten</string>
     <string name="uninstall_container_menu">Container deinstallieren</string>
     <!-- Container Card -->
-    <string name="status_running">LÄUFT</string>
-    <string name="status_stopped">GESTOPPT</string>
+    <string name="status_running">Läuft</string>
+    <string name="status_stopped">Gestoppt</string>
     <string name="pid_label">PID: %1$d</string>
     <string name="options_label">Optionen: %1$s</string>
     <string name="start">Start</string>
@@ -418,12 +418,12 @@
     <string name="repo_title">Rootfs Repository</string>
     <string name="repo_dl_error_code">Fehlercode %1$d</string>
     <string name="repo_download">Herunterladen</string>
-    <string name="repo_status_downloading">WIRD GELADEN</string>
+    <string name="repo_status_downloading">Wird geladen</string>
     <string name="repo_cancel">Abbrechen</string>
     <string name="privileged_confirm_instruction">Zur Bestätigung bitte genau den Satz \"ICH WERDE KEINE FEHLER MELDEN“ in Großbuchstaben eingeben:</string>
     <string name="repo_error_no_assets">In der neuesten Version wurden keine Rootfs-Tarballs gefunden</string>
-    <string name="repo_status_ready">BEREIT</string>
-    <string name="repo_status_failed">FEHLGESCHLAGEN</string>
+    <string name="repo_status_ready">Bereit</string>
+    <string name="repo_status_failed">Fehlgeschlagen</string>
     <string name="repo_dl_error_unknown">Unbekannter Fehler</string>
     <string name="repo_not_found_in_repo">%1$s nicht in der Repository gefunden</string>
     <string name="repo_banner_text">Die Rootfs-Tarballs unter \"Droidspaces developers“ sind Open Source und transparent. Du kannst unsere Änderungen manuell herunterladen oder einsehen, indem du auf diese Karte tippst.</string>

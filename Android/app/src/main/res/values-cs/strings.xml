@@ -105,8 +105,8 @@
     <string name="view_logs">Zobrazit protokoly</string>
     <string name="edit_container_configuration">Upravit konfiguraci kontejneru</string>
     <string name="uninstall_container_menu">Odinstalovat kontejner</string>
-    <string name="status_running">SPUŠTĚNO</string>
-    <string name="status_stopped">ZASTAVENO</string>
+    <string name="status_running">Spuštěno</string>
+    <string name="status_stopped">Zastaveno</string>
     <string name="pid_label">PID: %1$d</string>
     <string name="options_label">Možnosti: %1$s</string>
     <string name="start">Spustit</string>
@@ -447,9 +447,9 @@
     <string name="repo_dl_error_http_data">Chyba dat HTTP</string>
     <string name="repo_dl_error_not_found">Soubor nebyl nalezen (404)</string>
     <string name="repo_dl_error_code">Kód chyby %1$d</string>
-    <string name="repo_status_ready">PŘIPRAVENO</string>
-    <string name="repo_status_downloading">STAHUJE SE</string>
-    <string name="repo_status_failed">SELHALO</string>
+    <string name="repo_status_ready">Připraveno</string>
+    <string name="repo_status_downloading">Stahuje se</string>
+    <string name="repo_status_failed">Selhalo</string>
     <string name="repo_add_custom">Přidat vlastní repozitář</string>
     <string name="repo_manage_custom">Spravovat repozitáře</string>
     <string name="repo_manager_subtitle">Odebírejte vlastní zdroje rootfs.json.</string>

@@ -33,7 +33,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.droidspaces.app.R
-import com.droidspaces.app.util.AnimationUtils
 import com.droidspaces.app.util.ContainerInfo
 import com.droidspaces.app.util.ContainerOSInfoManager
 import com.droidspaces.app.util.ContainerStatus
@@ -99,7 +98,7 @@ fun ContainerCard(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .animateContentSize(animationSpec = AnimationUtils.mediumSpec())
+                .animateContentSize(animationSpec = MaterialTheme.motionScheme.defaultSpatialSpec())
                 .padding(CardContentPadding),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
@@ -142,15 +141,16 @@ fun ContainerCard(
 
                     val (statusText, statusColor) = when (container.status) {
                         ContainerStatus.RUNNING -> context.getString(R.string.status_running) to MaterialTheme.colorScheme.primary
-                        ContainerStatus.STOPPED -> context.getString(R.string.status_stopped) to MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                        ContainerStatus.STOPPED -> context.getString(R.string.status_stopped) to MaterialTheme.colorScheme.onSurfaceVariant
                     }
 
                     // The label keeps reporting the state; the dot spins while an operation
                     // runs. Changing the label would change the pill's width and shove the
                     // logs button around every time a container starts or stops.
-                    StatusPill(
-                        label = statusText.uppercase(),
+                    StatusChip(
+                        label = statusText,
                         color = statusColor,
+                        active = container.status == ContainerStatus.RUNNING,
                         busy = isOperationRunning
                     )
                 }
@@ -294,11 +294,11 @@ fun ContainerCard(
             AnimatedVisibility(
                 visible = isExpanded,
                 enter = expandVertically(
-                    animationSpec = AnimationUtils.mediumSpec(),
+                    animationSpec = MaterialTheme.motionScheme.defaultSpatialSpec(),
                     expandFrom = Alignment.Top
                 ) + fadeIn(),
                 exit = shrinkVertically(
-                    animationSpec = AnimationUtils.mediumSpec(),
+                    animationSpec = MaterialTheme.motionScheme.defaultSpatialSpec(),
                     shrinkTowards = Alignment.Top
                 ) + fadeOut()
             ) {

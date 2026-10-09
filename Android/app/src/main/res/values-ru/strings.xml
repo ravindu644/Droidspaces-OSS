@@ -81,8 +81,8 @@
     <string name="edit_container_configuration">Редактировать конфигурацию контейнера</string>
     <string name="uninstall_container_menu">Удалить контейнер</string>
     <!-- Container Card -->
-    <string name="status_running">ЗАПУЩЕН</string>
-    <string name="status_stopped">ОСТАНОВЛЕН</string>
+    <string name="status_running">Запущен</string>
+    <string name="status_stopped">Остановлен</string>
     <string name="pid_label">PID: %1$d</string>
     <string name="options_label">Опции: %1$s</string>
     <string name="start">Запустить</string>

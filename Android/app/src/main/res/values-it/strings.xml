@@ -91,8 +91,8 @@
     <string name="edit_container_configuration">Modifica configurazione contenitore</string>
     <string name="uninstall_container_menu">Disinstalla Contenitore</string>
     <!-- Container Card -->
-    <string name="status_running">IN ESECUZIONE</string>
-    <string name="status_stopped">ARRESTATO</string>
+    <string name="status_running">In esecuzione</string>
+    <string name="status_stopped">Arrestato</string>
     <string name="pid_label">PID: %1$d</string>
     <string name="options_label">Opzioni: %1$s</string>
     <string name="start">Avvia</string>
@@ -419,12 +419,12 @@
     <string name="network_mode_nat_short">NAT</string>
     <string name="network_mode_none_short">Nessuno</string>
     <string name="repo_download">Download</string>
-    <string name="repo_status_downloading">DOWNLOAD</string>
+    <string name="repo_status_downloading">Download</string>
     <string name="repo_cancel">Cancella</string>
     <string name="repo_error_no_assets">Nessun archivio tar rootfs trovato nell\'ultima versione</string>
-    <string name="repo_status_ready">PRONTO</string>
+    <string name="repo_status_ready">Pronto</string>
     <string name="notification_action_exit">ESCI</string>
-    <string name="repo_status_failed">FALLITO</string>
+    <string name="repo_status_failed">Fallito</string>
     <string name="custom_init_error_absolute">Il percorso deve essere assoluto (inizia con /)</string>
     <string name="custom_init_label">Binario Init personalizzato</string>
     <string name="repo_dl_error_unknown">Errore sconosciuto</string>

@@ -156,8 +156,8 @@
     <string name="uninstall_container_menu">Uninstall Container</string>
 
     <!-- Container Card -->
-    <string name="status_running">RUNNING</string>
-    <string name="status_stopped">STOPPED</string>
+    <string name="status_running">Running</string>
+    <string name="status_stopped">Stopped</string>
     <string name="pid_label">PID: %1$d</string>
     <string name="options_label">Options: %1$s</string>
     <string name="start">Start</string>
@@ -670,9 +670,9 @@
     <string name="repo_storage_permission_rationale">Rootfs tarballs are saved to your Downloads folder, and on this Android version that needs storage access. Without it the download cannot start.</string>
     <string name="repo_notification_permission_rationale">Droidspaces shows download progress, a Cancel button, and a notification you can tap to install once the download finishes. The download still runs without it, you just will not see any of that.</string>
     <string name="repo_dl_error_code">Error code %1$d</string>
-    <string name="repo_status_ready">READY</string>
-    <string name="repo_status_downloading">DOWNLOADING</string>
-    <string name="repo_status_failed">FAILED</string>
+    <string name="repo_status_ready">Ready</string>
+    <string name="repo_status_downloading">Downloading</string>
+    <string name="repo_status_failed">Failed</string>
     <string name="repo_add_custom">Add Custom Repository</string>
     <string name="repo_manage_custom">Manage Repositories</string>
     <string name="repo_manager_subtitle">Subscribe to custom rootfs.json feeds.</string>

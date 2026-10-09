@@ -406,7 +406,7 @@ private fun RootfsAssetCard(
                 }
 
                 if (displayLabel.isNotEmpty()) {
-                    StatusPill(label = displayLabel, color = statusColor)
+                    StatusChip(label = displayLabel, color = statusColor, active = state is AssetDownloadState.Done)
                 }
             }
 

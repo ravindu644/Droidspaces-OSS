@@ -37,6 +37,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.graphics.Color
 import androidx.compose.foundation.BorderStroke
 import com.droidspaces.app.R
+import com.droidspaces.app.ui.component.DetailPill
 import com.droidspaces.app.ui.component.DsSnackbarHost
 import com.droidspaces.app.ui.component.TerminalDialog
 import com.droidspaces.app.ui.viewmodel.AppStateViewModel
@@ -493,7 +494,10 @@ private fun CodeBox(
                     }
                 }
 
-                Button(
+                DetailPill(
+                    text = context.getString(R.string.copy),
+                    icon = Icons.Default.ContentCopy,
+                    iconSize = 18.dp,
                     onClick = {
                         val clipboard = context.getSystemService(ClipboardManager::class.java)
                         val clip = ClipData.newPlainText(
@@ -504,25 +508,8 @@ private fun CodeBox(
                         Toast.makeText(context, R.string.kernel_requirements_copied, Toast.LENGTH_SHORT).show()
                         // Show snackbar feedback
                         scope.showSuccess(snackbarHostState, context.getString(R.string.kernel_requirements_copied))
-                    },
-                    modifier = Modifier.widthIn(min = 140.dp),
-                    shape = RoundedCornerShape(16.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.primary,
-                        contentColor = MaterialTheme.colorScheme.onPrimary
-                    )
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.ContentCopy,
-                        contentDescription = context.getString(R.string.copy),
-                        modifier = Modifier.size(18.dp)
-                    )
-                    Spacer(Modifier.width(6.dp))
-                    Text(
-                        text = context.getString(R.string.copy),
-                        fontWeight = FontWeight.SemiBold
-                    )
-                }
+                    }
+                )
             }
         }
     }

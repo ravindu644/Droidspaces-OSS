@@ -36,7 +36,9 @@ the FAB and its menu, an anchored menu, a bottom sheet.
 **Groups, not cards.** Rows that belong together (device info, settings, form switches,
 users) sit in a segmented group: rows of `surfaceContainer` with a 2dp gap of `background`
 between them, 24dp corners on the outer edges and 6dp on the inner ones. The group reads as
-one object with visible joints. Carding every row is the old look.
+one object with visible joints. Carding every row is the old look. `SegmentedGroup` in
+`ui/component/SegmentedGroup.kt` hands each row its shape; it does not use
+`ListItemDefaults.segmentedShapes`, whose outer corners are the theme's 16.
 
 **One highlighted surface per screen.** `primaryContainer` with `onPrimaryContainer` is
 reserved for the one thing a screen wants you to see first: the backend status card on Home,
@@ -255,10 +257,11 @@ tab and a 3dp indicator.
 
 Copy login, Open and Manage on container details are one shape, kept from today's app
 because it already fit: an M3 `Button`, 40dp tall, `widthIn(min = 140.dp)`,
-`RoundedCornerShape(16.dp)`, `primary` on `onPrimary`, the default 24dp content padding,
+`shapes.large` (16), `primary` on `onPrimary`, the default 24dp content padding,
 `labelLarge` SemiBold, a 16dp chevron (or an 18dp copy icon) and a 6dp gap. It trails its
-row; Copy login sits right aligned on its own row under the user toggles. Three sites,
-one composable, `ui/component/DetailPill.kt` once phase 1 lands.
+row; Copy login sits right aligned on its own row under the user toggles. The Copy
+button on the requirements screen is the same pill. Four sites, one composable,
+`ui/component/DetailPill.kt`.
 
 ## Dialogs
 
@@ -300,14 +303,15 @@ reserved for full screen states: empty lists, loading, setup heroes.
 Animation specs come from `MaterialTheme.motionScheme`, which the theme sets to
 `MotionScheme.expressive()`: `defaultSpatialSpec()` for size and position,
 `defaultEffectsSpec()` and `fastEffectsSpec()` for fades and colour, `slowEffectsSpec()` for
-a result settling in. Never hand-type a spring or a tween; `AnimationUtils` is being deleted.
+a result settling in. Never hand-type a spring or a tween.
 
 Screen transitions are fades, except Home entering from the installer, which scales in from
 0.9. The container card to container details transition is a shared-element candidate once
 navigation moves to 2.9, which also brings predictive back. The setup hero morphs between
 `MaterialShapes` presets through `ui/component/MorphShape.kt`.
 
-Haptics come from `LocalHapticFeedback` and fire where the platform does:
+Haptics go through `rememberHaptics()` in `ui/component/Haptics.kt`, one method per row below,
+and fire where the platform does:
 
 | Moment | Type |
 | --- | --- |

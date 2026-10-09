@@ -258,7 +258,10 @@ fun ContainerUsersCard(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.End
             ) {
-                Button(
+                DetailPill(
+                    text = context.getString(R.string.copy_login),
+                    icon = Icons.Default.ContentCopy,
+                    iconSize = 18.dp,
                     onClick = {
                         clearFocus()
                         scope.launch {
@@ -287,25 +290,8 @@ fun ContainerUsersCard(
                                 }
                             }
                         }
-                    },
-                    modifier = Modifier.widthIn(min = 140.dp),
-                    shape = RoundedCornerShape(16.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.primary,
-                        contentColor = MaterialTheme.colorScheme.onPrimary
-                    )
-                ) {
-                    Icon(
-                        Icons.Default.ContentCopy,
-                        contentDescription = null,
-                        modifier = Modifier.size(18.dp)
-                    )
-                    Spacer(Modifier.width(6.dp))
-                    Text(
-                        context.getString(R.string.copy_login),
-                        fontWeight = FontWeight.SemiBold
-                    )
-                }
+                    }
+                )
             }
         }
     }

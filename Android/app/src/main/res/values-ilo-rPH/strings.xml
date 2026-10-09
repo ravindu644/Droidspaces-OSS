@@ -73,8 +73,8 @@
     <string name="view_logs">Kitaen dagiti log</string>
     <string name="edit_container_configuration">I-edit ti Container Configuration</string>
     <string name="uninstall_container_menu">I-uninstall ti Container</string>
-    <string name="status_running">AGTARTARAY</string>
-    <string name="status_stopped">NAGSARDENG</string>
+    <string name="status_running">Agtartaray</string>
+    <string name="status_stopped">Nagsardeng</string>
     <string name="pid_label">PID: %1$d</string>
     <string name="options_label">Dagiti Opsyon: %1$s</string>
     <string name="start">Irugi</string>

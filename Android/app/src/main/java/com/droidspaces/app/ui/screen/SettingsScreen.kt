@@ -40,7 +40,7 @@ import com.droidspaces.app.R
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.droidspaces.app.ui.component.DialogCloseButton
 import com.droidspaces.app.ui.component.DialogFooterRow
-import com.droidspaces.app.ui.component.SectionHeader
+import com.droidspaces.app.ui.component.SectionLabel
 import com.droidspaces.app.ui.component.AccentColorPicker
 import com.droidspaces.app.ui.component.BugReportDialog
 import com.droidspaces.app.ui.component.SwitchItem
@@ -159,7 +159,7 @@ fun SettingsScreen(
                 .verticalScroll(rememberScrollState())
         ) {
             // Backend Reinstallation Section
-            SectionHeader(
+            SectionLabel(
                 text = context.getString(R.string.backend_section),
                 modifier = Modifier.padding(start = 24.dp, bottom = 8.dp, top = 8.dp)
             )
@@ -300,7 +300,7 @@ fun SettingsScreen(
             Spacer(modifier = Modifier.height(8.dp))
 
             // Theme Section
-            SectionHeader(
+            SectionLabel(
                 text = context.getString(R.string.appearance_section),
                 modifier = Modifier.padding(start = 24.dp, bottom = 8.dp, top = 8.dp)
             )
@@ -451,7 +451,7 @@ fun SettingsScreen(
             Spacer(modifier = Modifier.height(8.dp))
 
             // Updates Section
-            SectionHeader(
+            SectionLabel(
                 text = context.getString(R.string.updates_section),
                 modifier = Modifier.padding(start = 24.dp, bottom = 8.dp, top = 8.dp)
             )
@@ -480,7 +480,7 @@ fun SettingsScreen(
             Spacer(modifier = Modifier.height(8.dp))
 
             // Debugging Section
-            SectionHeader(
+            SectionLabel(
                 text = context.getString(R.string.debugging_section),
                 modifier = Modifier.padding(start = 24.dp, bottom = 8.dp, top = 8.dp)
             )
@@ -543,7 +543,7 @@ fun SettingsScreen(
 
             // Experimental Section, only for a 32-bit userspace on a 64-bit kernel
             if (DeviceArch.is32Bit()) {
-                SectionHeader(
+                SectionLabel(
                     text = context.getString(R.string.experimental_section),
                     modifier = Modifier.padding(start = 24.dp, bottom = 8.dp, top = 8.dp)
                 )
@@ -573,7 +573,7 @@ fun SettingsScreen(
             }
 
             // About Section
-            SectionHeader(
+            SectionLabel(
                 text = context.getString(R.string.about_section),
                 modifier = Modifier.padding(start = 24.dp, bottom = 8.dp, top = 8.dp)
             )
@@ -673,7 +673,7 @@ private fun AboutDialog(onDismiss: () -> Unit) {
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
-            SectionHeader(text = context.getString(R.string.developers))
+            SectionLabel(text = context.getString(R.string.developers))
             Surface(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(24.dp),
@@ -790,7 +790,7 @@ private fun AboutDialog(onDismiss: () -> Unit) {
             }
 
             // Contributors
-            SectionHeader(text = context.getString(R.string.contributors))
+            SectionLabel(text = context.getString(R.string.contributors))
             val contributors = remember { ContributorManager.load(context) }
             Surface(
                 modifier = Modifier.fillMaxWidth(),

@@ -2,6 +2,7 @@ package com.droidspaces.app.ui.navigation
 
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -18,7 +19,6 @@ import com.droidspaces.app.util.PreferencesManager
 import com.droidspaces.app.util.RootChecker
 import com.droidspaces.app.util.RootStatus
 import com.droidspaces.app.util.Constants
-import com.droidspaces.app.util.AnimationUtils
 import com.droidspaces.app.ui.screen.InstallationScreen
 import com.droidspaces.app.ui.screen.MainTabScreen
 import com.droidspaces.app.ui.screen.TabItem
@@ -215,19 +215,20 @@ fun DroidspacesNavigation(
         onShortcutHandled()
     }
 
-    // Define animation specs - consistent 200ms for snappy feel
+    // The transition lambdas below are not composable, so read the scheme here
+    val motion = MaterialTheme.motionScheme
     val defaultEnterTransition: AnimatedContentTransitionScope<NavBackStackEntry>.() -> EnterTransition = {
-        fadeIn(animationSpec = AnimationUtils.fastSpec())
+        fadeIn(animationSpec = motion.fastEffectsSpec())
     }
     val defaultExitTransition: AnimatedContentTransitionScope<NavBackStackEntry>.() -> ExitTransition = {
-        fadeOut(animationSpec = AnimationUtils.fastSpec())
+        fadeOut(animationSpec = motion.fastEffectsSpec())
     }
 
     val setupEnterTransition: AnimatedContentTransitionScope<NavBackStackEntry>.() -> EnterTransition = {
-        fadeIn(animationSpec = AnimationUtils.mediumSpec())
+        fadeIn(animationSpec = motion.defaultEffectsSpec())
     }
     val setupExitTransition: AnimatedContentTransitionScope<NavBackStackEntry>.() -> ExitTransition = {
-        fadeOut(animationSpec = AnimationUtils.mediumSpec())
+        fadeOut(animationSpec = motion.defaultEffectsSpec())
     }
 
     // Home grows in over a finished installer, backend or container, so landing there
@@ -235,10 +236,10 @@ fun DroidspacesNavigation(
     val installers = setOf(Screen.Installation.route, Screen.InstallationProgress.route)
     val homeEnterTransition: AnimatedContentTransitionScope<NavBackStackEntry>.() -> EnterTransition = {
         if (initialState.destination.route in installers) {
-            scaleIn(initialScale = 0.9f, animationSpec = AnimationUtils.mediumSpec()) +
-                fadeIn(animationSpec = AnimationUtils.mediumSpec())
+            scaleIn(initialScale = 0.9f, animationSpec = motion.defaultSpatialSpec()) +
+                fadeIn(animationSpec = motion.defaultEffectsSpec())
         } else {
-            fadeIn(animationSpec = AnimationUtils.fastSpec())
+            fadeIn(animationSpec = motion.fastEffectsSpec())
         }
     }
 
@@ -287,7 +288,7 @@ fun DroidspacesNavigation(
             enterTransition = setupEnterTransition,
             // Home scales in over this screen, so the result hero has to be gone before
             // the new screen has settled or the two cross-paint; the fast spec does that.
-            exitTransition = { fadeOut(animationSpec = AnimationUtils.fastSpec()) }
+            exitTransition = { fadeOut(animationSpec = motion.fastEffectsSpec()) }
         ) {
             InstallationScreen(
                 appStateViewModel = sharedAppStateViewModel,

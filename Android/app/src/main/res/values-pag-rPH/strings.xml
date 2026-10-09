@@ -73,8 +73,8 @@
     <string name="view_logs">Nengnengen iray log</string>
     <string name="edit_container_configuration">I-edit so Container Configuration</string>
     <string name="uninstall_container_menu">I-uninstall so Container</string>
-    <string name="status_running">AANDAR</string>
-    <string name="status_stopped">TINMUNDA</string>
+    <string name="status_running">Aandar</string>
+    <string name="status_stopped">Tinmunda</string>
     <string name="pid_label">PID: %1$d</string>
     <string name="options_label">Saray Opsyon: %1$s</string>
     <string name="start">Igapo</string>

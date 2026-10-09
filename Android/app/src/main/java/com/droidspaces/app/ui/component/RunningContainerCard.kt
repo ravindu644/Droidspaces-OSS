@@ -18,7 +18,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.droidspaces.app.R
 import com.droidspaces.app.service.TerminalSessionService
-import com.droidspaces.app.util.AnimationUtils
 import com.droidspaces.app.util.ContainerInfo
 import com.droidspaces.app.util.ContainerOSInfoManager
 import com.droidspaces.app.util.IconUtils
@@ -50,7 +49,7 @@ fun RunningContainerCard(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .animateContentSize(animationSpec = AnimationUtils.mediumSpec())
+                .animateContentSize(animationSpec = MaterialTheme.motionScheme.defaultSpatialSpec())
                 .padding(CardContentPadding),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
