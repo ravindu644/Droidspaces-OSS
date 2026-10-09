@@ -140,8 +140,13 @@ smaller diff in the right place is the goal, not a smaller diff anywhere.
 ## UI changes
 
 Anything visual in `Android/` follows [DESIGN.md](./DESIGN.md). Colours, type, spacing, radii and
-the action pill pattern are all specified there, and they were read out of the existing app rather
-than invented, so following them is also the smallest diff.
+the shared components are all specified there, with the Material 3 token each value comes from,
+so following them is also the smallest diff.
+
+The app is mid-conversion to Material 3 Expressive. [ROADMAP-MD3E.md](./ROADMAP-MD3E.md) holds
+the phase ledger, the per-screen decisions and what each shared component becomes. Read it
+before touching UI under `Android/`, work in its phase order, tick items there as they land,
+and delete that file and this paragraph at its last ledger item.
 
 If a rule genuinely does not fit your case, deviate, but leave a comment at the site saying what
 the deviation buys and say it in the PR. An undocumented deviation is drift and the next
