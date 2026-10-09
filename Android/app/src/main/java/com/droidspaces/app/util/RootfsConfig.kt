@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
 package com.droidspaces.app.util
 
 import com.topjohnwu.superuser.Shell
