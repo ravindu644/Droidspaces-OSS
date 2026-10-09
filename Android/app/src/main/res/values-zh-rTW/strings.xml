@@ -264,9 +264,8 @@
     <string name="system_default">系統預設</string>
     <string name="restart_service">重啟服務</string>
     <string name="container_info">容器資訊</string>
-    <string name="ram">RAM:</string>
     <string name="uptime_label">%1$s: %2$s</string>
-    <string name="cpu">CPU:</string>
+    <string name="cpu">CPU</string>
     <string name="ip_address_label">%1$s: %2$s</string>
     <string name="backend_attention_required">後端：需要執行操作</string>
     <string name="tap_to_fix_system">點擊修復系統配置</string>

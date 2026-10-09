@@ -310,6 +310,7 @@ the language and about dialogs in `ui/screen/SettingsScreen.kt`). Do not import 
 | Symbol | Path | Use it when |
 | --- | --- | --- |
 | `StatusChip(label, color, active, busy)` | `ui/component/StatusChip.kt` | Any status chip. `active` is the running or healthy fill, `color` tints the dot |
+| `ContainerStatsBox(osInfo)` | `ui/component/RunningContainerCard.kt` | The live uptime, IP, CPU and memory box. Panel and container details show the same one |
 | `DsTopAppBar(title, onBack, glyph, actions)` | `ui/component/DsTopAppBar.kt` | Every screen's app bar. `onBack` for sub-screens, `glyph` for the tabs, `close` for an abandonable flow |
 | `SectionLabel(text)` | `ui/component/SectionLabel.kt` | Any label above a group of rows or cards. Spacing goes on the modifier |
 | `SegmentedGroup(count) { index, shape -> }` | `ui/component/SegmentedGroup.kt` | Rows that belong together. Hands each row its shape and draws the AMOLED separator |

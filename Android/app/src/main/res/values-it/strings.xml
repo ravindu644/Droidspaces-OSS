@@ -354,8 +354,7 @@
     <string name="no_matches">Nessuna corrispondenza</string>
     <string name="empty_directory">Directory vuota</string>
     <string name="select_folder">Seleziona Cartella</string>
-    <string name="cpu">CPU:</string>
-    <string name="ram">RAM:</string>
+    <string name="cpu">CPU</string>
     <string name="terminal_logs">Log Terminale</string>
     <string name="installation_logs">Log di Installazione</string>
     <string name="terminal_label">Terminale</string>

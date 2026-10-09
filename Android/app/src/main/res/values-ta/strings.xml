@@ -151,7 +151,6 @@
     <string name="update_available_message">பின்தளத்தில் புதுப்பிப்பு உள்ளது, புதுப்பிக்க இங்கே சொடுக்கு செய்யவும்</string>
     <string name="reboot_recommended">SELinux விதிகளைப் பயன்படுத்த மறுதொடக்கம் பரிந்துரைக்கப்படுகிறது மற்றும் துவக்கத்தில் டீமானைத் தொடங்கவும்.</string>
     <string name="gateway_bridge">புரவலன் பாலம்</string>
-    <string name="ram">ரேம்:</string>
     <string name="repo_not_found_in_repo">%1$s களஞ்சியத்தில் இல்லை</string>
     <string name="enable_pulseaudio">பல்ச் ஆடியோவை உள்ளமைக்கவும்</string>
     <string name="init_system_not_available_desc">இந்த கொள்கலனில் systemd, OpenWrt/procd அல்லது OpenRC நிறுவப்படவில்லை</string>
@@ -341,7 +340,7 @@
     <string name="termux_x11">Termux:X11ஐ உள்ளமைக்கவும்</string>
     <string name="feat_unkillable_desc">நேட்டிவ் init.rc ஒருங்கிணைப்பு மற்றும் 2-லேயர் யூசர்ச்பேச் டெமான்களை ஆதரிக்கிறது. முற்றிலும் அழிக்க முடியாதது.</string>
     <string name="backend_update_available">பின்தளம்: புதுப்பிப்பு உள்ளது</string>
-    <string name="cpu">CPU:</string>
+    <string name="cpu">CPU</string>
     <string name="architecture">கட்டிடக்கலை</string>
     <string name="termux_requirements">Termux தேவைகள்</string>
     <string name="image_size">படத்தின் அளவு</string>

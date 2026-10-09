@@ -336,8 +336,7 @@
     <string name="no_matches">Tidak ada hasil</string>
     <string name="empty_directory">Direktori kosong</string>
     <string name="select_folder">Pilih Folder</string>
-    <string name="cpu">CPU:</string>
-    <string name="ram">RAM:</string>
+    <string name="cpu">CPU</string>
     <string name="terminal_logs">Log Terminal</string>
     <string name="installation_logs">Log Instalasi</string>
     <string name="terminal_label">Terminal</string>

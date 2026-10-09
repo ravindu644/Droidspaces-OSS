@@ -405,8 +405,7 @@
     <string name="select_folder">Select Folder</string>
 
     <!-- Protocols -->
-    <string name="cpu">CPU:</string>
-    <string name="ram">RAM:</string>
+    <string name="cpu">CPU</string>
 
     <string name="terminal_logs">Terminal Logs</string>
     <string name="installation_logs">Installation Logs</string>

@@ -384,7 +384,7 @@ misses.
 - **The unit detail and override editor titles** keep a smaller style than every other
   screen title. Both display systemd unit names, which are long.
 - **Live stats use plain bars, not wavy ones.** CPU, memory and disk on Panel and container
-  details are `LinearProgressIndicator`s. The wave reads as noise on a number that idles at
+  details are `LinearProgressIndicator`s, drawn by `ContainerStatsBox`. The wave reads as noise on a number that idles at
   zero. The rootfs download keeps its wavy bar.
 - **The Home status card is the only `primaryContainer` surface on the tabs.** Count tiles,
   device rows and container cards stay `surfaceContainer` so the card is the one thing that

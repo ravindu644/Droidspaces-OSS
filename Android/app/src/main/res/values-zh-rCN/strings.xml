@@ -347,8 +347,7 @@
     <string name="no_matches">没有匹配项</string>
     <string name="empty_directory">空目录</string>
     <string name="select_folder">选择文件夹</string>
-    <string name="cpu">CPU:</string>
-    <string name="ram">RAM:</string>
+    <string name="cpu">CPU</string>
     <string name="terminal_logs">终端日志</string>
     <string name="installation_logs">安装日志</string>
     <string name="terminal_label">终端</string>

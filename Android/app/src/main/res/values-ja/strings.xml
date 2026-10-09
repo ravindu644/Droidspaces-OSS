@@ -333,8 +333,7 @@
     <string name="custom_init_warning">自分が何をしているのか完全に理解しているのでなければ本項目を変更しないでください。init実行可能ファイルを誤って設定するとコンテナが起動しなくなります。</string>
     <string name="no_matches">該当なし</string>
     <string name="empty_directory">空のディレクトリ</string>
-    <string name="cpu">中央演算処理装置 (CPU):</string>
-    <string name="ram">RAM:</string>
+    <string name="cpu">中央演算処理装置 (CPU)</string>
     <string name="terminal_logs">ターミナルの記録</string>
     <string name="installation_logs">インストールの記録</string>
     <string name="terminal_label">ターミナル</string>

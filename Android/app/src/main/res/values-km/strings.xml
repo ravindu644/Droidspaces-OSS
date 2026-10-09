@@ -245,8 +245,7 @@
     <string name="no_matches">គ្មាន​ការ​ផ្គូផ្គង​ទេ</string>
     <string name="empty_directory">ថតឯកសារទទេ</string>
     <string name="select_folder">ជ្រើសរើសថតឯកសារ</string>
-    <string name="cpu">CPU:</string>
-    <string name="ram">RAM:</string>
+    <string name="cpu">CPU</string>
     <string name="terminal_logs">កំណត់ហេតុស្ថានីយ</string>
     <string name="installation_logs">កំណត់ហេតុដំឡើង</string>
     <string name="terminal_label">Terminal</string>

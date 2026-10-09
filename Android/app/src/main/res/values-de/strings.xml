@@ -352,8 +352,7 @@
     <string name="no_matches">Keine Treffer</string>
     <string name="empty_directory">Leeres Verzeichnis</string>
     <string name="select_folder">Ordner auswählen</string>
-    <string name="cpu">CPU:</string>
-    <string name="ram">RAM:</string>
+    <string name="cpu">CPU</string>
     <string name="terminal_logs">Terminalprotokolle</string>
     <string name="installation_logs">Installationsprotokolle</string>
     <string name="terminal_label">Terminal</string>

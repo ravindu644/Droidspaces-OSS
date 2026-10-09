@@ -93,7 +93,7 @@ fun ControlPanelScreen(
                             .verticalScroll(rememberScrollState())
                             .padding(horizontal = 16.dp)
                             .padding(top = 8.dp, bottom = 16.dp),
-                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
                         runningContainers.forEach { container ->
                             RunningContainerCard(

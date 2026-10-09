@@ -294,8 +294,7 @@
     <string name="no_matches">Žádné shody</string>
     <string name="empty_directory">Prázdný adresář</string>
     <string name="select_folder">Vybrat složku</string>
-    <string name="cpu">CPU:</string>
-    <string name="ram">RAM:</string>
+    <string name="cpu">CPU</string>
     <string name="terminal_logs">Protokoly terminálu</string>
     <string name="installation_logs">Protokoly instalace</string>
     <string name="terminal_label">Terminál</string>

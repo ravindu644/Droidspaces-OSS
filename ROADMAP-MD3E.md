@@ -96,10 +96,10 @@ Tick a box only when the phase is built, on-device verified and committed.
 - [x] Acceptance: boards 2 and 2b.
 
 ### Phase 5, Panel
-- [ ] `RunningContainerCard.kt`: header with pretty name and chevron, divider, one
+- [x] `RunningContainerCard.kt`: header with pretty name and chevron, divider, one
       `surfaceContainerHigh` box with uptime, IP, CPU bar, memory bar, then a full-width
       Terminal button. Card tap opens details.
-- [ ] Acceptance: board 3.
+- [x] Acceptance: board 3.
 
 ### Phase 6, container details and terminal
 - [ ] `ContainerDetailsScreen.kt`: back + name + refresh; sections Details, Usage,
@@ -226,7 +226,7 @@ conversion removes.
 | PrivilegedModeDialog.kt | privileged flags | 2 | 0/1/0 | sheet, phase 7 |
 | PullToRefreshWrapper.kt | pull to refresh | 4 | 0/0/0 | keep, add the haptic |
 | RootfsRepoSheet.kt | rootfs repo sheet | 2 | 10/32/0 | board then rewrite, phase 8 |
-| RunningContainerCard.kt | Panel card | 1 | 4/6/0 | rewrite, phase 5 |
+| RunningContainerCard.kt | Panel card | 1 | 4/6/0 | done, phase 5; holds ContainerStatsBox |
 | SaveActionBottomBar.kt | save bar | 2 | 0/2/0 | replace with Save in the app bar |
 | SectionHeader.kt | group heading | 20 | 0/0/0 | restyle as SectionLabel |
 | SettingsCard.kt | bordered card shell | 7 | 1/1/0 | replace with segmented rows |

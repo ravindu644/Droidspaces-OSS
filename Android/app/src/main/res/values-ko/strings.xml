@@ -318,8 +318,7 @@
     <string name="empty_directory">빈 디렉터리</string>
     <string name="select_folder">폴더 선택</string>
     <!-- Protocols -->
-    <string name="cpu">CPU:</string>
-    <string name="ram">RAM:</string>
+    <string name="cpu">CPU</string>
     <string name="terminal_logs">터미널 로그</string>
     <string name="installation_logs">설치 로그</string>
     <string name="terminal_label">터미널</string>
