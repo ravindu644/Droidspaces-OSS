@@ -84,8 +84,7 @@ fun ContainersScreen(
     onNavigateToContainerDetails: (String) -> Unit = {},
     containerViewModel: ContainerViewModel,
     expandedContainerName: String?,
-    onExpandedContainerNameChange: (String?) -> Unit,
-    emptyStateBottomInset: Dp = 0.dp
+    onExpandedContainerNameChange: (String?) -> Unit
 ) {
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
@@ -150,18 +149,18 @@ fun ContainersScreen(
         // Show root unavailable state first, then backend unavailable, then content
         when {
             !isRootAvailable -> {
-                RootUnavailableState(modifier = Modifier.padding(bottom = emptyStateBottomInset))
+                RootUnavailableState()
             }
             !isBackendAvailable -> {
-                ErrorState(modifier = Modifier.padding(bottom = emptyStateBottomInset))
+                ErrorState()
             }
             !isKernelSupported -> {
-                KernelUnsupportedState(modifier = Modifier.padding(bottom = emptyStateBottomInset))
+                KernelUnsupportedState()
             }
             containers.isEmpty() -> {
                 if (containerViewModel.isRefreshing) {
                     Box(
-                        modifier = Modifier.fillMaxSize().padding(bottom = emptyStateBottomInset),
+                        modifier = Modifier.fillMaxSize(),
                         contentAlignment = Alignment.Center
                     ) {
                         LoadingIndicator(size = LoadingSize.Large)
@@ -170,10 +169,7 @@ fun ContainersScreen(
                     EmptyState(
                         icon = Icons.Default.Storage,
                         title = context.getString(R.string.no_containers_installed),
-                        description = context.getString(R.string.install_container_description),
-                        // Reserve the floating tab bar's space so the centered
-                        // content sits in the visible region, not behind the bar.
-                        modifier = Modifier.padding(bottom = emptyStateBottomInset)
+                        description = context.getString(R.string.install_container_description)
                     )
                 }
             }
@@ -191,7 +187,8 @@ fun ContainersScreen(
                             }
                         )
                         .padding(horizontal = 16.dp),
-                    contentPadding = PaddingValues(top = 8.dp, bottom = 120.dp), // Clear floating tab bar
+                    // The last card scrolls clear of the FAB: its 16 inset, 56 height, 16 gap
+                    contentPadding = PaddingValues(top = 8.dp, bottom = 88.dp),
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
                     items(containers, key = { it.name }) { container ->
@@ -285,10 +282,9 @@ fun ContainersScreen(
             BackHandler(fabMenuExpanded) { fabMenuExpanded = false }
 
             FloatingActionButtonMenu(
-                modifier = Modifier
-                    .align(Alignment.BottomEnd)
-                    .navigationBarsPadding()
-                    .padding(end = 24.dp, bottom = 88.dp), // Clear floating tab bar
+                // No padding of our own: the menu already insets itself 16 from the
+                // right and the bottom, which is where DESIGN.md puts the FAB
+                modifier = Modifier.align(Alignment.BottomEnd),
                 expanded = fabMenuExpanded,
                 button = {
                     ToggleFloatingActionButton(
@@ -357,7 +353,8 @@ fun ContainersScreen(
         // SNACKBAR LAYER (Highest Z-index in the root Box)
         DsSnackbarHost(
             hostState = snackbarHostState,
-            modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 100.dp)
+            // Above the FAB: its 16 inset, its 56 height, and 16 clear of it
+            modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 88.dp)
         )
 
         // Log viewer dialog - console stays open, user must close manually

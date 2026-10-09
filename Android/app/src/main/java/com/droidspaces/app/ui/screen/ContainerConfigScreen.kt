@@ -1,5 +1,6 @@
 package com.droidspaces.app.ui.screen
 
+import com.droidspaces.app.ui.component.DsTopAppBar
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
@@ -79,14 +80,7 @@ fun ContainerConfigScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text(context.getString(R.string.configuration_title), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold) },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = context.getString(R.string.back))
-                    }
-                }
-            )
+            DsTopAppBar(title = context.getString(R.string.configuration_title), onBack = onBack)
         },
         bottomBar = {
             PrimaryActionBottomBar(

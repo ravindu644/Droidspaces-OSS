@@ -1,5 +1,6 @@
 package com.droidspaces.app.ui.screen
 
+import com.droidspaces.app.ui.component.DsTopAppBar
 import android.content.Context
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.*
@@ -83,28 +84,17 @@ fun UnitDetailScreen(
     Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
         Scaffold(
             topBar = {
-                TopAppBar(
-                    title = {
-                        // A unit name is machine text and runs long, so this stays mono and
-                        // one step down from the titleLarge every other screen title uses.
-                        Text(
-                            unitName,
-                            style = MaterialTheme.typography.titleMedium.copy(fontFamily = JetBrainsMono),
-                            fontWeight = FontWeight.Bold,
-                            maxLines = 1
-                        )
-                    },
-                    navigationIcon = {
-                        IconButton(onClick = onNavigateBack) {
-                            Icon(Icons.AutoMirrored.Filled.ArrowBack, context.getString(R.string.back))
-                        }
-                    },
+                DsTopAppBar(
+                    title = unitName,
+                    // A unit name is machine text and runs long, so this stays mono and one step
+                    // down from the titleLarge every other screen title uses.
+                    titleStyle = MaterialTheme.typography.titleMedium.copy(fontFamily = JetBrainsMono),
+                    onBack = onNavigateBack,
                     actions = {
                         IconButton(onClick = { load() }) { Icon(Icons.Default.Refresh, context.getString(R.string.refresh)) }
                         IconButton(onClick = onViewLogs) { Icon(Icons.Default.Terminal, context.getString(R.string.view_logs)) }
                         IconButton(onClick = onEditOverride) { Icon(Icons.Default.Edit, context.getString(R.string.edit_override)) }
-                    },
-                    colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
+                    }
                 )
             },
             containerColor = Color.Transparent

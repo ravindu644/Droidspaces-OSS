@@ -1,5 +1,6 @@
 package com.droidspaces.app.ui.screen
 
+import com.droidspaces.app.ui.component.DsTopAppBar
 import com.droidspaces.app.ui.component.SectionLabel
 import com.droidspaces.app.ui.component.DsTextFieldDefaults
 import com.droidspaces.app.ui.component.FilePickerDialog
@@ -85,14 +86,7 @@ fun SparseImageConfigScreen(
     Scaffold(
         containerColor = Color.Transparent,
         topBar = {
-            TopAppBar(
-                title = { Text(context.getString(R.string.storage_title), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold) },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = context.getString(R.string.back))
-                    }
-                }
-            )
+            DsTopAppBar(title = context.getString(R.string.storage_title), onBack = onBack)
         },
         bottomBar = {
             PrimaryActionBottomBar(

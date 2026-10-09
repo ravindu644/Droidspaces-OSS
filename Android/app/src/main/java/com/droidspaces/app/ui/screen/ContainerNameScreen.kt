@@ -1,5 +1,6 @@
 package com.droidspaces.app.ui.screen
 
+import com.droidspaces.app.ui.component.DsTopAppBar
 import com.droidspaces.app.ui.component.PrimaryActionBottomBar
 import androidx.compose.ui.graphics.Color
 
@@ -91,14 +92,7 @@ fun ContainerNameScreen(
     Scaffold(
         containerColor = Color.Transparent,
         topBar = {
-            TopAppBar(
-                title = { Text(context.getString(R.string.container_setup), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold) },
-                navigationIcon = {
-                    IconButton(onClick = onClose) {
-                        Icon(Icons.Default.Close, contentDescription = context.getString(R.string.close))
-                    }
-                }
-            )
+            DsTopAppBar(title = context.getString(R.string.container_setup), onBack = onClose, close = true)
         },
         bottomBar = {
             val isNextValid = containerName.isNotBlank() && nameError == null && hostnameError == null

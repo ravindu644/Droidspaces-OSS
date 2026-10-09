@@ -1,5 +1,6 @@
 package com.droidspaces.app.ui.screen
 
+import com.droidspaces.app.ui.component.DsTopAppBar
 import com.droidspaces.app.ui.component.PrimaryActionBottomBar
 import androidx.compose.ui.graphics.Color
 
@@ -41,14 +42,7 @@ fun InstallationSummaryScreen(
     Scaffold(
         containerColor = Color.Transparent,
         topBar = {
-            TopAppBar(
-                title = { Text(stringResource(R.string.installation_setup_summary), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold) },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
-                    }
-                }
-            )
+            DsTopAppBar(title = stringResource(R.string.installation_setup_summary), onBack = onBack)
         },
         bottomBar = {
             PrimaryActionBottomBar(

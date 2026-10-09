@@ -1,5 +1,6 @@
 package com.droidspaces.app.ui.screen
 
+import com.droidspaces.app.ui.component.DsTopAppBar
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -61,29 +62,12 @@ fun JournaldScreen(
     Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
         Scaffold(
             topBar = {
-                TopAppBar(
-                    title = {
-                        Column {
-                            // Title carries a unit name, so it stays one step below the
-                            // titleLarge every other screen title uses.
-                            Text(
-                                context.getString(R.string.logs_title, unitName),
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold,
-                                maxLines = 1
-                            )
-                            Text(
-                                containerName,
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
-                            )
-                        }
-                    },
-                    navigationIcon = {
-                        IconButton(onClick = onNavigateBack) {
-                            Icon(Icons.AutoMirrored.Filled.ArrowBack, context.getString(R.string.back))
-                        }
-                    },
+                DsTopAppBar(
+                    title = context.getString(R.string.logs_title, unitName),
+                    // Title carries a unit name, so it stays one step below titleLarge.
+                    titleStyle = MaterialTheme.typography.titleMedium,
+                    subtitle = containerName,
+                    onBack = onNavigateBack,
                     actions = {
                         LineCountSelector(
                             selected = viewModel.lineCount,
@@ -96,8 +80,7 @@ fun JournaldScreen(
                         ) {
                             Icon(Icons.Default.Refresh, context.getString(R.string.refresh))
                         }
-                    },
-                    colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
+                    }
                 )
             },
             containerColor = Color.Transparent

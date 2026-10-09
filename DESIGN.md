@@ -202,11 +202,15 @@ Droidspaces bars glyph, 24dp, then the tab title; on sub-screens the back arrow 
 title. Actions are 48dp icon buttons on the right: settings on the tabs, refresh on
 container details, plus on the terminal. A screen whose primary action is a commit (Edit
 container) puts a filled `Button` labelled Save in the actions slot, the way Contacts does.
-No large or medium app bars: they left an empty band under the title.
+No large or medium app bars: they left an empty band under the title. Every screen uses
+`DsTopAppBar` in `ui/component/DsTopAppBar.kt`; the glyph sits in the same 48dp box as the
+back arrow, so titles start at one x across the app.
 
 **Navigation bar.** `ShortNavigationBar` with three items. The active item gets the
 `secondaryContainer` pill behind its icon and a SemiBold label. The bar is `surfaceContainer`
-with no top divider. Tabs switch with `animateScrollToPage`.
+with no top divider. Tabs switch with `animateScrollToPage`. It sits in the Scaffold's
+`bottomBar` slot, so tab content ends above it and needs no bottom inset of its own; only a
+list under the FAB keeps 88dp at its end (the FAB's 16 inset, 56 height, 16 clear).
 
 **Button group.** The container card's actions are a connected `ButtonGroup`: the state
 action (Start or Stop) is the wide filled segment, Restart and Logs are 56dp

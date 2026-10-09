@@ -1,5 +1,6 @@
 package com.droidspaces.app.ui.screen
 
+import com.droidspaces.app.ui.component.DsTopAppBar
 import android.app.Activity
 import android.content.ComponentName
 import android.content.Context
@@ -235,35 +236,21 @@ fun ContainerTerminalScreen(
     Scaffold(
         topBar = {
             Column {
-                TopAppBar(
-                    title = {
-                        Text(
-                            containerName,
-                            style = MaterialTheme.typography.titleLarge,
-                            fontWeight = FontWeight.Bold,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                    },
-                    navigationIcon = {
-                        IconButton(onClick = { exitScreen() }) {
-                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
-                        }
-                    },
+                DsTopAppBar(
+                    title = containerName,
+                    onBack = { exitScreen() },
                     actions = {
                         IconButton(onClick = { showUserPicker = true }) {
                             Icon(Icons.Default.Add, contentDescription = "New tab")
                         }
-                    },
-                    colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceContainerLow
-                    )
+                    }
                 )
 
                 if (tabs.isNotEmpty()) {
                     SecondaryScrollableTabRow(
                         selectedTabIndex = tabs.indexOfFirst { it.id == activeTabId }.coerceAtLeast(0),
-                        containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+                        // Matches the app bar above it so the two read as one header band
+                        containerColor = MaterialTheme.colorScheme.surface,
                         contentColor = MaterialTheme.colorScheme.primary,
                         edgePadding = 0.dp,
                         divider = {},

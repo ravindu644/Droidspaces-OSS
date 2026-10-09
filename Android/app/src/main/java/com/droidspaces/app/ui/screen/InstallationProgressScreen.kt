@@ -1,5 +1,6 @@
 package com.droidspaces.app.ui.screen
 
+import com.droidspaces.app.ui.component.DsTopAppBar
 import android.net.Uri
 import android.util.Log
 import android.widget.Toast
@@ -95,26 +96,17 @@ fun InstallationProgressScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = {
-                    Text(
-                        when (installationState) {
-                            InstallationState.INSTALLING -> context.getString(R.string.installing_container)
-                            InstallationState.SUCCESS -> context.getString(R.string.installation_complete)
-                            InstallationState.ERROR -> context.getString(R.string.installation_failed)
-                        },
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold
-                    )
+            DsTopAppBar(
+                title = when (installationState) {
+                    InstallationState.INSTALLING -> context.getString(R.string.installing_container)
+                    InstallationState.SUCCESS -> context.getString(R.string.installation_complete)
+                    InstallationState.ERROR -> context.getString(R.string.installation_failed)
                 },
-                navigationIcon = {
-                    if (installationState != InstallationState.INSTALLING) {
-                        IconButton(onClick = {
-                            if (installationState == InstallationState.SUCCESS) onSuccess() else onError()
-                        }) {
-                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = context.getString(R.string.back))
-                        }
-                    }
+                // No way back while the install runs; the result screens leave through it.
+                onBack = when (installationState) {
+                    InstallationState.INSTALLING -> null
+                    InstallationState.SUCCESS -> onSuccess
+                    InstallationState.ERROR -> onError
                 }
             )
         }

@@ -1,5 +1,6 @@
 package com.droidspaces.app.ui.screen
 
+import com.droidspaces.app.ui.component.DsTopAppBar
 import com.droidspaces.app.ui.component.SaveActionBottomBar
 import com.droidspaces.app.ui.component.DsTextFieldDefaults
 
@@ -180,13 +181,9 @@ fun EditContainerScreen(
     Scaffold(
         containerColor = Color.Transparent,
         topBar = {
-            TopAppBar(
-                title = { Text(context.getString(R.string.edit_container_title, container.name), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis) },
-                navigationIcon = {
-                    IconButton(onClick = { clearFocus(); onBack() }) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = context.getString(R.string.back))
-                    }
-                }
+            DsTopAppBar(
+                title = context.getString(R.string.edit_container_title, container.name),
+                onBack = { clearFocus(); onBack() }
             )
         },
         bottomBar = {

@@ -1,5 +1,6 @@
 package com.droidspaces.app.ui.screen
 
+import com.droidspaces.app.ui.component.DsTopAppBar
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -90,21 +91,11 @@ fun OverrideEditorScreen(
     Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
         Scaffold(
             topBar = {
-                TopAppBar(
-                    title = {
-                        // Title carries a unit name, so it stays small enough to survive one line.
-                        Text(
-                            context.getString(R.string.edit_override_title, unitName),
-                            style = MaterialTheme.typography.titleSmall,
-                            fontWeight = FontWeight.Bold,
-                            maxLines = 1
-                        )
-                    },
-                    navigationIcon = {
-                        IconButton(onClick = onNavigateBack) {
-                            Icon(Icons.AutoMirrored.Filled.ArrowBack, context.getString(R.string.back))
-                        }
-                    },
+                DsTopAppBar(
+                    title = context.getString(R.string.edit_override_title, unitName),
+                    // Title carries a unit name, so it stays small enough to survive one line.
+                    titleStyle = MaterialTheme.typography.titleSmall,
+                    onBack = onNavigateBack,
                     actions = {
                         if (hasExistingOverride) {
                             IconButton(onClick = { delete() }, enabled = !isSaving) {
@@ -114,8 +105,7 @@ fun OverrideEditorScreen(
                         IconButton(onClick = { save() }, enabled = !isSaving) {
                             Icon(Icons.Default.Save, context.getString(R.string.save_override))
                         }
-                    },
-                    colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
+                    }
                 )
             },
             snackbarHost = { DsSnackbarHost(snackbarHostState) },

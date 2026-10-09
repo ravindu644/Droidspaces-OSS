@@ -66,12 +66,12 @@ Tick a box only when the phase is built, on-device verified and committed.
       file outside `ui/theme/` names a hex colour that was not already a decided exception.
 
 ### Phase 2, app bars and navigation
-- [ ] A shared small app bar composable: 64dp, glyph + title on the tabs, back + title on
+- [x] A shared small app bar composable: 64dp, glyph + title on the tabs, back + title on
       sub-screens, actions slot. Replace the title row in `ui/screen/MainTabScreen.kt` and
       every `TopAppBar` call in `ui/screen/`.
-- [ ] `ShortNavigationBar` replaces `MainBottomBar` in `MainTabScreen.kt`; the pager uses
+- [x] `ShortNavigationBar` replaces `MainBottomBar` in `MainTabScreen.kt`; the pager uses
       `animateScrollToPage`; the `emptyStateBottomInset` plumbing goes with the overlay bar.
-- [ ] Acceptance: Home, Containers and Panel content starts at the same y; the first card
+- [x] Acceptance: Home, Containers and Panel content starts at the same y; the first card
       top edge is identical on all three.
 
 ### Phase 3, Home

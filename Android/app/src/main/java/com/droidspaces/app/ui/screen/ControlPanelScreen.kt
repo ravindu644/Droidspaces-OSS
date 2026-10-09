@@ -42,8 +42,7 @@ fun ControlPanelScreen(
     isKernelSupported: Boolean = true,
     containerViewModel: ContainerViewModel,
     onNavigateToContainerDetails: (String) -> Unit = {},
-    onNavigateToTerminal: (String) -> Unit = {},
-    emptyStateBottomInset: Dp = 0.dp,
+    onNavigateToTerminal: (String) -> Unit = {}
 ) {
     val context = LocalContext.current
     val snackbarHostState = remember { SnackbarHostState() }
@@ -72,23 +71,20 @@ fun ControlPanelScreen(
         // Using when instead of early return to prevent UI glitches during recomposition
         when {
             !isRootAvailable -> {
-                RootUnavailableState(modifier = Modifier.padding(bottom = emptyStateBottomInset))
+                RootUnavailableState()
             }
             !isBackendAvailable -> {
-                ErrorState(modifier = Modifier.padding(bottom = emptyStateBottomInset))
+                ErrorState()
             }
             !isKernelSupported -> {
-                KernelUnsupportedState(modifier = Modifier.padding(bottom = emptyStateBottomInset))
+                KernelUnsupportedState()
             }
             else -> {
                 if (runningContainers.isEmpty()) {
                     EmptyState(
                         icon = Icons.Default.Dashboard,
                         title = context.getString(R.string.no_containers_running),
-                        description = context.getString(R.string.start_container_first),
-                        // Reserve the floating tab bar's space so the centered
-                        // content sits in the visible region, not behind the bar.
-                        modifier = Modifier.padding(bottom = emptyStateBottomInset)
+                        description = context.getString(R.string.start_container_first)
                     )
                 } else {
                     Column(
@@ -96,7 +92,7 @@ fun ControlPanelScreen(
                             .fillMaxSize()
                             .verticalScroll(rememberScrollState())
                             .padding(horizontal = 16.dp)
-                            .padding(top = 8.dp, bottom = 120.dp), // Clear floating tab bar
+                            .padding(top = 8.dp, bottom = 16.dp),
                         verticalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
                         runningContainers.forEach { container ->

@@ -1,5 +1,6 @@
 package com.droidspaces.app.ui.screen
 
+import com.droidspaces.app.ui.component.DsTopAppBar
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.widget.Toast
@@ -78,23 +79,7 @@ fun RequirementsScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = {
-                    Text(
-                        text = context.getString(R.string.requirements),
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold
-                    )
-                },
-                navigationIcon = {
-                    IconButton(onClick = onNavigateBack) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = context.getString(R.string.back)
-                        )
-                    }
-                }
-            )
+            DsTopAppBar(title = context.getString(R.string.requirements), onBack = onNavigateBack)
         }
     ) { padding ->
         Box(modifier = Modifier.fillMaxSize()) {
