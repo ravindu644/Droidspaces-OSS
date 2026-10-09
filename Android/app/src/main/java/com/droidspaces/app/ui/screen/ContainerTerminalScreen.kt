@@ -21,6 +21,12 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
+import kotlinx.coroutines.launch
+import com.droidspaces.app.util.ContainerUsersManager
+import com.droidspaces.app.ui.component.SegmentedGroup
+import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Keyboard
 import androidx.compose.material.icons.filled.KeyboardHide
@@ -220,8 +226,9 @@ fun ContainerTerminalScreen(
     }
 
     if (showUserPicker) {
-        UserPickerDialog(
-            users = availableUsers,
+        NewSessionSheet(
+            containerName = containerName,
+            initialUsers = availableUsers,
             onConfirm = { user ->
                 showUserPicker = false
                 addTab(user)
@@ -236,8 +243,10 @@ fun ContainerTerminalScreen(
     Scaffold(
         topBar = {
             Column {
+                // No title: each session tab below already reads user@hostname, and the
+                // row it would take goes to the terminal instead
                 DsTopAppBar(
-                    title = containerName,
+                    title = "",
                     onBack = { exitScreen() },
                     actions = {
                         IconButton(onClick = { showUserPicker = true }) {
@@ -247,7 +256,7 @@ fun ContainerTerminalScreen(
                 )
 
                 if (tabs.isNotEmpty()) {
-                    SecondaryScrollableTabRow(
+                    PrimaryScrollableTabRow(
                         selectedTabIndex = tabs.indexOfFirst { it.id == activeTabId }.coerceAtLeast(0),
                         // Matches the app bar above it so the two read as one header band
                         containerColor = MaterialTheme.colorScheme.surface,
@@ -380,6 +389,12 @@ private fun TerminalTabView(
     // Stays a literal: the keys sit against the terminal's own black, so they have to
     // read dark even when the app itself is in the light theme.
     val virtualKeysBackground = if (terminalDarkTheme) Color(0xFF1A1A1E) else MaterialTheme.colorScheme.surfaceContainerHighest
+    // The keys themselves: tonal pills, and a latched CTRL or ALT filled in primary like a
+    // checked toggle button. On the dark terminal a faint white lift stands in for the
+    // tonal fill, which would follow the app theme instead of the terminal's black.
+    val keyFill = (if (terminalDarkTheme) Color.White.copy(alpha = 0.08f) else MaterialTheme.colorScheme.secondaryContainer).toArgb()
+    val keyActiveFill = MaterialTheme.colorScheme.primary.toArgb()
+    val keyActiveText = MaterialTheme.colorScheme.onPrimary.toArgb()
 
     AnimatedVisibility(
         visible = isVisible,
@@ -474,7 +489,7 @@ private fun TerminalTabView(
                     VirtualKeysView(ctx, null).apply {
                         TerminalScreenState.virtualKeysView = WeakReference(this)
                         binder.getSession(tab.id)?.let { virtualKeysViewClient = VirtualKeysListener(it) }
-                        buttonTextColor = terminalForeground
+                        setButtonColors(terminalForeground, keyActiveText, keyFill, keyActiveFill)
                         try {
                             reload(VirtualKeysInfo(VIRTUAL_KEYS_LAYOUT, "", VirtualKeysConstants.CONTROL_CHARS_ALIASES))
                         } catch (e: Exception) {
@@ -493,7 +508,8 @@ private fun TerminalTabView(
                     .fillMaxWidth()
                     .background(virtualKeysBackground)
                     .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Bottom))
-                    .height(64.dp)
+                    .padding(horizontal = 6.dp, vertical = 4.dp)
+                    .height(96.dp)
             )
         }
     }
@@ -540,96 +556,76 @@ private fun KeyboardToggleButton(
     }
 }
 
+/**
+ * The new session picker: one row per user, root first. A tap opens the shell, there is
+ * nothing to confirm. Refresh re-reads the container's users, for one added from inside
+ * it since the screen opened.
+ */
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
-private fun UserPickerDialog(
-    users: List<String>,
+private fun NewSessionSheet(
+    containerName: String,
+    initialUsers: List<String>,
     onConfirm: (String) -> Unit,
     onDismiss: () -> Unit,
 ) {
     val context = LocalContext.current
-    var selected by remember { mutableStateOf(users.firstOrNull() ?: "root") }
+    val scope = rememberCoroutineScope()
+    var users by remember { mutableStateOf(initialUsers) }
 
-    DsDialog(
-        onDismiss = onDismiss,
-        modifier = Modifier.heightIn(max = 460.dp),
-        footer = {
-            DialogFooterRow(
-                dismissLabel = context.getString(android.R.string.cancel),
-                confirmLabel = context.getString(R.string.open),
-                onDismiss = onDismiss,
-                onConfirm = { onConfirm(selected) }
-            )
-        }
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        // The sheet component's own 28; the theme's extraLarge is 24 for cards
+        shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
+        containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+        sheetMaxWidth = 640.dp
     ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Add,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(24.dp)
-                )
-                Text(
-                    text = context.getString(R.string.open_terminal),
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold
-                )
-            }
-
-            Text(
-                text = context.getString(R.string.select_user_to_enter),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f)
-            )
-
-            Column(
-                modifier = Modifier.fillMaxWidth(),
-                verticalArrangement = Arrangement.spacedBy(10.dp)
-            ) {
-                users.forEach { user ->
-                    val isSelected = user == selected
-                    Surface(
-                        onClick = { selected = user },
-                        shape = RoundedCornerShape(16.dp),
-                        color = if (isSelected) MaterialTheme.colorScheme.primary.copy(alpha = 0.08f) 
-                                else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.04f),
-                        border = androidx.compose.foundation.BorderStroke(
-                            1.dp, 
-                            if (isSelected) MaterialTheme.colorScheme.primary.copy(alpha = 0.4f)
-                            else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f)
-                        ),
-                        tonalElevation = 0.dp
-                    ) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 14.dp),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(
-                                text = user,
-                                style = MaterialTheme.typography.bodyLarge,
-                                fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
-                                color = if (isSelected) MaterialTheme.colorScheme.primary
-                                        else MaterialTheme.colorScheme.onSurface
-                            )
-                            RadioButton(
-                                selected = isSelected,
-                                onClick = { selected = user },
-                                colors = RadioButtonDefaults.colors(
-                                    selectedColor = MaterialTheme.colorScheme.primary,
-                                    unselectedColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.6f)
-                                )
-                            )
-                        }
+        Column(Modifier.padding(start = 16.dp, end = 16.dp, bottom = 24.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f).padding(start = 8.dp)) {
+                    Text(context.getString(R.string.new_session), style = MaterialTheme.typography.headlineSmall)
+                    Text(
+                        context.getString(R.string.new_session_subtitle, containerName),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                IconButton(onClick = {
+                    scope.launch {
+                        val fresh = ContainerUsersManager.getUsers(containerName, useCache = false)
+                        users = listOf("root") + fresh.filter { it != "root" }
                     }
+                }) {
+                    Icon(Icons.Default.Refresh, context.getString(R.string.refresh_users))
                 }
             }
+            Spacer(Modifier.height(16.dp))
+            SegmentedGroup(count = users.size) { index, shape ->
+                val user = users[index]
+                val root = user == "root"
+                Surface(onClick = { onConfirm(user) }, shape = shape, color = MaterialTheme.colorScheme.surfaceContainer) {
+                    ListItem(
+                        headlineContent = { Text(user, style = MaterialTheme.typography.bodyLargeEmphasized) },
+                        supportingContent = { Text(context.getString(if (root) R.string.user_superuser else R.string.user_regular)) },
+                        leadingContent = {
+                            Surface(
+                                shape = CircleShape,
+                                color = if (root) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.secondaryContainer,
+                                modifier = Modifier.size(40.dp)
+                            ) {
+                                Box(contentAlignment = Alignment.Center) {
+                                    Icon(Icons.Default.Person, contentDescription = null, modifier = Modifier.size(24.dp))
+                                }
+                            }
+                        },
+                        trailingContent = { Icon(Icons.Default.ChevronRight, contentDescription = null) },
+                        colors = ListItemDefaults.colors(containerColor = Color.Transparent)
+                    )
+                }
+            }
+        }
     }
-    }
-
+}
 
 private val VIRTUAL_KEYS_LAYOUT = """
 [

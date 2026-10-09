@@ -3,24 +3,17 @@ package com.droidspaces.app.ui.component
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.ContentCopy
-import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import com.droidspaces.app.ui.component.DsDropdown
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.font.FontWeight
 import com.droidspaces.app.ui.util.rememberClearFocus
 import androidx.compose.ui.unit.dp
 import com.droidspaces.app.util.Constants
@@ -30,12 +23,11 @@ import com.droidspaces.app.ui.util.LoadingIndicator
 import com.droidspaces.app.ui.util.LoadingSize
 import com.droidspaces.app.ui.util.showSuccess
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import com.droidspaces.app.R
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class, ExperimentalLayoutApi::class)
 @Composable
 fun ContainerUsersCard(
     containerName: String,
@@ -56,7 +48,6 @@ fun ContainerUsersCard(
     var isLoading by remember {
         mutableStateOf(ContainerUsersManager.getCachedUsers(containerName) == null)
     }
-    var isManuallyRefreshing by remember { mutableStateOf(false) }
 
     // Available users list: always include "root", plus any local users
     val availableUsers = remember(users) {
@@ -77,7 +68,6 @@ fun ContainerUsersCard(
         }
     }
 
-
     LaunchedEffect(containerName, refreshTrigger) {
         scope.launch {
             // Only show loading if we don't have cached data (first load)
@@ -88,212 +78,88 @@ fun ContainerUsersCard(
             }
             users = ContainerUsersManager.getUsers(containerName, useCache = refreshTrigger == 0)
             isLoading = false
-            isManuallyRefreshing = false
         }
     }
 
-
-    // Manual refresh function with premium rotation animation
-    fun refreshUsers() {
-        if (!isManuallyRefreshing) {
-            isManuallyRefreshing = true
-            scope.launch {
-                // Start timing for artificial delay
-                val startTime = System.currentTimeMillis()
-
-                // Fetch fresh data
-                users = ContainerUsersManager.getUsers(containerName, useCache = false)
-
-                // Premium UX: Ensure icon completes exactly 1 full rotation (600ms)
-                val elapsed = System.currentTimeMillis() - startTime
-                val minRotationTime = 600L // One complete 360° rotation
-                if (elapsed < minRotationTime) {
-                    delay(minRotationTime - elapsed)
-                }
-
-                isManuallyRefreshing = false
-            }
-        }
-    }
-
-    Surface(
-        modifier = modifier
-            .fillMaxWidth()
-            .animateContentSize(), // Smooth height changes when dropdown opens
-        shape = RoundedCornerShape(20.dp),
-        color = MaterialTheme.colorScheme.surfaceContainerHigh,
-        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(20.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
-        ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+    // The shell user, picked from a connected toggle group: root first, then the
+    // container's own users. The section card around this is the caller's.
+    Column(modifier = modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+        if (isLoading) {
+            LoadingIndicator(size = LoadingSize.Medium, modifier = Modifier.align(Alignment.CenterHorizontally))
+        } else {
+            // FlowRow so a container with many users wraps instead of squeezing
+            FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(ButtonGroupDefaults.ConnectedSpaceBetween),
+                verticalArrangement = Arrangement.spacedBy(ButtonGroupDefaults.ConnectedSpaceBetween)
             ) {
-                // Title area - clickable to unfocus
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(10.dp),
-                    modifier = Modifier.clickable(
-                        indication = null,
-                        interactionSource = remember { MutableInteractionSource() }
+                availableUsers.forEachIndexed { i, user ->
+                    val checked = user == selectedUser
+                    ToggleButton(
+                        checked = checked,
+                        onCheckedChange = { selectedUser = user },
+                        shapes = when {
+                            availableUsers.size == 1 -> ToggleButtonDefaults.shapes()
+                            i == 0 -> ButtonGroupDefaults.connectedLeadingButtonShapes()
+                            i == availableUsers.lastIndex -> ButtonGroupDefaults.connectedTrailingButtonShapes()
+                            else -> ButtonGroupDefaults.connectedMiddleButtonShapes()
+                        },
+                        // The default unchecked fill is surfaceContainer, the card's own colour,
+                        // so it would vanish here. DESIGN.md: unchecked is secondaryContainer.
+                        colors = ToggleButtonDefaults.toggleButtonColors(
+                            containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                            contentColor = MaterialTheme.colorScheme.onSecondaryContainer
+                        ),
+                        modifier = Modifier.heightIn(min = 48.dp)
                     ) {
-                        clearFocus()
-                    }
-                ) {
-                    Icon(
-                        Icons.Default.Person,
-                        contentDescription = null,
-                        modifier = Modifier.size(20.dp),
-                        tint = MaterialTheme.colorScheme.primary
-                    )
-                    Text(
-                        text = context.getString(R.string.available_users),
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                }
-
-                // Premium refresh icon button - exactly 1 full rotation, perfectly visible!
-                val rotation by animateFloatAsState(
-                    targetValue = if (isManuallyRefreshing) 360f else 0f,
-                    animationSpec = if (isManuallyRefreshing) {
-                        // Animate forward smoothly - 600ms for one full rotation
-                        tween(
-                            durationMillis = 600,
-                            easing = LinearEasing
-                        )
-                    } else {
-                        // Snap back instantly when done (no reverse animation)
-                        tween(
-                            durationMillis = 0,
-                            easing = LinearEasing
-                        )
-                    },
-                    label = "refresh_rotation"
-                )
-
-                IconButton(
-                    onClick = {
-                        clearFocus()
-                        refreshUsers()
-                    },
-                    enabled = !isManuallyRefreshing,
-                    modifier = Modifier.size(40.dp)
-                ) {
-                    Icon(
-                        Icons.Default.Refresh,
-                        contentDescription = context.getString(R.string.refresh_users),
-                        modifier = Modifier
-                            .size(20.dp)
-                            .graphicsLayer {
-                                // Hardware-accelerated rotation for buttery smooth 60fps
-                                rotationZ = rotation
-                            },
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            }
-
-            // Show users list - use stable layout to prevent glitches
-            if (isLoading) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .heightIn(min = 40.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    LoadingIndicator(size = LoadingSize.Medium)
-                }
-            } else if (users.isEmpty()) {
-                Text(
-                    text = context.getString(R.string.no_local_users_found),
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.heightIn(min = 24.dp)
-                )
-            } else {
-                Column(
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
-                    modifier = Modifier
-                        .heightIn(max = 150.dp)
-                        .clickable(
-                            indication = null,
-                            interactionSource = remember { MutableInteractionSource() }
-                        ) {
-                            clearFocus()
+                        if (checked) {
+                            Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(18.dp))
+                            Spacer(Modifier.width(8.dp))
                         }
-                ) {
-                    users.forEach { user ->
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(
-                                text = user,
-                                style = MaterialTheme.typography.bodyMedium
-                            )
-                        }
+                        Text(user, style = MaterialTheme.typography.labelLarge)
                     }
                 }
             }
+        }
 
-            DsDropdown(
-                label = context.getString(R.string.select_user),
-                selected = selectedUser,
-                options = availableUsers,
-                displayName = { it },
-                onSelect = { selectedUser = it }
+        // Copy login button - right aligned, same dimensions and style as Manage button
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.End
+        ) {
+            DetailPill(
+                text = context.getString(R.string.copy_login),
+                icon = Icons.Default.ContentCopy,
+                iconSize = 18.dp,
+                onClick = {
+                    clearFocus()
+                    scope.launch {
+                        // Check if droidspaces is in PATH, otherwise use full path
+                        val droidspacesCmd = withContext(Dispatchers.IO) {
+                            Constants.getDroidspacesCommand()
+                        }
+
+                        // Quote container name with double quotes
+                        val quotedContainerName = "\"${containerName.replace("\"", "\\\"")}\""
+                        val loginCommand = if (selectedUser == "root") {
+                            "$droidspacesCmd --name=$quotedContainerName enter"
+                        } else {
+                            "$droidspacesCmd --name=$quotedContainerName enter $selectedUser"
+                        }
+                        // Wrap entire command in single quotes for su -c
+                        val suCommand = "su -c '$loginCommand'"
+                        val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                        val clip = ClipData.newPlainText(context.getString(R.string.login_command_copied, selectedUser), suCommand)
+                        clipboard.setPrimaryClip(clip)
+
+                        // Show snackbar feedback
+                        snackbarHostState?.let { hostState ->
+                            scope.launch {
+                                hostState.showSuccess(context.getString(R.string.login_command_copied, selectedUser))
+                            }
+                        }
+                    }
+                }
             )
-
-            // Copy login button - right aligned, same dimensions and style as Manage button
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.End
-            ) {
-                DetailPill(
-                    text = context.getString(R.string.copy_login),
-                    icon = Icons.Default.ContentCopy,
-                    iconSize = 18.dp,
-                    onClick = {
-                        clearFocus()
-                        scope.launch {
-                            // Check if droidspaces is in PATH, otherwise use full path
-                            val droidspacesCmd = withContext(Dispatchers.IO) {
-                                Constants.getDroidspacesCommand()
-                            }
-
-                            // Quote container name with double quotes
-                            val quotedContainerName = "\"${containerName.replace("\"", "\\\"")}\""
-                            val loginCommand = if (selectedUser == "root") {
-                                "$droidspacesCmd --name=$quotedContainerName enter"
-                            } else {
-                                "$droidspacesCmd --name=$quotedContainerName enter $selectedUser"
-                            }
-                            // Wrap entire command in single quotes for su -c
-                            val suCommand = "su -c '$loginCommand'"
-                            val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                            val clip = ClipData.newPlainText(context.getString(R.string.login_command_copied, selectedUser), suCommand)
-                            clipboard.setPrimaryClip(clip)
-
-                            // Show snackbar feedback
-                            snackbarHostState?.let { hostState ->
-                                scope.launch {
-                                    hostState.showSuccess(context.getString(R.string.login_command_copied, selectedUser))
-                                }
-                            }
-                        }
-                    }
-                )
-            }
         }
     }
 }
-

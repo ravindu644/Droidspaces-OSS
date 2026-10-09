@@ -102,15 +102,15 @@ Tick a box only when the phase is built, on-device verified and committed.
 - [x] Acceptance: board 3.
 
 ### Phase 6, container details and terminal
-- [ ] `ContainerDetailsScreen.kt`: back + name + refresh; sections Details, Usage,
+- [x] `ContainerDetailsScreen.kt`: back + name + refresh; sections Details, Usage,
       Available users, then the Terminal row and the init-system row, each with the detail
       pill. Refresh re-reads the user list.
-- [ ] `ContainerUsersCard.kt`: toggle-button group of users, Copy login pill right aligned.
-- [ ] `ContainerTerminalScreen.kt`: back and plus on one row, session tabs on the next;
+- [x] `ContainerUsersCard.kt`: toggle-button group of users, Copy login pill right aligned.
+- [x] `ContainerTerminalScreen.kt`: back and plus on one row, session tabs on the next;
       the user picker becomes a sheet listing users as rows with chevrons; virtual keys as
       two connected button groups with Ctrl and Alt as toggle buttons if the Termux
       `VirtualKeysView` can be replaced, otherwise restyled in place.
-- [ ] Acceptance: boards 4, 6 and 7.
+- [x] Acceptance: boards 4, 6 and 7.
 
 ### Phase 7, edit and create forms
 - [ ] `EditContainerScreen.kt`: small bar with a filled Save action, the running note as a
@@ -162,6 +162,9 @@ Kept here so the reasoning is not lost with the chat.
 - **Accent picker and AMOLED stay** (decided 2026-10-09, do not re-open). Dynamic colour
   stays the default; the six palettes and AMOLED keep the rules DESIGN.md writes for them.
 - **Tablet and foldable are in scope** (decided 2026-10-09). Phase 12 exists.
+- **Terminal keys stay the Termux `VirtualKeysView`**, restyled (decided in the phase 6
+  spike, 2026-10-09). Replacing it means re-owning key repeat, the swipe-up popups and the
+  modifier latch; the look the boards ask for was a paint change in the view.
 
 - **Manage actions are a labelled anchored menu**, not a bottom sheet and not an icon
   toolbar. Material's guidance says an action sheet becomes a context menu on large windows
@@ -202,7 +205,7 @@ conversion removes.
 | ColorPaletteSwatch.kt | canvas swatch | 2 | 0/1/0 | keep |
 | ContainerCard.kt | container list card | 3 | 5/16/0 | done, phase 4 |
 | ContainerConfigForm.kt | create and edit form | 2 | 4/6/0 | rewrite, phase 7 |
-| ContainerUsersCard.kt | users and copy login | 1 | 2/1/0 | rewrite, phase 6 |
+| ContainerUsersCard.kt | users and copy login | 1 | 2/1/0 | done, phase 6 |
 | DangerousActionConfirm.kt | warning card, phrase field | 4 | 2/2/0 | restyle (errorContainer banner) |
 | DialogCloseButton.kt | 36dp close square | 2 | 1/0/0 | replace with a 48dp icon button |
 | DialogFooterRow.kt | dialog actions | 19 | 1/6/0 | keep |
@@ -253,6 +256,3 @@ Compose haptics anywhere.
   which is not how Expressive builds depth. Design a pure black mode that holds its
   hierarchy without edges, then drop the edge rules. Raised 2026-10-09; boards first.
 
-- **Terminal keys.** The Termux `VirtualKeysView` is a View; replacing it with Compose
-  toggle buttons means owning key repeat and modifier latching. Decide in phase 6 after a
-  spike.

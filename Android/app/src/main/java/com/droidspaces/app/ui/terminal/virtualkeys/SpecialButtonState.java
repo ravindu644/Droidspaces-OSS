@@ -45,6 +45,12 @@ public class SpecialButtonState {
           value
               ? mVirtualKeysView.getButtonActiveTextColor()
               : mVirtualKeysView.getButtonTextColor());
+      // A latched modifier stays filled, not just recoloured, so it reads at a glance
+      mVirtualKeysView.paintKey(
+          button,
+          value
+              ? mVirtualKeysView.getButtonActiveBackgroundColor()
+              : mVirtualKeysView.getButtonBackgroundColor());
     }
   }
 

@@ -131,9 +131,10 @@ fun ContainerStatsBox(osInfo: ContainerOSInfoManager.OSInfo?, modifier: Modifier
     }
 }
 
+/** A label and value row of a stats box, with an optional plain bar under it. */
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
-private fun StatRow(label: String, value: String, fraction: Float? = null) {
+fun StatRow(label: String, value: String, fraction: Float? = null) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
             Text(label, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)

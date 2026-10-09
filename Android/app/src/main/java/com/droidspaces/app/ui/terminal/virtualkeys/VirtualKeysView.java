@@ -13,6 +13,7 @@ import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewConfiguration;
 import android.view.ViewGroup;
+import android.graphics.drawable.GradientDrawable;
 import android.widget.Button;
 import android.widget.GridLayout;
 import android.widget.PopupWindow;
@@ -357,6 +358,7 @@ public final class VirtualKeysView extends GridLayout {
         button.setTextColor(mButtonTextColor);
         button.setAllCaps(mButtonTextAllCaps);
         button.setPadding(0, 0, 0, 0);
+        paintKey(button, restingColor(button));
 
         button.setOnClickListener(
             view -> {
@@ -368,7 +370,7 @@ public final class VirtualKeysView extends GridLayout {
             (view, event) -> {
               switch (event.getAction()) {
                 case MotionEvent.ACTION_DOWN:
-                  view.setBackgroundColor(mButtonActiveBackgroundColor);
+                  paintKey(view, mButtonActiveBackgroundColor);
                   // Start long press scheduled executors which will be stopped in
                   // next MotionEvent
                   startScheduledExecutors(view, buttonInfo, button);
@@ -379,23 +381,23 @@ public final class VirtualKeysView extends GridLayout {
                     // Show popup on swipe up
                     if (mPopupWindow == null && event.getY() < 0) {
                       stopScheduledExecutors();
-                      view.setBackgroundColor(mButtonBackgroundColor);
+                      paintKey(view, restingColor(button));
                       showPopup(view, buttonInfo.getPopup());
                     }
                     if (mPopupWindow != null && event.getY() > 0) {
-                      view.setBackgroundColor(mButtonActiveBackgroundColor);
+                      paintKey(view, mButtonActiveBackgroundColor);
                       dismissPopup();
                     }
                   }
                   return true;
 
                 case MotionEvent.ACTION_CANCEL:
-                  view.setBackgroundColor(mButtonBackgroundColor);
+                  paintKey(view, restingColor(button));
                   stopScheduledExecutors();
                   return true;
 
                 case MotionEvent.ACTION_UP:
-                  view.setBackgroundColor(mButtonBackgroundColor);
+                  paintKey(view, restingColor(button));
                   stopScheduledExecutors();
                   // If ACTION_UP up was not from a repetitive key or was with a
                   // key with a popup
@@ -421,7 +423,9 @@ public final class VirtualKeysView extends GridLayout {
         LayoutParams param = new GridLayout.LayoutParams();
         param.width = 0;
         param.height = 0;
-        param.setMargins(0, 0, 0, 0);
+        // A small gap so each key reads as its own pill, as the design boards draw them
+        int gap = Math.round(2 * getResources().getDisplayMetrics().density);
+        param.setMargins(gap, gap, gap, gap);
         param.columnSpec = GridLayout.spec(col, GridLayout.FILL, 1.f);
         param.rowSpec = GridLayout.spec(row, GridLayout.FILL, 1.f);
         button.setLayoutParams(param);
@@ -536,7 +540,7 @@ public final class VirtualKeysView extends GridLayout {
     button.setMinimumHeight(0);
     button.setWidth(width);
     button.setHeight(height);
-    button.setBackgroundColor(mButtonActiveBackgroundColor);
+    paintKey(button, mButtonActiveBackgroundColor);
     mPopupWindow = new PopupWindow(this);
     mPopupWindow.setWidth(LayoutParams.WRAP_CONTENT);
     mPopupWindow.setHeight(LayoutParams.WRAP_CONTENT);
@@ -544,6 +548,30 @@ public final class VirtualKeysView extends GridLayout {
     mPopupWindow.setOutsideTouchable(true);
     mPopupWindow.setFocusable(false);
     mPopupWindow.showAsDropDown(view, 0, -2 * height);
+  }
+
+  /**
+   * Paints a key as a pill in {@code color}. Upstream used a flat setBackgroundColor; the
+   * drawable is reused so a key press does not allocate.
+   */
+  void paintKey(View view, int color) {
+    if (view.getBackground() instanceof GradientDrawable) {
+      ((GradientDrawable) view.getBackground()).setColor(color);
+      return;
+    }
+    GradientDrawable pill = new GradientDrawable();
+    // Larger than any key, so the corners clamp to a full pill at whatever height
+    pill.setCornerRadius(1000f);
+    pill.setColor(color);
+    view.setBackground(pill);
+  }
+
+  /** The colour a key settles back to: the active fill while its modifier is latched. */
+  private int restingColor(Button button) {
+    for (SpecialButtonState state : mSpecialButtons.values()) {
+      if (state.isActive && state.buttons.contains(button)) return mButtonActiveBackgroundColor;
+    }
+    return mButtonBackgroundColor;
   }
 
   private void dismissPopup() {

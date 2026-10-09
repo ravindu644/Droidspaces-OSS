@@ -595,6 +595,13 @@
     <string name="terminal_card_desc">Open an interactive shell inside this container</string>
     <string name="open">Open</string>
     <string name="open_terminal">Open Terminal</string>
+    <string name="details_section">Details</string>
+    <string name="usage_section">Usage</string>
+    <string name="new_session">New Session</string>
+    <string name="new_session_subtitle">Pick a user to open a shell in %1$s</string>
+    <string name="user_superuser">Superuser</string>
+    <string name="user_regular">User</string>
+    <string name="init_services_desc">Services and their state</string>
     <string name="select_user_to_enter">Select the user to enter the container as:</string>
 
     <!-- Notification Permission -->

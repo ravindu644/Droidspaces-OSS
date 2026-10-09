@@ -221,8 +221,15 @@ action (Start or Stop) is the wide filled segment, Restart and Logs are 56dp
 mode in the edit form is the same group as a single-select set. A `ToggleButton` inside the
 group morphs from 8dp to full corners when checked.
 
-**Toggle button.** Shell user on container details, Ctrl and Alt in the terminal keys. A
-checked toggle is `primary` on `onPrimary`, unchecked is `secondaryContainer`.
+**Toggle button.** The shell user on container details is a connected group of
+`ToggleButton`s. A checked toggle is `primary` on `onPrimary`, unchecked is
+`secondaryContainer` (set explicitly: the component's own unchecked fill is the card's
+`surfaceContainer`).
+
+**Terminal keys.** The Termux `VirtualKeysView` stays, restyled in place: every key a
+`secondaryContainer` pill with a 2dp gap, a latched Ctrl or Alt filled `primary` on
+`onPrimary` like a checked toggle. It owns key repeat, the swipe-up popups and the modifier
+latch the terminal reads, which a Compose rewrite would have to rebuild.
 
 **Chips.** The status chip is a 32dp `surfaceContainerHighest` chip with a 6dp dot and a
 label; running uses `primaryContainer`. Option chips (Sandboxing, Run at boot) are the same
