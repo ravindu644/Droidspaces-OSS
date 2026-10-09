@@ -327,23 +327,23 @@ object ContainerManager {
     /**
      * Parse container configuration from string content.
      */
-    fun parseConfig(configContent: String, defaultName: String): ContainerInfo? {
-        try {
-            val configMap = mutableMapOf<String, String>()
-
-            // Parse config file (key=value format)
-            configContent.lines().forEach { line ->
-                val trimmed = line.trim()
-                // Skip comments and empty lines
-                if (trimmed.isEmpty() || trimmed.startsWith("#")) {
-                    return@forEach
-                }
-
+    internal fun parseConfigValues(configContent: String): Map<String, String> = buildMap {
+        configContent.lineSequence().forEach { line ->
+            val trimmed = line.trim()
+            if (trimmed.isNotEmpty() && !trimmed.startsWith("#")) {
                 val parts = trimmed.split("=", limit = 2)
-                if (parts.size == 2) {
-                    configMap[parts[0].trim()] = parts[1].trim()
-                }
+                if (parts.size == 2) put(parts[0].trim(), parts[1].trim())
             }
+        }
+    }
+
+    fun parseConfig(
+        configContent: String,
+        defaultName: String,
+        loadEnvironment: Boolean = true
+    ): ContainerInfo? {
+        try {
+            val configMap = parseConfigValues(configContent)
 
             // Build ContainerInfo from config
             val containerName = configMap["name"] ?: defaultName
@@ -412,7 +412,7 @@ object ContainerManager {
                 status = ContainerStatus.STOPPED,
                 useSparseImage = useSparseImage,
                 sparseImageSizeGB = sparseImageSizeGB,
-                envFileContent = loadEnvFileContent(containerName),
+                envFileContent = if (loadEnvironment) loadEnvFileContent(containerName) else null,
                 upstreamInterfaces = upstreamInterfaces,
                 portForwards = portForwards,
                 forceCgroupv1 = configMap["force_cgroupv1"] == "1",

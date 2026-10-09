@@ -38,6 +38,7 @@ fun ContainerNameScreen(
     initialName: String = "",
     initialHostname: String = "",
     existingContainerNames: List<String> = emptyList(),
+    recommendationNotice: String? = null,
     onNext: (String, String) -> Unit,
     onClose: () -> Unit
 ) {
@@ -148,6 +149,14 @@ fun ContainerNameScreen(
                 fontWeight = FontWeight.Bold
             )
 
+            recommendationNotice?.let {
+                Text(
+                    text = it,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                )
+            }
+
             // Container Name
             OutlinedTextField(
                 value = containerName,
@@ -202,4 +211,3 @@ fun ContainerNameScreen(
         }
     }
 }
-

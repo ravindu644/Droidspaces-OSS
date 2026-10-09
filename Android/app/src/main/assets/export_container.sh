@@ -20,6 +20,7 @@ error() { echo "[ERROR] $1"; }
 
 # --- Cleanup state ---
 TEMP_MOUNT=""
+TEMP_CONFIG_DIR=""
 CLEANUP_DONE=0
 
 cleanup() {
@@ -40,6 +41,9 @@ cleanup() {
 
     if [ -n "$TEMP_MOUNT" ] && [ -d "$TEMP_MOUNT" ]; then
         rmdir "$TEMP_MOUNT" 2>/dev/null || true
+    fi
+    if [ -n "$TEMP_CONFIG_DIR" ]; then
+        "$BUSYBOX" rm -rf "$TEMP_CONFIG_DIR"
     fi
 }
 
@@ -93,8 +97,10 @@ if [ ! -f "$CONFIG_FILE" ]; then
     exit 1
 fi
 
-# Parse rootfs_path from config
-ROOTFS_PATH=$(grep "rootfs_path=" "$CONFIG_FILE" | cut -d'=' -f2)
+# Snapshot the current host config, including edits made since this rootfs was imported.
+TEMP_CONFIG_DIR=$("$BUSYBOX" mktemp -d "${CONTAINER_DIR}/.export-config.XXXXXX")
+"$BUSYBOX" cp "$CONFIG_FILE" "$TEMP_CONFIG_DIR/container.config"
+ROOTFS_PATH=$("$BUSYBOX" sed -n 's/^rootfs_path=//p' "$TEMP_CONFIG_DIR/container.config")
 
 if [ -z "$ROOTFS_PATH" ]; then
     error "Could not extract rootfs_path from $CONFIG_FILE"
@@ -179,7 +185,18 @@ fi
 
 # --- Create archive ---
 log "Creating archive... (this may take a while)"
-if ! "$BUSYBOX" tar -czf "$OUTPUT_PATH" -C "$TAR_ROOT" . 2>&1; then
+# BusyBox applies only the last -C, so prepend a small config tar without its end
+# blocks. Both rootfs modes stay read-only, and no uncompressed rootfs copy is needed.
+"$BUSYBOX" tar -cf "$TEMP_CONFIG_DIR/config.tar" -C "$TEMP_CONFIG_DIR" container.config
+CONFIG_SIZE=$("$BUSYBOX" stat -c %s "$TEMP_CONFIG_DIR/container.config")
+CONFIG_BLOCKS=$((1 + (CONFIG_SIZE + 511) / 512))
+if ! (
+    set -o pipefail
+    {
+        "$BUSYBOX" dd if="$TEMP_CONFIG_DIR/config.tar" bs=512 count="$CONFIG_BLOCKS" 2>/dev/null &&
+        "$BUSYBOX" tar -cf - --exclude='./container.config' -C "$TAR_ROOT" .
+    } | "$BUSYBOX" gzip > "$OUTPUT_PATH"
+); then
     error "tar failed. Removing incomplete archive."
     rm -f "$OUTPUT_PATH" 2>/dev/null || true
     exit 1

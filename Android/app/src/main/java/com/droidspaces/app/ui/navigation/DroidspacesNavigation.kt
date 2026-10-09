@@ -51,6 +51,11 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.ui.Modifier
 import com.droidspaces.app.ui.util.LoadingIndicator
 import com.droidspaces.app.ui.util.LoadingSize
+import com.droidspaces.app.ui.util.FullScreenLoading
+import com.droidspaces.app.ui.util.ErrorLogsDialog
+import com.droidspaces.app.ui.component.HardwareAccessDialog
+import com.droidspaces.app.ui.component.PrivilegedModeDialog
+import com.droidspaces.app.R
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.droidspaces.app.ui.viewmodel.AppStateViewModel
 import androidx.activity.ComponentActivity
@@ -352,21 +357,40 @@ fun DroidspacesNavigation(
             val tarballUri = Uri.parse(tarballUriString)
 
             LaunchedEffect(tarballUri) {
-                viewModel.setTarball(tarballUri)
+                viewModel.setTarball(context, tarballUri)
             }
 
-            ContainerNameScreen(
-                initialName = viewModel.containerName,
-                initialHostname = viewModel.hostname,
-                existingContainerNames = sharedContainerViewModel.containerList.map { it.name },
-                onNext = { name, hostname ->
-                    viewModel.setName(name, hostname)
-                    navController.navigate(Screen.ContainerConfig.route)
-                },
-                onClose = {
-                    navController.popBackStack()
+            if (viewModel.preparingTarball) {
+                FullScreenLoading(context.getString(R.string.rootfs_config_loading))
+            } else if (viewModel.preparationError != null) {
+                ErrorLogsDialog(listOf(viewModel.preparationError.orEmpty())) { navController.popBackStack() }
+            } else {
+                if (viewModel.recommendedHwAccess) {
+                    HardwareAccessDialog(
+                        onConfirm = { viewModel.confirmRecommendedHwAccess(true) },
+                        onDismiss = { viewModel.confirmRecommendedHwAccess(false) }
+                    )
+                } else if (viewModel.recommendedPrivileged.isNotEmpty()) {
+                    PrivilegedModeDialog(
+                        initialPrivileged = viewModel.recommendedPrivileged,
+                        onConfirm = viewModel::confirmRecommendedPrivileged,
+                        onDismiss = { viewModel.confirmRecommendedPrivileged("") }
+                    )
                 }
-            )
+                ContainerNameScreen(
+                    initialName = viewModel.containerName,
+                    initialHostname = viewModel.hostname,
+                    recommendationNotice = viewModel.recommendationNotice,
+                    existingContainerNames = sharedContainerViewModel.containerList.map { it.name },
+                    onNext = { name, hostname ->
+                        viewModel.setName(name, hostname)
+                        navController.navigate(Screen.ContainerConfig.route)
+                    },
+                    onClose = {
+                        navController.popBackStack()
+                    }
+                )
+            }
         }
 
         composable(
@@ -470,6 +494,7 @@ fun DroidspacesNavigation(
                 InstallationProgressScreen(
                     tarballUri = tarballUri,
                     config = config,
+                    preparedTarball = viewModel.preparedTarball,
                     onSuccess = {
                         viewModel.reset()
                         // Trigger container list refresh before navigating back

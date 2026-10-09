@@ -5,6 +5,8 @@ import android.net.Uri
 import com.topjohnwu.superuser.Shell
 import com.topjohnwu.superuser.io.SuFile
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.FileOutputStream
@@ -26,7 +28,8 @@ object ContainerInstaller {
         context: Context,
         tarballUri: Uri,
         config: ContainerInfo,
-        logger: ContainerLogger
+        logger: ContainerLogger,
+        preparedTarball: File? = null
     ): Result<Unit> = withContext(Dispatchers.IO) {
         // Use sanitized name for directory (spaces -> dashes)
         val sanitizedName = ContainerManager.sanitizeContainerName(config.name)
@@ -39,6 +42,7 @@ object ContainerInstaller {
         val isExternal = rootfsParent != containerPath
         val configFilePath = "$containerPath/${Constants.CONTAINER_CONFIG_FILE}"
         var createdPaths = mutableListOf<String>()
+        var tempTarball = preparedTarball
 
         try {
             // Reject control chars in single-line config values.
@@ -106,27 +110,26 @@ object ContainerInstaller {
                 createdPaths.add(rootfsParent)
             }
 
-            // Step 4: Copy tarball to temp location
-            logger.i("Copying tarball to temporary location...")
-            val tarballExtension = getTarballExtension(context, tarballUri)
-            val tempTarball = File("${context.cacheDir}/container_${sanitizedName}.tar$tarballExtension")
-            context.contentResolver.openInputStream(tarballUri)?.use { inputStream ->
-                FileOutputStream(tempTarball).use { outputStream ->
-                    inputStream.copyTo(outputStream)
-                }
-            } ?: throw Exception("Failed to open tarball input stream")
+            // Reuse the wizard's snapshot so the settings and payload come from the same archive.
+            logger.i("Preparing installation archive...")
+            val archive = tempTarball ?: File.createTempFile(
+                "rootfs_", ".tar${getTarballExtension(context, tarballUri)}", context.cacheDir
+            ).also {
+                tempTarball = it
+                copyTarball(context, tarballUri, it)
+            }
 
-            logger.i("Tarball copied: ${tempTarball.absolutePath}")
+            logger.i("Tarball ready: ${archive.absolutePath}")
 
             // Step 4.5: Verify the tarball is actually a Linux rootfs before we
             // extract anything, so users can't install arbitrary archives.
-            validateRootfsTarball(context, tempTarball, logger)
+            validateRootfsTarball(context, archive, logger)
 
             // Step 5: Extract tarball (either to directory or sparse image)
             if (config.useSparseImage) {
                 SparseImageInstaller.extract(
                     context = context,
-                    tarball = tempTarball,
+                    tarball = archive,
                     imgPath = rootfsPath,
                     mountPoint = "${containerPath}/rootfs",
                     sizeGB = config.sparseImageSizeGB ?: 8,
@@ -142,11 +145,11 @@ object ContainerInstaller {
                 }
 
                 logger.i("Extracting tarball to $rootfsPath...")
-                val isXz = tempTarball.name.lowercase().endsWith(".xz")
+                val isXz = archive.name.lowercase().endsWith(".xz")
                 val extractCmd = if (isXz) {
-                    "cd ${quote(rootfsPath)} && $BUSYBOX_PATH xzcat ${quote(tempTarball.absolutePath)} | $BUSYBOX_PATH tar -xpf - 2>&1"
+                    "cd ${quote(rootfsPath)} && $BUSYBOX_PATH xzcat ${quote(archive.absolutePath)} | $BUSYBOX_PATH tar -xpf - 2>&1"
                 } else {
-                    "cd ${quote(rootfsPath)} && $BUSYBOX_PATH tar -xzpf ${quote(tempTarball.absolutePath)} 2>&1"
+                    "cd ${quote(rootfsPath)} && $BUSYBOX_PATH tar -xzpf ${quote(archive.absolutePath)} 2>&1"
                 }
 
                 val extractResult = Shell.cmd(extractCmd).exec()
@@ -249,8 +252,7 @@ object ContainerInstaller {
         } finally {
             // Clean up temp tarball
             try {
-                File("${context.cacheDir}/container_${sanitizedName}.tar.xz").delete()
-                File("${context.cacheDir}/container_${sanitizedName}.tar.gz").delete()
+                tempTarball?.delete()
             } catch (e: Exception) {
                 // Ignore cleanup errors
             }
@@ -261,7 +263,7 @@ object ContainerInstaller {
      * Get the tarball extension (.xz or .gz) from the URI.
      * Uses FilePickerUtils.getFileName() to reliably get the filename even for recent files.
      */
-    private suspend fun getTarballExtension(context: Context, uri: Uri): String = withContext(Dispatchers.IO) {
+    internal suspend fun getTarballExtension(context: Context, uri: Uri): String = withContext(Dispatchers.IO) {
         // First, try to get the filename using FilePickerUtils (handles content URIs)
         val fileName = FilePickerUtils.getFileName(context, uri)
 
@@ -284,6 +286,20 @@ object ContainerInstaller {
             uriString.endsWith(".tar.gz") -> ".gz"
             else -> ".gz" // Default to .gz if we can't determine
         }
+    }
+
+    internal suspend fun copyTarball(context: Context, uri: Uri, destination: File) = withContext(Dispatchers.IO) {
+        context.contentResolver.openInputStream(uri)?.use { input ->
+            destination.outputStream().use { output ->
+                val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
+                while (true) {
+                    currentCoroutineContext().ensureActive()
+                    val count = input.read(buffer)
+                    if (count < 0) break
+                    output.write(buffer, 0, count)
+                }
+            }
+        } ?: throw Exception("Failed to open tarball input stream")
     }
 
 
@@ -431,4 +447,3 @@ object ContainerInstaller {
         }
     }
 }
-

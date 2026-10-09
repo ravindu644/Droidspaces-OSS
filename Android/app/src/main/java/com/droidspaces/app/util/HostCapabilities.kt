@@ -38,7 +38,8 @@ data class HostCapabilities(
     /**
      * Every correction collected into one copy: unsupported features off, IPv6
      * forced off in NAT without IPv6 NAT, an unsupported network mode back to host.
-     * Limit values are left alone, the backend skips what it cannot apply.
+     * Limits and the requested user-namespace setting are retained. The form shows
+     * the latter checked but disabled when the kernel cannot provide it.
      */
     fun coerce(s: ContainerConfigState): ContainerConfigState {
         val mode = if (s.netMode in supportedNetModes()) s.netMode else "host"
@@ -46,7 +47,6 @@ data class HostCapabilities(
             netMode = mode,
             enableHwAccess = s.enableHwAccess && has("devtmpfs"),
             volatileMode = s.volatileMode && has("overlayfs"),
-            allowSandboxing = s.allowSandboxing && has("user_ns"),
             forceCgroupv1 = s.forceCgroupv1 && has("cgroup2"),
             disableIPv6 = s.disableIPv6 || (mode == "nat" && !has("ipv6_nat"))
         )

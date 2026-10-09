@@ -371,6 +371,9 @@
     <!-- Container Name Screen -->
     <string name="container_setup">Container Setup</string>
     <string name="container_information">Container Information</string>
+    <string name="rootfs_config_loading">Preparing rootfs and reading recommended settings…</string>
+    <string name="rootfs_config_loaded">Recommended settings loaded. You can review and change them in the next steps.</string>
+    <string name="rootfs_config_invalid">Could not load recommended settings. Configure this container manually. %1$s</string>
     <string name="container_name_label">Container Name *</string>
     <string name="container_name_placeholder">my-container</string>
     <string name="hostname_placeholder">Leave empty for default</string>

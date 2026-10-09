@@ -215,6 +215,9 @@
     <string name="add_bind_mount">添加绑定挂载点</string>
     <string name="kernel">内核</string>
     <string name="container_information">容器信息</string>
+    <string name="rootfs_config_loading">正在准备 rootfs 并读取推荐配置…</string>
+    <string name="rootfs_config_loaded">已加载推荐配置，你可以在后续步骤中检查和修改。</string>
+    <string name="rootfs_config_invalid">无法加载推荐配置，请手动配置此容器。%1$s</string>
     <string name="select_user">选择用户</string>
     <string name="container_setup">容器设置</string>
     <string name="no_local_users_found">未找到本地用户</string>

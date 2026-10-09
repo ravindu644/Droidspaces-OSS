@@ -632,7 +632,7 @@ fun ContainerConfigForm(
         val isSeccompDisabled = state.privileged.contains("noseccomp") || state.privileged.contains("full")
         val usernsSupported = ok("user_ns")
 
-        // One pass: drop what the kernel cannot do, then the seccomp rule, then a
+        // One pass: apply capability adjustments, then the seccomp rule, then a
         // single state write so the Edit screen sees one change, not several.
         LaunchedEffect(caps, isSeccompDisabled, state.netMode) {
             var s = caps?.coerce(state) ?: state
