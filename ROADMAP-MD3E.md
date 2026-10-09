@@ -75,12 +75,12 @@ Tick a box only when the phase is built, on-device verified and committed.
       top edge is identical on all three.
 
 ### Phase 3, Home
-- [ ] `DroidspacesStatusCard.kt`: `primaryContainer` card, 44dp header (verified badge,
+- [x] `DroidspacesStatusCard.kt`: `primaryContainer` card, 44dp header (verified badge,
       "Backend: Working", mode chip), divider, "Droidspaces" wordmark, "Version: vX".
-- [ ] Count tiles in `MainTabScreen.kt`: `surfaceContainer`, no border, 24dp corners.
-- [ ] `SystemInfoCard.kt` becomes a segmented group of five rows, no header.
-- [ ] `HelpCard.kt` becomes one `tertiaryContainer` list row with a chevron.
-- [ ] Acceptance: Home board 1 matches on device.
+- [x] Count tiles in `MainTabScreen.kt`: `surfaceContainer`, no border, 24dp corners.
+- [x] `SystemInfoCard.kt` becomes a segmented group of five rows, no header.
+- [x] `HelpCard.kt` becomes one `tertiaryContainer` list row with a chevron.
+- [x] Acceptance: Home board 1 matches on device.
 
 ### Phase 4, Containers
 - [ ] `ContainerCard.kt`: 44dp icon tile, name, status chip; divider; PID line when
@@ -148,8 +148,8 @@ Tick a box only when the phase is built, on-device verified and committed.
       (the setup frame, card headers); reduced motion respected.
 
 ### Phase 12, adaptive
-- [ ] Decision pending (see Open questions). If yes: list-detail for containers, a
-      navigation rail at medium width.
+- [ ] In scope (decided 2026-10-09): list-detail for containers, a navigation rail at
+      medium width. Boards first.
 
 ### Phase 13, close out
 - [ ] Delete this file and the paragraph in AGENTS.md that links it. Update CONTRIBUTING.md's
@@ -158,6 +158,10 @@ Tick a box only when the phase is built, on-device verified and committed.
 ## Per-screen decisions from the design session
 
 Kept here so the reasoning is not lost with the chat.
+
+- **Accent picker and AMOLED stay** (decided 2026-10-09, do not re-open). Dynamic colour
+  stays the default; the six palettes and AMOLED keep the rules DESIGN.md writes for them.
+- **Tablet and foldable are in scope** (decided 2026-10-09). Phase 12 exists.
 
 - **Manage actions are a labelled anchored menu**, not a bottom sheet and not an icon
   toolbar. Material's guidance says an action sheet becomes a context menu on large windows
@@ -244,10 +248,6 @@ Compose haptics anywhere.
 
 ## Open questions
 
-- **Accent picker and AMOLED.** Keep both (the plan assumes yes, and DESIGN.md writes the
-  AMOLED rules), or go dynamic colour only like Google's apps? Decide before phase 3, since
-  the status card's AMOLED treatment depends on it.
-- **Tablet and foldable.** In or out of scope? It decides whether phase 12 exists.
 - **Terminal keys.** The Termux `VirtualKeysView` is a View; replacing it with Compose
   toggle buttons means owning key repeat and modifier latching. Decide in phase 6 after a
   spike.

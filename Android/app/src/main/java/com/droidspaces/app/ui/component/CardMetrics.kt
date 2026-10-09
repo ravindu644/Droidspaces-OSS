@@ -1,6 +1,10 @@
 package com.droidspaces.app.ui.component
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 
 /**
@@ -21,3 +25,14 @@ val CardContentPadding = PaddingValues(16.dp)
 
 /** Height of the title-and-chip row at the top of a card. See [CardContentPadding]. */
 val CardHeaderHeight = 44.dp
+
+/**
+ * Cards are tonal, never bordered, except on AMOLED: there surfaceContainer and the
+ * background are the same black and a card would have no edge at all. Then, and only
+ * then, a card gets the 1px outlineVariant edge DESIGN.md gives boxes and group rows.
+ */
+@Composable
+fun amoledCardBorder(): BorderStroke? {
+    val scheme = MaterialTheme.colorScheme
+    return if (scheme.surfaceContainer == scheme.background) BorderStroke(Dp.Hairline, scheme.outlineVariant) else null
+}

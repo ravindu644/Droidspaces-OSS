@@ -8,7 +8,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.pager.HorizontalPager
@@ -17,15 +16,13 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import com.droidspaces.app.ui.component.DsTopAppBar
+import com.droidspaces.app.ui.component.amoledCardBorder
 import com.droidspaces.app.ui.component.PullToRefreshWrapper
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.activity.compose.BackHandler
@@ -42,7 +39,6 @@ import com.droidspaces.app.util.AppUpdateInfo
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import androidx.compose.ui.unit.sp
 import com.droidspaces.app.R
 import com.droidspaces.app.util.HostCapabilities
 import androidx.compose.runtime.collectAsState
@@ -385,7 +381,8 @@ private fun HomeTabContent(
                 .fillMaxWidth()
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = 16.dp)
-                .padding(top = 8.dp, bottom = 16.dp)
+                .padding(top = 8.dp, bottom = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             DroidspacesStatusCard(
                 status = droidspacesStatus,
@@ -429,104 +426,59 @@ private fun HomeTabContent(
                 }
             )
 
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // The count cards lead to the other tabs, so hide them when those
+            // The count tiles lead to the other tabs, so hide them when those
             // tabs would only show the root or kernel state.
             if (isRootAvailable && isKernelSupported) {
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(16.dp)
+                    modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Min),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    // Container count card
-                    Surface(
+                    CountTile(
+                        count = containerCount,
+                        label = context.getString(R.string.containers),
+                        icon = Icons.Default.Layers,
                         onClick = onNavigateToContainers,
-                        modifier = Modifier
-                            .weight(1f)
-                            .height(140.dp),
-                        shape = RoundedCornerShape(24.dp), // Slightly more rounded for home cards
-                        color = MaterialTheme.colorScheme.surfaceContainer,
-                        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f))
-                    ) {
-                        Column(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .padding(16.dp),
-                            horizontalAlignment = Alignment.Start,
-                            verticalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Layers,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.size(28.dp)
-                            )
-                            Column {
-                                Text(
-                                    text = containerCount.toString(),
-                                    style = MaterialTheme.typography.headlineMedium,
-                                    fontWeight = FontWeight.Black
-                                )
-                                Text(
-                                    text = context.getString(R.string.containers).uppercase(),
-                                    style = MaterialTheme.typography.labelMedium,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
-                                    letterSpacing = 1.sp
-                                )
-                            }
-                        }
-                    }
-
-                    // Running count card
-                    Surface(
+                        modifier = Modifier.weight(1f).fillMaxHeight()
+                    )
+                    CountTile(
+                        count = runningCount,
+                        label = context.getString(R.string.running),
+                        icon = Icons.Default.PlayCircle,
                         onClick = onNavigateToControlPanel,
-                        modifier = Modifier
-                            .weight(1f)
-                            .height(140.dp),
-                        shape = RoundedCornerShape(24.dp),
-                        color = MaterialTheme.colorScheme.surfaceContainer,
-                        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f))
-                    ) {
-                        Column(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .padding(16.dp),
-                            horizontalAlignment = Alignment.Start,
-                            verticalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.PlayCircle,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.secondary,
-                                modifier = Modifier.size(28.dp)
-                            )
-                            Column {
-                                Text(
-                                    text = runningCount.toString(),
-                                    style = MaterialTheme.typography.headlineMedium,
-                                    fontWeight = FontWeight.Black
-                                )
-                                Text(
-                                    text = context.getString(R.string.running).uppercase(),
-                                    style = MaterialTheme.typography.labelMedium,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
-                                    letterSpacing = 1.sp
-                                )
-                            }
-                        }
-                    }
+                        modifier = Modifier.weight(1f).fillMaxHeight()
+                    )
                 }
-
-                Spacer(modifier = Modifier.height(6.dp))
             }
 
             SystemInfoCard(refreshTrigger = refreshTrigger)
 
-            Spacer(modifier = Modifier.height(16.dp))
-
             HelpCard()
+        }
+    }
+}
 
-            Spacer(modifier = Modifier.height(16.dp))
+/** A Home count tile: plain surfaceContainer, no border, the number carrying the weight. */
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
+@Composable
+private fun CountTile(
+    count: Int,
+    label: String,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Surface(
+        onClick = onClick,
+        modifier = modifier,
+        shape = MaterialTheme.shapes.extraLarge,
+        color = MaterialTheme.colorScheme.surfaceContainer,
+        border = amoledCardBorder()
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+            Spacer(Modifier.height(8.dp))
+            Text(count.toString(), style = MaterialTheme.typography.displaySmallEmphasized)
+            Text(label, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
 }

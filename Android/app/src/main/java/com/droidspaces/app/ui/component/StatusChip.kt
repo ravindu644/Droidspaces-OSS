@@ -12,6 +12,7 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.contentColorFor
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -22,7 +23,9 @@ import androidx.compose.ui.unit.dp
  * The status chip from DESIGN.md: a dot and a label, a label and never a button.
  *
  * [active] is the running or healthy state and fills the chip with primaryContainer;
- * everything else sits quietly on surfaceContainerHighest. [color] tints only the dot,
+ * everything else sits quietly on surfaceContainerHighest. A chip on a surface that is
+ * already primaryContainer (the Home status card) passes [containerColor] instead, or
+ * it would vanish into the card. [color] tints only the dot,
  * so a caller with its own hue (the init system traffic light) keeps it without the
  * chip turning into a colour swatch.
  *
@@ -36,12 +39,15 @@ fun StatusChip(
     modifier: Modifier = Modifier,
     active: Boolean = false,
     busy: Boolean = false,
+    containerColor: Color = if (active) MaterialTheme.colorScheme.primaryContainer
+        else MaterialTheme.colorScheme.surfaceContainerHighest,
 ) {
-    val scheme = MaterialTheme.colorScheme
+    val quiet = containerColor == MaterialTheme.colorScheme.surfaceContainerHighest
     Surface(
         modifier = modifier.height(32.dp),
-        color = if (active) scheme.primaryContainer else scheme.surfaceContainerHighest,
-        contentColor = if (active) scheme.onPrimaryContainer else scheme.onSurfaceVariant,
+        color = containerColor,
+        // contentColorFor would give onSurface; a quiet chip reads one step down
+        contentColor = if (quiet) MaterialTheme.colorScheme.onSurfaceVariant else contentColorFor(containerColor),
         shape = MaterialTheme.shapes.small
     ) {
         Row(

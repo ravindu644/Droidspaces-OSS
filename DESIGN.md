@@ -118,6 +118,9 @@ AMOLED blacks out `background`, `surface`, `surfaceVariant` and the five
   in the static AMOLED scheme for this.
 - Boxes inside cards stay visible. `surfaceContainerHigh` collapses to black too, so a box
   on AMOLED falls back to the same 1px `outlineVariant` edge.
+- Cards and tiles keep an edge. A `surfaceContainer` card is black on black there, so it
+  takes the same 1px `outlineVariant` edge through `amoledCardBorder()` in
+  `ui/component/CardMetrics.kt`, which returns null on every other scheme.
 
 ## Typography
 
@@ -223,7 +226,9 @@ checked toggle is `primary` on `onPrimary`, unchecked is `secondaryContainer`.
 
 **Chips.** The status chip is a 32dp `surfaceContainerHighest` chip with a 6dp dot and a
 label; running uses `primaryContainer`. Option chips (Sandboxing, Run at boot) are the same
-chip without a dot. Chips are labels here, never buttons.
+chip without a dot. Chips are labels here, never buttons. The mode chip on the Home status
+card is `primary` on `onPrimary`, because the card is already `primaryContainer` and an
+active chip would vanish into it.
 
 **Anchored menu.** Per-item secondary actions (Edit configuration, Migrate or Resize sparse
 image, Export, Uninstall) open an anchored `DropdownMenu` on long press, or on tap for a
