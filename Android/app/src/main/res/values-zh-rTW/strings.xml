@@ -237,7 +237,7 @@
     <string name="init_system_not_available_desc">此容器未安裝 systemd 或 OpenWrt/OpenRC</string>
     <string name="requirements">需求檢測</string>
     <string name="root_unavailable">沒有root權限。</string>
-    <string name="symlink_integration_description">在 /system/bin 目錄下建立鏈接，以便在 Android root shell 中存取 droidspaces 命令。警告：如果您的掛載系統是 OverlayFS 元模組，啟用此選項會導致無限重新啟動。僅在使用基於 Magic Mount 的掛載系統時才使用此選項（需要重新啟動）。</string>
+    <string name="symlink_integration_description">在 /system/bin 目錄下建立鏈接，以便在 Android root shell 中存取 droidspaces 命令。警告：如果您的掛載系統是 OverlayFS 元模組，啟用此選項會導致無限重新啟動。僅在使用基於 Magic Mount 或基於核心的nomount掛載系統時才使用此選項（需要重新啟動）。</string>
     <string name="installation_setup_summary">安裝概要</string>
     <string name="checking_root">正在檢查root存取權限...</string>
     <string name="refresh_users">重新整理用戶</string>
@@ -557,4 +557,31 @@
     <plurals name="cpu_cores">
         <item quantity="other">%1$s 核心</item>
     </plurals>
+    <string name="limit_memory_requirement">CONFIG_MEMCG，且核心命令列中未設定 cgroup_disable=memory</string>
+    <string name="limit_cpu_requirement">CONFIG_CFS_BANDWIDTH，且核心命令列中未設定 cgroup_disable=cpu</string>
+    <string name="limit_pids_requirement">CONFIG_CGROUP_PIDS，且核心命令列中未指定 cgroup_disable=pids</string>
+    <string name="hardware_access_not_supported">不可用。此核心沒有 devtmpfs (CONFIG_DEVTMPFS)。</string>
+    <string name="volatile_mode_not_supported">不可用。此核心沒有 OverlayFS (CONFIG_OVERLAY_FS)。</string>
+    <string name="force_cgroupv1_not_supported">不可用。此核心僅支援 cgroup v1，因此無需進行強制設定。</string>
+    <string name="disable_ipv6_forced">請稍候。此核心未啟用 IPv6 NAT (CONFIG_IP6_NF_NAT)，因此 NAT 容器僅支援 IPv4。</string>
+    <string name="memory_kb">%1$s KB</string>
+    <string name="memory_mb_decimal">%1$s MB</string>
+    <string name="backend_installed_unsupported_kernel">Droidspaces 後端已成功安裝，但目前核心不支援 Droidspaces。</string>
+    <string name="ram_used_label">%1$s (%2$.1f%%)</string>
+    <string name="ram_used_of_limit_label">%1$s / %2$s (%3$.0f%%)</string>
+    <string name="kernel_unsupported">核心不支援</string>
+    <string name="kernel_unsupported_description">此頁面已停用，因為該核心缺少 Droidspaces 所需的功能</string>
+    <string name="kernel_unsupported_message">點擊以了解如何為 Droidspaces 配置核心。</string>
+    <string name="welcome_headline">在手機上運行真正的 Linux</string>
+    <string name="welcome_body">Droidspaces 利用您裝置自身的內核，在容器中執行完整的作業系統發行版。無需模擬器，也無需虛擬機器。</string>
+    <string name="next">下一步</string>
+    <string name="page_counter">%2$d 的 %1$d</string>
+    <string name="root_access_title">root 權限</string>
+    <string name="root_access_body">Droidspaces 需要 Root 權限來建立容器。您的 Root 管理工具會提示您授予該權限。</string>
+    <string name="installing_backend_message">正在設定後端。這需要一點時間。</string>
+    <string name="add_container">新增容器</string>
+    <string name="install_from_file">從檔案安裝</string>
+    <string name="fab_menu_expanded">擴展</string>
+    <string name="fab_menu_collapsed">摺疊</string>
+    <string name="close_menu">關閉選單</string>
 </resources>

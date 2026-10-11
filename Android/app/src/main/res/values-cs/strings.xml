@@ -559,4 +559,31 @@
         <item quantity="many">%1$s jader</item>
         <item quantity="other">%1$s jader</item>
     </plurals>
+    <string name="welcome_headline">Skutečný Linux ve vašem telefonu</string>
+    <string name="welcome_body">Droidspaces spouští plnohodnotné distribuce v kontejnerech na vlastním jádře vašeho zařízení. Bez emulátoru, bez virtuálního stroje.</string>
+    <string name="next">Další</string>
+    <string name="page_counter">%1$d z %2$d</string>
+    <string name="root_access_title">Přístup roota</string>
+    <string name="root_access_body">Droidspaces potřebuje k vytváření kontejnerů přístup roota. Váš správce roota vás požádá o povolení tohoto přístupu.</string>
+    <string name="limit_memory_requirement">CONFIG_MEMCG a příkazový řádek jádra bez cgroup_disable=memory</string>
+    <string name="limit_cpu_requirement">CONFIG_CFS_BANDWIDTH a příkazový řádek jádra bez cgroup_disable=cpu</string>
+    <string name="limit_pids_requirement">CONFIG_CGROUP_PIDS a příkazový řádek jádra bez cgroup_disable=pids</string>
+    <string name="hardware_access_not_supported">Není k dispozici. Toto jádro nepodporuje devtmpfs (CONFIG_DEVTMPFS).</string>
+    <string name="volatile_mode_not_supported">Není k dispozici. Toto jádro nepodporuje OverlayFS (CONFIG_OVERLAY_FS).</string>
+    <string name="force_cgroupv1_not_supported">Není k dispozici. Toto jádro má pouze cgroup v1, takže není co vynucovat.</string>
+    <string name="disable_ipv6_forced">Vynuceně zapnuto. Toto jádro nepodporuje NAT pro IPv6 (CONFIG_IP6_NF_NAT), takže kontejnery v režimu NAT používají pouze IPv4.</string>
+    <string name="memory_kb">%1$s KB</string>
+    <string name="memory_mb_decimal">%1$s MB</string>
+    <string name="installing_backend_message">Nastavuje se backend. Chvíli to potrvá.</string>
+    <string name="backend_installed_unsupported_kernel">Backend Droidspaces byl úspěšně nainstalován, ale toto jádro nepodporuje Droidspaces.</string>
+    <string name="ram_used_label">%1$s (%2$.1f%%)</string>
+    <string name="ram_used_of_limit_label">%1$s / %2$s (%3$.0f%%)</string>
+    <string name="kernel_unsupported">Jádro není podporováno</string>
+    <string name="kernel_unsupported_description">Tato stránka není dostupná, protože tomuto jádru chybějí funkce potřebné pro Droidspaces</string>
+    <string name="kernel_unsupported_message">Klepnutím zjistíte, jak nastavit jádro pro Droidspaces.</string>
+    <string name="add_container">Přidat kontejner</string>
+    <string name="install_from_file">Nainstalovat ze souboru</string>
+    <string name="fab_menu_expanded">Rozbaleno</string>
+    <string name="fab_menu_collapsed">Sbaleno</string>
+    <string name="close_menu">Zavřít nabídku</string>
 </resources>
