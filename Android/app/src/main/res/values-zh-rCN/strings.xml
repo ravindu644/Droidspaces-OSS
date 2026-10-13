@@ -69,7 +69,7 @@
     <string name="amoled_mode">AMOLED 模式</string>
     <string name="amoled_mode_description">为 OLED 屏幕提供纯黑背景</string>
     <string name="dynamic_color">使用系统默认配色方案</string>
-    <string name="dynamic_color_description">使用 Android 12+ Monet 主题 (Material You)</string>
+    <string name="dynamic_color_description">使用 Android 12+ 莫奈主题（Material You）</string>
     <string name="daemon_mode">守护进程模式</string>
     <string name="daemon_mode_description">将 Droidspaces 作为持久的系统级守护进程运行，以绕过来自 Magisk/APatch、GrapheneOS 等的 seccomp 限制。这允许通过从用户空间获取并运行命令来实现高权限操作（重启后生效）。</string>
     <string name="about_description">适用于 Android 的 LXC 风格容器管理器</string>
@@ -203,7 +203,7 @@
     <string name="container_information">容器信息</string>
     <string name="rootfs_config_loading">正在读取推荐配置…</string>
     <string name="rootfs_config_loaded_title">已自动填写配置</string>
-    <string name="rootfs_config_loaded">此归档自带容器配置，所有设置均已应用，包括硬件访问和特权模式。来自他人的 rootfs 可能请求超出你预期的权限。安装前请仔细检查下一页。</string>
+    <string name="rootfs_config_loaded">此归档自带容器配置，包括硬件访问和特权模式在内的所有设置均已应用。来自他人的根文件系统可能请求超出你预期的权限。安装前请仔细检查下一页。</string>
     <string name="rootfs_config_review">检查配置</string>
     <string name="rootfs_config_invalid">无法加载推荐配置，请手动配置此容器。%1$s</string>
     <string name="select_user">选择用户</string>
@@ -290,7 +290,7 @@
     <string name="error_unknown">错误：%1$s</string>
     <string name="options">选项</string>
     <string name="symlink_integration">将 Droidspaces 集成到系统路径中</string>
-    <string name="symlink_integration_description">在 /system/bin 创建软链接，以便在 Android root shell 中访问 droidspaces 命令。警告：如果您的挂载机制为 OverlayFS 元模块，启用此项将导致无限重启！仅当您使用基于 Magic Mount 的挂载系统时才可启用此选项。（重启后生效）</string>
+    <string name="symlink_integration_description">在 /system/bin 创建软链接，以便在 Android root shell 中访问 droidspaces 命令。警告：如果您的挂载机制为 OverlayFS 元模块，启用此项将导致无限重启！仅当您使用基于 Magic Mount 的挂载系统或基于内核的 nomount 挂载系统时才可启用此选项（重启后生效）</string>
     <string name="gpu_access">GPU 访问</string>
     <string name="gpu_access_description">将GPU节点镜像到隔离的 /dev（非完整硬件直通）</string>
     <string name="privileged_mode">特权模式</string>
@@ -320,8 +320,8 @@
     <string name="feat_autoboot_desc">支持开机自动启动容器，即使在屏幕锁定且数据尚未解密的状态下依然有效。</string>
     <string name="backend_attention_required">后端：待处理</string>
     <string name="tap_to_fix_system">点击修复系统配置</string>
-    <string name="kernel_requirements_nongki">non-GKI 内核要求 (版本 &lt;=4.19)</string>
-    <string name="kernel_requirements_gki">GKI 内核要求 (版本 &gt;=5.4)</string>
+    <string name="kernel_requirements_nongki">non-GKI 内核要求（版本 &lt;=4.19）</string>
+    <string name="kernel_requirements_gki">GKI 内核要求（版本 &gt;=5.4）</string>
     <string name="guide">指南</string>
     <string name="gpu_option">GPU</string>
     <string name="selinux_permissive_option">SELinux 宽容模式</string>
@@ -367,8 +367,8 @@
     <string name="hw_access_disclaimer">从 Droidspaces v6.1.0 版本开始，udevd 可完整接管 USB、块设备、输入设备、串口、网络子系统权限，容器能够直接占用安卓系统正在使用的硬件资源。\n\n若启动容器后，安卓端键盘、SD 卡、USB 外设等设备失效，这并非程序 BUG，是容器抢占占用了硬件资源，属于正常设计行为。\n\n请勿提交因硬件资源冲突、该模式引发内核宕机死机相关的问题反馈。</string>
     <string name="custom_init_warning">除非你很清楚你在做什么，否则不要更改此选项。设定错误的 init 可执行文件路径会导致容器无法启动。</string>
     <string name="custom_init_label">指定 init 可执行文件路径</string>
-    <string name="custom_init_placeholder">/sbin/init (默认)</string>
-    <string name="custom_init_hint">留空则使用默认值 (/sbin/init)</string>
+    <string name="custom_init_placeholder">/sbin/init（默认）</string>
+    <string name="custom_init_hint">留空则使用默认值（/sbin/init）</string>
     <string name="custom_init_error_absolute">路径必须是以 / 开头的绝对路径</string>
     <string name="custom_init_option">自定义 init</string>
     <string name="notification_title">Droidspaces 终端</string>
@@ -398,7 +398,7 @@
     <string name="repo_banner_url" translatable="false">https://github.com/Droidspaces/Droidspaces-rootfs-builder</string>
     <string name="repo_custom_remove">移除</string>
     <string name="repo_custom_url_invalid">URL 必须以 https:// 开头</string>
-    <string name="repo_banner_text">在 \"Droidspaces developers\" 下的 Rootfs Tar 包是开源且透明的，你可以通过点击这个卡片来手动下载它们或者检查我们的更改。</string>
+    <string name="repo_banner_text">在“Droidspaces developers”下的根文件系统压缩包是开源且透明的，你可以通过点击这个卡片来手动下载它们或者检查我们的更改。</string>
     <string name="repo_custom_name_hint">仓库名称</string>
     <string name="repo_not_found_in_repo">仓库中未找到 %1$s</string>
     <string name="repo_manage_custom">管理仓库</string>
@@ -446,7 +446,7 @@
     <string name="error_gateway_name_chars">仅使用字母、数字、_ 或 -</string>
     <string name="error_iface_too_long">太长了 - 最多15个字符</string>
     <string name="error_gateway_bridge_taken">桥接已被 \'%1$s\' 使用。请使用不同的局域网名称。</string>
-    <string name="error_gateway_iface_taken">接口已被另一个段（\'%1$s\'）使用。请使用其他接口。</string>
+    <string name="error_gateway_iface_taken">接口已被另一个段“%1$s”使用。请使用其他接口。</string>
     <string name="openwrt_services">OpenWrt 服务</string>
     <string name="unknown_legend">未知</string>
     <string name="reload_service">重新加载服务</string>
@@ -455,10 +455,10 @@
     <string name="disk_usage">磁盘占用</string>
     <string name="disk_usage_used_of_total">已使用 %1$s / %2$s</string>
     <string name="disk_usage_calculating">计算中…</string>
-    <string name="allow_userns_description_not_supported">不支持：内核未启用 CONFIG_USER_NS 配置项</string>
-    <string name="allow_userns">允许用户命名空间</string>
-    <string name="userns_option">用户命名空间</string>
-    <string name="allow_userns_description">允许非特权用户命名空间，Flatpak/bwrap/Firefox等软件需要此功能。但是，若内核未打补丁，设备可能易受某些漏洞利用攻击影响（如 Fragnesia）</string>
+    <string name="allow_userns_description_not_supported">不可用：内核不支持用户命名空间（CONFIG_USER_NS）。</string>
+    <string name="allow_userns">允许沙箱</string>
+    <string name="userns_option">沙箱</string>
+    <string name="allow_userns_description">允许非特权 Docker、Podman、Flatpak、bwrap 和浏览器沙箱在容器内运行。这会削弱隔离性，因此仅对您信任的容器启用此功能。</string>
     <string name="accent_color">强调色</string>
     <string name="type_container_name_to_confirm">完整输入容器名称以确认：</string>
     <string name="debugging_section">调试</string>
@@ -476,7 +476,7 @@
     <string name="property_started_at">启动时间</string>
     <string name="property_restart_policy">重启策略</string>
     <string name="property_memory">内存</string>
-    <string name="property_cpu_time">CPU 时间 (纳秒)</string>
+    <string name="property_cpu_time">CPU 时间（纳秒）</string>
     <string name="unit_detail_load_error_title">无法加载单元详细信息</string>
     <string name="unit_detail_load_error_message">单元可能已不存在，或容器当前无法访问。</string>
     <string name="properties_section">属性</string>
@@ -491,7 +491,7 @@
     <string name="override_placeholder">[Service]\nEnvironment=FOO=bar</string>
     <string name="saving_override">正在保存覆盖配置…</string>
     <string name="applying_override">正在应用覆盖配置…</string>
-    <string name="fetching_distros">正在从 rootfs 仓库中获取发行版……</string>
+    <string name="fetching_distros">正在从根文件系统仓库中获取发行版…</string>
     <string name="resize_same_as_current">当前已为 %1$d GB，请输入其他容量大小。</string>
     <string name="storage_location">存储位置</string>
     <string name="storage_location_default">内部存储（默认）</string>
@@ -504,10 +504,10 @@
     <string name="allow">允许</string>
     <string name="not_now">不是现在</string>
     <string name="storage_location_image_forced">此处需要稀疏镜像</string>
-    <string name="storage_location_custom_description">将rootfs放在SD卡、U盘或其它目录中</string>
+    <string name="storage_location_custom_description">将根文件系统放在 SD 卡、U 盘或其它目录中</string>
     <string name="storage_title">存储</string>
     <string name="next_summary">下一步：安装概览</string>
-    <string name="storage_location_default_description">将rootfs保存在 %1$s</string>
+    <string name="storage_location_default_description">将根文件系统保存在 %1$s</string>
     <string name="storage_location_checking">检查存储位置……</string>
     <string name="storage_location_free">%1$s, %2$d GB 空闲</string>
     <string name="terminal_appearance_summary">深色模式，字体大小和自定义字体</string>
@@ -542,8 +542,8 @@
     <string name="page_counter">%1$d / %2$d</string>
     <string name="root_access_title">Root 权限</string>
     <string name="easter_egg_warning">后端没问题，没必要频繁请求 🙂</string>
-    <string name="termux_not_installed">不可用。未安装 Termux。</string>
-    <string name="termux_x11_not_installed">不可用。需要同时安装 Termux 和 Termux:X11。</string>
+    <string name="termux_not_installed">不可用：未安装 Termux。</string>
+    <string name="termux_x11_not_installed">不可用：需要同时安装 Termux 和 Termux:X11。</string>
     <string name="cat_resource_limits">资源限制</string>
     <string name="limit_memory">内存限制</string>
     <string name="limit_memory_off">无限制，共享全部 %1$s</string>
@@ -554,9 +554,124 @@
     <string name="limit_pids_value">%1$d PIDs</string>
     <string name="limit_pids_error">最少 %1$d</string>
     <string name="limit_not_supported">当前内核不支持（需要 %1$s）</string>
-    <string name="hardware_access_not_supported">不支持：当前内核没有 devtmpfs（CONFIG_DEVTMPFS）。</string>
-    <string name="volatile_mode_not_supported">不支持：当前内核没有 OverlayFS（CONFIG_OVERLAY_FS）。</string>
+    <string name="hardware_access_not_supported">不可用：当前内核没有 devtmpfs（CONFIG_DEVTMPFS）。</string>
+    <string name="volatile_mode_not_supported">不可用：当前内核没有 OverlayFS（CONFIG_OVERLAY_FS）。</string>
     <string name="installing_backend_message">正在设置后端。这需要一些时间。</string>
     <string name="keep_editing">继续编辑</string>
     <string name="limit_pids_hint">留空则无限制</string>
+    <string name="anland_not_installed">不可用：需要安装 Anland。</string>
+    <string name="force_cgroupv1_not_supported">不可用：当前内核只支持 cgroup v1，无须强制。</string>
+    <string name="easter_egg_reward">You asked for it 🎵</string>
+    <string name="anland_option">Anland</string>
+    <string name="enable_anland">Anland 显示</string>
+    <string name="enable_anland_description">在 Anland 应用中显示 Wayland 桌面</string>
+    <string name="launch_anland_window">启动</string>
+    <string name="anland_needs_gpu">需要 GPU 或硬件访问权限。</string>
+    <string name="anland_replaces_x11">当 Anland 显示开启时，此设置会关闭。一个容器只能使用一个显示方案。</string>
+    <string name="limit_memory_on">上限低于设备总额的 %1$s</string>
+    <string name="limit_cpu_on">上限低于设备总额的 %1$s</string>
+    <string name="limit_cpu_off">无限制：共享所有 %1$s</string>
+    <string name="limit_pids_on">同时运行多个进程和线程</string>
+    <string name="limit_memory_requirement">CONFIG_MEMCG，且内核命令行中未配置 cgroup_disable=memory</string>
+    <string name="limit_cpu_requirement">CONFIG_CFS_BANDWIDTH，且内核命令行中未配置 cgroup_disable=cpu</string>
+    <string name="limit_pids_requirement">CONFIG_CGROUP_PIDS，且内核命令行中未配置 cgroup_disable=pids</string>
+    <string name="disable_ipv6_forced">稍等，当前内核没有 IPv6 NAT（CONFIG_IP6_NF_NAT），因此 NAT 容器仅支持 IPv4。</string>
+    <string name="memory_kb">%1$s KB</string>
+    <string name="memory_mb">%1$d MB</string>
+    <string name="memory_mb_decimal">%1$s MB</string>
+    <string name="memory_gb">%1$s GB</string>
+    <plurals name="cpu_cores">
+        <item quantity="other">%1$s 核心</item>
+    </plurals>
+    <string name="network_mode_macvlan">Macvlan（有线局域网）</string>
+    <string name="network_mode_macvlan_short">Macvlan</string>
+    <string name="macvlan_parent">主机接口</string>
+    <string name="macvlan_parent_choose">选择主机接口</string>
+    <string name="macvlan_parent_hint">容器的 eth0 所挂载的有线接口，通常是 USB 以太网适配器。指代单个接口，需使用其确切名称。</string>
+    <string name="error_macvlan_parent_required">选择主机接口</string>
+    <string name="warning_macvlan_passthru_shared">%1$s 也被“%2$s”使用。在透传模式下，它们同一时间只能运行其中一个。</string>
+    <string name="macvlan_mode">Macvlan 模式</string>
+    <string name="macvlan_mode_bridge_desc">此接口上的容器可以直接相互通信。</string>
+    <string name="macvlan_mode_private_desc">此接口上的容器无法相互通信，仅能访问局域网。</string>
+    <string name="macvlan_mode_vepa_desc">容器间的流量会先发送到局域网交换机再返回，因此需要支持环回功能的交换机。</string>
+    <string name="macvlan_mode_passthru_desc">整个接口都指向这一个容器，导致手机在该容器上断开了网络连接。</string>
+    <string name="macvlan_mode_bridge">桥接（默认）</string>
+    <string name="macvlan_mode_private">专用网络</string>
+    <string name="macvlan_mode_vepa">VEPA</string>
+    <string name="macvlan_mode_passthru">穿透</string>
+    <string name="env_placeholder">KEY=VALUE，一行一个，以 # 开头的行会被忽略。</string>
+    <string name="backend_installed_unsupported_kernel">Droidspaces 后端已成功安装，但当前内核不支持 Droidspaces。</string>
+    <string name="ram_used_label">%1$s (%2$.1f%%)</string>
+    <string name="ram_used_of_limit_label">%1$s / %2$s (%3$.0f%%)</string>
+    <string name="fetching_logs">正在获取日志…</string>
+    <string name="journal_load_error_title">无法加载日志</string>
+    <string name="journal_load_error_message">该单元可能没有日志，或者容器可能无法访问。</string>
+    <string name="journal_line_count_custom">自定义…</string>
+    <string name="journal_line_count_title">行数</string>
+    <string name="journal_line_count_label">行</string>
+    <string name="kernel_unsupported">内核不支持</string>
+    <string name="kernel_unsupported_description">此页面已禁用，因为当前内核缺少 Droidspaces 所需的功能</string>
+    <string name="kernel_unsupported_message">点击以了解如何为 Droidspaces 配置内核。</string>
+    <string name="add_container">新建容器</string>
+    <string name="install_from_file">从文件安装</string>
+    <string name="fab_menu_expanded">已展开</string>
+    <string name="fab_menu_collapsed">已折叠</string>
+    <string name="close_menu">关闭目录</string>
+    <string name="repo_dl_error_storage_permission">存储权限被拒绝</string>
+    <string name="repo_dl_channel_name">下载根文件系统</string>
+    <string name="repo_dl_complete">下载完成，点击安装</string>
+    <string name="repo_storage_permission_title">存储权限</string>
+    <string name="repo_storage_permission_rationale">根文件系统压缩包会保存到您的“下载”文件夹中；在此 Android 版本上，这需要存储访问权限。若无此权限，下载将无法开始。</string>
+    <string name="repo_notification_permission_rationale">Droidspaces 会显示下载进度、“取消”按钮以及一条通知；下载完成后，您可以点击该通知进行安装。即便不显示这些内容，下载过程仍会继续进行。</string>
+    <string name="experimental_section">实验性</string>
+    <string name="treat_as_64bit">使用 64 位后端</string>
+    <string name="treat_as_64bit_description">您的操作系统是 32 位的，但内核是 64 位的。请安装 64 位后端，并改为列出 64 位根文件系统。</string>
+    <string name="app_update_message">Droidspaces %1$s 已就绪。点击前往 GitHub 上的发布页。</string>
+    <plurals name="upstream_count">
+        <item quantity="other">%1$d 个上游</item>
+    </plurals>
+    <string name="config_general">一般设置</string>
+    <string name="network_mode_nat_desc">手机使用的专用网络</string>
+    <string name="network_mode_gateway_desc">通过另一个充当路由器的容器</string>
+    <string name="network_mode_macvlan_desc">直接连接到有线局域网</string>
+    <string name="network_mode_host_desc">共享手机网络</string>
+    <string name="network_mode_none_desc">无网络，仅限回环</string>
+    <plurals name="port_rule_count">
+        <item quantity="other">%1$d 个端口规则</item>
+    </plurals>
+    <plurals name="bind_mount_count">
+        <item quantity="other">%1$d 个挂载点</item>
+    </plurals>
+    <string name="network_summary_gateway">使用 %1$s</string>
+    <string name="network_summary_macvlan">在 %1$s</string>
+    <string name="discard">放弃</string>
+    <string name="discard_invalid_body">此页面上的某些设置无效。请修正这些设置以保留更改，或放弃更改。</string>
+    <string name="discard_edits_body">您在此页面上所做的更改尚未生效。</string>
+    <string name="discard_edits_title">放弃更改？</string>
+    <string name="mount_from">挂载自 %1$s</string>
+    <string name="read_only_description">容器可以读取这些文件，但无法修改它们</string>
+    <string name="path_in_container_hint">容器内的一个文件夹，例如 /mnt/music。不能是“/”根目录本身，且不得包含逗号“,”或冒号“:”。</string>
+    <string name="path_in_container">容器内的路径</string>
+    <string name="choose_folder">选择文件夹</string>
+    <string name="folder_on_phone">手机上的文件夹</string>
+    <string name="bind_dest_taken">已有其他挂载点使用此路径</string>
+    <string name="bind_mounts_intro">手机上显示在容器内的文件夹。</string>
+    <string name="env_not_key_value">格式非 KEY=VALUE 的行已加下划线标注。请修正或删除这些行以进行保存。</string>
+    <string name="reorder">拖拽排序</string>
+    <string name="delete_item">删除 %1$s</string>
+    <string name="gateway_lan">局域网网关</string>
+    <string name="optional">可选</string>
+    <string name="same_as_host">跟随主机</string>
+    <string name="container_port">容器端口</string>
+    <string name="host_port">主机端口</string>
+    <string name="port_forward_same_port">%1$s，与内部端口一致</string>
+    <string name="port_forwarding_intro">手机上通向该容器的端口。</string>
+    <string name="no_interfaces_found">目前未找到任何接口。</string>
+    <string name="or_type_exact_name">或输入它的确切名称</string>
+    <string name="or_type_a_name">或输入名称</string>
+    <string name="add_interfaces_manual_hint">可以使用通配符。手动输入的名称会排在最后，添加之后你还可以重新调整各项的顺序。</string>
+    <string name="add_interfaces_lead">请按照应尝试的顺序点击它们。</string>
+    <string name="upstream_max">最多可添加 %1$d 个接口。取消勾选一个即可添加另一个。</string>
+    <string name="bind_path_separator">路径不能包含逗号“,”或冒号“:”</string>
+    <string name="x11_replaces_anland">当使用Termux:X11时关闭此选项。一个容器只使用一个显示途径。</string>
 </resources>

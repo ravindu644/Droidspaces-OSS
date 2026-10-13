@@ -8,4 +8,12 @@
         <item quantity="many">%d جلسات تعمل حاليا</item>
         <item quantity="other">%d جلسات تعمل حاليا</item>
     </plurals>
+    <plurals name="commit_count">
+        <item quantity="zero">لا توجد اعتماد</item>
+        <item quantity="one">%d اعتماد</item>
+        <item quantity="two">%d اعتماد</item>
+        <item quantity="few">%d اعتمادات</item>
+        <item quantity="many">اعتمادا %d</item>
+        <item quantity="other">%d اعتماد</item>
+    </plurals>
 </resources>
