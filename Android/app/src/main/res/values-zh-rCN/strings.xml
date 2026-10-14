@@ -559,7 +559,7 @@
     <string name="installing_backend_message">正在设置后端。这需要一些时间。</string>
     <string name="keep_editing">继续编辑</string>
     <string name="limit_pids_hint">留空则无限制</string>
-    <string name="anland_not_installed">不可用：需要安装 Anland。</string>
+    <string name="anland_not_installed">不可用：需安装 Anland 5.x，且不支持 Anland 6.x。</string>
     <string name="force_cgroupv1_not_supported">不可用：当前内核只支持 cgroup v1，无须强制。</string>
     <string name="easter_egg_reward">You asked for it 🎵</string>
     <string name="anland_option">Anland</string>
@@ -567,7 +567,7 @@
     <string name="enable_anland_description">在 Anland 应用中显示 Wayland 桌面</string>
     <string name="launch_anland_window">启动</string>
     <string name="anland_needs_gpu">需要 GPU 或硬件访问权限。</string>
-    <string name="anland_replaces_x11">当 Anland 显示开启时，此设置会关闭。一个容器只能使用一个显示方案。</string>
+    <string name="anland_replaces_x11">当 Anland 显示开启时关闭此选项。一个容器只能使用一个显示方案。</string>
     <string name="limit_memory_on">上限低于设备总额的 %1$s</string>
     <string name="limit_cpu_on">上限低于设备总额的 %1$s</string>
     <string name="limit_cpu_off">无限制：共享所有 %1$s</string>
@@ -673,5 +673,5 @@
     <string name="add_interfaces_lead">请按照应尝试的顺序点击它们。</string>
     <string name="upstream_max">最多可添加 %1$d 个接口。取消勾选一个即可添加另一个。</string>
     <string name="bind_path_separator">路径不能包含逗号“,”或冒号“:”</string>
-    <string name="x11_replaces_anland">当使用Termux:X11时关闭此选项。一个容器只使用一个显示途径。</string>
+    <string name="x11_replaces_anland">当使用 Termux:X11 时关闭此选项。一个容器只能使用一个显示方案。</string>
 </resources>
