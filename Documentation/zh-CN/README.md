@@ -62,7 +62,7 @@ Droidspaces 在已 root 的 Android 手机或 Linux PC 上，以容器方式运�
 
 > [!WARNING]
 >
-> Droidspaces 是一个特权容器运行时。
+> Droidspaces 是一个特权容器。
 >
 > 容器内的 root 权限很强大，恶意的 root 进程可以触达宿主机。
 >
