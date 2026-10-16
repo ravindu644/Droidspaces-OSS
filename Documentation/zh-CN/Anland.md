@@ -13,14 +13,12 @@ Anland 是 Droidspaces 的可选 Wayland 显示方案。它通过一套缓冲区
 
 与 Termux:X11 路径不同，Anland 面向 Wayland 合成器工作流，适合希望在 Droidspaces 容器中运行 KDE Plasma Wayland 等桌面环境的场景。
 
+## 更多 Anland 指南
 
-> [!IMPORTANT]
->       
-> [Anland 使用指南](https://github.com/SuperTurtleDev/anland/blob/legacy/doc/UserManual/anland_guide_zh.md)：安装 Anland，并通过 chroot 或 Droidspaces 连接支持 Anland 的 Wayland 桌面。
-> [Anland 设置使用说明](https://github.com/SuperTurtleDev/anland/blob/legacy/doc/UserManual/anland_settings_guide_zh.md)：配置 Android 应用中的输入、显示、连接、音频与窗口行为。
+- [Anland 使用指南](https://github.com/SuperTurtleDev/anland/blob/legacy/doc/UserManual/anland_guide_zh.md)：安装 Anland，并通过 chroot 或 Droidspaces 连接支持 Anland 的 Wayland 桌面。
+- [Anland 设置使用说明](https://github.com/SuperTurtleDev/anland/blob/legacy/doc/UserManual/anland_settings_guide_zh.md)：配置 Android 应用中的输入、显示、连接、音频与窗口行为。
 
-
-### 快速导航
+## 快速导航
 
 - [前提条件](#requirements)
 - [第 1 步：安装支持 Anland 的后端](#backend)

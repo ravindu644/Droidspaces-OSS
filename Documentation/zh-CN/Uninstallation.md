@@ -6,46 +6,41 @@ desc: 从 Android 和 Linux 上安全卸载 Droidspaces。彻底删除容器、�
 keywords: uninstall, droidspaces, remove, android, delete, rootfs, cleanup, container, runtime, backend, data
 -->
 
-> [!NOTE]
-> 本页的翻译落后于英文版本，部分内容可能已过时。最新内容请看[英文页面](../Uninstallation.md)。
+# 卸载
 
-# 卸载指南
+## Android
 
-本指南将讲述如何从你的系统中安全、彻底地删除 Droidspaces。
+卸载应用只会移除应用本身。后端、启动模块和所有容器仍保留在 `/data/local/Droidspaces` 下，容器也会继续运行。这是有意设计的，因此更新或重装应用永远不会影响你的容器。若要彻底删除：
+
+1. 在 **容器** 标签页中停止每个容器，然后长按它的卡片并选择 **卸载容器**。这会删除该容器的 rootfs 和设置。对每个容器重复此操作。
+2. 在 root shell（Termux 配合 `su` 或其他方式）中删除后端及其数据：
+
+   ```sh
+   rm -rf /data/local/Droidspaces
+   ```
+
+3. 在你的 root 管理器（KernelSU、Magisk 或 APatch）中移除 "Droidspaces: Daemon & Init" 模块。它是在启动时拉起守护进程和容器的启动模块。
+4. 卸载应用。
+5. 重启。
+
+如果你曾把 Droidspaces 加入 vendor 镜像以做原生 init 集成，也需要一并撤销，参见 [init/README_CN.md](../../init/README_CN.md)。
+
+App 下载的 rootfs tarball 仍留在你的下载文件夹中。
+
+## Linux
+
+```bash
+sudo droidspaces stop --name=a,b,c       # 所有正在运行的容器
+sudo systemctl disable --now droidspaces  # 如果你安装了守护进程单元
+sudo rm -f /etc/systemd/system/droidspaces.service
+sudo systemctl daemon-reload
+sudo rm -rf /var/lib/Droidspaces
+sudo apt remove droidspaces               # 如果是从 .deb 安装的
+sudo rm -f /usr/local/bin/droidspaces     # 如果是从 tarball 安装的
+```
+
+你自己创建的 rootfs 目录和镜像在你自己放置的位置。
 
 ---
 
-## Android（应用）
-
-请按照以下步骤操作，确保所有容器数据和后端文件都被删除。
-
-1.  **停止容器**：确保所有正在运行的容器已从**容器**选项卡中停止。
-2.  **删除容器**：
-    - 前往**容器**选项卡。
-    - 长按每个容器卡片，选择**卸载容器**。这将删除 rootfs 镜像及其配置。
-3.  **删除后端数据**：
-    - 使用具有 Root 权限的文件管理器或终端（如带有 Root 权限的 Termux），删除以下目录：
-    ```bash
-    su -c "rm -rf /data/local/Droidspaces"
-    ```
-4.  **卸载 APK**：从你的 Android 设置或启动器中卸载 Droidspaces 应用。
-5.  **重启**：从你的 Root 管理器中禁用或移除 Magisk/KernelSU 的 `Droidspaces: Run-at-boot` 模块，然后重启以清除任何残留的 Droidspaces 相关内容。
-
----
-
-## Linux（CLI）
-
-1.  **停止容器**：停止所有正在运行的容器。
-    ```bash
-    sudo droidspaces --name=web,db stop
-    ```
-2.  **删除文件系统**：删除 Droidspaces 工作空间目录。这将删除残留的 PID 文件和日志。
-
-    ```bash
-    sudo rm -rf /var/lib/Droidspaces
-    ```
-3.  **删除二进制文件**：删除 `droidspaces` 二进制文件。
-    ```bash
-    sudo rm /usr/local/bin/droidspaces
-    # 或者你安装它的任何位置
-    ```
+上一页：[NixOS](Nix-NixOS.md) | 回到开头：[Android 安装](Installation-Android.md)
