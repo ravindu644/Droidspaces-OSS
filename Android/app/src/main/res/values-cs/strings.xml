@@ -592,7 +592,7 @@
     <string name="enable_anland">Zobrazení přes Anland</string>
     <string name="enable_anland_description">Zobrazit plochu Wayland v aplikaci Anland</string>
     <string name="launch_anland_window">Spustit</string>
-    <string name="anland_not_installed">Není k dispozici. Je nutné mít nainstalovanou aplikaci Anland.</string>
+    <string name="anland_not_installed">Není k dispozici. Je nutné mít nainstalovanou aplikaci Anland 5.x. Anland 6.x není podporován.</string>
     <string name="anland_needs_gpu">Vyžaduje přístup ke GPU nebo přístup k hardwaru.</string>
     <string name="anland_replaces_x11">Vypnuto, když je zapnuté zobrazení přes Anland. Kontejner používá jednu cestu grafického zobrazení.</string>
     <string name="network_mode_macvlan">Macvlan (kabelová LAN)</string>
@@ -682,4 +682,9 @@
     <string name="upstream_max">Nejvýše %1$d rozhraní. Chcete-li přidat další, zrušte výběr některého z nich.</string>
     <string name="bind_path_separator">Cesty nesmějí obsahovat znaky , nebo :</string>
     <string name="keep_editing">Pokračovat v úpravách</string>
+    <string name="x11_replaces_anland">Vypnuto, když je zapnutá volba „Nastavit Termux:X11“. Kontejner používá jednu cestu grafického zobrazení.</string>
+    <string name="limit_swap">Povolit swap</string>
+    <string name="limit_swap_on">Může využívat swap zařízení nad rámec svého limitu paměti</string>
+    <string name="limit_swap_off">Nepřekročí svůj limit paměti, swap zařízení zůstane volný</string>
+    <string name="limit_swap_requirement">CONFIG_MEMCG_SWAP se zapnutým sledováním využití swapu</string>
 </resources>

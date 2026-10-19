@@ -674,4 +674,8 @@
     <string name="upstream_max">最多可添加 %1$d 个接口。取消勾选一个即可添加另一个。</string>
     <string name="bind_path_separator">路径不能包含逗号“,”或冒号“:”</string>
     <string name="x11_replaces_anland">当使用 Termux:X11 时此选项禁用。一个容器只能使用一个显示方案。</string>
+    <string name="limit_swap">允许交换空间（swap）</string>
+    <string name="limit_swap_on">达到内存上限后可能会使用设备的交换空间</string>
+    <string name="limit_swap_off">达到内存上限后，设备的交换空间将保持空闲</string>
+    <string name="limit_swap_requirement">设置 CONFIG_MEMCG_SWAP 以启用交换空间</string>
 </resources>
