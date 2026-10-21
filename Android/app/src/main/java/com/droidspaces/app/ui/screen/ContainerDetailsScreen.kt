@@ -94,6 +94,7 @@ fun ContainerDetailsScreen(
             "systemd" -> InitSystemCardState.Available(InitSystem.SYSTEMD)
             "procd" -> InitSystemCardState.Available(InitSystem.PROCD)
             "openrc" -> InitSystemCardState.Available(InitSystem.OPENRC)
+            "runit" -> InitSystemCardState.Available(InitSystem.RUNIT)
             else -> InitSystemCardState.NotAvailable
         }
     }
@@ -279,7 +280,7 @@ fun ContainerDetailsScreen(
 /**
  * Which init system is available in the container.
  */
-enum class InitSystem { SYSTEMD, PROCD, OPENRC }
+enum class InitSystem { SYSTEMD, PROCD, OPENRC, RUNIT }
 
 /**
  * Init system card state - sealed for type safety and stability
@@ -601,6 +602,7 @@ private fun PremiumInitSystemCard(
             InitSystem.SYSTEMD -> context.getString(R.string.systemd)
             InitSystem.PROCD -> context.getString(R.string.openwrt)
             InitSystem.OPENRC -> context.getString(R.string.openrc)
+            InitSystem.RUNIT -> context.getString(R.string.runit)
         }
         else -> context.getString(R.string.init_system)
     }

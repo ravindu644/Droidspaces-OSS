@@ -41,6 +41,7 @@ import com.droidspaces.app.ui.screen.UnitDetailScreen
 import com.droidspaces.app.ui.screen.OverrideEditorScreen
 import com.droidspaces.app.ui.screen.ProcdScreen
 import com.droidspaces.app.ui.screen.OpenRCScreen
+import com.droidspaces.app.ui.screen.RunitScreen
 import com.droidspaces.app.ui.screen.ContainerTerminalScreen
 import com.droidspaces.app.ui.viewmodel.ContainerInstallationViewModel
 import com.droidspaces.app.ui.viewmodel.ContainerViewModel
@@ -120,6 +121,9 @@ sealed class Screen(val route: String) {
     }
     data object OpenRC : Screen("openrc/{containerName}") {
         fun createRoute(containerName: String) = "openrc/${Uri.encode(containerName)}"
+    }
+    data object Runit : Screen("runit/{containerName}") {
+        fun createRoute(containerName: String) = "runit/${Uri.encode(containerName)}"
     }
 
     data object Terminal : Screen("terminal/{containerName}") {
@@ -670,6 +674,8 @@ fun DroidspacesNavigation(
                                 navController.navigate(Screen.Procd.createRoute(containerName))
                             com.droidspaces.app.ui.screen.InitSystem.OPENRC ->
                                 navController.navigate(Screen.OpenRC.createRoute(containerName))
+                            com.droidspaces.app.ui.screen.InitSystem.RUNIT ->
+                                navController.navigate(Screen.Runit.createRoute(containerName))
                         }
                     },
                     onNavigateToTerminal = {
@@ -780,6 +786,21 @@ fun DroidspacesNavigation(
         ) { backStackEntry ->
             val containerName = backStackEntry.arguments?.getString("containerName") ?: ""
             OpenRCScreen(
+                containerName = containerName,
+                onNavigateBack = { navController.popBackStack() }
+            )
+        }
+
+        composable(
+            route = Screen.Runit.route,
+            arguments = listOf(
+                navArgument("containerName") { type = NavType.StringType }
+            ),
+            enterTransition = defaultEnterTransition,
+            exitTransition = defaultExitTransition
+        ) { backStackEntry ->
+            val containerName = backStackEntry.arguments?.getString("containerName") ?: ""
+            RunitScreen(
                 containerName = containerName,
                 onNavigateBack = { navController.popBackStack() }
             )

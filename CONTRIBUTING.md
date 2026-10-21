@@ -417,7 +417,7 @@ boundary.
 
 ### Android: init system managers and container introspection
 
-All three init managers share the same shape. The container name is always quoted through
+All four init managers share the same shape. The container name is always quoted through
 `ContainerCommandBuilder`, and the service name is always allow-listed through
 `ServiceManagerBase`.
 
@@ -426,6 +426,7 @@ All three init managers share the same shape. The container name is always quote
 | `ContainerSystemdManager` | `util/ContainerSystemdManager.kt` | systemd units. Also owns unit inspection and drop-in override read, write, delete. The base64 streaming in `setOverrideConf` is the pattern to copy for arbitrary text |
 | `ContainerOpenRCManager` | `util/ContainerOpenRCManager.kt` | OpenRC services |
 | `ContainerProcdManager` | `util/ContainerProcdManager.kt` | procd services. The only manager that also allow-lists the action |
+| `ContainerRunitManager` | `util/ContainerRunitManager.kt` | runit services |
 | `ContainerProcessManager` | `util/ContainerProcessManager.kt` | Process list and kill inside a container |
 | `ContainerUsersManager` | `util/ContainerUsersManager.kt` | Container user list, cached |
 | `ContainerOSInfoManager` | `util/ContainerOSInfoManager.kt` | Distro name, version, icon, and live usage. `OSInfo.ramLabel(context)` is the one formatter for the RAM text, limit aware |
@@ -446,7 +447,7 @@ validation. Prefer the wrappers.
 | `ContainerUsageViewModel` | `ui/viewmodel/ContainerUsageViewModel.kt` | Live usage polling |
 | `SystemStatsViewModel` | `ui/viewmodel/SystemStatsViewModel.kt` | Per-container OS info |
 | `RootfsRepoViewModel` | `ui/viewmodel/RootfsRepoViewModel.kt` | Repo listing and per-asset download state |
-| `InitServiceViewModel` | `ui/viewmodel/InitServiceViewModel.kt` | Init-system service list, filter and search, shared by systemd, OpenRC and procd |
+| `InitServiceViewModel` | `ui/viewmodel/InitServiceViewModel.kt` | Init-system service list, filter and search, shared by systemd, OpenRC, procd and runit |
 
 ### Android: terminal
 

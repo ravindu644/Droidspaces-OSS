@@ -16,7 +16,7 @@
     <string name="feat_overhead_desc">Talks to the host Linux kernel directly. No hypervisor, no virtual machine layer.</string>
     <string name="feat_unkillable_title">Unkillable by design</string>
     <string name="feat_unkillable_desc">Supports native init.rc integration and 2-layer userspace daemons. Completely unkillable.</string>
-    <string name="feat_init_title">systemd / OpenWrt procd / OpenRC as PID 1</string>
+    <string name="feat_init_title">systemd / OpenWrt procd / OpenRC / runit as PID 1</string>
     <string name="feat_init_desc">Full init system support. Real service management, not a simulated environment.</string>
     <string name="feat_isolation_title">Complete isolation</string>
     <string name="feat_isolation_desc">Private PID tree, mount table, hostname, IPC, and cgroup hierarchy per container.</string>
@@ -445,9 +445,11 @@
     <string name="openwrt">OpenWrt</string>
     <string name="openrc_services">OpenRC Services</string>
     <string name="openrc">OpenRC</string>
+    <string name="runit_services">Runit Services</string>
+    <string name="runit">runit</string>
     <string name="init_system">Init System</string>
-    <string name="init_system_not_available">Systemd/OpenWrt/OpenRC Not Available</string>
-    <string name="init_system_not_available_desc">This container does not have systemd, OpenWrt/procd, or OpenRC installed</string>
+    <string name="init_system_not_available">Systemd/OpenWrt/OpenRC/runit Not Available</string>
+    <string name="init_system_not_available_desc">This container does not have systemd, OpenWrt/procd, runit, or OpenRC installed</string>
     <string name="fetching_services">Fetching services...</string>
     <string name="fetching_distros">Fetching distros from the rootfs repo...</string>
 
@@ -463,6 +465,7 @@
     <string name="enable_service">Enable</string>
     <string name="disable_service">Disable</string>
     <string name="restart_service">Restart service</string>
+    <string name="toggle_run_on_boot">Toggle run-on-boot</string>
     <string name="reload_service">Reload service</string>
     <string name="mask_service">Mask service</string>
     <string name="inspect_unit">Inspect unit</string>
