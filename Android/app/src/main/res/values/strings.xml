@@ -465,7 +465,7 @@
     <string name="enable_service">Enable</string>
     <string name="disable_service">Disable</string>
     <string name="restart_service">Restart service</string>
-    <string name="toggle_run_on_boot">Toggle run-on-boot</string>
+    <string name="toggle_run_at_boot">Toggle run-at-boot</string>
     <string name="reload_service">Reload service</string>
     <string name="mask_service">Mask service</string>
     <string name="inspect_unit">Inspect unit</string>

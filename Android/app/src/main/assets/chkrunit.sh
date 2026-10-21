@@ -39,7 +39,7 @@ _all_enabled() {
         [ -e "$path" ] || [ -L "$path" ] || continue
         [ -d "$path" ] || continue
         name=$(basename "$path")
-        status=$([ -f "$path/down" ] && printf "run-on-boot: disabled" || printf "run-on-boot: enabled" )
+        status=$([ -f "$path/down" ] && printf "run-at-boot: disabled" || printf "run-at-boot: enabled" )
 
         printf '%s|%s\n' "$name" "$status"
     done
@@ -53,7 +53,7 @@ _all_disabled() {
         [ -d "$path" ] || continue
         name=$(basename "$path")
         [ -e "$ACTIVE_DIR/$name" ] && continue
-        status=$([ -f "$path/down" ] && printf "run-on-boot: disabled" || printf "run-on-boot: enabled" )
+        status=$([ -f "$path/down" ] && printf "run-at-boot: disabled" || printf "run-at-boot: enabled" )
 
         printf '%s|%s\n' "$name" "$status"
     done

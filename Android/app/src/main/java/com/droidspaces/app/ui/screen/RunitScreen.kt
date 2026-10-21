@@ -33,7 +33,7 @@ private fun ContainerRunitManager.ServiceInfo.toRow(containerName: String): Init
         unmask = null,
         menu = buildList {
             if (isRunning) add(InitServiceMenuAction.Command(R.string.restart_service, Icons.Default.Refresh) { ContainerRunitManager.restartService(containerName, name).toInit() })
-            add(InitServiceMenuAction.Command(R.string.toggle_run_on_boot, Icons.Rounded.PowerSettingsNew) { ContainerRunitManager.toggleDefaultState(containerName, name).toInit() })
+            add(InitServiceMenuAction.Command(R.string.toggle_run_at_boot, Icons.Rounded.PowerSettingsNew) { ContainerRunitManager.toggleDefaultState(containerName, name).toInit() })
         }
     )
 }
