@@ -1,8 +1,8 @@
 <!--
-title: 卸载指南
+title: 卸载
 section: Reference
 order: 4
-desc: 从 Android 和 Linux 上安全卸载 Droidspaces。彻底删除容器、后端数据、APK 和系统文件。
+desc: 从 Android 或 Linux 上移除 Droidspaces：容器、后端及其数据、启动模块，以及应用。
 keywords: uninstall, droidspaces, remove, android, delete, rootfs, cleanup, container, runtime, backend, data
 -->
 
@@ -19,7 +19,7 @@ keywords: uninstall, droidspaces, remove, android, delete, rootfs, cleanup, cont
    rm -rf /data/local/Droidspaces
    ```
 
-3. 在你的 root 管理器（KernelSU、Magisk 或 APatch）中移除 "Droidspaces: Daemon & Init" 模块。它是在启动时拉起守护进程和容器的启动模块。
+3. 在你的 Root 管理器（KernelSU、Magisk 或 APatch）中移除 "Droidspaces: Daemon & Init" 模块。它是在启动时拉起守护进程和容器的启动模块。
 4. 卸载应用。
 5. 重启。
 

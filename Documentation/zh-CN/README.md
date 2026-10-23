@@ -27,7 +27,7 @@ Droidspaces 在已 root 的 Android 手机或 Linux PC 上，以容器方式运�
 **Android**
 
 - 已 root 的设备。**推荐 KernelSU**，Magisk 和 APatch 也可以。
-- 内核需启用 Droidspaces 所需的选项。多数原厂内核都没有。参见[内核配置指南](../Kernel-Configuration.md)，或从[社区支持的设备](../community-supported-devices.md)列表中挑选手机，该列表会链接到现成的内核。
+- 内核需启用 Droidspaces 所需的选项。多数原厂内核都没有。参见[内核配置指南](Kernel-Configuration.md)，或从[社区支持的设备](community-supported-devices.md)列表中挑选手机，该列表会链接到现成的内核。
 - 内核 3.10 或更新。4.9 及以上是大多数发行版工作良好的版本。
 
 **Linux**
@@ -42,11 +42,11 @@ Droidspaces 在已 root 的 Android 手机或 Linux PC 上，以容器方式运�
 2. 打开 **容器** 标签页，点击 **+**，再点 **仓库**。选择一个发行版，点 **下载**，再点 **安装**，然后按向导完成设置。
 3. 点击 **启动**。打开 **面板** 标签页，点 **终端** 即可获得一个 shell。
 
-[Android 安装指南](../Installation-Android.md)详细介绍了每一步。
+[Android 安装指南](Installation-Android.md)详细介绍了每一步。
 
 **Linux**
 
-[Linux 安装指南](../Installation-Linux.md)介绍如何安装 Droidspaces、从哪里获取 rootfs，以及如何把它放进镜像文件。
+[Linux 安装指南](Installation-Linux.md)介绍如何安装 Droidspaces、从哪里获取 rootfs，以及如何把它放进镜像文件。
 
 ## 截图
 
@@ -76,20 +76,20 @@ Droidspaces 在已 root 的 Android 手机或 Linux PC 上，以容器方式运�
 
 | 页面 | 内容 |
 |------|------|
-| [Android 安装](../Installation-Android.md) | 从已 root 的手机，到在应用里跑起一个容器。 |
-| [Linux 安装](../Installation-Linux.md) | 在 PC 上安装二进制并准备 rootfs。 |
-| [Android 应用指南](../Usage-Android-App.md) | 应用中的每个界面及其作用。 |
-| [容器设置](../Features.md) | 每个开关和参数：做什么，什么时候用。 |
-| [Linux CLI](../Linux-CLI.md) | 每条命令、参数和配置文件键。 |
-| [从零开始的网络基础](../Networking-From-Zero.md) | 网络模式如何工作，从 IP 地址一直讲到 OpenWrt 网关。 |
-| [显示、音频与桌面](../Graphics-and-Audio.md) | Android 和 Linux 上的 GPU 加速、声音与桌面环境。 |
-| [Anland](../Anland.md) | 通过 Anland 应用在 Android 上运行 Wayland 桌面，适用于 KDE Plasma 等 Wayland 合成器。 |
-| [内核配置](../Kernel-Configuration.md) | 构建支持 Droidspaces 的 Android 内核。 |
-| [实用配方](../Cool-things-you-can-do.md) | 用 Tailscale 把手机变成家庭服务器、在容器里跑 Docker，以及更多。 |
-| [故障排查](../Troubleshooting.md) | 症状、原因和解决办法。 |
-| [社区支持的设备](../community-supported-devices.md) | 已知可运行 Droidspaces 的手机及其内核源码。 |
-| [NixOS](../Nix-NixOS.md) | 构建并配置 NixOS 容器。 |
-| [卸载](../Uninstallation.md) | 从 Android 或 Linux 上移除 Droidspaces。 |
+| [Android 安装](Installation-Android.md) | 从已 root 的手机，到在应用里跑起一个容器。 |
+| [Linux 安装](Installation-Linux.md) | 在 PC 上安装二进制并准备 rootfs。 |
+| [Android 应用指南](Usage-Android-App.md) | 应用中的每个界面及其作用。 |
+| [容器设置](Features.md) | 每个开关和参数：做什么，什么时候用。 |
+| [Linux CLI](Linux-CLI.md) | 每条命令、参数和配置文件键。 |
+| [从零开始的网络基础](Networking-From-Zero.md) | 网络模式如何工作，从 IP 地址一直讲到 OpenWrt 网关。 |
+| [显示、音频与桌面](Graphics-and-Audio.md) | Android 和 Linux 上的 GPU 加速、声音与桌面环境。 |
+| [Anland](Anland.md) | 通过 Anland 应用在 Android 上运行 Wayland 桌面，适用于 KDE Plasma 等 Wayland 合成器。 |
+| [内核配置](Kernel-Configuration.md) | 构建支持 Droidspaces 的 Android 内核。 |
+| [实用配方](Cool-things-you-can-do.md) | 用 Tailscale 把手机变成家庭服务器、在容器里跑 Docker，以及更多。 |
+| [故障排查](Troubleshooting.md) | 症状、原因和解决办法。 |
+| [社区支持的设备](community-supported-devices.md) | 已知可运行 Droidspaces 的手机及其内核源码。 |
+| [NixOS](Nix-NixOS.md) | 构建并配置 NixOS 容器。 |
+| [卸载](Uninstallation.md) | 从 Android 或 Linux 上移除 Droidspaces。 |
 
 ## 社区与贡献
 

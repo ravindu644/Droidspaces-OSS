@@ -8,7 +8,7 @@ keywords: droidspaces, recipes, android, server, tailscale, ufw, fail2ban, docke
 
 # 实用配方
 
-三样人们会在手机上用 Droidspaces 搭建的东西。每一项都假设容器已经能启动并能上网，[安装指南](./Installation-Android.md)可以带你走到这一步。命令针对 Debian 和 Ubuntu；其他发行版的软件包名称可能不同。
+三样人们会在手机上用 Droidspaces 搭建的东西。每一项都假设容器已经能启动并能上网，[安装指南](./Installation-Android.md)可以带你走到这一步。命令针对 Debian 和 Ubuntu；其他发行版也有相同的软件包，只是名称不同。
 
 ## 把手机变成随处可访问的家庭服务器
 
@@ -41,7 +41,7 @@ curl -fsSL https://tailscale.com/install.sh | sh
 tailscale up
 ```
 
-此后，在你 Tailscale 账号下的任何其他设备上，都可以用 Tailscale 管理控制台中显示的名称执行 `ssh alice@<容器名>`。
+此后，在你 Tailscale 账号下的任何其他设备上，都可以用 Tailscale 管理控制台中显示的名称执行 `ssh alice@<container name>`。
 
 **4. UFW：** 拒绝一切不是通过 Tailscale 到达的流量：
 
@@ -111,7 +111,7 @@ usermod -aG docker alice
 docker run --rm hello-world
 ```
 
-**3. 可选：用户命名空间重映射：** 在容器设置中打开 **允许用户命名空间** 后，Docker 可以在重映射的用户范围内运行它的容器，这样 Docker 容器内的 root 就不再是 Droidspaces 容器内的 root。把下面的内容放进 `/etc/docker/daemon.json` 并重启 Docker：
+**3. 可选：用户命名空间重映射：** 在容器设置中打开 **允许沙箱** 后，Docker 可以在重映射的用户范围内运行它的容器，这样 Docker 容器内的 root 就不再是 Droidspaces 容器内的 root。把下面的内容放进 `/etc/docker/daemon.json` 并重启 Docker：
 
 ```json
 { "userns-remap": "default" }

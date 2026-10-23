@@ -88,4 +88,4 @@ https://raw.githubusercontent.com/Droidspaces/linuxcontainers-mirror/refs/heads/
 
 下一页：[Linux 安装](./Installation-Linux.md)
 
-在 Android 上你也可以直接往下读：[Android 应用指南](./Usage-Android-App.md)、[容器设置](./Features.md)和[显示、音频与桌面](./Graphics-and-Audio.md)。
+在 Android 上可以跳过下一页，接着阅读这些：[Android 应用指南](./Usage-Android-App.md)、[容器设置](./Features.md)和[显示、音频与桌面](./Graphics-and-Audio.md)。

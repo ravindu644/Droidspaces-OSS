@@ -53,6 +53,9 @@ CONFIG_CGROUP_NET_PRIO=y
 # accounting that reports CPU usage on kernels before 4.15.
 # Optional: a limit whose option is missing is skipped with a warning
 CONFIG_MEMCG=y
+# Keeps a memory-limited container out of swap. Before 6.1 only; before 5.8
+# also boot with swapaccount=1 unless CONFIG_MEMCG_SWAP_ENABLED=y
+CONFIG_MEMCG_SWAP=y
 CONFIG_CFS_BANDWIDTH=y
 CONFIG_CGROUP_PIDS=y
 CONFIG_CGROUP_CPUACCT=y
@@ -264,7 +267,7 @@ CONFIG_TMPFS_XATTR=y
 
 只有当你能够用同一份源码树和配置重新构建设备上的每一个内核模块，并把它们放进 `vendor_boot`、`vendor_dlkm` 和 `system_dlkm`，与新 `boot.img` 一起一次性刷入时，才开启它们。只要有任何模块是没有源码的预编译文件，你就做不到。不要通过禁用 `CONFIG_MODVERSIONS` 或强制加载模块来绕过检查；结构体确实变了。
 
-没有这两个选项，其他一切仍然可用。`--cpus` 和 `--pids-limit` 会被跳过并给出警告，App 会把这两个开关置灰。内存限制只需要 `CONFIG_MEMCG`，GKI 已经具备。要让受限容器不进入 swap，还需要 `CONFIG_MEMCG_SWAP`，并在 5.8 之前的内核命令行上加上 `swapaccount=1`（除非设置了 `CONFIG_MEMCG_SWAP_ENABLED`）；否则容器仍可能越过限制溢入 swap，启动日志会说明这一点。
+没有这两个选项，其他一切仍然可用。`--cpus` 和 `--pids-limit` 会被跳过并给出警告，App 会把这两个开关置灰。内存限制只需要 `CONFIG_MEMCG`，GKI 已经具备。要让受限容器不进入 swap，还需要 `CONFIG_MEMCG_SWAP`，并在 5.8 之前的内核命令行上加上 `swapaccount=1`（除非设置了 `CONFIG_MEMCG_SWAP_ENABLED`）；否则容器仍可能越过限制溢入 swap，启动日志会说明这一点，App 也会把 **允许交换空间（swap）** 置灰。
 
 ## 检查会看什么
 
@@ -284,8 +287,9 @@ CONFIG_TMPFS_XATTR=y
 | Macvlan | `CONFIG_MACVLAN` | Macvlan 模式不可用。 |
 | OverlayFS | `CONFIG_OVERLAY_FS` | 易失模式不可用。 |
 | FUSE、TUN | `CONFIG_FUSE_FS`、`CONFIG_TUN` | 容器内的 FUSE 文件系统和 VPN 无法工作。 |
-| 用户命名空间 | `CONFIG_USER_NS` | 允许用户命名空间不可用。 |
+| 用户命名空间 | `CONFIG_USER_NS` | 允许沙箱不可用。 |
 | 内存、CPU 和进程限制 | `CONFIG_MEMCG`、`CONFIG_CFS_BANDWIDTH`、`CONFIG_CGROUP_PIDS`，且内核命令行上没有针对它们的 `cgroup_disable=` | 对应的限制会被跳过。 |
+| Swap 限制 | 开启 swap 统计的 `CONFIG_MEMCG_SWAP`，5.8 之前需要 `swapaccount=1` | 受内存限制的容器仍可使用 swap。 |
 | CPU 用量统计 | 4.15 之前的内核需要 `CONFIG_CGROUP_CPUACCT` | `info` 不显示 CPU 用量。 |
 
 ## 该选哪个内核版本

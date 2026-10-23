@@ -100,7 +100,8 @@ keywords: droidspaces, settings, features, network, mode, hardware, access, gpu,
 
 `--memory=SIZE`、`--cpus=COUNT` 和 `--pids-limit=N`，键分别为 `memory_limit`、`cpu_quota`（配合 `cpu_period`）和 `pids_limit`。默认关闭；容器共享设备的全部资源。
 
-- **限制内存**：`--memory=512M` 或 `--memory=2G`。容器无法越过该上限使用设备的 swap，因此到达上限时，是容器自己的 OOM killer 终止容器内的某个进程，而不是让手机随着 zram 被填满而变慢。容器内的一切，包括 `free` 和 fastfetch，都会依据该上限报告用量。
+- **限制内存**：`--memory=512M` 或 `--memory=2G`。容器无法越过该上限使用设备的 swap，因此到达上限时，是容器自己的 OOM killer 终止容器内的某个进程，而不是让手机随着 zram 被填满而变慢。容器内的一切，包括 `free` 和 fastfetch，都会依据该上限报告用量，并且看不到 swap。
+- **允许 swap**：`--allow-swap`，键 `allow_swap`。让受内存限制的容器越过上限使用设备的 swap，就像设置上限之前那样，并让它看到设备的 swap。`droidspaces info` 和 `show --json` 会显示运行中的容器是否可以使用 swap。
 - **限制 CPU**：`--cpus=1.5` 给容器一个半核心的计算时间，分摊到所有核心上。
 - **限制进程数**：容器同时可以拥有的最大进程和线程数，最小为 16。一个 systemd 发行版需要几百个。
 
@@ -116,7 +117,7 @@ keywords: droidspaces, settings, features, network, mode, hardware, access, gpu,
 
 <a id="sandboxing"></a>
 
-### 沙箱支持
+### 允许沙箱
 
 `--allow-sandboxing`，键 `allow_sandboxing`。默认关闭。当容器内的程序要构建自己的沙箱时打开：rootless Docker 或 Podman、Flatpak、bwrap、Firefox、Chromium。它们都会创建用户命名空间，并在其中挂载自己的 `/proc`，而默认配置的容器会同时拦截这两步。打开后，用户命名空间被允许，容器会获得内核为此所需的干净 `/proc` 和只读 `/sys` 实例，位于 `/run/droidspaces/` 下。
 
@@ -140,7 +141,7 @@ keywords: droidspaces, settings, features, network, mode, hardware, access, gpu,
 - `shared`：容器内的挂载会传播到宿主机。
 - `full`：以上全部。
 
-每一项都是容器隔离上的一个洞。日常使用都不需要它们；Flatpak、bwrap 和 rootless Docker 单独用沙箱支持就够了。开启特权模式时发现的问题我们不予受理，App 也会要求你确认这一点。
+每一项都是容器隔离上的一个洞。日常使用都不需要它们；Flatpak、bwrap 和 rootless Docker 单独用允许沙箱就够了。开启特权模式时发现的问题我们不予受理，App 也会要求你确认这一点。
 
 ### 开机自启动
 
@@ -176,7 +177,7 @@ keywords: droidspaces, settings, features, network, mode, hardware, access, gpu,
 
 ## 没有开关的设置项
 
-**init 系统：** 任何能作为 PID 1 运行的 init 都可以：systemd、OpenRC、runit、s6、SysVinit、OpenWrt 的 procd。容器的 `/sbin/init` 必须存在，或者你用自定义 init 二进制指定另一个。App 的容器详情能识别 systemd、OpenRC 和 procd，并让你管理它们的服务。
+**init 系统：** 任何能作为 PID 1 运行的 init 都可以：systemd、OpenRC、runit、s6、SysVinit、OpenWrt 的 procd。容器的 `/sbin/init` 必须存在，或者你用自定义 init 二进制指定另一个。App 的容器详情能识别 systemd、OpenRC、procd 和 runit，并让你管理它们的服务。
 
 **主机名：** `--hostname=NAME`，键 `hostname`。默认为容器名。
 
