@@ -601,7 +601,7 @@
     <string name="macvlan_mode_bridge">橋接器（預設）</string>
     <string name="macvlan_mode_private">私有網路</string>
     <string name="macvlan_mode_vepa">VEPA</string>
-    <string name="macvlan_mode_passthru">Passthru</string>
+    <string name="macvlan_mode_passthru">直通</string>
     <string name="rootfs_config_loading">正在讀取建議的設置…</string>
     <string name="rootfs_config_loaded_title">已為您填寫設定</string>
     <string name="rootfs_config_loaded">此歸檔檔案附帶了預設的容器配置，且所有設定（包括硬體存取權限和特權模式）已自動套用。使用他人提供的 rootfs 可能會導致容器取得超出您預期範圍的存取權限。請在安裝前仔細閱讀下一頁的內容。</string>
@@ -668,4 +668,9 @@
     <string name="anland_needs_gpu">需要「GPU 存取」或「硬體存取」。</string>
     <string name="anland_replaces_x11">本選項已關閉（Anland已啟用，一個容器僅使用一個顯示途徑）。</string>
     <string name="x11_replaces_anland">本選項已關閉（X11已啟用，一個容器僅使用一個顯示途徑）。</string>
+    <string name="enable_anland_description">在 Anland 應用程式中顯示 Wayland 桌面</string>
+    <string name="limit_swap">允許swap</string>
+    <string name="limit_swap_on">可能會在超出記憶體限制時使用設備的交換空間</string>
+    <string name="limit_swap_off">在達到記憶體上限時停止，不使用裝置上的交換空間</string>
+    <string name="limit_swap_requirement">設置 CONFIG_MEMCG_SWAP 以啟用交換空間</string>
 </resources>
