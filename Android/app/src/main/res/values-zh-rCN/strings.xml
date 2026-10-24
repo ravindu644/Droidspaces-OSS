@@ -276,8 +276,8 @@
     <string name="openrc_services">OpenRC 服务</string>
     <string name="openrc">OpenRC</string>
     <string name="init_system">Init 系统</string>
-    <string name="init_system_not_available">Systemd/OpenWrt/OpenRC 不可用</string>
-    <string name="init_system_not_available_desc">此容器未安装 systemd、OpenWrt/procd 或 OpenRC</string>
+    <string name="init_system_not_available">Systemd/OpenWrt/OpenRC/runit 不可用</string>
+    <string name="init_system_not_available_desc">此容器未安装 systemd、OpenWrt/procd、runit 或 OpenRC</string>
     <string name="installation_setup_summary">安装概要</string>
     <string name="refresh_users">刷新用户</string>
     <string name="mask_service">屏蔽服务</string>
@@ -308,7 +308,7 @@
     <string name="feat_overhead_desc">直接与宿主 Linux 内核交互。无需 Hypervisor，亦无虚拟机层。</string>
     <string name="feat_unkillable_title">设计上不可终止</string>
     <string name="feat_unkillable_desc">原生支持 init.rc 集成与双层用户空间守护进程。不会被轻易终止。</string>
-    <string name="feat_init_title">以 systemd / OpenWrt procd / OpenRC 作为 PID 1</string>
+    <string name="feat_init_title">以 systemd / OpenWrt procd / OpenRC / runit 作为 PID 1</string>
     <string name="feat_init_desc">支持完整的 Init 系统。具备真实的服务管理能力，并非简单的模拟环境。</string>
     <string name="feat_isolation_title">完全隔离</string>
     <string name="feat_isolation_desc">为每个容器提供独立的 PID 树、挂载表、主机名、IPC 及 cgroup 层级。</string>
@@ -678,4 +678,7 @@
     <string name="limit_swap_on">达到内存上限后可能会使用设备的交换空间</string>
     <string name="limit_swap_off">达到内存上限后，设备的交换空间将保持空闲</string>
     <string name="limit_swap_requirement">设置 CONFIG_MEMCG_SWAP 以启用交换空间</string>
+    <string name="runit_services">Runit 服务</string>
+    <string name="runit">runit</string>
+    <string name="toggle_run_at_boot">切换启动时运行</string>
 </resources>

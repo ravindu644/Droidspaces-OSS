@@ -7,7 +7,7 @@
     <string name="feat_overhead_desc">Komunikuje přímo s linuxovým jádrem hostitele. Bez hypervizoru a bez vrstvy virtuálního počítače.</string>
     <string name="feat_unkillable_title">Neukončitelné už z principu</string>
     <string name="feat_unkillable_desc">Podporuje nativní integraci s init.rc a dvouvrstvé démony v uživatelském prostoru. Nelze jej vůbec ukončit.</string>
-    <string name="feat_init_title">systemd / OpenWrt procd / OpenRC jako PID 1</string>
+    <string name="feat_init_title">systemd / OpenWrt procd / OpenRC / runit jako PID 1</string>
     <string name="feat_init_desc">Plná podpora inicializačních systémů. Skutečná správa služeb, nikoli simulované prostředí.</string>
     <string name="feat_isolation_title">Úplná izolace</string>
     <string name="feat_isolation_desc">Soukromý strom PID, tabulka připojení, název hostitele, IPC a hierarchie cgroup pro každý kontejner.</string>
@@ -296,8 +296,8 @@
     <string name="openrc_services">Služby OpenRC</string>
     <string name="openrc">OpenRC</string>
     <string name="init_system">Inicializační systém</string>
-    <string name="init_system_not_available">systemd/OpenWrt/OpenRC není dostupný</string>
-    <string name="init_system_not_available_desc">V tomto kontejneru není nainstalován systemd, OpenWrt/procd ani OpenRC</string>
+    <string name="init_system_not_available">systemd/OpenWrt/OpenRC/runit není dostupný</string>
+    <string name="init_system_not_available_desc">V tomto kontejneru není nainstalován systemd, OpenWrt/procd, runit ani OpenRC</string>
     <string name="fetching_services">Načítají se služby...</string>
     <string name="search_services">Hledat služby...</string>
     <string name="enabled_legend">Povolené</string>
@@ -687,4 +687,7 @@
     <string name="limit_swap_on">Může využívat swap zařízení nad rámec svého limitu paměti</string>
     <string name="limit_swap_off">Nepřekročí svůj limit paměti, swap zařízení zůstane volný</string>
     <string name="limit_swap_requirement">CONFIG_MEMCG_SWAP se zapnutým sledováním využití swapu</string>
+    <string name="runit_services">Služby runit</string>
+    <string name="runit">runit</string>
+    <string name="toggle_run_at_boot">Přepnout spouštění při startu</string>
 </resources>
