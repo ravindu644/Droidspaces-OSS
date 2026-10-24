@@ -2,7 +2,7 @@
 title: 社区支持的 Android 设备
 section: Reference
 order: 2
-desc: 社区维护的已通过验证可运行 Droidspaces 的 Android 设备兼容性列表。
+desc: 社区成员已运行过 Droidspaces 的 Android 设备，附内核源码和下载链接。
 keywords: droidspaces, supported, devices, android, device, compatibility, kernel, support, list, hardware
 -->
 
@@ -10,23 +10,23 @@ keywords: droidspaces, supported, devices, android, device, compatibility, kerne
 
 > [!NOTE]
 >
-> 如果你想将自己的 Droidspaces 内核添加到此表格，请查看[贡献指南](#贡献指南)部分。
+> 要把你自己的 Droidspaces 内核添加到这些表格中，请遵循[贡献指南](#贡献指南)。
 
 > [!WARNING]
 >
-> 刷写自定义内核需要解锁引导加载程序（bootloader）。Droidspaces 开发者不对任何设备变砖、数据丢失或因内核安装导致的硬件损坏负责。
+> 刷写自定义内核需要解锁引导加载程序（bootloader）。Droidspaces 开发者不对因安装内核导致的设备变砖、数据丢失或硬件损坏负责。
 >
 > 本列表仅供帮助你定位特定设备的源代码。
 >
 > 这些仓库未经 Droidspaces 团队深度审计或审查。请自行承担风险。
 
-本文档是社区维护的已知可成功运行 Droidspaces 的 Android 设备兼容性列表。旨在帮助人们选择合适的设备，尤其是在购买二手硬件时。
+这是一份由社区维护的、已知可运行 Droidspaces 的 Android 设备列表，旨在帮助你挑选用于自托管的手机，尤其是在购买二手硬件时。
 
 ## Non-GKI 设备（内核 4.19 及更低版本）
 
 | 设备名称 | 型号 | Android / ROM | Baseband / Build | 内核版本 | Root 方式 | 内核源码 | 下载链接 | Droidspaces 模式 | GPU 加速 | 状态 | 维护者 | 附加说明 |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| **Realme 6, 6i（印度版）, 6s, 7, Narzo 20 Pro, Narzo 30 4G** | RM6785 | LineageOS 23.2 - Android 16 | - | `4.14.357` | BakaSU v4.2.0 | - | [Download](https://github.com/avelith07/android_kernel_realme_mt6785/releases/tag/v0.9) | Both | Virgl | 正常运行 | [@avelith07](https://github.com/avelith07) | 适用于 RM6785（基于 RUI 2.0），已在 Android 16 上测试。内核源码基于 Lineage-24.0，应可在基于 AOSP/Lineage 的 Android 17 ROM 以及 Android 11-15 ROM 上工作。Droidspaces 不支持内存限制和 CPU 限制。请使用 Magic Mount 元模块 |
+| **Realme 6, 6i（印度版）, 6s, 7, Narzo 20 Pro, Narzo 30 4G** | RM6785 | LineageOS 23.2 - Android 16 | - | `4.14.357` | BakaSU v4.2.0 | [Source](https://github.com/avelith07/android_kernel_realme_mt6785) | [Download](https://github.com/avelith07/android_kernel_realme_mt6785/releases/tag/v1.0) | Both | Virgl | 正常运行 | [@avelith07](https://github.com/avelith07) | 适用于 RM6785（基于 RUI 2.0），已在 Android 16 上测试。内核源码基于 Lineage-24.0，应可在基于 AOSP/Lineage 的 Android 17 ROM 以及 Android 11-15 ROM 上工作。Droidspaces 不支持内存限制和 CPU 限制。请使用 Magic Mount 元模块 |
 | **OnePlus 7 Pro** | GM1911 | LineageOS 17.1 - Android 10 | `QQ3A.200805.001` | `4.14.117` | Magisk | [Source](https://github.com/charan-gn/guacamole-droidspaces-kernel) | [Download](https://github.com/charan-gn/guacamole-droidspaces-kernel/releases/tag/v1.0) | Both | Turnip &amp; Virgl | 正常运行 | [@charan-gn](https://github.com/charan-gn) | AnyKernel3 可在任何 ROM 上刷入。 |
 | **Galaxy S10（日版）** | SCV41 / SM-G973J | One UI 4.1 - Android 12 | `SCV41KDU1DWC1` | `4.14.190` | KernelSU-Next v3.1.0 | [Source](https://github.com/ravindu644/samsung_kernel_SCV41_droidspaces) | [Download](https://github.com/ravindu644/samsung_kernel_SCV41_droidspaces/releases/download/v2/Droidspaces-KSUN-Samsung-SCV41.tar) | Both | Turnip &amp; Virgl | 正常运行 | [@ravindu644](https://github.com/ravindu644) | - |
 | **Poco X2** | M1912G7Bx | BlissROM-v16.5 - Android 13 | - | `4.14.274` | KernelSU-Next v1.1.1 | [Source](https://github.com/ravindu644/phoenix-blissROM-A13-droidspaces) | [Download](https://github.com/ravindu644/phoenix-blissROM-A13-droidspaces/releases/download/v1/Droidspaces-KSUNv1.1.1-phoenix.zip) | Both | Turnip &amp; Virgl | 正常运行 | [@ravindu644](https://github.com/ravindu644) | - |
@@ -257,7 +257,7 @@ keywords: droidspaces, supported, devices, android, device, compatibility, kerne
 
 ## 贡献指南
 
-为了保持此列表的实用性和可靠性，添加或更新条目时请遵循以下规则：
+添加或更新条目时，请遵循以下规则，让列表保持可用：
 
 - 每行添加一台设备。
 - 完整填写每一列。
@@ -265,8 +265,13 @@ keywords: droidspaces, supported, devices, android, device, compatibility, kerne
 - 提供可直接下载的内核压缩包（`zip`、`tar`、`img`）或可下载的内核包；缺乏经验的用户不必自行编译内核。
 - 在内核源码列中提供你的 Droidspaces 内核的确切源代码链接。
 - 记录确切的 `Baseband / Build` 字符串（仅限 Non-GKI 设备必填）。
-- 指定所使用的 `Root 方式`，例如 `Magisk`、`KernelSU`、`APatch` 或 `none`。（GKI内核设备仅编译内核而不添加任何root方案；你需要自行修补 `init_boot` 以获得 root 权限。）
+- 指定所使用的 `Root 方式`，例如 `Magisk`、`KernelSU`、`APatch` 或 `none`（`none` 表示编译内核时没有加入任何 root 方案，你需要自行修补 `init_boot` 来获得 root）。
 - 将 `状态` 设置为以下之一：`正常运行`、`部分可用` 或 `不可用`。
-- 在备注中包含已知的异常和问题、额外的设置步骤以及推荐的工作负载。
+- 在备注列中列出已知的异常和问题、额外的设置步骤以及推荐的工作负载。
 - 通过 GitHub pull request 提交贡献。
 - 当状态变化时更新条目，并保持信息为最新。
+- 把条目放进与其内核版本对应的表格：5.4 设备放在 5.4 部分，5.10 设备放在 5.10 部分，依此类推。这样列表更易读，维护成本也更低。
+
+---
+
+上一页：[故障排查](./Troubleshooting.md) | 下一页：[NixOS](./Nix-NixOS.md)

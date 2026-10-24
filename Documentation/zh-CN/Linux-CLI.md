@@ -89,6 +89,7 @@ keywords: droidspaces, cli, linux, container, command, line, reference, flags, c
 | 参数 | 值 | 配置键 |
 |------|-------|------------|
 | `--memory` | 带 `K`、`M`、`G` 或 `T` 的大小，最小 `4M` | `memory_limit`，单位为字节 |
+| `--allow-swap` | | `allow_swap` |
 | `--cpus` | 核心数，允许小数 | `cpu_quota` 和 `cpu_period`，单位为微秒 |
 | `--pids-limit` | 进程数，最小 16 | `pids_limit` |
 | `-P`, `--selinux-permissive` | | `selinux_permissive` |

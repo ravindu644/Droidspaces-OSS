@@ -99,7 +99,7 @@ https://raw.githubusercontent.com/Droidspaces/linuxcontainers-mirror/refs/heads/
 
 **Systemd：** 列表显示每个单元及其状态，并可按全部、已启用、已禁用、已屏蔽、静态或异常状态的单元筛选。每个单元都可以启动、停止、重启、启用、禁用或屏蔽，**查看日志** 会显示其 journal。**检查单元** 会打开单元属性、依赖关系和 `systemctl status` 输出，**编辑覆盖配置** 可以为它写入 drop-in，这样无需在容器里使用文本编辑器就能修改服务设置。
 
-**OpenRC** 和 **OpenWrt (procd)** 会得到相同的列表，支持启动、停止、重启、启用和禁用，OpenWrt 上还支持重载。
+**OpenRC**、**OpenWrt (procd)** 和 **runit** 会得到相同的列表，支持启动、停止、重启、启用和禁用，OpenWrt 上还支持重载，runit 上还有一个开机运行开关，用于添加或删除该服务的 `down` 文件。
 
 ## 终端
 
