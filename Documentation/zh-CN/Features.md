@@ -129,7 +129,7 @@ keywords: droidspaces, settings, features, network, mode, hardware, access, gpu,
 
 ### 强制使用 Cgroup V1
 
-`--force-cgroupv1`，键 `force_cgroupv1`。即使宿主机提供 v2，也让容器使用旧版 cgroup v1 层级。用于旧的 Android 内核（4.9 及更早），它们的 cgroup v2 缺少 systemd 期望的控制器，会导致 systemd 误判环境并启动失败。除非 systemd 容器在这类内核上无法启动，否则不要打开。
+`--force-cgroupv1`，键 `force_cgroupv1`。即使宿主机提供 v2，也让容器使用旧版 cgroup v1 层级。用于旧的 Android 内核（4.9 及更早），它们的 cgroup v2 缺少 systemd 期望的控制器，会导致 systemd 误判环境并启动失败。除非 systemd 容器在这类内核上无法启动，否则不要打开。它对运行 systemd 258 及更新版本的容器没有帮助，这些版本已移除 cgroup v1，并会在旧版层级上拒绝运行。
 
 ### 特权模式
 

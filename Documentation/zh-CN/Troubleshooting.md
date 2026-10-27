@@ -12,11 +12,11 @@ keywords: droidspaces, troubleshooting, systemd, hang, fix, network, dns, selinu
 
 ## 现代发行版在旧内核上无法启动
 
-**症状：** Arch、Fedora、openSUSE 或其他当前发行版在 4.x 内核上拒绝启动，提示 "Unsupported Kernel"，很早就崩溃，或者卡在服务始终无法启动的状态。
+**症状：** Arch、Fedora、openSUSE 或其他当前发行版在 4.x 内核上拒绝启动，很早就崩溃，或者卡住不动，每个服务都以 "Function not implemented" 失败。
 
-**原因：** 2025 年 9 月发布的 systemd 258 取消了针对 5.4 之前内核的回退路径。它现在会调用 `clone3`、`openat2` 等 4.14 或 4.19 内核没有的系统调用，并且直接失败，而不是回退。
+**原因：** 2025 年 9 月发布的 systemd 258 取消了针对 5.4 之前内核的回退路径。现在启动一个服务需要 `pidfd_open` 和 `waitid(P_PIDFD)`，它们分别在内核 5.3 和 5.4 才加入，systemd 不再回退到普通 PID，而是直接失败。同一版本还移除了 cgroup v1 支持，因此 PID 1 在旧版层级上会拒绝运行，`--force-cgroupv1` 也无能为力。2026 年 3 月发布的 systemd 260 又因为要求 `close_range` 和 `STATX_MNT_ID`，把门槛提高到了 5.10。
 
-**解决方法：** 使用 systemd 早于 258 的发行版，例如 Ubuntu 22.04 或 24.04、Debian 12 或 13，或者使用其他 init 的发行版，例如带 OpenRC 的 Alpine 或带 runit 的 Void。限制来自内核，而不是 Droidspaces。
+**解决方法：** 在 4.x 内核上，使用 systemd 早于 258 的发行版，例如 Ubuntu 22.04 或 24.04、Debian 12 或 13，或者使用其他 init 的发行版，例如带 OpenRC 的 Alpine 或带 runit 的 Void。在 5.4 内核上，停留在 systemd 259 或更早。限制来自内核，而不是 Droidspaces。
 
 ## "Required key not available"
 

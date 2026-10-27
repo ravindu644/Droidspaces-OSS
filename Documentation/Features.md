@@ -125,7 +125,7 @@ The cost is that root in the container can reach the host's live sysctl tree thr
 
 ### Force Cgroup V1
 
-`--force-cgroupv1`, key `force_cgroupv1`. Makes the container use the legacy cgroup v1 hierarchy even when the host offers v2. For old Android kernels, 4.9 and earlier, whose cgroup v2 is missing the controllers systemd expects, which makes systemd misread the environment and fail to boot. Leave it off unless a systemd container will not boot on such a kernel.
+`--force-cgroupv1`, key `force_cgroupv1`. Makes the container use the legacy cgroup v1 hierarchy even when the host offers v2. For old Android kernels, 4.9 and earlier, whose cgroup v2 is missing the controllers systemd expects, which makes systemd misread the environment and fail to boot. Leave it off unless a systemd container will not boot on such a kernel. It cannot help a guest running systemd 258 or newer, which dropped cgroup v1 and refuses to run on a legacy hierarchy.
 
 ### Privileged Mode
 

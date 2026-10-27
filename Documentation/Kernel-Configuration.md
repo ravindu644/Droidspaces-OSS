@@ -294,7 +294,8 @@ Without these two options everything else works. `--cpus` and `--pids-limit` are
 |---------|----------------|
 | 3.10 to 3.18 | The floor. Namespaces work, but systemd distributions might be unstable. Alpine, Artix or Gentoo with OpenRC is the safe choice. |
 | 4.4 to 4.19 | Solid. Any distribution whose systemd is older than 258, and Docker inside containers. |
-| 5.4 to 5.10 | Everything, including cgroup v2 and current distributions. |
+| 5.4 | Everything, including cgroup v2, with any distribution whose systemd is older than 260. |
+| 5.10 | Everything, including current distributions. |
 | 5.15 and newer | Everything, with the best performance. |
 
 ## Where to ask

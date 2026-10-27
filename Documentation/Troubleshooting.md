@@ -12,11 +12,11 @@ Each entry is a symptom, what causes it, and what to do. If yours is not here, t
 
 ## A modern distribution will not boot on an old kernel
 
-**Symptom.** Arch, Fedora, openSUSE or another current distribution refuses to boot on a 4.x kernel with "Unsupported Kernel", crashes early, or hangs with services that never start.
+**Symptom.** Arch, Fedora, openSUSE or another current distribution refuses to boot on a 4.x kernel, crashes early, or hangs with every service failing with "Function not implemented".
 
-**Cause.** systemd 258, released in September 2025, dropped its fallbacks for kernels older than 5.4. It now calls system calls such as `clone3` and `openat2` that a 4.14 or 4.19 kernel does not have, and fails instead of falling back.
+**Cause.** systemd 258, released in September 2025, dropped its fallbacks for kernels older than 5.4. Starting a service now needs `pidfd_open` and `waitid(P_PIDFD)`, which arrived in kernels 5.3 and 5.4, and systemd fails instead of falling back to plain PIDs. The same release removed cgroup v1 support, so PID 1 refuses to run on a legacy hierarchy and `--force-cgroupv1` cannot help. systemd 260, released in March 2026, raised the floor again to 5.10 by requiring `close_range` and `STATX_MNT_ID`.
 
-**Fix.** Use a distribution whose systemd is older than 258, such as Ubuntu 22.04 or 24.04, Debian 12 or 13, or one with another init, such as Alpine with OpenRC or Void with runit. The kernel is the limit, not Droidspaces.
+**Fix.** On a 4.x kernel, use a distribution whose systemd is older than 258, such as Ubuntu 22.04 or 24.04, Debian 12 or 13, or one with another init, such as Alpine with OpenRC or Void with runit. On a 5.4 kernel, stay on systemd 259 or older. The kernel is the limit, not Droidspaces.
 
 ## "Required key not available"
 
