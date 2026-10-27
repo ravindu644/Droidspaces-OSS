@@ -240,4 +240,5 @@
     <string name="feat_init_title">systemd / Open RC को PID 1 के तौर पर</string>
     <string name="feat_init_desc">पूर्ण init system समर्थन । वास्तविक service management, नकली वातावरण नहीं।</string>
     <string name="feat_isolation_title">पूर्ण आइसोलेशन</string>
+    <string name="help_card_title">Droidspaces में नए हैं?</string>
 </resources>

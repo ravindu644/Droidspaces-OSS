@@ -233,8 +233,8 @@
     <string name="openrc_services">OpenRC 服務</string>
     <string name="openrc">OpenRC</string>
     <string name="init_system">Init 系統</string>
-    <string name="init_system_not_available">Systemd/OpenWrt/OpenRC 不可用</string>
-    <string name="init_system_not_available_desc">此容器未安裝 systemd 或 OpenWrt/OpenRC</string>
+    <string name="init_system_not_available">Systemd/OpenWrt/OpenRC/runit 不可用</string>
+    <string name="init_system_not_available_desc">此容器未安裝 systemd 或 OpenWrt/procd,runit,OpenRC</string>
     <string name="requirements">需求檢測</string>
     <string name="root_unavailable">沒有root權限。</string>
     <string name="symlink_integration_description">在 /system/bin 目錄下建立鏈接，以便在 Android root shell 中存取 droidspaces 命令。警告：如果您的掛載系統是 OverlayFS 元模組，啟用此選項會導致無限重新啟動。僅在使用基於 Magic Mount 或基於核心的nomount掛載系統時才使用此選項（需要重新啟動）。</string>
@@ -324,7 +324,7 @@
     <string name="feat_overhead_desc">直接與主機 Linux 核心通訊。無需虛擬機器管理程序，也無需虛擬機器層。</string>
     <string name="feat_unkillable_title">設計上即不可終止</string>
     <string name="feat_unkillable_desc">支援原生 init.rc 整合和雙層使用者空間守護程式。完全無法終止。</string>
-    <string name="feat_init_title">systemd /OpenWrt,procd/ OpenRC 作為 PID 1</string>
+    <string name="feat_init_title">systemd /OpenWrt,procd/ OpenRC/runit 作為 PID 1</string>
     <string name="feat_init_desc">完整支援init系統。真正的服務管理，而非模擬環境。</string>
     <string name="feat_isolation_title">完全隔離</string>
     <string name="feat_isolation_desc">每個容器擁有私有的 PID 樹、掛載表、主機名稱、IPC 和 cgroup 層次結構。</string>
@@ -673,4 +673,7 @@
     <string name="limit_swap_on">可能會在超出記憶體限制時使用設備的交換空間</string>
     <string name="limit_swap_off">在達到記憶體上限時停止，不使用裝置上的交換空間</string>
     <string name="limit_swap_requirement">設置 CONFIG_MEMCG_SWAP 以啟用交換空間</string>
+    <string name="runit_services">Runit 服務</string>
+    <string name="runit">runit</string>
+    <string name="toggle_run_at_boot">切換 run-at-boot</string>
 </resources>

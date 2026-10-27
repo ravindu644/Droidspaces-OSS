@@ -677,8 +677,10 @@
     <string name="limit_swap">允许交换空间（swap）</string>
     <string name="limit_swap_on">达到内存上限后可能会使用设备的交换空间</string>
     <string name="limit_swap_off">达到内存上限后，设备的交换空间将保持空闲</string>
-    <string name="limit_swap_requirement">设置 CONFIG_MEMCG_SWAP 以启用交换空间</string>
+    <string name="limit_swap_requirement">开启 swap accounting 的 CONFIG_MEMCG_SWAP</string>
     <string name="runit_services">Runit 服务</string>
     <string name="runit">runit</string>
-    <string name="toggle_run_at_boot">切换启动时运行</string>
+    <string name="toggle_run_at_boot">切换开机自启动状态</string>
+    <string name="termux_x11_option">Termux:X11</string>
+    <string name="launch_x11_description">在 Termux:X11 应用中显示 X11 桌面</string>
 </resources>
