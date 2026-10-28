@@ -85,6 +85,12 @@ void ds_env_boot_setup(struct ds_config *cfg) {
     setenv("GALLIUM_DRIVER", "virpipe", 1);
   if (is_android() && cfg->pulseaudio)
     setenv("PULSE_SERVER", "unix:" DS_PULSE_SOCKET, 1);
+
+  /* Without the 5.2 mount API the seccomp shim on a systemd PID 1 answers
+   * EPERM, which libmount does not fall back from, so tell mount(8) to use
+   * mount(2) directly.  Probed here, before that shim is installed. */
+  if (ds_kernel_has_mount_api() == 0)
+    setenv("LIBMOUNT_FORCE_MOUNT2", "always", 1);
 }
 
 void ds_env_save(const char *path, struct ds_config *cfg) {
@@ -120,6 +126,8 @@ void ds_env_save(const char *path, struct ds_config *cfg) {
     fprintf(f, "export GALLIUM_DRIVER='virpipe'\n");
   if (is_android() && cfg->pulseaudio)
     fprintf(f, "export PULSE_SERVER='unix:" DS_PULSE_SOCKET "'\n");
+  if (ds_kernel_has_mount_api() == 0)
+    fprintf(f, "export LIBMOUNT_FORCE_MOUNT2='always'\n");
 
   fclose(f);
   chmod(path, 0755);

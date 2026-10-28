@@ -280,6 +280,7 @@ CONFIG_TMPFS_XATTR=y
 | Seccomp | `CONFIG_SECCOMP`、`CONFIG_SECCOMP_FILTER` | 容器无法启动。 |
 | devtmpfs | `CONFIG_DEVTMPFS` | 硬件访问不可用。 |
 | Cgroup 命名空间、cgroup v2 | `CONFIG_CGROUPS`、cgroup v2 | systemd 容器行为异常。 |
+| 新挂载 API | 内核 5.2，`fsopen()` 及相关系统调用 | systemd 259 及更新版本会把服务凭据放在普通目录中，`ProtectProc=` 不起作用。Droidspaces 会对这些调用返回 EPERM，让 systemd 走这些回退路径而不是失败，并设置 `LIBMOUNT_FORCE_MOUNT2=always`，让 `mount` 继续使用传统调用。 |
 | Loop 设备、ext4 | `CONFIG_BLK_DEV_LOOP`、`CONFIG_EXT4_FS` | 稀疏镜像容器无法挂载。 |
 | PTY、devpts、epoll、signalfd | Android 上始终存在 | 交互式会话失败。 |
 | 网络命名空间、veth、网桥 | `CONFIG_NET_NS`、`CONFIG_VETH`、`CONFIG_BRIDGE` | 只有主机模式可用。仅缺少网桥时，NAT 会使用直连 veth。 |

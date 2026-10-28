@@ -276,6 +276,7 @@ Without these two options everything else works. `--cpus` and `--pids-limit` are
 | Seccomp | `CONFIG_SECCOMP`, `CONFIG_SECCOMP_FILTER` | Containers cannot start. |
 | devtmpfs | `CONFIG_DEVTMPFS` | Hardware access is unavailable. |
 | Cgroup namespace, cgroup v2 | `CONFIG_CGROUPS`, cgroup v2 | systemd containers misbehave. |
+| New mount API | kernel 5.2, `fsopen()` and friends | systemd 259 and newer keep service credentials in a plain directory and `ProtectProc=` does nothing. Droidspaces answers EPERM for these calls so systemd takes those fallbacks instead of failing, and sets `LIBMOUNT_FORCE_MOUNT2=always` so `mount` keeps using the classic call. |
 | Loop device, ext4 | `CONFIG_BLK_DEV_LOOP`, `CONFIG_EXT4_FS` | Sparse image containers cannot mount. |
 | PTY, devpts, epoll, signalfd | always present on Android | Interactive sessions fail. |
 | Network namespace, veth, bridge | `CONFIG_NET_NS`, `CONFIG_VETH`, `CONFIG_BRIDGE` | Only host mode works. Without the bridge alone, NAT uses a direct veth. |

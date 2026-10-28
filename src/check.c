@@ -384,6 +384,11 @@ int check_requirements_detailed(int json_output) {
                  "Control Group namespace isolation",
                  check_ns(CLONE_NEWCGROUP, "cgroup"), "OPT");
 
+  print_ds_check("mount_api", "New mount API",
+                 "fsopen() and friends, kernel 5.2; systemd 259+ needs them "
+                 "or the seccomp fallback",
+                 ds_kernel_has_mount_api() != 0, "OPT");
+
   int has_devtmpfs = grep_file("/proc/filesystems", "devtmpfs");
   print_ds_check(
       "devtmpfs", "devtmpfs support",

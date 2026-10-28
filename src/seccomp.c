@@ -277,22 +277,25 @@ void ds_ksu_neutralize_root_escape(void) {
   close(fd);
 }
 
-/*
- * android_seccomp_setup()
- *
- * Kernels below 5.0 store Android FBE keys in the session keyring, and systemd
- * loses them when it creates its own keyring.  Return ENOSYS for keyctl so it
- * keeps using the one it inherited.  Nothing to do on newer kernels.
- */
-int android_seccomp_setup(int privileged_mask) {
-  if (privileged_mask & DS_PRIV_NOSEC)
-    return 0;
-  int major = 0, minor = 0;
-  get_kernel_version(&major, &minor);
-  if (major >= 5)
-    return 0;
+/* The new mount API arrived in kernel 5.2 with the same numbers on every
+ * architecture. Older musl headers do not know them. */
+#ifndef __NR_open_tree
+#define __NR_open_tree 428
+#endif
+#ifndef __NR_fsopen
+#define __NR_fsopen 430
+#endif
+#ifndef __NR_fspick
+#define __NR_fspick 433
+#endif
+#ifndef FSOPEN_CLOEXEC
+#define FSOPEN_CLOEXEC 0x00000001
+#endif
 
-  /* Define base filter (arch check + load nr) */
+/* Installs "architecture check, then these rules, then allow everything".
+ * Both per-kernel shims below are built from it. */
+static int ds_seccomp_install_rules(const struct sock_filter *rules,
+                                    size_t n_rules) {
   struct sock_filter filter_base[] = {
       /* Same wrong-arch fix as ds_seccomp_apply_minimal: KILL on mismatch. */
       BPF_STMT(BPF_LD | BPF_W | BPF_ABS, offsetof(struct seccomp_data, arch)),
@@ -310,32 +313,21 @@ int android_seccomp_setup(int privileged_mask) {
       BPF_STMT(BPF_RET | BPF_K, SECCOMP_RET_KILL_PROCESS), /* wrong arch */
       BPF_STMT(BPF_LD | BPF_W | BPF_ABS, offsetof(struct seccomp_data, nr)),
   };
-
-  struct sock_filter filter_keyring[] = {
-      BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, __NR_keyctl, 0, 1),
-      BPF_STMT(BPF_RET | BPF_K,
-               SECCOMP_RET_ERRNO | (ENOSYS & SECCOMP_RET_DATA))};
-
   struct sock_filter filter_allow[] = {
       BPF_STMT(BPF_RET | BPF_K, SECCOMP_RET_ALLOW)};
 
-  int filter_len = sizeof(filter_base) / sizeof(struct sock_filter) +
-                   sizeof(filter_keyring) / sizeof(struct sock_filter) +
-                   sizeof(filter_allow) / sizeof(struct sock_filter);
+  size_t n_base = sizeof(filter_base) / sizeof(struct sock_filter);
+  size_t n_allow = sizeof(filter_allow) / sizeof(struct sock_filter);
+  size_t filter_len = n_base + n_rules + n_allow;
 
   struct sock_filter *final_filter =
       malloc(filter_len * sizeof(struct sock_filter));
   if (!final_filter)
     return -1;
 
-  int curr = 0;
-  memcpy(final_filter + curr, filter_base, sizeof(filter_base));
-  curr += sizeof(filter_base) / sizeof(struct sock_filter);
-
-  memcpy(final_filter + curr, filter_keyring, sizeof(filter_keyring));
-  curr += sizeof(filter_keyring) / sizeof(struct sock_filter);
-
-  memcpy(final_filter + curr, filter_allow, sizeof(filter_allow));
+  memcpy(final_filter, filter_base, sizeof(filter_base));
+  memcpy(final_filter + n_base, rules, n_rules * sizeof(struct sock_filter));
+  memcpy(final_filter + n_base + n_rules, filter_allow, sizeof(filter_allow));
 
   struct sock_fprog prog = {
       .len = (unsigned short)filter_len,
@@ -350,4 +342,83 @@ int android_seccomp_setup(int privileged_mask) {
 
   free(final_filter);
   return 0;
+}
+
+/*
+ * android_seccomp_setup()
+ *
+ * Kernels below 5.0 store Android FBE keys in the session keyring, and systemd
+ * loses them when it creates its own keyring.  Return ENOSYS for keyctl so it
+ * keeps using the one it inherited.  Nothing to do on newer kernels.
+ */
+int android_seccomp_setup(int privileged_mask) {
+  if (privileged_mask & DS_PRIV_NOSEC)
+    return 0;
+
+  int major = 0, minor = 0;
+  get_kernel_version(&major, &minor);
+  if (major >= 5)
+    return 0;
+
+  struct sock_filter filter_keyring[] = {
+      BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, __NR_keyctl, 0, 1),
+      BPF_STMT(BPF_RET | BPF_K,
+               SECCOMP_RET_ERRNO | (ENOSYS & SECCOMP_RET_DATA))};
+
+  return ds_seccomp_install_rules(
+      filter_keyring, sizeof(filter_keyring) / sizeof(struct sock_filter));
+}
+
+/* 1 when the kernel has fsopen() and the rest of the 5.2 mount API, 0 when the
+ * syscall does not exist, -1 when it exists but the probe failed for another
+ * reason, such as running the check without privileges.  Probed once: after
+ * the shim below is installed the same call answers EPERM, and the init
+ * arguments are built after that. */
+int ds_kernel_has_mount_api(void) {
+  static int cached = -2;
+  if (cached != -2)
+    return cached;
+
+  int fd = (int)syscall(__NR_fsopen, "tmpfs", FSOPEN_CLOEXEC);
+  if (fd >= 0) {
+    close(fd);
+    cached = 1;
+  } else {
+    cached = errno == ENOSYS ? 0 : -1;
+  }
+  return cached;
+}
+
+/*
+ * systemd 259 and newer build service credentials and private /proc instances
+ * with fsopen(), fsmount() and move_mount().  On ENOSYS it gives up and the
+ * service fails at CREDENTIALS or NAMESPACE.  On EPERM it takes the fallbacks
+ * it already has for unprivileged user managers: a plain credentials
+ * directory, the /proc that is already mounted.  So on a kernel without the
+ * API answer EPERM for the six syscalls.  mount_setattr() stays untouched,
+ * systemd handles its ENOSYS correctly.
+ *
+ * util-linux wants the opposite: libmount falls back to mount(2) only on
+ * ENOSYS and reports EPERM as a real failure, so mount(8) would break under
+ * this filter.  Hence it is installed only on a systemd PID 1, where every
+ * mount unit and login shell gets LIBMOUNT_FORCE_MOUNT2=always from the
+ * environment (see ds_env_boot_setup and the systemd.setenv= init argument),
+ * and not on processes entered with run or exec.
+ */
+int ds_seccomp_mount_api_shim(int privileged_mask) {
+  if (privileged_mask & DS_PRIV_NOSEC)
+    return 0;
+  if (ds_kernel_has_mount_api() != 0)
+    return 0;
+
+  struct sock_filter filter_mount_api[] = {
+      BPF_JUMP(BPF_JMP | BPF_JGE | BPF_K, __NR_open_tree, 0, 2),
+      BPF_JUMP(BPF_JMP | BPF_JGT | BPF_K, __NR_fspick, 1, 0),
+      BPF_STMT(BPF_RET | BPF_K,
+               SECCOMP_RET_ERRNO | (EPERM & SECCOMP_RET_DATA))};
+
+  ds_log("[SEC] Kernel has no fsopen(), answering EPERM for the new mount API "
+         "so systemd falls back gracefully");
+  return ds_seccomp_install_rules(
+      filter_mount_api, sizeof(filter_mount_api) / sizeof(struct sock_filter));
 }

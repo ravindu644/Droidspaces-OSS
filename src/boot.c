@@ -603,6 +603,8 @@ int internal_boot(struct ds_config *cfg) {
   ds_ksu_neutralize_root_escape();
   ds_seccomp_apply_minimal(cfg->privileged_mask, cfg->sandboxing_allowed);
   android_seccomp_setup(cfg->privileged_mask);
+  if (is_systemd)
+    ds_seccomp_mount_api_shim(cfg->privileged_mask);
 
   ds_apply_capability_hardening(cfg->hw_access, cfg->privileged_mask,
                                 cfg->sandboxing_allowed);
@@ -672,6 +674,12 @@ int internal_boot(struct ds_config *cfg) {
       }
     }
     /* statfs failure → leave systemd to probe on its own */
+
+    /* The mount API shim above answers EPERM, which libmount treats as a
+     * real error.  Services and their mount units get the classic mount(2)
+     * path through the manager's default environment. */
+    if (ds_kernel_has_mount_api() == 0)
+      init_args[argc++] = (char *)"systemd.setenv=LIBMOUNT_FORCE_MOUNT2=always";
   }
 
   init_args[argc] = NULL;
