@@ -1095,9 +1095,53 @@ static int stop_rootfs_locked(struct ds_config *caller_cfg, int skip_unmount,
     case DS_INIT_BUSYBOX:
       kill(pid, SIGUSR2);
       break;
-    case DS_INIT_RUNIT:
+    case DS_INIT_RUNIT: {
+      /* Set the /etc/runit/stopit flag, then use SIGCONT
+       * chroot() is needed here because /etc/runit/stopit can be a symlink (like in Debian),
+       * and openat2() with resolve in root is only available in 5.x kernels. */
+      int oldroot = open("/", O_RDONLY | O_DIRECTORY);
+      if (oldroot == -1) {
+            perror("open /");
+            return 1;
+      }
+
+      char new_root[PATH_MAX];
+      snprintf(new_root, sizeof(new_root), "/proc/%d/root", pid);
+      if (chroot(new_root) == -1) {
+            perror("chroot");
+            close(oldroot);
+            return 1;
+      }
+
+      if (chdir("/") == -1) {
+            perror("chdir");
+            close(oldroot);
+            return 1;
+      }
+
+      chmod("/etc/runit/stopit", 0100);
+
+      if (fchdir(oldroot) == -1) {
+            perror("fchdir");
+            close(oldroot);
+            return 1;
+      }
+
+      if (chroot(".") == -1) {
+            perror("restore chroot");
+            close(oldroot);
+            return 1;
+      }
+
+      if (chdir("/") == -1) {
+            perror("restore cwd");
+            close(oldroot);
+            return 1;
+      }
+
       kill(pid, SIGCONT);
       break;
+    }
     case DS_INIT_SYSTEMD:
       kill(pid, DS_SIG_STOP); /* SIGRTMIN+3 */
       break;
