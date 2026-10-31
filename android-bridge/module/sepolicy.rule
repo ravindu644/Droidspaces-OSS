@@ -1,0 +1,21 @@
+# android-bridge SELinux rules, KernelSU module format
+# Copyright (C) 2026 ravindu644 <droidcasts@protonmail.com>
+# SPDX-License-Identifier: GPL-3.0-or-later
+
+# The daemon runs in the root manager's domain, su or ksu depending on the
+# KernelSU version. Declaring both keeps the file loadable on either, the same
+# way the Droidspaces module does.
+type su domain
+type ksu domain
+
+# The shell runs in u:r:shell:s0 like adb shell, but its stdio is a pty or
+# pipes the daemon opened, so it has to use the daemon's descriptors and
+# signal it on exit.
+allow su shell process { transition noatsecure rlimitinh siginh }
+allow ksu shell process { transition noatsecure rlimitinh siginh }
+allow shell su fd use
+allow shell ksu fd use
+allow shell su fifo_file { getattr ioctl read write }
+allow shell ksu fifo_file { getattr ioctl read write }
+allow shell su process sigchld
+allow shell ksu process sigchld
