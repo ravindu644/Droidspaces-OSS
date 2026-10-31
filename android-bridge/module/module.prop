@@ -3,4 +3,4 @@ name=Android Bridge
 version=v@VERSION@
 versionCode=@VERSIONCODE@
 author=ravindu644
-description=Lets root in a container open a shell on Android as the shell user, like adb shell. Bind-mount /dev/android-bridge into the container read-only.
+description=Lets root in a container open a shell on Android as the shell user, like adb shell. Droidspaces bind-mounts the socket into its containers.

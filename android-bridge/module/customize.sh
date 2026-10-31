@@ -7,6 +7,7 @@ case "$ARCH" in
     arm) abi=armhf ;;
     x64) abi=x86_64 ;;
     x86) abi=x86 ;;
+    riscv64) abi=riscv64 ;;
     *) abort "! Unsupported architecture: $ARCH" ;;
 esac
 
@@ -16,5 +17,4 @@ rm -rf "$MODPATH/bin"
 set_perm "$MODPATH/android-bridge" 0 0 0755
 
 ui_print "- Installed android-bridge for $abi"
-ui_print "- After a reboot, give a container the bridge with"
-ui_print "  --bind=/dev/android-bridge:/run/android-bridge:ro"
+ui_print "- The socket appears at /dev/android-bridge/bridge.sock after a reboot"

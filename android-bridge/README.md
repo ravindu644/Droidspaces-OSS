@@ -5,17 +5,17 @@ nobody touches, it is how a container reboots the phone, runs `pm`, `cmd` or
 `dumpsys`, or manages Droidspaces itself. `reboot` inside a container only
 reboots the container.
 
-It is a separate project from Droidspaces. It needs nothing from it beyond a
-bind mount, and it ships as its own KernelSU module.
+It is a separate project from Droidspaces and ships as its own KernelSU module.
+This side only creates the socket on the host. Droidspaces bind-mounts it into
+its containers.
 
 ## How it works
 
 - A daemon on Android, started from the module's `post-fs-data.sh`, listens on
   `/dev/android-bridge/bridge.sock`. It starts before Droidspaces boots any
   container.
-- A container gets that directory as a read-only bind mount at
-  `/run/android-bridge`. The client binary sits next to the socket, so nothing
-  has to be installed in the container.
+- Droidspaces bind-mounts that socket into a container at
+  `/run/android-bridge/bridge.sock`, where the client looks by default.
 - Every connection gets `/system/bin/sh` as the shell user, uid 2000, in
   `u:r:shell:s0`, with adbd's groups and adbd's capability bounding set. That
   is what `adb shell` gives you, and it is never root. Run `su` in it for root,
@@ -36,31 +36,31 @@ Only real root. Three checks, each one denies when it cannot tell:
    which has uid 0 but no power over the host.
 
 Droidspaces containers do not use user namespaces, so container root is host
-uid 0 and passes. Every container you bind the directory into can open a
+uid 0 and passes. Every container that gets the socket can open a
 shell on the phone. Do not give it to a container that runs untrusted code as
 root.
 
-Keep the bind read-only. Writable, container root could delete the socket for
-every container, or swap the client binary that other containers run.
+The socket keeps its 0600 root mode through a bind mount, so non-root users
+inside a container get `EACCES` on connect the same way. A bind-mounted file
+cannot be deleted from inside the container.
+
+A bind mount pins the socket's inode. If the daemon is restarted, it binds a
+new socket and containers keep the old one until they restart. Mounting the
+directory instead of the file avoids that.
 
 ## Install
 
 1. Build the module with `make module`, or take the zip from a release.
-2. Flash `out/android-bridge-v*.zip` in the KernelSU manager and reboot.
-3. Give a container the bridge. Add this bind mount in the container's
-   settings, or this line to its `container.config`, then restart it:
-
-   ```
-   bind_mounts=/dev/android-bridge:/run/android-bridge:ro
-   ```
+2. Flash `android-bridge-module-v*.zip` in the KernelSU manager and reboot.
+3. Put the client in the container. It is the same static binary as the
+   daemon, `/data/adb/modules/android-bridge/android-bridge` on the phone, or
+   the matching arch from `make all-tarball`.
 
 ## Use
 
 Inside the container, as root:
 
 ```
-ln -s /run/android-bridge/android-bridge /usr/local/bin/android-bridge
-
 android-bridge                         # interactive shell, like adb shell
 android-bridge reboot                  # reboot the phone
 android-bridge dumpsys battery
@@ -82,20 +82,27 @@ logged.
 
 ## Build
 
-The musl toolchains are the ones Droidspaces uses, found the same way through
-`MUSL_CROSS` or `~/toolchains`. Run `../scripts/install-musl.sh <arch>` if one
-is missing.
+The Makefile is the Droidspaces one, ported. Static musl builds, per-arch
+objects under `output/.obj/<arch>`, and incremental rebuilds. Toolchains are
+found through `MUSL_CROSS` or `~/toolchains`. `scripts/install-musl.sh <arch>`
+installs one.
 
 ```
-make                 # host build into out/android-bridge
-make aarch64         # also armhf, x86_64, x86
-make module          # every arch, then the KernelSU zip
-make test            # smoke test, as root on Linux
-make format
+make                 # prints the help, builds nothing
+make native          # this machine's arch, into output/android-bridge
+make aarch64         # also x86_64, armhf, x86, riscv64
+make all-build       # every arch
+make all-tarball     # every arch, packed per arch into one tarball
+make module          # every arch, then the KernelSU module zip
+make debug-hardened  # ASan, UBSan, LSan, for a glibc host
+make test            # smoke test against output/android-bridge
+make bump NEW=x.y.z  # set AB_VERSION in bridge.h
+make format          # clang-format over src/
 ```
 
 `make test` runs a real daemon on a temporary directory. It needs root and
 `/system/bin/sh`, so link that to `/bin/sh` on a machine where that is fine.
+`make test BIN=output/android-bridge-hardened` runs it under the sanitizers.
 
 ## Status
 
