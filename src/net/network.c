@@ -797,25 +797,72 @@ static void ds_net_setup_android_routing(ds_nl_ctx_t *ctx) {
             "- container reachability may be degraded");
 }
 
-/* TX checksum disable (Samsung/MTK kernel workaround) */
+/* A veth hands each packet to netif_rx() on the CPU that sent it, and TCP
+ * sends from whichever CPU took the last ACK, so one flow lands on several
+ * CPUs' backlogs and they drain out of order. The receiver reads that as loss:
+ * a download to a Wi-Fi client ran at a third of the link with thousands of
+ * retransmits and nothing dropped. RPS hashes each flow to one CPU instead.
+ * The mask is every CPU but CPU0, which takes most interrupts, as Pixel does
+ * for its modem. A kernel without CONFIG_RPS has no rps_cpus, so a failed
+ * write is the probe. `sys` is where sysfs is mounted for the caller.
+ * ponytail: the kernel keeps only the CPUs online at the moment of the write,
+ * for the life of the device, so a phone that has hotplugged its big cores off
+ * steers that container's flows to the little ones until it restarts, and with
+ * only CPU0 online RPS stays off. Re-apply on CPU hotplug if that shows. */
+void ds_net_steer_rx(const char *sys, const char *ifname) {
+  char path[PATH_MAX], buf[64], mask[300];
 
-int ds_net_disable_tx_checksum(const char *ifname) {
+  snprintf(path, sizeof(path), "%s/devices/system/cpu/present", sys);
+  if (read_file(path, buf, sizeof(buf)) < 0)
+    return;
+  /* "0-7" or "0,2-5": the highest CPU id is the last number */
+  char *p = buf + strlen(buf);
+  while (p > buf && !isdigit((unsigned char)p[-1]))
+    p--;
+  while (p > buf && isdigit((unsigned char)p[-1]))
+    p--;
+  int max = atoi(p);
+  if (max < 1)
+    return; /* one CPU: nothing to steer to */
+  if (max > 1023)
+    max = 1023;
+
+  /* The kernel parses the mask in 32-bit words, most significant first */
+  size_t off = 0;
+  for (int w = max / 32; w >= 0; w--) {
+    uint32_t bits = 0;
+    for (int b = 0; b < 32; b++) {
+      int cpu = w * 32 + b;
+      if (cpu >= 1 && cpu <= max)
+        bits |= 1u << b;
+    }
+    off += (size_t)snprintf(mask + off, sizeof(mask) - off,
+                            w == max / 32 ? "%x" : ",%08x", bits);
+  }
+
+  snprintf(path, sizeof(path), "%s/class/net/%s/queues/rx-0/rps_cpus", sys,
+           ifname);
+  write_file(path, mask);
+}
+
+/* Every host-side veth: TX checksum off (Samsung/MTK kernel workaround), and
+ * RPS so a container's flows leave it in order. */
+void ds_net_prepare_host_veth(const char *ifname) {
   int fd = socket(AF_INET, SOCK_DGRAM | SOCK_CLOEXEC, 0);
-  if (fd < 0)
-    return -errno;
+  if (fd >= 0) {
+    struct ifreq ifr;
+    memset(&ifr, 0, sizeof(ifr));
+    safe_strncpy(ifr.ifr_name, ifname, IFNAMSIZ);
 
-  struct ifreq ifr;
-  memset(&ifr, 0, sizeof(ifr));
-  safe_strncpy(ifr.ifr_name, ifname, IFNAMSIZ);
+    struct ethtool_value eval;
+    eval.cmd = ETHTOOL_STXCSUM;
+    eval.data = 0; /* Disable */
+    ifr.ifr_data = (caddr_t)&eval;
 
-  struct ethtool_value eval;
-  eval.cmd = ETHTOOL_STXCSUM;
-  eval.data = 0; /* Disable */
-  ifr.ifr_data = (caddr_t)&eval;
-
-  int ret = ioctl(fd, SIOCETHTOOL, &ifr);
-  close(fd);
-  return (ret < 0) ? -errno : 0;
+    ioctl(fd, SIOCETHTOOL, &ifr);
+    close(fd);
+  }
+  ds_net_steer_rx("/sys", ifname);
 }
 
 /* install_netfilter_rules
@@ -999,7 +1046,7 @@ static int setup_nat6_host(ds_nl_ctx_t *ctx, struct ds_config *cfg,
  *   1. Create or reuse bridge ds-br0 with IP 172.28.0.1/16
  *   2. iptables: MASQUERADE + FORWARD ACCEPT + INPUT ACCEPT + MSS clamp
  *   3. Create veth pair (ds-vXXXXX / ds-pXXXXX)
- *   4. Disable TX checksum on host veth (Samsung/MTK workaround)
+ *   4. Prepare the host veth: TX checksum off, RPS on
  *   5. Attach host veth to bridge, bring up
  *   6. Move peer veth into container's network namespace
  *   7. Android policy routing */
@@ -1129,8 +1176,8 @@ int setup_veth_host_side(struct ds_config *cfg, pid_t child_pid) {
     return -1;
   }
 
-  /* 4. Disable TX checksum on host veth */
-  ds_net_disable_tx_checksum(veth_host);
+  /* 4. Prepare the host veth: TX checksum off, RPS on */
+  ds_net_prepare_host_veth(veth_host);
 
   /* 5. Set master or assign IP directly for PTP */
   if (!cfg->net_bridgeless) {
@@ -1422,7 +1469,7 @@ static int gateway_ensure_lan_uplink_locked(struct ds_config *cfg,
     return -1;
   }
 
-  ds_net_disable_tx_checksum(gw_host);
+  ds_net_prepare_host_veth(gw_host);
   if (ds_nl_set_master(ctx, gw_host, bridge) < 0)
     ds_warn("[NET] Gateway: failed to attach %s to %s", gw_host, bridge);
   if (ds_nl_link_up(ctx, gw_host) < 0)
@@ -1527,7 +1574,7 @@ static int gateway_wire_client(struct ds_config *cfg, pid_t client_pid,
     goto out;
   }
 
-  ds_net_disable_tx_checksum(app_host);
+  ds_net_prepare_host_veth(app_host);
   if (ds_nl_set_master(ctx, app_host, bridge) < 0)
     ds_warn("[NET] Gateway: failed to attach %s to %s", app_host, bridge);
   if (ds_nl_link_up(ctx, app_host) < 0)

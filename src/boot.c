@@ -331,6 +331,25 @@ int internal_boot(struct ds_config *cfg) {
     goto boot_fail;
   }
 
+  /* The far end of our veth gets RPS too, for traffic the host forwards in
+   * from several CPUs at once (a Wi-Fi or modem driver spreading its receive
+   * work). This sysfs belongs to our netns and is still writable. Only veth
+   * modes: a macvlan frame is steered on the parent NIC, and a host netns
+   * container would be writing to the phone's real interfaces. The LAN eth1
+   * we add to a running gateway later is skipped, and needs nothing: all of
+   * it comes from a client's host end, already steered. A cable some other
+   * tool plugs in (VirtualAP's vaplan0) has to set its own. */
+  if (cfg->net_mode == DS_NET_NAT || cfg->net_mode == DS_NET_GATEWAY) {
+    DIR *nd = opendir("sys/class/net");
+    if (nd) {
+      struct dirent *de;
+      while ((de = readdir(nd)) != NULL)
+        if (de->d_name[0] != '.' && strcmp(de->d_name, "lo") != 0)
+          ds_net_steer_rx("sys", de->d_name);
+      closedir(nd);
+    }
+  }
+
   /* 10. Pre-create the cgroup mountpoint while /sys is still RW.
    * This allows us to mount cgroups onto it later even after /sys is RO. */
   mkdir_p("sys/fs/cgroup", 0755);
