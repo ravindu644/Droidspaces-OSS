@@ -6,6 +6,8 @@
  * --gpu mode mirrors a fixed table of GPU nodes into a private tmpfs /dev.
  * That table only carries render nodes (/dev/dri/renderD*), because render
  * nodes let several processes share the GPU while card nodes need DRM master.
+ * On Android it keeps only the hardware codecs of /dev/video*, see
+ * do_mirror_gpu_dir().
  * --hw-access mode exposes the host devtmpfs as-is, card nodes included, and
  * only uses the same table to fill in nodes the devtmpfs is missing.
  *
@@ -15,6 +17,7 @@
 
 #include "droidspace.h"
 #include <dirent.h>
+#include <linux/videodev2.h>
 
 /*
  * Unified GPU group bridge.
@@ -200,11 +203,27 @@ static void mirror_gpu_node(const char *host_path, const char *dev_path,
          (int)minor(host_st.st_rdev));
 }
 
+static int is_v4l2_codec(int fd) {
+  struct v4l2_capability cap;
+  /* musl takes the request as int and this one has bit 31 set */
+  if (ioctl(fd, (int)VIDIOC_QUERYCAP, &cap) < 0)
+    return 0;
+  __u32 c = (cap.capabilities & V4L2_CAP_DEVICE_CAPS) ? cap.device_caps
+                                                      : cap.capabilities;
+  if (c & (V4L2_CAP_VIDEO_M2M | V4L2_CAP_VIDEO_M2M_MPLANE))
+    return 1;
+  /* Exynos MFC reports capture and output on one node but no M2M bit. */
+  return (c & V4L2_CAP_STREAMING) &&
+         (c & (V4L2_CAP_VIDEO_CAPTURE | V4L2_CAP_VIDEO_CAPTURE_MPLANE)) &&
+         (c & (V4L2_CAP_VIDEO_OUTPUT | V4L2_CAP_VIDEO_OUTPUT_MPLANE));
+}
+
 /*
  * do_mirror_gpu_dir()
  *
  * Walk a host directory (e.g. /dev/dri, /dev/dma_heap) and call
- * mirror_gpu_node() for every entry that matches the optional prefix.
+ * mirror_gpu_node() for every entry that matches the optional prefix, except
+ * the non-codec /dev/video* nodes that --gpu skips on Android (see below).
  *
  * We deliberately do NOT pre-filter by d_type here.  d_type can be
  * DT_UNKNOWN on some Android kernels/filesystems, which would silently
@@ -220,6 +239,22 @@ static void do_mirror_gpu_dir(const char *host_dir, const char *prefix,
   struct dirent *entry;
   char full_path[PATH_MAX];
 
+  /* ffmpeg's v4l2m2m codecs, and Jellyfin through them, open every
+   * /dev/video* and enumerate its formats. A Galaxy S10 has 60 camera ISP
+   * nodes that answer that enumeration forever, so the probe hangs at 100%
+   * CPU. Android apps reach the camera through its HAL, never these nodes,
+   * so --gpu on Android keeps only codec nodes. Linux hosts keep everything
+   * (webcams), as does --hw-access (staging set). A node that will not open
+   * is skipped with its reason logged: on the S10 only camera nodes ever
+   * refuse (always, or while the camera app runs, which would let them in
+   * to hang ffmpeg once it closes); the MFC opened while Gallery decoded and
+   * a screen recording encoded. Codec fds stay open until the scan is over:
+   * the MFC reloads its firmware on every last close. Other nodes close at
+   * once, because a held camera node makes its siblings refuse to open. */
+  int probe_codecs =
+      !staging && is_android() && prefix && strcmp(prefix, "video") == 0;
+  int held[256], nheld = 0;
+
   while ((entry = readdir(dir)) != NULL) {
     if (entry->d_name[0] == '.')
       continue;
@@ -227,9 +262,41 @@ static void do_mirror_gpu_dir(const char *host_dir, const char *prefix,
       continue;
 
     snprintf(full_path, sizeof(full_path), "%s/%s", host_dir, entry->d_name);
+
+    if (probe_codecs) {
+      /* QUERYCAP reports Exynos' secure MFC nodes exactly like the normal
+       * ones, so only the name tells them apart. They need protected memory
+       * no container app can supply, and ffmpeg probing one before the
+       * normal decoder fed it plain memory: a secure SysMMU fault, which
+       * panics the S10. */
+      char sys[PATH_MAX], name[64];
+      snprintf(sys, sizeof(sys), "/sys/class/video4linux/%s/name",
+               entry->d_name);
+      if (read_file(sys, name, sizeof(name)) >= 0 && strstr(name, "secure")) {
+        ds_log("[GPU] Skipped %s: secure codec (%s)", full_path, name);
+        continue;
+      }
+
+      int fd = open(full_path, O_RDWR | O_NONBLOCK | O_CLOEXEC);
+      if (fd < 0) {
+        ds_log("[GPU] Skipped %s: %s", full_path, strerror(errno));
+        continue;
+      }
+      if (!is_v4l2_codec(fd)) {
+        close(fd);
+        continue;
+      }
+      if (nheld < (int)(sizeof(held) / sizeof(held[0])))
+        held[nheld++] = fd;
+      else
+        close(fd);
+    }
+
     mirror_gpu_node(full_path, dev_path, staging);
   }
 
+  while (nheld > 0)
+    close(held[--nheld]);
   closedir(dir);
 }
 
