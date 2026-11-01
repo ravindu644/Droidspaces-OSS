@@ -678,8 +678,17 @@ int main(int argc, char **argv) {
    * path like --conf=./file.conf would resolve against '/' in the re-exec'd
    * child.  Doing this here - while we still own the user's CWD - means every
    * subsequent getopt pass reads absolute paths, covering all execution modes.
+   * Everything after `run` is the container's command, whose -i, -E or -C
+   * mean something else entirely: `ffmpeg -i x` reached the container as
+   * `ffmpeg -i //x`. Only the words before it are ours to resolve.
    */
-  ds_resolve_argv_paths(argc - 1, argv + 1);
+  int own_args = argc - 1;
+  const char *word = ds_command_word(argc, argv);
+  if (word && strcmp(word, "run") == 0)
+    for (int k = 1; k < argc; k++)
+      if (argv[k] == word)
+        own_args = k - 1;
+  ds_resolve_argv_paths(own_args, argv + 1);
 
   /*
    * Multi-pass argument parsing:

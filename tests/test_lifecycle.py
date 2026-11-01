@@ -143,6 +143,13 @@ class Run(DsTest):
     def test_command_arguments_are_opaque(self):
         # "Anything after run belongs to the command", the daemon's recursion guard included.
         self.assertEqual(self.c.run("echo", "daemon", "client").stdout.strip(), "daemon client")
+        # Our path options mean nothing to the command: `ffmpeg -i x` once
+        # reached the container as `ffmpeg -i //x`.
+        self.assertEqual(self.c.run("printf", "%s ", "-i", "x", "-E", "y", "-C", "z").stdout,
+                         "-i x -E y -C z ")
+        # The same without the -- fence, and the =value and bind forms.
+        p = ds("-n", self.c.name, "run", "printf", "%s ", "-B", "/a:/b", "--rootfs=x", check=True)
+        self.assertEqual(p.stdout, "-B /a:/b --rootfs=x ")
 
     def test_missing_command(self):
         p = ds("-n", self.c.name, "run")
