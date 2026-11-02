@@ -490,6 +490,9 @@ struct ds_config {
 #include "security/selinux.h"
 #include "status/collect.h"
 #include "status/show.h"
+#include "tty/console.h"
+#include "tty/proxy.h"
+#include "tty/pty.h"
 #include "virt/affinity.h"
 #include "virt/vproc.h"
 
@@ -709,22 +712,6 @@ void ds_ra_build(uint8_t *out, const uint8_t mac[6],
 /* Stop the DHCP server and unblock its recv() loop. Call before veth teardown.
  */
 void ds_dhcp_server_stop(void);
-
-/* terminal.c */
-
-int ds_openpty(const char *ptmx, int *master, int *slave, char *name);
-int ds_console_send(int sock, int master, int slave);
-int ds_console_recv(int sock, int *master, int *slave);
-int ds_terminal_create(struct ds_tty_info *tty);
-int ds_terminal_set_stdfds(int fd);
-int ds_terminal_make_controlling(int fd);
-int ds_setup_tios(int fd, struct termios *old);
-int ds_terminal_proxy(int master_fd);
-
-/* console.c */
-
-int console_monitor_loop(int console_sock, pid_t monitor_pid,
-                         struct ds_config *cfg);
 
 /* pid.c */
 

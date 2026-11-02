@@ -66,6 +66,9 @@ SRCS = $(SRC_DIR)/main.c \
        $(SRC_DIR)/virt/vproc.c \
        $(SRC_DIR)/hw/gpu.c \
        $(SRC_DIR)/hw/hardware.c \
+       $(SRC_DIR)/tty/pty.c \
+       $(SRC_DIR)/tty/proxy.c \
+       $(SRC_DIR)/tty/console.c \
        $(SRC_DIR)/android/firmware.c \
        $(SRC_DIR)/android/spawn.c \
        $(SRC_DIR)/android/socket.c \
@@ -78,8 +81,6 @@ SRCS = $(SRC_DIR)/main.c \
        $(SRC_DIR)/cli/usage.c \
        $(SRC_DIR)/android/android.c \
        $(SRC_DIR)/net/network.c \
-       $(SRC_DIR)/terminal.c \
-       $(SRC_DIR)/console.c \
        $(SRC_DIR)/boot.c \
        $(SRC_DIR)/container.c \
        $(SRC_DIR)/monitor.c \

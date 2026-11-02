@@ -7,6 +7,30 @@
 
 #include "droidspace.h"
 
+/* The console pair on its way from container init to the monitor, or to a
+ * foreground start. Both fds travel together so the holder keeps the slave
+ * open too: with no slave open the master hangs up, and the session would end
+ * between an init's death and the next cycle's pair arriving. */
+int ds_console_send(int sock, int master, int slave) {
+  int fds[2] = {master, slave};
+  return ds_send_fds(sock, "FD", 2, fds, 2);
+}
+
+int ds_console_recv(int sock, int *master, int *slave) {
+  char tag[2];
+  int fds[2], count;
+  if (ds_recv_fds(sock, tag, sizeof(tag), fds, 2, &count) < 0)
+    return -1;
+  if (count != 2) {
+    for (int i = 0; i < count; i++)
+      close(fds[i]);
+    return -1;
+  }
+  *master = fds[0];
+  *slave = fds[1];
+  return 0;
+}
+
 /* Console Monitor Loop */
 
 /* The console pair arrives on console_sock from container init, once per boot
