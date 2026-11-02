@@ -488,6 +488,7 @@ struct ds_config {
 #include "env/environment.h"
 #include "hw/gpu.h"
 #include "hw/hardware.h"
+#include "monitor/monitor.h"
 #include "net/cleanup.h"
 #include "net/dhcp/server.h"
 #include "net/dns.h"
@@ -526,10 +527,6 @@ struct ds_config {
 #include "tty/pty.h"
 #include "virt/affinity.h"
 #include "virt/vproc.h"
-
-/* monitor.c */
-
-void ds_monitor_run(struct ds_config *cfg, int sync_pipe_write);
 
 /* android.c */
 

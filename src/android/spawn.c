@@ -10,8 +10,8 @@
 
 /* Daemon lifecycle helpers
  *
- * Shared building blocks for x11.c, virgl-android.c, pulseaudio-android.c,
- * monitor.c, and daemon.c.  Generic (not Android-specific). */
+ * Shared building blocks for android/x11.c, android/virgl.c,
+ * android/pulseaudio.c and anland/anland.c.  Generic (not Android-specific). */
 
 /* A daemon pidfile is "<pid> <starttime>\n<flags>". Pids/ survives a device
  * reboot, and by then the pid can belong to any process, which a stop would
