@@ -18,7 +18,6 @@ int ds_nl_create_veth_in(ds_nl_ctx_t *ctx, const char *host, const char *peer,
                          int peer_netns_fd, const uint8_t *peer_mac);
 int ds_nl_set_master(ds_nl_ctx_t *ctx, const char *ifname, const char *master);
 int ds_nl_link_up(ds_nl_ctx_t *ctx, const char *ifname);
-int ds_nl_link_down(ds_nl_ctx_t *ctx, const char *ifname);
 
 /* 1 = removed by this call, 0 = was already gone, negative = error. */
 int ds_nl_del_link(ds_nl_ctx_t *ctx, const char *ifname);

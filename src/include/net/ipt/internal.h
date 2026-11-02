@@ -60,7 +60,6 @@ struct xt_ent_view {
         ? DS_XT_CLAMP_MATCH_SZ + DS_XT_CLAMP_TARGET_SZ                         \
         : DS_XT_NAT_TARGET_SZ))
 
-extern const struct xt_family xt_v6;
 extern int modules_probed;
 
 const struct xt_family *xt_family_of(int family);

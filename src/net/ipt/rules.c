@@ -127,17 +127,18 @@ int ds_ipt_host_rules_present(int family, const char *iface,
  * and `droidspaces check` come through here. */
 
 int ds_ipt6_available(void) {
-  int fd = open_raw_socket(&xt_v6);
+  const struct xt_family *f = xt_family_of(AF_INET6);
+  int fd = open_raw_socket(f);
   if (fd >= 0) {
     struct ipt_getinfo info;
     unsigned char *base = NULL;
-    if (get_table(&xt_v6, fd, "nat", &info, &base) == 0) {
+    if (get_table(f, fd, "nat", &info, &base) == 0) {
       free(base);
       /* Revision 0 is the one raw_ensure_masquerade() inserts. */
       struct xt_get_revision rev = {.name = "MASQUERADE"};
       socklen_t len = sizeof(rev);
       int ret =
-          getsockopt(fd, xt_v6.level, IP6T_SO_GET_REVISION_TARGET, &rev, &len);
+          getsockopt(fd, f->level, IP6T_SO_GET_REVISION_TARGET, &rev, &len);
       close(fd);
       return ret >= 0;
     }
@@ -149,10 +150,10 @@ int ds_ipt6_available(void) {
    * nothing jumps to and take it away again. No packet ever sees it. */
   const char *const none[] = {NULL};
   const char *const masq[] = {"-j", "MASQUERADE", NULL};
-  bin_rule(&xt_v6, "-N", "nat", "ds-cap-masq", none);
-  int ok = bin_rule(&xt_v6, "-A", "nat", "ds-cap-masq", masq) == 0;
-  bin_rule(&xt_v6, "-F", "nat", "ds-cap-masq", none);
-  bin_rule(&xt_v6, "-X", "nat", "ds-cap-masq", none);
+  bin_rule(f, "-N", "nat", "ds-cap-masq", none);
+  int ok = bin_rule(f, "-A", "nat", "ds-cap-masq", masq) == 0;
+  bin_rule(f, "-F", "nat", "ds-cap-masq", none);
+  bin_rule(f, "-X", "nat", "ds-cap-masq", none);
   return ok;
 }
 

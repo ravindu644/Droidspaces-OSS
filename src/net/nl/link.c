@@ -243,7 +243,7 @@ int ds_nl_link_up(ds_nl_ctx_t *ctx, const char *ifname) {
   return ds_nl_link_set_up(ctx, ifname, 1);
 }
 
-int ds_nl_link_down(ds_nl_ctx_t *ctx, const char *ifname) {
+static int ds_nl_link_down(ds_nl_ctx_t *ctx, const char *ifname) {
   return ds_nl_link_set_up(ctx, ifname, 0);
 }
 

@@ -16,7 +16,7 @@
  * GPU group. A rootfs that already has GID 786, under whatever name, is left
  * alone, so the call is idempotent across restarts.
  */
-int setup_gpu_groups(void) {
+static int setup_gpu_groups(void) {
   /* Check if /etc/group exists - some minimal rootfs may not have it */
   if (access("/etc/group", F_OK) != 0) {
     ds_warn("No /etc/group found, skipping GPU group setup");

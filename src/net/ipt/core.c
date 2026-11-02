@@ -44,7 +44,7 @@ static const struct xt_family xt_v4 = {
     "iptables",
 };
 
-const struct xt_family xt_v6 = {
+static const struct xt_family xt_v6 = {
     AF_INET6,
     IPPROTO_IPV6,
     sizeof(struct ip6t_entry),
