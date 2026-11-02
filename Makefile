@@ -123,7 +123,7 @@ SRCS = $(SRC_DIR)/main.c \
        $(SRC_DIR)/boot/init.c \
        $(SRC_DIR)/monitor/console.c \
        $(SRC_DIR)/monitor/monitor.c \
-       $(SRC_DIR)/documentation.c \
+       $(SRC_DIR)/cli/docs.c \
        $(SRC_DIR)/daemon/protocol.c \
        $(SRC_DIR)/daemon/session.c \
        $(SRC_DIR)/daemon/server.c \
