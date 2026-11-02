@@ -15,6 +15,8 @@
 #include <grp.h>
 #include <sys/wait.h>
 
+#include "internal.h"
+
 /* helpers */
 
 /*

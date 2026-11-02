@@ -10,6 +10,8 @@
 #include <fcntl.h>
 #include <grp.h>
 
+#include "internal.h"
+
 /* Android optimizations */
 
 void android_optimizations(int enable) {

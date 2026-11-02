@@ -19,7 +19,7 @@
 #include <dirent.h>
 #include <linux/videodev2.h>
 
-#include "hw/internal.h"
+#include "internal.h"
 
 /*
  * Shared GPU/hardware device lists.

@@ -15,7 +15,7 @@
 #include <sys/un.h>
 #include <sys/wait.h>
 
-#include "daemon/internal.h"
+#include "internal.h"
 
 /*
  * g_self_path is populated once during daemon startup (after daemonize()).

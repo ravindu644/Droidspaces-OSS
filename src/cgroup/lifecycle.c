@@ -7,7 +7,7 @@
 
 #include "droidspaces.h"
 
-#include "cgroup/internal.h"
+#include "internal.h"
 
 /* Build this boot's cgroups from nothing and write the limits into them.
  *

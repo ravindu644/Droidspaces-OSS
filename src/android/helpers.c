@@ -7,6 +7,8 @@
 
 #include "droidspaces.h"
 
+#include "internal.h"
+
 /* Poll for a socket path to appear, bailing early if the server process dies.
  * Returns 0 on socket ready, -1 on server death or timeout. */
 int wait_for_socket_or_death(pid_t pid, const char *path, int timeout_ms,

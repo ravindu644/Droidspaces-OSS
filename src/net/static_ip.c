@@ -17,7 +17,7 @@
 #include <sys/file.h>
 #include <sys/ioctl.h>
 
-#include "net/internal.h"
+#include "internal.h"
 
 /* Static NAT IP: validation, collision check, and resolution */
 

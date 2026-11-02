@@ -17,7 +17,7 @@
 #include <sys/file.h>
 #include <sys/ioctl.h>
 
-#include "net/internal.h"
+#include "internal.h"
 
 /* Open a container's network namespace for the host side to plug cables
  * into or act in. Fails closed when the namespace turns out to be our own: a

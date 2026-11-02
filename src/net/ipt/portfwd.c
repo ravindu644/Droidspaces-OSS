@@ -15,7 +15,7 @@
 #include <linux/netfilter_ipv4/ip_tables.h>
 #include <linux/netfilter_ipv6/ip6_tables.h>
 
-#include "net/ipt/internal.h"
+#include "internal.h"
 
 /* Internal: check if xt_addrtype match is available on this kernel.
  * Reads /proc/net/ip_tables_matches which lists every loaded/built-in match.

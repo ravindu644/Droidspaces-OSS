@@ -15,7 +15,7 @@
 #include <sys/un.h>
 #include <sys/wait.h>
 
-#include "daemon/internal.h"
+#include "internal.h"
 
 static void drain_fd(int fd, int conn, uint8_t type) {
   char buf[DS_IOBUF];

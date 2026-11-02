@@ -13,7 +13,7 @@
 #include <net/if.h>
 #include <sys/socket.h>
 
-#include "net/nl/internal.h"
+#include "internal.h"
 
 /* Enumerate all network interfaces via RTM_GETLINK dump.
  *

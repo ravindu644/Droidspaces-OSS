@@ -16,7 +16,7 @@
 #include <sys/socket.h>
 #include <sys/un.h>
 
-#include "container/internal.h"
+#include "internal.h"
 
 #define DS_CMD_PREFIX "droidspaces/"
 #define DS_CMD_SUFFIX "/command"

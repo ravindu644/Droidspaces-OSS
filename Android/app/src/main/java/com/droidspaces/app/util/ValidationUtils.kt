@@ -74,7 +74,7 @@ object ValidationUtils {
 
     /**
      * Key of a `KEY=VALUE` env-file line, null if the backend would skip it.
-     * Mirrors parse_env_file_to_config() in src/env/environment.c: blank and `#`
+     * Mirrors parse_env_file_to_config() in src/config/parse.c: blank and `#`
      * lines are ignored, an `export ` prefix is tolerated, and the key must be
      * `[A-Za-z_][A-Za-z0-9_]*`.
      */

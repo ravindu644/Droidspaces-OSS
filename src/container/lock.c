@@ -8,7 +8,7 @@
 #include "droidspaces.h"
 #include <sys/file.h>
 
-#include "container/internal.h"
+#include "internal.h"
 
 /* Container lifecycle lock
  *

@@ -12,7 +12,7 @@
 #include <stddef.h>
 #include <sys/prctl.h>
 
-#include "security/internal.h"
+#include "internal.h"
 
 /* Arch check, then these rules, then allow everything. Both shims below are
  * built from it. */

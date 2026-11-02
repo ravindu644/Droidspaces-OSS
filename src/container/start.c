@@ -7,7 +7,7 @@
 
 #include "droidspaces.h"
 
-#include "container/internal.h"
+#include "internal.h"
 
 /* True once the container's init has exec'd the real init, false if it died
  * first or hung.

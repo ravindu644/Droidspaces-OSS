@@ -7,7 +7,7 @@
 
 #include "droidspaces.h"
 
-#include "container/internal.h"
+#include "internal.h"
 
 /* Load the config the running instance pid actually booted with, from its
  * monitor, never from the copy in the guest's own /run, which root in the

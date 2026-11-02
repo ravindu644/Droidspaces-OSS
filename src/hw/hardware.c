@@ -7,7 +7,7 @@
 
 #include "droidspaces.h"
 
-#include "hw/internal.h"
+#include "internal.h"
 
 /*
  * setup_gpu_groups()

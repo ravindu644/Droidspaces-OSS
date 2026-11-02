@@ -7,7 +7,7 @@
 
 #include "droidspaces.h"
 
-#include "monitor/internal.h"
+#include "internal.h"
 
 /* ds_console_drain - Empty the container's console PTY master.
  *

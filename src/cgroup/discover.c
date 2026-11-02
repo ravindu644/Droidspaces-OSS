@@ -7,7 +7,7 @@
 
 #include "droidspaces.h"
 
-#include "cgroup/internal.h"
+#include "internal.h"
 
 static int ctrl_supported_v2(const char *cg_path, const char *name);
 

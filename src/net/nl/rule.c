@@ -13,7 +13,7 @@
 #include <net/if.h>
 #include <sys/socket.h>
 
-#include "net/nl/internal.h"
+#include "internal.h"
 
 /* Policy rule management (RTM_NEWRULE / RTM_DELRULE), either family.
  * src and dst point at an in_addr or in6_addr matching `family`. */

@@ -7,7 +7,7 @@
 
 #include "droidspaces.h"
 
-#include "container/internal.h"
+#include "internal.h"
 
 int is_pid_file(const char *name) {
   if (!name)

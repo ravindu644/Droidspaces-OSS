@@ -156,7 +156,6 @@
 #include "core/core.h"
 #include "daemon/daemon.h"
 #include "dev/dev.h"
-#include "env/env.h"
 #include "hw/hw.h"
 #include "monitor/monitor.h"
 #include "rootfs/rootfs.h"

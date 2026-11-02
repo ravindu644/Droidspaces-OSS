@@ -8,7 +8,7 @@
 #include "droidspaces.h"
 #include <time.h>
 
-#include "virt/internal.h"
+#include "internal.h"
 
 /* Compute container CPU count from quota/period, capped at host CPUs. */
 int container_cpus(struct ds_config *cfg) {

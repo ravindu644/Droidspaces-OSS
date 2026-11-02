@@ -15,7 +15,7 @@
 #include <linux/netfilter_ipv4/ip_tables.h>
 #include <linux/netfilter_ipv6/ip6_tables.h>
 
-#include "net/ipt/internal.h"
+#include "internal.h"
 
 int hook_contains_offset(const struct ipt_getinfo *info, unsigned int hook_id,
                          unsigned int offset) {

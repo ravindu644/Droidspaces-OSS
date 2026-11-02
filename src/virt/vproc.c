@@ -7,7 +7,7 @@
 
 #include "droidspaces.h"
 
-#include "virt/internal.h"
+#include "internal.h"
 
 #define VPROC_PATH "/run/droidspaces/vproc"
 #define ARRAY_SIZE(x) (sizeof(x) / sizeof((x)[0]))

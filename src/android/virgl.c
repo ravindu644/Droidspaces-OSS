@@ -20,6 +20,8 @@
 #include <time.h>
 #include <unistd.h>
 
+#include "internal.h"
+
 /* daemon child */
 
 struct virgl_args {

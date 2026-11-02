@@ -8,6 +8,8 @@
 #include "droidspaces.h"
 #include <time.h>
 
+#include "internal.h"
+
 /* Daemon lifecycle helpers
  *
  * Shared building blocks for android/x11.c, android/virgl.c,
@@ -58,7 +60,7 @@ void ds_daemon_remove_pid(const char *filename) {
 }
 
 /* Resolve a cached pid or fall back to the pidfile. */
-pid_t ds_resolve_daemon_pid(pid_t cached, const char *pidfile) {
+static pid_t ds_resolve_daemon_pid(pid_t cached, const char *pidfile) {
   return cached > 0 ? cached : ds_daemon_read_pid(pidfile);
 }
 
@@ -154,8 +156,8 @@ void ds_daemon_child_preamble(void) {
  * signals, calls ds_oom_protect(), and exits when the pipe reaches EOF.
  * pipe_read_fd is closed in the parent after this returns.
  */
-void ds_spawn_log_relay(int pipe_read_fd, const char *log_file,
-                        const char *tag) {
+static void ds_spawn_log_relay(int pipe_read_fd, const char *log_file,
+                               const char *tag) {
   pid_t relay = fork();
   if (relay == 0) {
     /* Ignore hangups, keyboard interrupts, broken pipes, and SIGTERM.

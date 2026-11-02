@@ -45,7 +45,6 @@ SRCS = $(SRC_DIR)/main.c \
        $(SRC_DIR)/config/parse.c \
        $(SRC_DIR)/config/load.c \
        $(SRC_DIR)/config/save.c \
-       $(SRC_DIR)/env/environment.c \
        $(SRC_DIR)/security/jail.c \
        $(SRC_DIR)/security/caps.c \
        $(SRC_DIR)/security/seccomp.c \
@@ -122,6 +121,7 @@ SRCS = $(SRC_DIR)/main.c \
        $(SRC_DIR)/cli/usage.c \
        $(SRC_DIR)/android/android.c \
        $(SRC_DIR)/boot/init.c \
+       $(SRC_DIR)/boot/env.c \
        $(SRC_DIR)/monitor/console.c \
        $(SRC_DIR)/monitor/monitor.c \
        $(SRC_DIR)/cli/docs.c \

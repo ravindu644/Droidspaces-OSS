@@ -7,7 +7,7 @@
 
 #include "droidspaces.h"
 
-#include "container/internal.h"
+#include "internal.h"
 
 /* The body of a restart. One lock covers the stop and the start, so nothing
  * else can act on the container in the gap where the old instance is gone and

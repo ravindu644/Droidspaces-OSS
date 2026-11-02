@@ -184,9 +184,9 @@ install_policy_rules(cfg);
 ### C 语言约定
 
 - 使用 C89 块注释（`/* ... */`）。`src/` 中没有 `//` 注释。
-- 默认 `static`。只有当函数的原型被加进 `src/include/` 下的头文件时，才去掉 `static`：
+- 默认 `static`。只有当函数的原型被加进头文件时，才去掉 `static`：`src/include/` 下
   该目录的公开头文件 `<folder>/<folder>.h`，放在定义它的那个文件的 `/* file.c */` 标签下；
-  如果只有同一目录的文件调用，就放进该目录的 `internal.h`。
+  如果只有同一目录的文件调用，就放进与源文件同目录的 `internal.h`（`src/<folder>/internal.h`）。
 - 新的常量或类型放进拥有它的那个目录的头文件（`net/net.h`；`struct ds_config` 及其内嵌的
   类型放在 `config/config.h`），即使其他目录也会用到。
   `src/include/droidspaces.h` 只放全项目通用的内容。
@@ -472,7 +472,6 @@ libsu 的全局配置在 `DroidspacesApplication.kt` 中，那是唯一应该设
 | `rotate_log(path, max_size)` | | 按大小轮转日志 |
 | `write_monitor_debug_log(name, fmt, ...)` | | 从分离的 monitor 进程记录日志，只写文件 |
 | `ds_open_container_log` / `ds_close_container_log` | | 把 `ds_log` 输出同时写进容器日志 |
-| `ds_spawn_log_relay(fd, log_file, tag)` | | 给子进程输出打时间戳并写入日志目录 |
 
 调试通道是方括号前缀，不是命令行开关。以 `[DEBUG]`、`[NET]`、`[CGROUP]`、`[SEC]`、`[IPT]`、
 `[VIRT]`、`[GPU]`、`[FW]`、`[DHCP]`、`[X11]`、`[VirGL]`、`[PulseAudio]` 或 `[Anland]` 开头的
@@ -520,9 +519,9 @@ libsu 的全局配置在 `DroidspacesApplication.kt` 中，那是唯一应该设
 | `ds_daemon_child_preamble()` | 在这类子进程里第一个调用，此时还是 root |
 | `ds_oom_protect()` | 尽力而为的 OOM 分数保护 |
 | `ds_thread_create(tid, fn, arg)` | 在通过 signalfd 等待信号的进程中启动辅助线程。线程启动时屏蔽所有信号，因此不会抢走发给主线程的信号。不要在监视器中直接调用 `pthread_create` |
-| `ds_daemon_read_pid` / `write_pid` / `remove_pid`、`ds_resolve_daemon_pid` | pid 文件生命周期。读取时会检查进程是否存活 |
+| `ds_daemon_read_pid` / `write_pid` / `remove_pid` | pid 文件生命周期。读取时会检查进程是否存活 |
 | `ds_global_daemon_stop(...)` | 统一的 SIGTERM、轮询、SIGKILL、回收、删除文件流程 |
-| `wait_for_socket_or_death(pid, path, timeout_ms, interval_us)` | 等待套接字出现，服务端一死就提前返回。用它代替 sleep 轮询 |
+| `wait_for_socket_or_death(pid, path, timeout_ms, interval_us)` | 等待套接字出现，服务端一死就提前返回。用它代替 sleep 轮询。仅限 `android/`，声明在它的 `internal.h` 中；其他目录需要时把原型移到 `android.h` |
 | `ds_send_fd` / `ds_recv_fd` | SCM_RIGHTS 文件描述符传递 |
 | `collect_pids`、`read_and_validate_pid` | 快照 `/proc`，以及读取 pid 文件并检查存活 |
 | `ds_container_lock(name, wait)` / `ds_container_unlock(fd)` | 每个容器的生命周期锁，基于 `flock`。**任何**修改容器磁盘状态（pidfile、挂载、cgroup）的操作都必须持有它，监视器也不例外。命令传入 `wait=0` 并在忙时报错；监视器传入 `wait=1`。持锁后根据实际状态决定要做什么 |
@@ -619,7 +618,7 @@ libsu 的全局配置在 `DroidspacesApplication.kt` 中，那是唯一应该设
 | `ds_cmd_get_config(name, cfg, pid)`、`ds_cmd_get_pid(name)`、`ds_cmd_for_each(visit, arg)` | 运行中容器启动时使用的配置及其 init pid，取自它的 monitor 命令套接字 `@droidspaces/<name>/command`。这是两者唯一的来源：主机从不读取客体自己的那份副本 |
 | `ds_peer_in_pidns(peer_pid)` | 必须失败即拒绝。pid 为 0 表示对端无法映射进我们的命名空间，readlink 失败表示我们无法证明其归属，两种情况都拒绝。这里一旦失败即放行，调用方就能复用已死的 pid 逃逸到主机 root |
 | `ds_bind_mount_socket(src, dst, uid, label)` | 向容器可控目录写入时防软链接竞态的标准做法 |
-| `set_selinux_context`、`get_selinux_context`、`ds_selinux_dyntransition`、`ds_selinux_enter_domain`、`ds_drop_privileges`、`ds_resolve_termux_uid` | SELinux 与权限处理 |
+| `set_selinux_context`、`get_selinux_context`、`ds_selinux_dyntransition`、`ds_selinux_enter_domain`、`ds_drop_privileges`、`ds_resolve_termux_uid` | SELinux 与权限处理。`ds_selinux_dyntransition`、`ds_drop_privileges` 和 `ds_resolve_termux_uid` 仅限 `android/`，声明在它的 `internal.h` 中 |
 
 任何安全检查上写着"无法确定，那就放行"的注释都是 Bug。在信任边界上无法证明，就意味着拒绝。
 

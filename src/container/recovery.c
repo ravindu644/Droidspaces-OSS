@@ -7,7 +7,7 @@
 
 #include "droidspaces.h"
 
-#include "container/internal.h"
+#include "internal.h"
 
 /* A root container init whose root, as the host sees it, is on the image
  * mounted at mpath, or 0. The device is the loop device we attached, so no

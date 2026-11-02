@@ -13,7 +13,7 @@
 #include <stddef.h>
 #include <sys/prctl.h>
 
-#include "security/internal.h"
+#include "internal.h"
 
 /* KernelSU container-escape hardening constants.
  *

@@ -7,7 +7,7 @@
 
 #include "droidspaces.h"
 
-#include "config/internal.h"
+#include "internal.h"
 
 int ds_parse_net_mode(const char *s) {
   if (strcmp(s, "nat") == 0)
@@ -243,6 +243,172 @@ void free_config_binds(struct ds_config *cfg) {
   cfg->binds = NULL;
   cfg->bind_count = 0;
   cfg->bind_capacity = 0;
+}
+
+/* parse_env_file_to_config() - load cfg->env_file into cfg->env_vars,
+ * replacing what was there. Call while host paths are still reachable: before
+ * pivot_root on boot, before setns on enter and run. Supports unlimited line
+ * length and variable count via dynamic allocation. */
+void parse_env_file_to_config(struct ds_config *cfg) {
+  const char *path = cfg->env_file;
+  if (path[0] == '\0')
+    return;
+  free_config_env_vars(cfg);
+
+  FILE *f = fopen(path, "re");
+  if (!f) {
+    /* Non-fatal: env file missing is fine, container still boots */
+    if (errno != ENOENT) {
+      ds_warn("Failed to open env file: %s (%s)", path, strerror(errno));
+    }
+    return;
+  }
+
+  /* The progress lines go to the log file only; warnings about bad lines
+   * still reach the terminal. */
+  int prev_silent = ds_log_silent;
+  ds_log_silent = 1;
+  ds_log("Parsing environment file: %s", path);
+
+  char *line = NULL;
+  size_t linecap = 0;
+  ssize_t linelen;
+  int line_num = 0;
+  int failed_count = 0;
+
+  while ((linelen = getline(&line, &linecap, f)) > 0) {
+    line_num++;
+
+    /* Strip trailing newline and carriage return */
+    while (linelen > 0 &&
+           (line[linelen - 1] == '\n' || line[linelen - 1] == '\r')) {
+      line[--linelen] = '\0';
+    }
+
+    /* Skip empty lines */
+    if (linelen == 0)
+      continue;
+
+    /* Skip comment lines and leading whitespace */
+    char *p = line;
+    while (*p == ' ' || *p == '\t')
+      p++;
+    if (*p == '#' || *p == '\0')
+      continue;
+
+    /* Strip optional 'export ' prefix (written by ds_env_save) */
+    if (strncmp(p, "export ", 7) == 0)
+      p += 7;
+
+    /* Find the '=' separator */
+    char *eq = strchr(p, '=');
+    if (!eq) {
+      ds_warn("Env file line %d: no '=' found, skipping", line_num);
+      failed_count++;
+      continue;
+    }
+
+    /* Extract key */
+    size_t key_len = (size_t)(eq - p);
+    if (key_len == 0) {
+      ds_warn("Env file line %d: empty key, skipping", line_num);
+      failed_count++;
+      continue;
+    }
+
+    char *key = malloc(key_len + 1);
+    if (!key)
+      break;
+    memcpy(key, p, key_len);
+    key[key_len] = '\0';
+
+    /* Validate key: [A-Za-z_][A-Za-z0-9_]* */
+    if (!isalpha((unsigned char)key[0]) && key[0] != '_') {
+      ds_warn("Env file line %d: invalid key '%s' "
+              "(must start with letter or _), skipping",
+              line_num, key);
+      free(key);
+      failed_count++;
+      continue;
+    }
+    int key_valid = 1;
+    for (size_t i = 1; i < key_len; i++) {
+      if (!isalnum((unsigned char)key[i]) && key[i] != '_') {
+        key_valid = 0;
+        break;
+      }
+    }
+    if (!key_valid) {
+      ds_warn("Env file line %d: invalid key '%s' "
+              "(only [A-Za-z0-9_] allowed), skipping",
+              line_num, key);
+      free(key);
+      failed_count++;
+      continue;
+    }
+
+    /* Extract value - everything after '=' */
+    char *val = eq + 1;
+    size_t val_len = strlen(val);
+    char *value = NULL;
+
+    /* Strip surrounding quotes (single or double) */
+    if (val_len >= 2 && ((val[0] == '"' && val[val_len - 1] == '"') ||
+                         (val[0] == '\'' && val[val_len - 1] == '\'')))
+      value = strndup(val + 1, val_len - 2);
+    else
+      value = strdup(val);
+
+    if (!value) {
+      free(key);
+      break;
+    }
+
+    /* Store in config, growing if needed */
+    if (cfg->env_var_count >= cfg->env_var_capacity) {
+      int new_cap = cfg->env_var_capacity ? cfg->env_var_capacity * 2 : 16;
+      struct ds_env_var *new_vars =
+          realloc(cfg->env_vars, new_cap * sizeof(struct ds_env_var));
+      if (!new_vars) {
+        ds_error("Out of memory while parsing env file");
+        failed_count++;
+        free(key);
+        free(value);
+        break;
+      }
+      cfg->env_vars = new_vars;
+      cfg->env_var_capacity = new_cap;
+    }
+
+    cfg->env_vars[cfg->env_var_count].key = key;
+    cfg->env_vars[cfg->env_var_count].value = value;
+    cfg->env_var_count++;
+  }
+
+  free(line);
+  fclose(f);
+
+  if (failed_count > 0) {
+    ds_log("Loaded %d environment variable(s) (%d failed)", cfg->env_var_count,
+           failed_count);
+  } else {
+    ds_log("Loaded %d environment variable(s)", cfg->env_var_count);
+  }
+  ds_log_silent = prev_silent;
+}
+
+void free_config_env_vars(struct ds_config *cfg) {
+  if (!cfg || !cfg->env_vars)
+    return;
+
+  for (int i = 0; i < cfg->env_var_count; i++) {
+    free(cfg->env_vars[i].key);
+    free(cfg->env_vars[i].value);
+  }
+  free(cfg->env_vars);
+  cfg->env_vars = NULL;
+  cfg->env_var_count = 0;
+  cfg->env_var_capacity = 0;
 }
 
 /* Core Implementation */

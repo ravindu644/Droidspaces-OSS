@@ -15,7 +15,7 @@
 #include <linux/netfilter_ipv4/ip_tables.h>
 #include <linux/netfilter_ipv6/ip6_tables.h>
 
-#include "net/ipt/internal.h"
+#include "internal.h"
 
 static const char *const k_mss_spec[] = {
     "-p", "tcp",    "--tcp-flags",         "SYN,RST", "SYN",

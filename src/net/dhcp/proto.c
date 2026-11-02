@@ -17,7 +17,7 @@
 #include <sys/eventfd.h>
 #include <sys/ioctl.h>
 
-#include "net/dhcp/internal.h"
+#include "internal.h"
 
 /* Option helpers */
 

@@ -13,7 +13,7 @@
 #include <net/if.h>
 #include <sys/socket.h>
 
-#include "net/nl/internal.h"
+#include "internal.h"
 
 /* Find the default-route table used for internet connectivity
  *

@@ -223,6 +223,8 @@ char *ds_config_auto_path(const char *rootfs_path);
 
 /* parse.c */
 void sort_bind_mounts(struct ds_config *cfg);
+void free_config_env_vars(struct ds_config *cfg);
+void parse_env_file_to_config(struct ds_config *cfg);
 int validate_bind_destination(const char *dest);
 
 /* --net / net_mode= value to its mode, -1 if unknown. */

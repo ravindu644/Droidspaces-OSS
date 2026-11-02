@@ -7,7 +7,7 @@
 
 #include "droidspaces.h"
 
-#include "cgroup/internal.h"
+#include "internal.h"
 
 /* LXC's cpuset1_initialize: a new cpuset cgroup starts with no cpus and no
  * mems and refuses every attach until it has both. Copy the root's into our

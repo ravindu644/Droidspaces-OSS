@@ -7,7 +7,7 @@
 
 #include "droidspaces.h"
 
-#include "virt/internal.h"
+#include "internal.h"
 
 /* Set process CPU affinity to match the virtualized CPU count.
  * This ensures tools like nproc and htop that use sched_getaffinity()

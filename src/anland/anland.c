@@ -24,7 +24,7 @@
 
 #include "droidspaces.h"
 
-#include "anland/display_daemon.h"
+#include "display_daemon.h"
 
 /* Per-container record names in the Pids dir, keyed by the sanitized name
  * like every other file there. The extensions are deliberately not

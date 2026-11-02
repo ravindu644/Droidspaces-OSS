@@ -7,7 +7,7 @@
 
 #include "droidspaces.h"
 
-#include "monitor/internal.h"
+#include "internal.h"
 
 /* Close a descriptor the monitor keeps a number for, and forget the number.
  * The handshake pipes live in cfg across boot cycles. Closing one without

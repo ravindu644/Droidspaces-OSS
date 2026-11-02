@@ -201,9 +201,9 @@ change in the wrong place is a second bug.
 
 - C89 block comments (`/* ... */`). There are no `//` comments in `src/`.
 - `static` by default. A function becomes non-static only when its prototype is added to a
-  header under `src/include/`: the folder's public header, `<folder>/<folder>.h`, under the
-  `/* file.c */` label of the file that defines it, or the folder's `internal.h` when only
-  that folder calls it.
+  header: the folder's public header, `src/include/<folder>/<folder>.h`, under the
+  `/* file.c */` label of the file that defines it, or, when only that folder calls it, the
+  `internal.h` next to the folder's sources (`src/<folder>/internal.h`).
 - A new constant or type goes in the header of the folder that owns it (`net/net.h`,
   `config/config.h` for `struct ds_config` and the types it embeds), even when other folders
   use it. `src/include/droidspaces.h` is for project-wide ones.
@@ -500,7 +500,6 @@ validation. Prefer the wrappers.
 | `rotate_log(path, max_size)` | | Size-capped log rotation |
 | `write_monitor_debug_log(name, fmt, ...)` | | Logging from the detached monitor, file only |
 | `ds_open_container_log` / `ds_close_container_log` | | Tee `ds_log` output into the per-container log |
-| `ds_spawn_log_relay(fd, log_file, tag)` | | Timestamping a child's output into the logs directory |
 
 The debug channel is a bracket prefix, not a flag. A message starting with `[DEBUG]`,
 `[NET]`, `[CGROUP]`, `[SEC]`, `[IPT]`, `[VIRT]`, `[GPU]`, `[FW]`, `[DHCP]`, `[X11]`,
@@ -549,9 +548,9 @@ influenced, copy the `ds_bind_mount_socket` pattern: open with `O_NOFOLLOW|O_CLO
 | `ds_daemon_child_preamble()` | First call inside such a child, while still root |
 | `ds_oom_protect()` | Best effort OOM score protection |
 | `ds_thread_create(tid, fn, arg)` | Starting a helper thread in a process that waits on a signalfd. The thread starts with every signal blocked, so it cannot take a signal meant for the main thread. Never call `pthread_create` directly in the monitor |
-| `ds_daemon_read_pid` / `write_pid` / `remove_pid`, `ds_resolve_daemon_pid` | Pidfile lifecycle. The read form liveness-checks the pid |
+| `ds_daemon_read_pid` / `write_pid` / `remove_pid` | Pidfile lifecycle. The read form liveness-checks the pid |
 | `ds_global_daemon_stop(...)` | Unified SIGTERM, poll, SIGKILL, reap, unlink teardown |
-| `wait_for_socket_or_death(pid, path, timeout_ms, interval_us)` | Waiting for a socket to appear. Bails early if the server dies. Use instead of a sleep loop |
+| `wait_for_socket_or_death(pid, path, timeout_ms, interval_us)` | Waiting for a socket to appear. Bails early if the server dies. Use instead of a sleep loop. `android/` only, from its `internal.h`: move the prototype to `android.h` if another folder needs it |
 | `ds_send_fd` / `ds_recv_fd` | SCM_RIGHTS descriptor passing |
 | `collect_pids`, `read_and_validate_pid` | Snapshotting `/proc`, and reading a pidfile with a liveness check |
 | `ds_container_lock(name, wait)` / `ds_container_unlock(fd)` | The per-container lifecycle lock, a `flock`. **Anything** that changes a container's on-disk state (pidfile, mount, cgroup) must hold it, the monitor included. Commands pass `wait=0` and report busy; the monitor passes `wait=1`. Decide what to do from the state you find while holding it |
@@ -652,7 +651,7 @@ shell-out on the fast path. The netfilter helpers take an address family (`AF_IN
 | `ds_cmd_get_config(name, cfg, pid)`, `ds_cmd_get_pid(name)`, `ds_cmd_for_each(visit, arg)` | What a running container booted with and its init pid, from its monitor's command socket `@droidspaces/<name>/command`. The only source for either: the host never reads the guest's own copy |
 | `ds_peer_in_pidns(peer_pid)` | Must fail closed. A pid of zero is not translatable into our namespace, and a failed readlink means we cannot prove membership. Both deny. Failing open here let a caller recycle a dead pid and escape to host root |
 | `ds_bind_mount_socket(src, dst, uid, label)` | The symlink-race-safe write pattern for anything landing in a container-controlled directory |
-| `set_selinux_context`, `get_selinux_context`, `ds_selinux_dyntransition`, `ds_selinux_enter_domain`, `ds_drop_privileges`, `ds_resolve_termux_uid` | SELinux and privilege handling |
+| `set_selinux_context`, `get_selinux_context`, `ds_selinux_dyntransition`, `ds_selinux_enter_domain`, `ds_drop_privileges`, `ds_resolve_termux_uid` | SELinux and privilege handling. `ds_selinux_dyntransition`, `ds_drop_privileges` and `ds_resolve_termux_uid` are `android/` only, from its `internal.h` |
 
 Any comment on a security check that reads "cannot determine, so allow" is a bug. Inability
 to prove something at a trust boundary means deny.

@@ -17,7 +17,7 @@
 #include <sys/file.h>
 #include <sys/ioctl.h>
 
-#include "net/internal.h"
+#include "../internal.h"
 
 /* Shape of the host-side rules this monitor installed, captured in
  * setup_veth_host_side() before the monitor thread starts and only rewritten

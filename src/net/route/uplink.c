@@ -17,7 +17,7 @@
 #include <sys/file.h>
 #include <sys/ioctl.h>
 
-#include "net/internal.h"
+#include "../internal.h"
 
 /* User-pinned upstream interfaces (--upstream).  When non-empty, the uplink is
  * resolved ONLY from this list (priority order, literals + wildcards) and all

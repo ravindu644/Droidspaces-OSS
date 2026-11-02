@@ -15,7 +15,7 @@
 #include <sys/un.h>
 #include <sys/wait.h>
 
-#include "daemon/internal.h"
+#include "internal.h"
 
 /* connect to the daemon and relay our command */
 

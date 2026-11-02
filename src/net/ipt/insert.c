@@ -15,7 +15,7 @@
 #include <linux/netfilter_ipv4/ip_tables.h>
 #include <linux/netfilter_ipv6/ip6_tables.h>
 
-#include "net/ipt/internal.h"
+#include "internal.h"
 
 /* Internal: fixup_jump_targets
  *

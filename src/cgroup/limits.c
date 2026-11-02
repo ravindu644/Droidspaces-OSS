@@ -7,7 +7,7 @@
 
 #include "droidspaces.h"
 
-#include "cgroup/internal.h"
+#include "internal.h"
 
 /* Write one limit where its controller lives and return 1 if it is in place.
  * A NULL file means this cgroup version needs no write for this knob. On v1

@@ -15,6 +15,8 @@
 #include <sys/wait.h>
 #include <unistd.h>
 
+#include "internal.h"
+
 /* helpers */
 
 /*

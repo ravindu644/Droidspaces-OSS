@@ -7,7 +7,7 @@
 
 #include "droidspaces.h"
 
-#include "cgroup/internal.h"
+#include "internal.h"
 
 /* Mount cgroup2 on /sys/fs/cgroup if the host hasn't done so.
  * Android recovery kernels support cgroup2 but only mount it at /dev/cg2_bpf;

@@ -27,7 +27,7 @@
 #include <sys/un.h>
 #include <sys/wait.h>
 
-#include "daemon/internal.h"
+#include "internal.h"
 
 static FILE *g_daemon_log_fp = NULL;
 static char g_daemon_log_path[PATH_MAX] = "";

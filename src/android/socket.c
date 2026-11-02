@@ -7,6 +7,8 @@
 
 #include "droidspaces.h"
 
+#include "internal.h"
+
 /*
  * Create a file node at dst (if absent), chown+chmod 0666, then bind-mount
  * src onto dst.  label is used in the warning message on failure.

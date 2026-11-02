@@ -7,7 +7,7 @@
 
 #include "droidspaces.h"
 
-#include "cgroup/internal.h"
+#include "internal.h"
 
 /* Count the tasks under one cgroup2 dir, children included: all of them in
  * *total, the ones that count towards a load average in *running. */

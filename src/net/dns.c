@@ -17,7 +17,7 @@
 #include <sys/file.h>
 #include <sys/ioctl.h>
 
-#include "net/internal.h"
+#include "internal.h"
 
 /* Host-side networking setup (before container boot) */
 

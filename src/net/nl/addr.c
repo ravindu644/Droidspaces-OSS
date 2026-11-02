@@ -13,7 +13,7 @@
 #include <net/if.h>
 #include <sys/socket.h>
 
-#include "net/nl/internal.h"
+#include "internal.h"
 
 /* Add an IPv4 address to an interface
  * ip_be and bcast_be are in network byte order. */

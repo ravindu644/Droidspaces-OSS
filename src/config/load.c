@@ -8,7 +8,7 @@
 #include "droidspaces.h"
 #include <libgen.h>
 
-#include "config/internal.h"
+#include "internal.h"
 
 /* Helpers */
 

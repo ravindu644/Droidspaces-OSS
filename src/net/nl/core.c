@@ -19,7 +19,7 @@
 #include <net/if.h>
 #include <sys/socket.h>
 
-#include "net/nl/internal.h"
+#include "internal.h"
 
 /* Netlink message helpers */
 

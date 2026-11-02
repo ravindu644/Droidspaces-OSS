@@ -7,7 +7,7 @@
 
 #include "droidspaces.h"
 
-#include "virt/internal.h"
+#include "internal.h"
 
 /* /proc/meminfo - virtualized when memory_limit > 0 */
 char *gen_meminfo(struct ds_config *cfg, size_t *out_len) {

@@ -17,7 +17,7 @@
 #include <sys/file.h>
 #include <sys/ioctl.h>
 
-#include "net/internal.h"
+#include "../internal.h"
 
 static int g_route_monitor_sock = -1;
 static volatile sig_atomic_t g_stop_monitor = 0;
