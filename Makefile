@@ -54,6 +54,12 @@ SRCS = $(SRC_DIR)/main.c \
        $(SRC_DIR)/rootfs/binds.c \
        $(SRC_DIR)/dev/dev.c \
        $(SRC_DIR)/dev/devpts.c \
+       $(SRC_DIR)/cgroup/discover.c \
+       $(SRC_DIR)/cgroup/mount.c \
+       $(SRC_DIR)/cgroup/v1.c \
+       $(SRC_DIR)/cgroup/lifecycle.c \
+       $(SRC_DIR)/cgroup/limits.c \
+       $(SRC_DIR)/cgroup/stats.c \
        $(SRC_DIR)/android/firmware.c \
        $(SRC_DIR)/android/spawn.c \
        $(SRC_DIR)/android/socket.c \
@@ -65,7 +71,6 @@ SRCS = $(SRC_DIR)/main.c \
        $(SRC_DIR)/cli/options.c \
        $(SRC_DIR)/cli/usage.c \
        $(SRC_DIR)/android/android.c \
-       $(SRC_DIR)/cgroup.c \
        $(SRC_DIR)/net/network.c \
        $(SRC_DIR)/terminal.c \
        $(SRC_DIR)/console.c \
