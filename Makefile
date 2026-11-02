@@ -85,6 +85,20 @@ SRCS = $(SRC_DIR)/main.c \
        $(SRC_DIR)/net/dhcp/proto.c \
        $(SRC_DIR)/net/dhcp/server.c \
        $(SRC_DIR)/net/dhcp/ra.c \
+       $(SRC_DIR)/net/naming.c \
+       $(SRC_DIR)/net/netns.c \
+       $(SRC_DIR)/net/dns.c \
+       $(SRC_DIR)/net/static_ip.c \
+       $(SRC_DIR)/net/nat/veth.c \
+       $(SRC_DIR)/net/nat/filter.c \
+       $(SRC_DIR)/net/route/policy.c \
+       $(SRC_DIR)/net/route/uplink.c \
+       $(SRC_DIR)/net/route/monitor.c \
+       $(SRC_DIR)/net/gateway/wire.c \
+       $(SRC_DIR)/net/gateway/lifecycle.c \
+       $(SRC_DIR)/net/macvlan.c \
+       $(SRC_DIR)/net/guest.c \
+       $(SRC_DIR)/net/cleanup.c \
        $(SRC_DIR)/android/firmware.c \
        $(SRC_DIR)/android/spawn.c \
        $(SRC_DIR)/android/socket.c \
@@ -96,7 +110,6 @@ SRCS = $(SRC_DIR)/main.c \
        $(SRC_DIR)/cli/options.c \
        $(SRC_DIR)/cli/usage.c \
        $(SRC_DIR)/android/android.c \
-       $(SRC_DIR)/net/network.c \
        $(SRC_DIR)/boot.c \
        $(SRC_DIR)/container.c \
        $(SRC_DIR)/monitor.c \

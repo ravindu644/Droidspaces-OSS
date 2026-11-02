@@ -478,11 +478,19 @@ struct ds_config {
 #include "env/environment.h"
 #include "hw/gpu.h"
 #include "hw/hardware.h"
+#include "net/cleanup.h"
 #include "net/dhcp/ra.h"
 #include "net/dhcp/server.h"
+#include "net/dns.h"
+#include "net/gateway/lifecycle.h"
+#include "net/guest.h"
 #include "net/ipt/core.h"
 #include "net/ipt/portfwd.h"
 #include "net/ipt/rules.h"
+#include "net/macvlan.h"
+#include "net/naming.h"
+#include "net/nat/veth.h"
+#include "net/netns.h"
 #include "net/nl/addr.h"
 #include "net/nl/core.h"
 #include "net/nl/link.h"
@@ -490,6 +498,8 @@ struct ds_config {
 #include "net/nl/probe.h"
 #include "net/nl/route_query.h"
 #include "net/nl/rule.h"
+#include "net/route/monitor.h"
+#include "net/static_ip.h"
 #include "rootfs/binds.h"
 #include "rootfs/image.h"
 #include "rootfs/mount.h"
@@ -564,74 +574,6 @@ int ds_setup_virgl_socket(struct ds_config *cfg);
 int ds_pulse_daemon_start(struct ds_config *cfg);
 void ds_pulse_daemon_stop(struct ds_config *cfg);
 int ds_setup_pulse_socket(struct ds_config *cfg);
-
-/* network.c */
-
-int fix_networking_host(struct ds_config *cfg);
-int fix_networking_rootfs(struct ds_config *cfg);
-
-/* NAT veth/bridge lifecycle */
-int setup_veth_host_side(struct ds_config *cfg, pid_t child_pid);
-
-/* Gateway LAN lifecycle: bridge-only veth plumbing, no NAT/DHCP/firewall. */
-int setup_gateway_veth_side(struct ds_config *cfg, pid_t child_pid);
-
-int setup_veth_child_side_named(struct ds_config *cfg, const char *peer_name,
-                                const char *ip_str);
-/* Populate a ds_net_handshake from a container init PID + resolved config.
- * peer_name is derived from the PID (stable per-boot interface name).
- * ip_str    is taken from cfg->static_nat_ip (stable across boots). */
-void ds_net_derive_handshake(pid_t init_pid, struct ds_config *cfg,
-                             struct ds_net_handshake *hs);
-void ds_net_cleanup(struct ds_config *cfg, pid_t container_pid);
-void ds_net_start_route_monitor(const char *container_name);
-void ds_net_stop_route_monitor(void);
-/* Marks route_localnet as required; route monitor re-asserts it every cycle
- * (same pattern as ip_forward). Called once port-forward rules with localhost
- * DNAT are installed. Sticky for process lifetime - never cleared. */
-void ds_net_mark_local_forward_active(void);
-/* Gateway self-heal: when the gateway container (re)boots, re-wire its LAN
- * cable to every running client that delegates to it, with no client restart.
- * Called from the gateway container's monitor on each boot cycle. */
-void ds_net_rewire_gateway_clients(const char *gateway_name, pid_t gateway_pid);
-int ds_net_gateway_reconcile(struct ds_config *cfg, pid_t client_pid);
-/* Macvlan: create eth0 in the container on its parent NIC. Called at start
- * and then on every heartbeat, since unplugging the parent deletes it. */
-int ds_net_macvlan_wire(struct ds_config *cfg, pid_t init_pid, int at_start);
-/* Refuse a macvlan start that could never get a network. 0 or -1. */
-int ds_net_macvlan_check(const struct ds_config *cfg);
-/* Gateway teardown: when a container that ACTS AS A GATEWAY stops, explicitly
- * delete the gateway-side veth(s) it serves and reap any now-idle delegated
- * bridge.  The kernel does not auto-reap these (the host-side veth pins its
- * orphan peer netns), so this prevents the leak.  No-op for a non-gateway. */
-void ds_net_gateway_teardown(const char *gateway_name);
-void ds_net_prepare_host_veth(const char *ifname);
-void ds_net_steer_rx(const char *sys, const char *ifname);
-
-int ds_get_dns_servers(const char *custom_dns, char *out, size_t size);
-
-/* Static NAT IP management (network.c) */
-
-/* Validate a user-supplied static NAT IP string.
- * Must be a valid IPv4 address inside DS_DEFAULT_SUBNET (172.28.0.0/16),
- * with octet3 in 1-254 and octet4 in 1-254 (excludes gateway row .0.x).
- * Returns 0 on success, -1 on failure (reason written to errbuf). */
-int ds_net_validate_static_ip(const char *ip_str, char *errbuf, size_t errsize);
-
-/* Scan all container.config files in the workspace for a static_nat_ip
- * collision.  exclude_name (the current container) is skipped.
- * Returns 0 if ip_str is unique across all other configs, 1 if collision. */
-int ds_net_check_ip_collision(const char *ip_str, const char *exclude_name);
-
-/* Called from start_rootfs() before the first config save and before fork.
- * Resolves cfg->static_nat_ip:
- *   - If user provided --nat-ip: validate + uniqueness check; fall back to
- *     auto-assign on failure.
- *   - If not provided (or fell back): derive a name-based deterministic IP,
- *     then walk forward until a unique slot is found.
- * After this call cfg->static_nat_ip is always a valid, unique IP string.
- * Callers must save config after this returns to persist the result. */
-void ds_net_resolve_static_ip(struct ds_config *cfg);
 
 /* boot.c */
 
