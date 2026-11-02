@@ -475,6 +475,7 @@ struct ds_config {
 #include "rootfs/image.h"
 #include "rootfs/mount.h"
 #include "rootfs/volatile.h"
+#include "security/caps.h"
 #include "security/jail.h"
 #include "security/peer_auth.h"
 #include "security/selinux.h"
@@ -775,8 +776,6 @@ void write_plain_env_file(const char *src, const char *dst);
 
 /* boot.c */
 
-void ds_apply_capability_hardening(int hw_access, int privileged_mask,
-                                   int sandboxing);
 int internal_boot(struct ds_config *cfg);
 
 /* container.c */
