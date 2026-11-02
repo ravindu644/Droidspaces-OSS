@@ -260,8 +260,14 @@ class Container:
         """Folder name the daemon uses for this container: the name with spaces turned into dashes."""
         return self.name.replace(" ", "-")
 
-    def cgroup(self, file):
-        return (Path("/sys/fs/cgroup/droidspaces") / self.dirname / file).read_text().strip()
+    def cgroup(self, file, missing=None):
+        """A file in the container's cgroup2 dir. `missing` is returned instead of raising when the
+        controller behind it is not enabled there, which droidspaces only does once a container
+        sets that limit."""
+        path = Path("/sys/fs/cgroup/droidspaces") / self.dirname / file
+        if missing is not None and not path.exists():
+            return missing
+        return path.read_text().strip()
 
     def log(self):
         return (WORKSPACE / "Logs" / self.dirname / "log").read_text()

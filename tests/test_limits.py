@@ -58,9 +58,10 @@ class Limits(DsTest):
 
     def test_no_limits_by_default(self):
         c = self.container("nolimit")
-        self.assertEqual(c.cgroup("memory.max"), "max")
-        self.assertEqual(c.cgroup("pids.max"), "max")
-        self.assertEqual(c.cgroup("cpu.max"), "max 100000")
+        # No file means the controller is off there, which is no limit as well
+        self.assertEqual(c.cgroup("memory.max", missing="max"), "max")
+        self.assertEqual(c.cgroup("pids.max", missing="max"), "max")
+        self.assertEqual(c.cgroup("cpu.max", missing="max 100000"), "max 100000")
 
     def test_cgroup_is_removed_on_stop(self):
         c = self.container("cgrm")
