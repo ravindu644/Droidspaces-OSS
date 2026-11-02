@@ -476,6 +476,8 @@ struct ds_config {
 #include "dev/dev.h"
 #include "dev/devpts.h"
 #include "env/environment.h"
+#include "hw/gpu.h"
+#include "hw/hardware.h"
 #include "rootfs/binds.h"
 #include "rootfs/image.h"
 #include "rootfs/mount.h"
@@ -524,12 +526,6 @@ int ds_drop_privileges(int uid);
 int ds_resolve_termux_uid(void);
 
 /* cgroup.c */
-
-/* hardware.c */
-
-void mirror_gpu_nodes(const char *dev_path, const char *staging);
-int setup_gpu_groups(void);
-int setup_hardware_access(struct ds_config *cfg);
 
 /* x11.c */
 

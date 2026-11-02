@@ -64,6 +64,8 @@ SRCS = $(SRC_DIR)/main.c \
        $(SRC_DIR)/virt/cpu.c \
        $(SRC_DIR)/virt/affinity.c \
        $(SRC_DIR)/virt/vproc.c \
+       $(SRC_DIR)/hw/gpu.c \
+       $(SRC_DIR)/hw/hardware.c \
        $(SRC_DIR)/android/firmware.c \
        $(SRC_DIR)/android/spawn.c \
        $(SRC_DIR)/android/socket.c \
@@ -82,7 +84,6 @@ SRCS = $(SRC_DIR)/main.c \
        $(SRC_DIR)/container.c \
        $(SRC_DIR)/monitor.c \
        $(SRC_DIR)/documentation.c \
-       $(SRC_DIR)/hardware.c \
        $(SRC_DIR)/net/iptables.c \
        $(SRC_DIR)/net/netlink.c \
        $(SRC_DIR)/net/dhcp.c \
