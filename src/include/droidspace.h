@@ -478,6 +478,8 @@ struct ds_config {
 #include "security/caps.h"
 #include "security/jail.h"
 #include "security/peer_auth.h"
+#include "security/seccomp.h"
+#include "security/seccomp_shims.h"
 #include "security/selinux.h"
 #include "status/collect.h"
 #include "status/show.h"
@@ -507,20 +509,6 @@ void android_native_personality(void);
 void android_optimizations(int enable);
 void android_remount_data_suid(void);
 int android_setup_storage(const char *rootfs_path);
-int ds_seccomp_keyring_shim(int privileged_mask);
-int ds_seccomp_apply_minimal(int privileged_mask, int sandboxing_allowed);
-int ds_kernel_has_mount_api(void);
-int ds_mount_api_shim_wanted(const struct ds_config *cfg);
-int ds_seccomp_mount_api_shim(const struct ds_config *cfg);
-
-/* KernelSU container-escape hardening: ask KSU to mark the current thread
- * (TIF_KSU_DISABLE_ESCAPE_WITH_ROOT via KSU_IOCTL_DISABLE_ESCAPE_TO_ROOT)
- * so escape_with_root_profile() refuses to escalate it.  Best-effort,
- * silent no-op on non-KSU kernels.  Must run BEFORE ds_seccomp_apply_minimal,
- * whose magic-reboot block would otherwise deny the very reboot() this uses
- * to obtain its fd.  The seccomp block is the load-bearing (tree-wide)
- * barrier; this is per-thread defense-in-depth. */
-void ds_ksu_neutralize_root_escape(void);
 
 /* SELinux + Termux privilege helpers */
 const char *ds_extract_mls(const char *ctx);
