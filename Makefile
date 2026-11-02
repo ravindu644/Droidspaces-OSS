@@ -69,6 +69,13 @@ SRCS = $(SRC_DIR)/main.c \
        $(SRC_DIR)/tty/pty.c \
        $(SRC_DIR)/tty/proxy.c \
        $(SRC_DIR)/tty/console.c \
+       $(SRC_DIR)/net/nl/core.c \
+       $(SRC_DIR)/net/nl/probe.c \
+       $(SRC_DIR)/net/nl/link.c \
+       $(SRC_DIR)/net/nl/addr.c \
+       $(SRC_DIR)/net/nl/linkdump.c \
+       $(SRC_DIR)/net/nl/route_query.c \
+       $(SRC_DIR)/net/nl/rule.c \
        $(SRC_DIR)/android/firmware.c \
        $(SRC_DIR)/android/spawn.c \
        $(SRC_DIR)/android/socket.c \
@@ -86,7 +93,6 @@ SRCS = $(SRC_DIR)/main.c \
        $(SRC_DIR)/monitor.c \
        $(SRC_DIR)/documentation.c \
        $(SRC_DIR)/net/iptables.c \
-       $(SRC_DIR)/net/netlink.c \
        $(SRC_DIR)/net/dhcp.c \
        $(SRC_DIR)/net/ra.c \
        $(SRC_DIR)/daemon.c \

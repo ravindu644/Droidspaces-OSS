@@ -191,7 +191,7 @@ enum ds_net_mode {
   DS_NET_MACVLAN, /* isolated netns, macvlan on a host NIC      */
 };
 
-/* Opaque RTNETLINK context - defined in ds_netlink.c */
+/* Opaque RTNETLINK context - defined in net/nl/internal.h */
 typedef struct ds_nl_ctx ds_nl_ctx_t;
 
 /* Handshake payload: Monitor → init via net_done_pipe */
@@ -478,6 +478,13 @@ struct ds_config {
 #include "env/environment.h"
 #include "hw/gpu.h"
 #include "hw/hardware.h"
+#include "net/nl/addr.h"
+#include "net/nl/core.h"
+#include "net/nl/link.h"
+#include "net/nl/linkdump.h"
+#include "net/nl/probe.h"
+#include "net/nl/route_query.h"
+#include "net/nl/rule.h"
 #include "rootfs/binds.h"
 #include "rootfs/image.h"
 #include "rootfs/mount.h"
@@ -598,56 +605,6 @@ void ds_net_steer_rx(const char *sys, const char *ifname);
 void parse_cidr(const char *cidr, uint32_t *ip_out, uint32_t *mask_out);
 
 int ds_get_dns_servers(const char *custom_dns, char *out, size_t size);
-
-/* ds_netlink.c */
-
-ds_nl_ctx_t *ds_nl_open(void);
-void ds_nl_close(ds_nl_ctx_t *ctx);
-int ds_nl_link_exists(ds_nl_ctx_t *ctx, const char *ifname);
-int ds_nl_get_ifindex(ds_nl_ctx_t *ctx, const char *ifname);
-int ds_nl_create_bridge(ds_nl_ctx_t *ctx, const char *name);
-int ds_nl_create_veth(ds_nl_ctx_t *ctx, const char *host, const char *peer);
-int ds_nl_create_macvlan(ds_nl_ctx_t *ctx, const char *name, int parent_index,
-                         int netns_fd, uint32_t mode, const uint8_t mac[6]);
-int ds_nl_create_veth_in(ds_nl_ctx_t *ctx, const char *host, const char *peer,
-                         int peer_netns_fd, const uint8_t *peer_mac);
-int ds_nl_set_master(ds_nl_ctx_t *ctx, const char *ifname, const char *master);
-int ds_nl_link_up(ds_nl_ctx_t *ctx, const char *ifname);
-int ds_nl_link_down(ds_nl_ctx_t *ctx, const char *ifname);
-/* 1 = removed by this call, 0 = was already gone, negative = error. */
-int ds_nl_del_link(ds_nl_ctx_t *ctx, const char *ifname);
-int ds_nl_rename(ds_nl_ctx_t *ctx, const char *ifname, const char *newname);
-int ds_nl_set_mac(ds_nl_ctx_t *ctx, const char *ifname, const uint8_t mac[6]);
-int ds_nl_add_addr4(ds_nl_ctx_t *ctx, const char *ifname, uint32_t ip_be,
-                    uint8_t prefix);
-int ds_nl_add_route4(ds_nl_ctx_t *ctx, uint32_t dst_be, uint8_t dst_len,
-                     uint32_t gw_be, int oif_idx);
-int ds_nl_add_addr6(ds_nl_ctx_t *ctx, const char *ifname,
-                    const struct in6_addr *ip, uint8_t prefix);
-int ds_nl_add_route6(ds_nl_ctx_t *ctx, const struct in6_addr *dst,
-                     uint8_t dst_len, int oif_idx);
-int ds_nl_rule6(ds_nl_ctx_t *ctx, int add, const struct in6_addr *net,
-                uint8_t len, int from_net, int table, int priority);
-int ds_nl_get_iface_table(ds_nl_ctx_t *ctx, int family, const char *ifname,
-                          int *table_out);
-int ds_nl_get_table_default_oif(ds_nl_ctx_t *ctx, int family, int table,
-                                char *ifname_out);
-int ds_nl_get_android_default(ds_nl_ctx_t *ctx, int family, char *ifname_out,
-                              int *table_out);
-int ds_nl_add_rule4(ds_nl_ctx_t *ctx, uint32_t src_be, uint8_t src_len,
-                    uint32_t dst_be, uint8_t dst_len, int table, int priority);
-int ds_nl_del_rule4(ds_nl_ctx_t *ctx, uint32_t src_be, uint8_t src_len,
-                    uint32_t dst_be, uint8_t dst_len, int table, int priority);
-int ds_nl_count_ifaces_with_prefix(ds_nl_ctx_t *ctx, const char *prefix);
-/* Count links enslaved to `bridge` whose name starts with `prefix`.
- * Returns 0 if the bridge does not exist. */
-int ds_nl_count_bridge_members_with_prefix(ds_nl_ctx_t *ctx, const char *bridge,
-                                           const char *prefix);
-int ds_nl_list_ifaces(ds_nl_ctx_t *ctx, char names[][IFNAMSIZ], int max);
-/* 1 if the kernel can create a macvlan, cached per boot */
-int ds_nl_probe_macvlan(void);
-/* Kernel capability probe - call before any NAT setup */
-int ds_nl_probe_nat_capability(char *reason, size_t rsz);
 
 /* ds_iptables.c */
 
