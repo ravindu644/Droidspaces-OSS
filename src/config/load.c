@@ -11,8 +11,6 @@
 
 /* Forward declarations */
 static void add_unknown_line(struct ds_config *cfg, const char *line);
-/* ds_net_validate_static_ip is defined in network.c - declared in droidspaces.h
- */
 #include <libgen.h>
 
 /* Helpers */

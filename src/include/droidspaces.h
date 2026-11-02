@@ -479,7 +479,6 @@ struct ds_config {
 #include "hw/gpu.h"
 #include "hw/hardware.h"
 #include "net/cleanup.h"
-#include "net/dhcp/ra.h"
 #include "net/dhcp/server.h"
 #include "net/dns.h"
 #include "net/gateway/lifecycle.h"

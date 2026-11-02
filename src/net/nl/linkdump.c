@@ -19,7 +19,7 @@
  *
  * Fills `names` with up to `max` interface name strings.
  * Returns the number of interfaces found.
- * Used by the uplink whitelist scan in network.c for pattern matching
+ * Used by the uplink whitelist scan in net/route/uplink.c for pattern matching
  * against interface families like "rmnet*" or "*ccmni*". */
 int ds_nl_list_ifaces(ds_nl_ctx_t *ctx, char names[][IFNAMSIZ], int max) {
   struct {

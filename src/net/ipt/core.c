@@ -126,7 +126,8 @@ void entry_view_ro(const struct xt_family *f, const void *e,
   entry_view(f, (void *)(uintptr_t)e, v);
 }
 
-/* CIDR helpers - parse_cidr is shared with network.c via the public header */
+/* CIDR helpers - net/ outside ipt/ uses parse_cidr too, so net/ipt/core.h
+ * declares it */
 
 void parse_cidr(const char *cidr, uint32_t *ip_out, uint32_t *mask_out) {
   char buf[64];

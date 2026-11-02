@@ -1,8 +1,8 @@
 /*
  * Droidspaces v7 - High-performance Container Runtime
  *
- * Network configuration: DNS, host-side setup, rootfs-side setup,
- * veth pair management, and network cleanup.
+ * The network layer's shared state and helpers, for net/, nat/, route/ and
+ * gateway/.
  *
  * All link/addr/route management uses the pure-C RTNETLINK API
  * (net/nl/). iptables rules go through the raw socket API (net/ipt/),

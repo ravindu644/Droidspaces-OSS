@@ -308,8 +308,9 @@ int is_container_init(pid_t pid) {
  *   0: feature containers exist but none are currently running
  *  -1: no containers with the feature are installed
  *
- * Adding support for a new feature costs zero lines here - just define
- * a DS_FEAT_* constant in droidspaces.h and call ds_feature_needs().
+ * A new feature needs no change to this scanner, only a check_*_needs()
+ * wrapper below that passes offsetof(struct ds_config, <flag>): the daemon
+ * helpers take a callback with no arguments.
  */
 int ds_feature_needs(size_t cfg_flag_offset) {
   /* Phase 1: any running container with the feature? */

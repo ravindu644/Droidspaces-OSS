@@ -93,4 +93,10 @@ int build_reply(struct dhcp_pkt *reply, const struct dhcp_pkt *req,
 int send_reply(int sock, int ifindex, const struct dhcp_pkt *pkt, int pkt_len,
                const ds_dhcp_ctx_t *ctx);
 
+/* ra.c: the Router Advertisement the DHCP thread sends when ra_prefix (a /64)
+ * is given, so the container also configures IPv6 by itself. */
+int ds_ra_is_solicit(const uint8_t *frame, size_t len);
+void ds_ra_build(uint8_t *out, const uint8_t mac[6],
+                 const struct in6_addr *prefix);
+
 #endif /* DS_NET_DHCP_INTERNAL_H */

@@ -266,7 +266,7 @@ int setup_veth_host_side(struct ds_config *cfg, pid_t child_pid) {
 
     /* In bridge mode the kernel also floods sibling containers' broadcasts
      * out of this port. The DHCP loop drops those by ingress ifindex and
-     * packet type, see dhcp.c. */
+     * packet type, see net/dhcp/server.c. */
     const char *dhcp_iface = veth_host;
     ds_dhcp_server_start(cfg, dhcp_iface, offer_ip, inet_addr(DS_NAT_GW_IP),
                          nat6 ? &ra_prefix : NULL);

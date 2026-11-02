@@ -17,6 +17,8 @@
 
 #include "droidspaces.h"
 
+#include "net/dhcp/internal.h"
+
 #define ETH_LEN 14
 #define IP6_HLEN 40
 #define RA_LEN 48 /* 16 header + 32 prefix option */

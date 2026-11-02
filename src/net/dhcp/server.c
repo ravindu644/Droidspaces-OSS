@@ -1,7 +1,7 @@
 /*
  * Droidspaces v7 - High-performance Container Runtime
  *
- * ds_dhcp.c - Embedded single-lease DHCP server for NAT containers.
+ * Embedded single-lease DHCP server for NAT containers.
  *
  * Runs as a joinable thread inside the monitor process. Bound exclusively to
  * the container's veth_host interface via SO_BINDTODEVICE + sll_ifindex so it
