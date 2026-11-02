@@ -76,6 +76,12 @@ SRCS = $(SRC_DIR)/main.c \
        $(SRC_DIR)/net/nl/linkdump.c \
        $(SRC_DIR)/net/nl/route_query.c \
        $(SRC_DIR)/net/nl/rule.c \
+       $(SRC_DIR)/net/ipt/core.c \
+       $(SRC_DIR)/net/ipt/match.c \
+       $(SRC_DIR)/net/ipt/insert.c \
+       $(SRC_DIR)/net/ipt/remove.c \
+       $(SRC_DIR)/net/ipt/rules.c \
+       $(SRC_DIR)/net/ipt/portfwd.c \
        $(SRC_DIR)/android/firmware.c \
        $(SRC_DIR)/android/spawn.c \
        $(SRC_DIR)/android/socket.c \
@@ -92,7 +98,6 @@ SRCS = $(SRC_DIR)/main.c \
        $(SRC_DIR)/container.c \
        $(SRC_DIR)/monitor.c \
        $(SRC_DIR)/documentation.c \
-       $(SRC_DIR)/net/iptables.c \
        $(SRC_DIR)/net/dhcp.c \
        $(SRC_DIR)/net/ra.c \
        $(SRC_DIR)/daemon.c \

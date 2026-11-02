@@ -478,6 +478,9 @@ struct ds_config {
 #include "env/environment.h"
 #include "hw/gpu.h"
 #include "hw/hardware.h"
+#include "net/ipt/core.h"
+#include "net/ipt/portfwd.h"
+#include "net/ipt/rules.h"
 #include "net/nl/addr.h"
 #include "net/nl/core.h"
 #include "net/nl/link.h"
@@ -602,27 +605,8 @@ int ds_net_macvlan_check(const struct ds_config *cfg);
 void ds_net_gateway_teardown(const char *gateway_name);
 void ds_net_prepare_host_veth(const char *ifname);
 void ds_net_steer_rx(const char *sys, const char *ifname);
-void parse_cidr(const char *cidr, uint32_t *ip_out, uint32_t *mask_out);
 
 int ds_get_dns_servers(const char *custom_dns, char *out, size_t size);
-
-/* ds_iptables.c */
-
-/* family is AF_INET or AF_INET6. Each call tries the raw ip_tables /
- * ip6_tables socket first and falls back to the iptables / ip6tables binary
- * for whatever the kernel rejects. */
-int ds_ipt_ensure_masquerade(int family, const char *src_cidr);
-int ds_ipt_host_rules_present(int family, const char *iface,
-                              const char *src_cidr, int expect_dnat);
-int ds_ipt_ensure_forward_accept(int family, const char *iface);
-int ds_ipt_ensure_input_accept(int family, const char *iface);
-int ds_ipt_ensure_mss_clamp(int family);
-int ds_ipt_remove_iface_rules(int family, const char *iface);
-int ds_ipt_remove_ds_rules(int family);
-int ds_ipt_add_portforwards(struct ds_port_forward *pfs, int count,
-                            const char *container_ip);
-int ds_ipt_remove_portforwards(struct ds_config *cfg);
-int ds_ipt6_available(void);
 
 /* Static NAT IP management (network.c) */
 
