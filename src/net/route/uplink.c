@@ -56,7 +56,7 @@ static int iface_is_running(const char *ifname) {
  * its connectivity downstream (hotspot / USB tethering - Android acts as
  * the router, these face clients, not the internet).  tun/ppp are VPN
  * tunnels which container traffic intentionally bypasses (see the
- * DS_RULE_PRIO_* rationale in droidspaces.h).  The rest are loopback,
+ * DS_RULE_PRIO_* rationale in net/net.h).  The rest are loopback,
  * placeholders, and our own bridge/veth devices. */
 
 static const char *const k_uplink_patterns[] = {

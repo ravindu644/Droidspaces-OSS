@@ -50,7 +50,7 @@ int ds_get_dns_servers(const char *custom_dns, char *out, size_t size) {
     }
   }
 
-  /* 1. Global stable fallbacks (defined in droidspaces.h) */
+  /* 1. Global stable fallbacks (defined in net/net.h) */
   if (count == 0 && size >= sizeof(k_dns_v4_first)) {
     memcpy(out, k_dns_v4_first, sizeof(k_dns_v4_first));
     count = 3;

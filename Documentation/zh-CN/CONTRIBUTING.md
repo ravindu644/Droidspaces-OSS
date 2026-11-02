@@ -186,6 +186,9 @@ install_policy_rules(cfg);
 - 使用 C89 块注释（`/* ... */`）。`src/` 中没有 `//` 注释。
 - 默认 `static`。只有当函数的原型被加进 `src/include/` 下的头文件时，才去掉 `static`：
   该层的公开头文件；如果只有同一目录的文件调用，就放进该目录的 `internal.h`。
+- 新的常量或类型放进拥有它的那一层的头文件（`net/net.h`、`android/termux.h`；
+  `struct ds_config` 及其内嵌的类型放在 `config/config.h`），即使其他层也会用到。
+  `src/include/droidspaces.h` 只放全项目通用的内容。
 - 新的跨模块函数使用 `ds_` 前缀。遗留的无前缀名称（`read_file`、`mkdir_p`、`run_command`、
   `domount`）保持原样，不要重命名，也不要在新代码中模仿它们。
 - `is_*` 用于判定函数，`check_*` 用于可能打印输出的探测函数，`setup_*` 与 `cleanup_*`

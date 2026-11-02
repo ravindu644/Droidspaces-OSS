@@ -203,6 +203,9 @@ change in the wrong place is a second bug.
 - `static` by default. A function becomes non-static only when its prototype is added to a
   header under `src/include/`: the layer's public header, or the folder's `internal.h` when
   only that folder calls it.
+- A new constant or type goes in the header of the layer that owns it (`net/net.h`,
+  `android/termux.h`, `config/config.h` for `struct ds_config` and the types it embeds),
+  even when other layers use it. `src/include/droidspaces.h` is for project-wide ones.
 - New cross-module functions take the `ds_` prefix. Legacy un-prefixed names (`read_file`,
   `mkdir_p`, `run_command`, `domount`) stay as they are; do not rename them and do not
   imitate them for new work.
