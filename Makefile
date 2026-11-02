@@ -133,8 +133,8 @@ SRCS = $(SRC_DIR)/main.c \
        $(SRC_DIR)/android/x11.c \
        $(SRC_DIR)/android/virgl.c \
        $(SRC_DIR)/android/pulseaudio.c \
-       $(SRC_DIR)/anland/anland.c \
-       $(SRC_DIR)/anland/display_daemon.c
+       $(SRC_DIR)/android/anland/anland.c \
+       $(SRC_DIR)/android/anland/display_daemon.c
 
 # Hardened warning set, all warnings are errors
 CFLAGS  = -Wall -Wextra -Wpedantic -Werror -O2 -flto=auto -std=gnu99 -I$(SRC_DIR)/include -no-pie -pthread

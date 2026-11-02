@@ -207,7 +207,8 @@ These are choke points. Bypassing one is a bug, not a shortcut.
   source file's prototypes sit under a `/* file.c */` label. A folder's private helpers are
   declared in its `internal.h`, which sits next to its sources (`src/net/internal.h`) and only
   that folder's files include, plus files in its subfolders that have no `internal.h` of their
-  own (`net/route/` includes `"../internal.h"`). `src/include/` holds only public headers.
+  own (`net/route/` includes `"../internal.h"`). Vendored code keeps its upstream header names
+  (`android/anland/`). `src/include/` holds only public headers.
   A new constant or type goes in the header of the folder that owns it (`net/net.h`,
   `config/config.h` for `struct ds_config`), even when other folders use it; the umbrella is
   for project-wide ones. Grep `src/` before writing a helper.

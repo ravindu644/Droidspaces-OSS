@@ -148,7 +148,6 @@
 #include "net/net.h"
 
 #include "android/android.h"
-#include "anland/anland.h"
 #include "boot/boot.h"
 #include "cgroup/cgroup.h"
 #include "cli/cli.h"
