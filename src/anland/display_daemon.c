@@ -48,7 +48,6 @@ struct daemon_ctx {
   struct client *producer;
   int epoll_fd;
   int listen_fd;
-  volatile sig_atomic_t running;
 
   struct screen_info screen;
   int has_screen;
@@ -326,7 +325,6 @@ int daemon_create(daemon_ctx **out, const char *sock_path) {
     return -1;
   ctx->epoll_fd = -1;
   ctx->listen_fd = -1;
-  ctx->running = 1;
   if (strlen(sock_path) >= sizeof(ctx->sock_path)) {
     dlog("socket path too long: %s\n", sock_path);
     free(ctx);
@@ -374,7 +372,7 @@ int daemon_create(daemon_ctx **out, const char *sock_path) {
 
 void daemon_run(daemon_ctx *ctx) {
   struct epoll_event events[MAX_EVENTS];
-  while (ctx->running) {
+  for (;;) {
     int nfds = epoll_wait(ctx->epoll_fd, events, MAX_EVENTS, -1);
     for (int i = 0; i < nfds; i++) {
       if (events[i].data.ptr == NULL) {
@@ -393,11 +391,6 @@ void daemon_run(daemon_ctx *ctx) {
     }
     free_dead(ctx);
   }
-}
-
-void daemon_stop(daemon_ctx *ctx) {
-  if (ctx)
-    ctx->running = 0;
 }
 
 void daemon_destroy(daemon_ctx *ctx) {

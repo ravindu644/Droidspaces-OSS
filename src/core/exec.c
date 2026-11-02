@@ -36,7 +36,6 @@ static int internal_run(char *const argv[], int quiet) {
   return -1;
 }
 
-int run_command(char *const argv[]) { return internal_run(argv, 0); }
 int run_command_quiet(char *const argv[]) { return internal_run(argv, 1); }
 
 /* run_command_log: runs argv, captures stderr and emits it via ds_log so

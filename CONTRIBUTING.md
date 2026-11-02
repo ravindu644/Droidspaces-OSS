@@ -207,7 +207,7 @@ change in the wrong place is a second bug.
   `android/termux.h`, `config/config.h` for `struct ds_config` and the types it embeds),
   even when other layers use it. `src/include/droidspaces.h` is for project-wide ones.
 - New cross-module functions take the `ds_` prefix. Legacy un-prefixed names (`read_file`,
-  `mkdir_p`, `run_command`, `domount`) stay as they are; do not rename them and do not
+  `mkdir_p`, `run_command_quiet`, `domount`) stay as they are; do not rename them and do not
   imitate them for new work.
 - `is_*` for predicates, `check_*` for probes that may print, `setup_*` and `cleanup_*` for
   paired lifecycle, `print_*` for pure output, `free_*` for teardown.
@@ -543,7 +543,7 @@ influenced, copy the `ds_bind_mount_socket` pattern: open with `O_NOFOLLOW|O_CLO
 
 | Symbol | Use it when |
 | --- | --- |
-| `run_command`, `run_command_quiet`, `run_command_log` | Running an external binary. These are the only sanctioned way. There is no `system()` in this tree |
+| `run_command_quiet`, `run_command_log` | Running an external binary. These are the only sanctioned way. There is no `system()` in this tree |
 | `ds_spawn_daemon(child_fn, user_data, log_file, tag, label)` | Forking a long-lived helper. Verifies `execv` succeeded through a ready pipe and attaches a log relay |
 | `ds_daemon_child_preamble()` | First call inside such a child, while still root |
 | `ds_oom_protect()` | Best effort OOM score protection |

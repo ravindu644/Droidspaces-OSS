@@ -6,12 +6,9 @@
  */
 
 #include "droidspaces.h"
+#include <libgen.h>
 
 #include "config/internal.h"
-
-/* Forward declarations */
-static void add_unknown_line(struct ds_config *cfg, const char *line);
-#include <libgen.h>
 
 /* Helpers */
 
@@ -70,6 +67,21 @@ int ds_config_load(const char *config_path, struct ds_config *cfg) {
   return ret;
 }
 
+/* Internal helper to add a raw line to the unknown list */
+static void add_unknown_line(struct ds_config *cfg, const char *line) {
+  struct ds_config_line *node = malloc(sizeof(*node));
+  if (!node)
+    return;
+  safe_strncpy(node->line, line, sizeof(node->line));
+  node->next = NULL;
+  if (!cfg->unknown_head) {
+    cfg->unknown_head = cfg->unknown_tail = node;
+  } else {
+    cfg->unknown_tail->next = node;
+    cfg->unknown_tail = node;
+  }
+}
+
 /* The parser behind ds_config_load, for a config that is not a file: the one
  * a monitor sends over its command socket. */
 int ds_config_load_file(FILE *f, struct ds_config *cfg) {
@@ -79,10 +91,8 @@ int ds_config_load_file(FILE *f, struct ds_config *cfg) {
   cfg->config_file_existed = 1;
 
   char line[2048];
-  int line_num = 0;
 
   while (fgets(line, sizeof(line), f)) {
-    line_num++;
     char line_copy[2048];
     safe_strncpy(line_copy, line, sizeof(line_copy));
     char *trimmed = trim_whitespace(line_copy);
@@ -282,21 +292,6 @@ int ds_config_load_file(FILE *f, struct ds_config *cfg) {
   }
 
   return 0;
-}
-
-/* Internal helper to add a raw line to the unknown list */
-static void add_unknown_line(struct ds_config *cfg, const char *line) {
-  struct ds_config_line *node = malloc(sizeof(*node));
-  if (!node)
-    return;
-  safe_strncpy(node->line, line, sizeof(node->line));
-  node->next = NULL;
-  if (!cfg->unknown_head) {
-    cfg->unknown_head = cfg->unknown_tail = node;
-  } else {
-    cfg->unknown_tail->next = node;
-    cfg->unknown_tail = node;
-  }
 }
 
 void free_config_unknown_lines(struct ds_config *cfg) {

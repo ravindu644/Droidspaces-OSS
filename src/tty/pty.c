@@ -6,7 +6,6 @@
  */
 
 #include "droidspaces.h"
-#include <sys/uio.h>
 
 /* PTY Allocation */
 

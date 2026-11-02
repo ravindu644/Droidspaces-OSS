@@ -189,7 +189,7 @@ install_policy_rules(cfg);
 - 新的常量或类型放进拥有它的那一层的头文件（`net/net.h`、`android/termux.h`；
   `struct ds_config` 及其内嵌的类型放在 `config/config.h`），即使其他层也会用到。
   `src/include/droidspaces.h` 只放全项目通用的内容。
-- 新的跨模块函数使用 `ds_` 前缀。遗留的无前缀名称（`read_file`、`mkdir_p`、`run_command`、
+- 新的跨模块函数使用 `ds_` 前缀。遗留的无前缀名称（`read_file`、`mkdir_p`、`run_command_quiet`、
   `domount`）保持原样，不要重命名，也不要在新代码中模仿它们。
 - `is_*` 用于判定函数，`check_*` 用于可能打印输出的探测函数，`setup_*` 与 `cleanup_*`
   成对表示生命周期，`print_*` 用于纯输出，`free_*` 用于释放。
@@ -514,7 +514,7 @@ libsu 的全局配置在 `DroidspacesApplication.kt` 中，那是唯一应该设
 
 | 符号 | 何时使用 |
 | --- | --- |
-| `run_command`、`run_command_quiet`、`run_command_log` | 执行外部程序。这是唯一被认可的方式。本仓库没有 `system()` |
+| `run_command_quiet`、`run_command_log` | 执行外部程序。这是唯一被认可的方式。本仓库没有 `system()` |
 | `ds_spawn_daemon(child_fn, user_data, log_file, tag, label)` | fork 一个长期存活的辅助进程。通过 ready 管道确认 `execv` 成功，并挂上日志中继 |
 | `ds_daemon_child_preamble()` | 在这类子进程里第一个调用，此时还是 root |
 | `ds_oom_protect()` | 尽力而为的 OOM 分数保护 |

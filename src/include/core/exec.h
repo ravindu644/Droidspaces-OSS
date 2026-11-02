@@ -8,7 +8,6 @@
 #ifndef DS_CORE_EXEC_H
 #define DS_CORE_EXEC_H
 
-int run_command(char *const argv[]);
 int run_command_quiet(char *const argv[]);
 int run_command_log(char *const argv[]);
 void ds_oom_protect(void);

@@ -210,8 +210,8 @@ These are choke points. Bypassing one is a bug, not a shortcut.
   `android/termux.h`, `config/config.h` for `struct ds_config`), even when other layers use
   it; the umbrella is for project-wide ones. Grep `src/include/` before writing a helper.
 - Logging is `ds_log`, `ds_warn`, `ds_error`, `ds_die`. Never a bare `fprintf` or `exit`.
-- `run_command`, `run_command_quiet`, `run_command_log` are the only sanctioned way to run
-  an external binary. There is no `system()` in this tree and there must not be one.
+- `run_command_quiet` and `run_command_log` are the only sanctioned way to run an external
+  binary. There is no `system()` in this tree and there must not be one.
 - Workspace paths come from `get_workspace_dir`, `get_pids_dir`, `get_net_dir`,
   `get_logs_dir`. They switch between the Android and Linux roots. Never hardcode either.
 
