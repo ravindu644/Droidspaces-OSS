@@ -468,7 +468,14 @@ struct ds_config {
 #include "core/paths.h"
 #include "core/proc.h"
 #include "core/string.h"
+#include "dev/dev.h"
+#include "dev/devpts.h"
 #include "env/environment.h"
+#include "rootfs/binds.h"
+#include "rootfs/image.h"
+#include "rootfs/mount.h"
+#include "rootfs/volatile.h"
+#include "security/jail.h"
 #include "security/peer_auth.h"
 #include "security/selinux.h"
 #include "status/collect.h"
@@ -519,27 +526,6 @@ const char *ds_extract_mls(const char *ctx);
 void ds_selinux_dyntransition(const char *mls);
 int ds_drop_privileges(int uid);
 int ds_resolve_termux_uid(void);
-
-/* mount.c */
-
-int domount(const char *src, const char *tgt, const char *fstype,
-            unsigned long flags, const char *data);
-int bind_mount(const char *src, const char *tgt);
-int ds_stage_dev_node(const char *staging, const char *dev_dir, const char *rel,
-                      mode_t mode, dev_t dev, gid_t gid);
-int ds_apply_jail_mask(int hw_access, int privileged_mask, int sandboxing);
-int setup_dev(const char *rootfs, int hw_access, int gpu_mode, int allow_vts);
-int create_devices(const char *rootfs, const char *staging);
-int setup_devpts(int hw_access);
-int setup_volatile_overlay(struct ds_config *cfg);
-int cleanup_volatile_overlay(struct ds_config *cfg);
-int check_volatile_mode(struct ds_config *cfg);
-int setup_custom_binds(struct ds_config *cfg, const char *rootfs);
-int mount_rootfs_img(const char *img_path, char *mount_point, size_t mp_size,
-                     const char *name);
-int unmount_rootfs_img(const char *mount_point, int silent);
-int is_mountpoint(const char *path);
-int ds_img_mount_point(const char *name, char *buf, size_t size);
 
 /* cgroup.c */
 
