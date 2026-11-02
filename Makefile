@@ -82,6 +82,9 @@ SRCS = $(SRC_DIR)/main.c \
        $(SRC_DIR)/net/ipt/remove.c \
        $(SRC_DIR)/net/ipt/rules.c \
        $(SRC_DIR)/net/ipt/portfwd.c \
+       $(SRC_DIR)/net/dhcp/proto.c \
+       $(SRC_DIR)/net/dhcp/server.c \
+       $(SRC_DIR)/net/dhcp/ra.c \
        $(SRC_DIR)/android/firmware.c \
        $(SRC_DIR)/android/spawn.c \
        $(SRC_DIR)/android/socket.c \
@@ -98,8 +101,6 @@ SRCS = $(SRC_DIR)/main.c \
        $(SRC_DIR)/container.c \
        $(SRC_DIR)/monitor.c \
        $(SRC_DIR)/documentation.c \
-       $(SRC_DIR)/net/dhcp.c \
-       $(SRC_DIR)/net/ra.c \
        $(SRC_DIR)/daemon.c \
        $(SRC_DIR)/check.c \
        $(SRC_DIR)/android/x11.c \

@@ -478,6 +478,8 @@ struct ds_config {
 #include "env/environment.h"
 #include "hw/gpu.h"
 #include "hw/hardware.h"
+#include "net/dhcp/ra.h"
+#include "net/dhcp/server.h"
 #include "net/ipt/core.h"
 #include "net/ipt/portfwd.h"
 #include "net/ipt/rules.h"
@@ -630,27 +632,6 @@ int ds_net_check_ip_collision(const char *ip_str, const char *exclude_name);
  * After this call cfg->static_nat_ip is always a valid, unique IP string.
  * Callers must save config after this returns to persist the result. */
 void ds_net_resolve_static_ip(struct ds_config *cfg);
-
-/* ds_dhcp.c */
-
-/* Start a single-lease DHCP server on veth_host (detached monitor thread).
- * Offers offer_ip_be to any DHCP client that broadcasts on the interface.
- * gw_ip_be becomes the router/server-id option (typically DS_NAT_GW_IP).
- * Isolation is enforced by AF_PACKET bind to veth_host's ifindex; no MAC
- * filter is needed or used (see ds_dhcp.c for rationale). */
-void ds_dhcp_server_start(struct ds_config *cfg, const char *veth_host,
-                          uint32_t offer_ip_be, uint32_t gw_ip_be,
-                          const struct in6_addr *ra_prefix);
-
-/* ra.c: the Router Advertisement the DHCP thread sends when ra_prefix (a /64)
- * is given, so the container also configures IPv6 by itself. */
-int ds_ra_is_solicit(const uint8_t *frame, size_t len);
-void ds_ra_build(uint8_t *out, const uint8_t mac[6],
-                 const struct in6_addr *prefix);
-
-/* Stop the DHCP server and unblock its recv() loop. Call before veth teardown.
- */
-void ds_dhcp_server_stop(void);
 
 /* boot.c */
 
