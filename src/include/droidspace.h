@@ -463,6 +463,7 @@ struct ds_config {
 #include "core/exec.h"
 #include "core/fdpass.h"
 #include "core/fs.h"
+#include "core/json.h"
 #include "core/log.h"
 #include "core/paths.h"
 #include "core/proc.h"
@@ -470,37 +471,11 @@ struct ds_config {
 #include "env/environment.h"
 #include "security/peer_auth.h"
 #include "security/selinux.h"
+#include "status/collect.h"
 #include "status/show.h"
 
 /* status.c */
 
-struct ds_status {
-  char name[128];
-  pid_t pid;
-  char hostname[256];    /* from the container config, same source as info */
-  char os[256];          /* PRETTY_NAME from /proc/<pid>/root/etc/os-release */
-  char ip[256];          /* non-loopback IPv4 addresses, comma separated */
-  char ip6[512];         /* global and ULA IPv6 addresses, comma separated */
-  char anland_sock[108]; /* host socket of the anland daemon, or "" */
-  int x11;               /* booted with Termux:X11 */
-  long uptime_sec;
-  long ram_used_kb;
-  long cpu_permill;
-  /* Limits in force, 0 when unlimited. cpu_limit_permill is the share of the
-   * host the container may use, the same scale as cpu_permill. */
-  long ram_limit_kb;
-  long cpu_limit_permill;
-  int swap_allowed; /* 0 only while a memory limit holds swap at 0 */
-};
-
-/* Caller fills name, pid and hostname. Fills the rest for every entry in one
- * /proc walk pair (one 250 ms CPU window total). Returns host MemTotal KB. */
-long ds_collect_status(struct ds_status *st, int n);
-void get_os_pretty(const char *osrelease_path, char *buf, size_t size);
-/* Flat JSON members, `,"key":value`. *first suppresses the leading comma. */
-void ds_json_str(const char *key, const char *val, int *first);
-void ds_json_int(const char *key, long long val, int *first);
-void ds_json_status(const struct ds_status *st, int *first);
 void ds_monitor_run(struct ds_config *cfg, int sync_pipe_write);
 int ds_container_lock(const char *name, int wait);
 void ds_container_unlock(int fd);
