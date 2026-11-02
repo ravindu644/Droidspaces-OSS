@@ -175,7 +175,6 @@
 
 /* Also mutes this container's log, see ds_log_internal. */
 #define DS_LOG_PEEK 2
-int check_ns(int flag, const char *name);
 
 /* Data structures */
 
@@ -457,6 +456,7 @@ struct ds_config {
 #include "cgroup/limits.h"
 #include "cgroup/mount.h"
 #include "cgroup/stats.h"
+#include "cli/check.h"
 #include "cli/docs.h"
 #include "cli/options.h"
 #include "cli/usage.h"
@@ -577,10 +577,5 @@ int ds_multi_stop(const char *raw_names);
 int ds_apply_cli_overrides(int argc, char **argv, struct ds_config *cfg,
                            int strict);
 const char *ds_command_word(int argc, char **argv);
-
-/* check.c */
-
-int check_requirements_hw(int hw_access);
-int check_requirements_detailed(int json_output);
 
 #endif /* DROIDSPACES_H */
