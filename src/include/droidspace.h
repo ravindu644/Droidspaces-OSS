@@ -488,6 +488,8 @@ struct ds_config {
 #include "security/selinux.h"
 #include "status/collect.h"
 #include "status/show.h"
+#include "virt/affinity.h"
+#include "virt/vproc.h"
 
 /* status.c */
 
@@ -522,17 +524,6 @@ int ds_drop_privileges(int uid);
 int ds_resolve_termux_uid(void);
 
 /* cgroup.c */
-
-/* virtualize.c: the LXCFS-style views of /proc and /sys/devices/system/cpu */
-
-/* Inside the container before init execs: bind-mounts the virtual files the
- * active limits need, no-op without limits. */
-int ds_virtualize_init(struct ds_config *cfg);
-/* From the monitor every 500 ms: rewrites the dynamic files in place so the
- * bind-mounted inodes survive. */
-void ds_virtualize_update(struct ds_config *cfg);
-void ds_virtualize_join(pid_t init_pid);
-unsigned long ds_get_pid_ns_inode(pid_t pid);
 
 /* hardware.c */
 

@@ -60,6 +60,10 @@ SRCS = $(SRC_DIR)/main.c \
        $(SRC_DIR)/cgroup/lifecycle.c \
        $(SRC_DIR)/cgroup/limits.c \
        $(SRC_DIR)/cgroup/stats.c \
+       $(SRC_DIR)/virt/mem.c \
+       $(SRC_DIR)/virt/cpu.c \
+       $(SRC_DIR)/virt/affinity.c \
+       $(SRC_DIR)/virt/vproc.c \
        $(SRC_DIR)/android/firmware.c \
        $(SRC_DIR)/android/spawn.c \
        $(SRC_DIR)/android/socket.c \
@@ -89,8 +93,7 @@ SRCS = $(SRC_DIR)/main.c \
        $(SRC_DIR)/android/virgl.c \
        $(SRC_DIR)/android/pulseaudio.c \
        $(SRC_DIR)/anland/anland.c \
-       $(SRC_DIR)/anland/display_daemon.c \
-       $(SRC_DIR)/virtualize.c
+       $(SRC_DIR)/anland/display_daemon.c
 
 # Hardened warning set, all warnings are errors
 CFLAGS  = -Wall -Wextra -Wpedantic -Werror -O2 -flto=auto -std=gnu99 -I$(SRC_DIR)/include -no-pie -pthread
