@@ -45,6 +45,8 @@ SRCS = $(SRC_DIR)/main.c \
        $(SRC_DIR)/android/socket.c \
        $(SRC_DIR)/container/inspect.c \
        $(SRC_DIR)/container/registry.c \
+       $(SRC_DIR)/container/recovery.c \
+       $(SRC_DIR)/status/show.c \
        $(SRC_DIR)/cli/options.c \
        $(SRC_DIR)/cli/usage.c \
        $(SRC_DIR)/android/android.c \
@@ -54,7 +56,6 @@ SRCS = $(SRC_DIR)/main.c \
        $(SRC_DIR)/net/network.c \
        $(SRC_DIR)/terminal.c \
        $(SRC_DIR)/console.c \
-       $(SRC_DIR)/pid.c \
        $(SRC_DIR)/status.c \
        $(SRC_DIR)/boot.c \
        $(SRC_DIR)/config.c \

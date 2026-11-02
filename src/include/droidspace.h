@@ -456,6 +456,7 @@ struct ds_config {
 #include "config/config.h"
 #include "config/parse.h"
 #include "container/inspect.h"
+#include "container/recovery.h"
 #include "container/registry.h"
 #include "core/exec.h"
 #include "core/fdpass.h"
@@ -466,6 +467,7 @@ struct ds_config {
 #include "core/string.h"
 #include "security/peer_auth.h"
 #include "security/selinux.h"
+#include "status/show.h"
 
 /* status.c */
 
@@ -839,31 +841,6 @@ int console_monitor_loop(int console_sock, pid_t monitor_pid,
 
 /* pid.c */
 
-const char *get_workspace_dir(void);
-const char *get_pids_dir(void);
-const char *get_net_dir(void);
-const char *get_logs_dir(void);
-int ensure_workspace(void);
-int resolve_pidfile_from_name(const char *name, char *pidfile, size_t size);
-int is_container_running(struct ds_config *cfg, pid_t *pid_out);
-int is_container_init(pid_t pid);
-int ds_metadata_sync(pid_t pid);
-int count_running_containers(char *first_name, size_t size);
-pid_t find_container_init_pid(const char *uuid);
-pid_t find_container_by_name(const char *name);
-int show_containers(struct ds_config *cfg);
-int scan_containers(void);
-int check_selinux_permissive_needs(void);
-int check_x11_needs(void);
-int check_virgl_needs(void);
-int check_pulse_needs(void);
-
-/*
- * ds_feature_needs - generic feature-needs scanner.
- * Pass offsetof(struct ds_config, <field>) for the boolean flag to check.
- * Returns: 1=running, 0=installed-but-idle, -1=not-installed
- */
-int ds_feature_needs(size_t cfg_flag_offset);
 void write_plain_env_file(const char *src, const char *dst);
 
 /* boot.c */

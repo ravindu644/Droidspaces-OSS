@@ -7,6 +7,42 @@
 
 #include "droidspace.h"
 
+/* Workspace / Paths */
+
+const char *get_workspace_dir(void) {
+  return is_android() ? DS_WORKSPACE_ANDROID : DS_WORKSPACE_LINUX;
+}
+
+const char *get_pids_dir(void) {
+  static char pids_path[PATH_MAX];
+  snprintf(pids_path, sizeof(pids_path), "%s/%s", get_workspace_dir(),
+           DS_PIDS_SUBDIR);
+  return pids_path;
+}
+
+const char *get_net_dir(void) {
+  static char net_path[PATH_MAX];
+  snprintf(net_path, sizeof(net_path), "%s/%s", get_workspace_dir(),
+           DS_NET_SUBDIR);
+  return net_path;
+}
+
+const char *get_logs_dir(void) {
+  static char logs_path[PATH_MAX];
+  snprintf(logs_path, sizeof(logs_path), "%s/%s", get_workspace_dir(),
+           DS_LOGS_SUBDIR);
+  return logs_path;
+}
+
+int ensure_workspace(void) {
+  mkdir_p(get_workspace_dir(), 0755);
+  mkdir_p(get_pids_dir(), 0755);
+  mkdir_p(get_net_dir(), 0755);
+  mkdir_p(get_logs_dir(), 0755);
+
+  return 0;
+}
+
 /* Relative-path resolution
  *
  * The daemon calls chdir("/") inside daemonize(), so any relative path
