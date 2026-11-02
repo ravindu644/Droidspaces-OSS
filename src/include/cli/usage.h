@@ -10,4 +10,6 @@
 
 void print_ds_banner(void);
 
+void print_usage(void);
+
 #endif /* DS_CLI_USAGE_H */

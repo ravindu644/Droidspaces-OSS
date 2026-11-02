@@ -573,9 +573,5 @@ int ds_setup_pulse_socket(struct ds_config *cfg);
 /* main.c */
 
 int ds_multi_stop(const char *raw_names);
-/* The CLI override pass. Idempotent over the same argv. */
-int ds_apply_cli_overrides(int argc, char **argv, struct ds_config *cfg,
-                           int strict);
-const char *ds_command_word(int argc, char **argv);
 
 #endif /* DROIDSPACES_H */

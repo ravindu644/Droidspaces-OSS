@@ -8,6 +8,10 @@
 #include "droidspaces.h"
 #include <time.h>
 
+int ds_log_silent = 0;
+char ds_log_container_name[256] = "";
+int ds_log_container_fd = -1;
+
 void rotate_log(const char *path, size_t max_size) {
   struct stat st;
   if (stat(path, &st) == 0 && (size_t)st.st_size >= max_size) {

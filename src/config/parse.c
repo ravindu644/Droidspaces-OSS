@@ -227,8 +227,9 @@ int ds_config_add_bind(struct ds_config *cfg, const char *src, const char *dest,
 
 /*
  * IMPORTANT: free_config_binds must NOT free unknown lines.
- * The --reset path in main.c saves unknown_head/tail pointers, calls this
- * function, then memset's the struct, then restores the saved pointers.
+ * ds_config_reset_defaults (config/config.c), used by --reset and by
+ * restart's reload, saves the unknown_head/tail pointers, calls this
+ * function, re-inits the struct (ds_config_init), then restores them.
  * If we free unknown lines here, the restored pointers dangle → SIGSEGV.
  *
  * Unknown lines are freed separately via free_config_unknown_lines().
