@@ -172,7 +172,7 @@ count++;
 install_policy_rules(cfg);
 ```
 
-后端有些地方已经做得很好了。`src/include/droidspaces.h` 记录了调用顺序约束（
+后端有些地方已经做得很好了。`src/include/security/seccomp.h` 记录了调用顺序约束（
 `ds_ksu_neutralize_root_escape` 必须在 `ds_seccomp_apply_minimal` 之前运行，并写明了
 原因），`ds_bind_mount_socket` 用它所堵住的竞态来解释为什么要用 `O_NOFOLLOW`。这就是标准。
 
@@ -184,7 +184,8 @@ install_policy_rules(cfg);
 ### C 语言约定
 
 - 使用 C89 块注释（`/* ... */`）。`src/` 中没有 `//` 注释。
-- 默认 `static`。只有当函数被加进 `src/include/droidspaces.h` 时，才去掉 `static`。
+- 默认 `static`。只有当函数的原型被加进 `src/include/` 下的头文件时，才去掉 `static`：
+  该层的公开头文件；如果只有同一目录的文件调用，就放进该目录的 `internal.h`。
 - 新的跨模块函数使用 `ds_` 前缀。遗留的无前缀名称（`read_file`、`mkdir_p`、`run_command`、
   `domount`）保持原样，不要重命名，也不要在新代码中模仿它们。
 - `is_*` 用于判定函数，`check_*` 用于可能打印输出的探测函数，`setup_*` 与 `cleanup_*`
@@ -458,7 +459,7 @@ libsu 的全局配置在 `DroidspacesApplication.kt` 中，那是唯一应该设
 
 | 符号 | 头文件 | 何时使用 |
 | --- | --- | --- |
-| `ds_log(fmt, ...)` | `droidspaces.h` | 正常进度输出 |
+| `ds_log(fmt, ...)` | `core/log.h` | 正常进度输出 |
 | `ds_warn(fmt, ...)` | | 可恢复的问题。输出到 stderr，永不被静音 |
 | `ds_error(fmt, ...)` | | 由调用方处理的失败 |
 | `ds_die(fmt, ...)` | | 致命错误。记录后退出。绝不要手写 `fprintf` 加 `exit` |
@@ -484,7 +485,7 @@ libsu 的全局配置在 `DroidspacesApplication.kt` 中，那是唯一应该设
 | `ds_format_uptime`、`ds_parse_size`、`ds_format_size` | 运行时长字符串，以及 `1G`、`512M` 这类字节数 |
 | `sanitize_container_name`、`validate_container_name`、`reject_container_name`、`parse_and_validate_names` | 处理用户输入的容器名。`reject_container_name` 是参数解析时的一步到位版本 |
 | `validate_bind_destination` | 拒绝会覆盖容器内部结构的挂载目标 |
-| `ds_shell_metachars`（`src/utils.c`） | 被拒绝元字符集合的唯一来源。引用它，不要重新敲一遍 |
+| `ds_shell_metachars`（`src/core/string.c`） | 被拒绝元字符集合的唯一来源。引用它，不要重新敲一遍 |
 
 ### C 后端：文件与路径
 
@@ -550,8 +551,8 @@ libsu 的全局配置在 `DroidspacesApplication.kt` 中，那是唯一应该设
 | `ds_config_auto_path`、`apply_reset_config` | 推导默认配置路径，以及重置 |
 | `load_etc_environment`、`ds_env_boot_setup`、`ds_env_save`、`parse_env_file_to_config` | 环境变量文件处理 |
 
-新增配置键必须**同时**加进 `src/config.c` 的 `ds_config_load()` 和
-`ds_config_serialize_known()`。漏掉后者，这个键会被当成未知行原样保留。
+新增配置键必须**同时**加进 `src/config/load.c` 的 `ds_config_load()` 和
+`src/config/save.c` 的 `ds_config_serialize_known()`。漏掉后者，下次保存时这个键的值会丢失。
 
 ### C 后端：挂载、cgroup、工作目录与 seccomp
 

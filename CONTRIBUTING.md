@@ -187,7 +187,7 @@ count++;
 install_policy_rules(cfg);
 ```
 
-The backend already does this well in places. `src/include/droidspaces.h` documents ordering
+The backend already does this well in places. `src/include/security/seccomp.h` documents ordering
 constraints (`ds_ksu_neutralize_root_escape` must run before `ds_seccomp_apply_minimal`, and
 says why), and `ds_bind_mount_socket` explains the `O_NOFOLLOW` choice in terms of the race
 it closes. That is the bar.
@@ -200,8 +200,9 @@ change in the wrong place is a second bug.
 ### C conventions
 
 - C89 block comments (`/* ... */`). There are no `//` comments in `src/`.
-- `static` by default. A function becomes non-static only when it is added to
-  `src/include/droidspaces.h`.
+- `static` by default. A function becomes non-static only when its prototype is added to a
+  header under `src/include/`: the layer's public header, or the folder's `internal.h` when
+  only that folder calls it.
 - New cross-module functions take the `ds_` prefix. Legacy un-prefixed names (`read_file`,
   `mkdir_p`, `run_command`, `domount`) stay as they are; do not rename them and do not
   imitate them for new work.
@@ -486,7 +487,7 @@ validation. Prefer the wrappers.
 
 | Symbol | Header line | Use it when |
 | --- | --- | --- |
-| `ds_log(fmt, ...)` | `droidspaces.h` | Normal progress output |
+| `ds_log(fmt, ...)` | `core/log.h` | Normal progress output |
 | `ds_warn(fmt, ...)` | | Recoverable problem. Goes to stderr, never silenced |
 | `ds_error(fmt, ...)` | | Failure the caller handles |
 | `ds_die(fmt, ...)` | | Fatal. Logs then exits. Never write `fprintf` plus `exit` by hand |
@@ -513,7 +514,7 @@ a verbosity flag.
 | `ds_format_uptime`, `ds_parse_size`, `ds_format_size` | Uptime strings, and byte counts like `1G` or `512M` |
 | `sanitize_container_name`, `validate_container_name`, `reject_container_name`, `parse_and_validate_names` | Container names from user input. `reject_container_name` is the one-call form for argument parsing |
 | `validate_bind_destination` | Rejecting bind targets that would clobber container internals |
-| `ds_shell_metachars` (`src/utils.c`) | The single source of truth for the rejected metacharacter set. Reference it, do not retype it |
+| `ds_shell_metachars` (`src/core/string.c`) | The single source of truth for the rejected metacharacter set. Reference it, do not retype it |
 
 ### C backend: files and paths
 
@@ -579,9 +580,9 @@ whole tree. It is almost entirely fixed-size, with three heap-owned lists.
 | `ds_config_auto_path`, `apply_reset_config` | Deriving the default config path, and resetting |
 | `load_etc_environment`, `ds_env_boot_setup`, `ds_env_save`, `parse_env_file_to_config` | Environment file handling |
 
-A new config key must be added to **both** `ds_config_load()` and
-`ds_config_serialize_known()` in `src/config.c`. Miss the second and the key round-trips as
-an unknown line.
+A new config key must be added to **both** `ds_config_load()` in `src/config/load.c` and
+`ds_config_serialize_known()` in `src/config/save.c`. Miss the second and the next save drops
+its value.
 
 ### C backend: mount, cgroup, workspace, seccomp
 

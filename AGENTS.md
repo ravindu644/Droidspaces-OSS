@@ -192,11 +192,14 @@ These are choke points. Bypassing one is a bug, not a shortcut.
   wraps every dynamic value that reaches a root shell.
 - `ContainerInitManager.isSafeServiceName()` allow-lists service names that came from inside a
   container. It fails closed. So does `ValidationUtils`.
-- `ds_peer_authorized()` in `src/utils.c` is the only authorization gate in the tree, and
+- `ds_peer_authorized()` in `src/security/peer_auth.c` is the only authorization gate in the tree, and
   `ds_peer_in_pidns()` backs it. Both must fail closed. A "cannot determine, so allow"
   branch there was a root container escape once already.
-- `src/include/droidspaces.h` is the catch-all header and every `.c` file includes only it.
-  Grep it before writing a helper.
+- `src/include/droidspaces.h` is the umbrella header. Every `.c` file includes it first, and it
+  pulls in the layer headers under `src/include/<layer>/`. A folder's private helpers are
+  declared in its `internal.h`, which only that folder's files include, plus files in its
+  subfolders that have no `internal.h` of their own (`net/route/` uses `net/internal.h`).
+  Grep `src/include/` before writing a helper.
 - Logging is `ds_log`, `ds_warn`, `ds_error`, `ds_die`. Never a bare `fprintf` or `exit`.
 - `run_command`, `run_command_quiet`, `run_command_log` are the only sanctioned way to run
   an external binary. There is no `system()` in this tree and there must not be one.
