@@ -8,7 +8,8 @@
 #include "droidspace.h"
 
 /* JSON output. We only ever write flat objects of strings and integers, so
- * these three functions are the whole encoder. */
+ * these two functions and ds_json_status() in status/collect.c are the whole
+ * encoder. */
 
 void ds_json_str(const char *key, const char *val, int *first) {
   printf("%s\"%s\":\"", *first ? "" : ",", key);

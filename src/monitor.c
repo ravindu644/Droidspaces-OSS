@@ -96,8 +96,8 @@ void ds_monitor_run(struct ds_config *cfg, int sync_pipe_write) {
     _exit(EXIT_FAILURE);
   }
 
-  /* Held until we exit. It tells the pruners in pid.c that this container's
-   * leftovers still have an owner, so they leave its pidfile alone. */
+  /* Held until we exit. It tells the pidfile pruners in container/ that this
+   * container's leftovers still have an owner, so they keep its pidfile. */
   ds_container_claim_supervision(cfg->container_name);
 
   /* Monitor Hardening

@@ -496,7 +496,7 @@ struct ds_config {
 #include "virt/affinity.h"
 #include "virt/vproc.h"
 
-/* status.c */
+/* monitor.c, container.c and main.c */
 
 void ds_monitor_run(struct ds_config *cfg, int sync_pipe_write);
 int ds_container_lock(const char *name, int wait);
@@ -527,8 +527,6 @@ const char *ds_extract_mls(const char *ctx);
 void ds_selinux_dyntransition(const char *mls);
 int ds_drop_privileges(int uid);
 int ds_resolve_termux_uid(void);
-
-/* cgroup.c */
 
 /* x11.c */
 
@@ -713,16 +711,13 @@ void ds_ra_build(uint8_t *out, const uint8_t mac[6],
  */
 void ds_dhcp_server_stop(void);
 
-/* pid.c */
-
-void write_plain_env_file(const char *src, const char *dst);
-
 /* boot.c */
 
 int internal_boot(struct ds_config *cfg);
 
 /* container.c */
 
+void write_plain_env_file(const char *src, const char *dst);
 int is_valid_container_pid(pid_t pid);
 int start_rootfs(struct ds_config *cfg);
 int stop_rootfs(struct ds_config *cfg, int skip_unmount);

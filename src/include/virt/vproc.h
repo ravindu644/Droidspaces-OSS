@@ -8,7 +8,7 @@
 #ifndef DS_VIRT_VPROC_H
 #define DS_VIRT_VPROC_H
 
-/* virtualize.c: the LXCFS-style views of /proc and /sys/devices/system/cpu */
+/* The LXCFS-style views of /proc and /sys/devices/system/cpu, built in virt/ */
 
 /* Inside the container before init execs: bind-mounts the virtual files the
  * active limits need, no-op without limits. */

@@ -7,6 +7,8 @@
 
 #include "droidspace.h"
 
+/* A key written here must also be parsed by ds_config_load() in config/load.c.
+ * Otherwise it is read back as an unknown line and saved twice. */
 static void ds_config_serialize_known(FILE *f, struct ds_config *cfg) {
   fprintf(f, "# Droidspaces Container Configuration\n");
   fprintf(f, "# Generated automatically - Changes may be overwritten\n\n");

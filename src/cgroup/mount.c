@@ -135,6 +135,12 @@ static void mount_v1_controller(const char *name, void *arg) {
   }
 }
 
+/**
+ * Ported LXC-style Cgroup Setup:
+ * 1. Discover host hierarchies from /proc/self/mountinfo.
+ * 2. If Cgroup Namespace is active (Linux 4.6+), mount hierarchies directly.
+ * 3. Otherwise (Legacy), bind-mount the container's subset from the host.
+ */
 int setup_cgroups(int is_systemd, int force_cgroupv1) {
   ds_cgroup_host_bootstrap(force_cgroupv1);
 

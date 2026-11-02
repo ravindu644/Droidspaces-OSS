@@ -9,9 +9,6 @@
 
 #include "virt/internal.h"
 
-/* Per-resource content generators
- * Each returns a malloc'd buffer + length. Caller must free(). */
-
 /* /proc/meminfo - virtualized when memory_limit > 0 */
 char *gen_meminfo(struct ds_config *cfg, size_t *out_len) {
   long long mem_limit = cfg->memory_limit; /* bytes */

@@ -9,13 +9,6 @@
 
 #include "cgroup/internal.h"
 
-/**
- * Ported LXC-style Cgroup Setup:
- * 1. Discover host hierarchies from /proc/self/mountinfo.
- * 2. If Cgroup Namespace is active (Linux 4.6+), mount hierarchies directly.
- * 3. Otherwise (Legacy), bind-mount the container's subset from the host.
- */
-
 static int ctrl_supported_v2(const char *cg_path, const char *name);
 
 /* Where we mount the v1 hierarchies the host left unmounted. */

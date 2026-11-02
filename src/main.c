@@ -662,7 +662,8 @@ int ds_apply_cli_overrides(int argc, char **argv, struct ds_config *cfg,
   return 0;
 }
 
-/* Init an iter_cfg suitable for per-container dispatch. */
+/* stop with a comma-separated name list: stop each one in turn, 1 if any
+ * of them failed. */
 int ds_multi_stop(const char *raw_names) {
   char tmp[4096];
   snprintf(tmp, sizeof(tmp), "%s", raw_names);

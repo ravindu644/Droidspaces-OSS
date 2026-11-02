@@ -56,6 +56,8 @@ static void parse_bind_mounts(const char *value, struct ds_config *cfg) {
       ds_warn("config: %s - skipping", err);
 }
 
+/* A key parsed here must also be written by ds_config_serialize_known() in
+ * config/save.c, or the next save drops its value. */
 int ds_config_load(const char *config_path, struct ds_config *cfg) {
   FILE *f = fopen(config_path, "re");
   if (!f) {

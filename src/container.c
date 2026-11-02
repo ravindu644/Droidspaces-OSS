@@ -20,8 +20,8 @@
  * holder dies. There is no stale lock to detect and no PID to recycle.
  *
  * A second file, <name>.monitor, is held shared by a container's monitor for
- * as long as it lives. It answers one question for the pruners in pid.c: is
- * somebody still responsible for this container's leftovers? */
+ * as long as it lives. It answers one question for the pidfile pruners in
+ * container/: is somebody still responsible for this container's leftovers? */
 
 #define DS_EXT_MONITOR ".monitor"
 #define DS_EXT_HELPERS ".helpers"
