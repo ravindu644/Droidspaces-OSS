@@ -20,6 +20,17 @@ int enter_namespace(pid_t pid, struct ds_config *cfg) {
   int ns_fds[6];
   char path[PATH_MAX];
 
+  /* Until pivot_root, init still has the host's root, and until its
+   * unshare the host's mount namespace: a command entered then would run
+   * on the host. The pidfile is written before that point. */
+  struct stat ours, its;
+  snprintf(path, sizeof(path), "/proc/%d/root", pid);
+  if (stat("/", &ours) == 0 && stat(path, &its) == 0 &&
+      ours.st_dev == its.st_dev && ours.st_ino == its.st_ino) {
+    ds_error("Container PID %d is still booting, try again.", pid);
+    return -1;
+  }
+
   /* 1. Open all namespace descriptors first (CRITICAL: before any setns) */
   for (int i = 0; i < 6; i++) {
     snprintf(path, sizeof(path), "/proc/%d/ns/%s", pid, ns_names[i]);

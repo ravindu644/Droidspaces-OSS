@@ -8,7 +8,6 @@
 #ifndef DS_CONTAINER_RECOVERY_H
 #define DS_CONTAINER_RECOVERY_H
 
-int ds_metadata_sync(pid_t pid);
 int scan_containers(void);
 
 #endif /* DS_CONTAINER_RECOVERY_H */

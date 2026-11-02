@@ -16,9 +16,10 @@
 
 /* In-place overwrite: preserves the bind-mount inode (rename(2) breaks it).
  * Hardened with O_NOFOLLOW and filesystem type checks to prevent attacks. */
-static int write_inplace(const char *path, const char *buf, size_t len) {
-  /* Use O_NOFOLLOW to prevent the container from tricking us with symlinks */
-  int fd = open(path, O_WRONLY | O_CLOEXEC | O_NOFOLLOW);
+static int write_inplace(int dir, const char *name, const char *buf,
+                         size_t len) {
+  /* O_NONBLOCK: a FIFO planted here would block the monitor in open() */
+  int fd = openat(dir, name, O_WRONLY | O_CLOEXEC | O_NOFOLLOW | O_NONBLOCK);
   if (fd < 0)
     return -1;
 
@@ -199,16 +200,12 @@ void ds_virtualize_update(struct ds_config *cfg) {
     }
   }
 
-  /* Pre-check: if the virtualization tmpfs directory is not yet
-   * mounted/created, skip the update silently to avoid startup race logs and
-   * redundant generation overhead. */
-  char vproc_dir[PATH_MAX];
-  snprintf(vproc_dir, sizeof(vproc_dir), "/proc/%d/root" VPROC_PATH,
-           (int)cfg->container_pid);
-  struct stat st_dir;
-  if (stat(vproc_dir, &st_dir) != 0 || !S_ISDIR(st_dir.st_mode)) {
+  /* No directory yet (still booting) or not one we can reach without a
+   * symlink: skip silently, as there is nothing of ours to refresh. */
+  int dir =
+      ds_open_in_root(cfg->container_pid, VPROC_PATH, O_PATH | O_DIRECTORY);
+  if (dir < 0)
     return;
-  }
 
   for (size_t i = 0; i < ARRAY_SIZE(vproc_files); i++) {
     if (!(vproc_files[i].flags & V_LIVE) ||
@@ -223,24 +220,16 @@ void ds_virtualize_update(struct ds_config *cfg) {
       continue;
     }
 
-    char path[PATH_MAX];
-    snprintf(path, sizeof(path), "/proc/%d/root/" VPROC_PATH "/%s",
-             (int)cfg->container_pid, vproc_files[i].name);
-
     /* The directory is there but this file is not: the guest is taking its
      * /run apart on the way down, or this one file never got set up. Nothing
      * to refresh here and nothing to report, any more than for the directory
      * itself above; the other files still get theirs. */
-    struct stat st;
-    if (stat(path, &st) != 0) {
-      free(buf);
-      continue;
-    }
-
-    if (write_inplace(path, buf, len) < 0)
+    if (write_inplace(dir, vproc_files[i].name, buf, len) < 0 &&
+        errno != ENOENT)
       write_monitor_debug_log(cfg->container_name,
-                              "[VIRT] write_inplace failed: %s (%s)", path,
-                              strerror(errno));
+                              "[VIRT] write_inplace failed: %s (%s)",
+                              vproc_files[i].name, strerror(errno));
     free(buf);
   }
+  close(dir);
 }

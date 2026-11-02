@@ -139,56 +139,9 @@ static void daemon_log_tee(const char *prefix, const char *fmt, ...) {
  */
 static char g_self_path[PATH_MAX];
 
-/* wire protocol helpers */
-
-static int read_exact(int fd, void *buf, size_t n) {
-  uint8_t *p = (uint8_t *)buf;
-  while (n) {
-    ssize_t r = read(fd, p, n);
-    if (r <= 0)
-      return -1;
-    p += r;
-    n -= (size_t)r;
-  }
-  return 0;
-}
-
-static int send_frame(int fd, uint8_t type, const void *data, uint32_t len) {
-  uint8_t hdr[5];
-  uint32_t nl = htonl(len);
-  hdr[0] = type;
-  memcpy(hdr + 1, &nl, 4);
-  if (write_all(fd, hdr, 5) < 0)
-    return -1;
-  if (len && write_all(fd, data, len) < 0)
-    return -1;
-  return 0;
-}
-
-static int recv_frame_hdr(int fd, uint8_t *type_out, uint32_t *len_out) {
-  uint8_t hdr[5];
-  if (read_exact(fd, hdr, 5) < 0)
-    return -1;
-  *type_out = hdr[0];
-  uint32_t nl;
-  memcpy(&nl, hdr + 1, 4);
-  *len_out = ntohl(nl);
-  return 0;
-}
-
 static void send_exit(int fd, int code) {
   uint32_t nc = htonl((uint32_t)code);
-  send_frame(fd, MSG_EXIT, &nc, 4);
-}
-
-/* abstract socket setup */
-
-static socklen_t make_addr(struct sockaddr_un *addr) {
-  memset(addr, 0, sizeof(*addr));
-  addr->sun_family = AF_UNIX;
-  size_t nlen = strlen(DS_SOCK_NAME);
-  memcpy(addr->sun_path + 1, DS_SOCK_NAME, nlen);
-  return (socklen_t)(offsetof(struct sockaddr_un, sun_path) + 1 + nlen);
+  ds_send_frame(fd, MSG_EXIT, &nc, 4);
 }
 
 /* request parsing */
@@ -212,7 +165,7 @@ static void free_req(ds_req_t *r) {
 static int recv_req(int fd, ds_req_t *r) {
   memset(r, 0, sizeof(*r));
   uint32_t nf, na;
-  if (read_exact(fd, &nf, 4) < 0 || read_exact(fd, &na, 4) < 0)
+  if (ds_read_exact(fd, &nf, 4) < 0 || ds_read_exact(fd, &na, 4) < 0)
     return -1;
   r->flags = ntohl(nf);
   uint32_t argc = ntohl(na);
@@ -221,7 +174,7 @@ static int recv_req(int fd, ds_req_t *r) {
 
   for (uint32_t i = 0; i < argc; i++) {
     uint32_t nl;
-    if (read_exact(fd, &nl, 4) < 0)
+    if (ds_read_exact(fd, &nl, 4) < 0)
       return -1;
     uint32_t al = ntohl(nl);
     if (al > DS_MAX_ARG)
@@ -229,7 +182,7 @@ static int recv_req(int fd, ds_req_t *r) {
     r->argv[i] = (char *)malloc((size_t)al + 1);
     if (!r->argv[i])
       return -1;
-    if (al && read_exact(fd, r->argv[i], al) < 0)
+    if (al && ds_read_exact(fd, r->argv[i], al) < 0)
       return -1;
     r->argv[i][al] = '\0';
     r->argc++; /* safely increment once we actually have the string */
@@ -238,7 +191,7 @@ static int recv_req(int fd, ds_req_t *r) {
 
   if (r->flags & REQ_FLAG_PTY) {
     uint16_t ws[2];
-    if (read_exact(fd, ws, 4) < 0)
+    if (ds_read_exact(fd, ws, 4) < 0)
       return -1;
     r->rows = ntohs(ws[0]);
     r->cols = ntohs(ws[1]);
@@ -283,7 +236,7 @@ static void drain_fd(int fd, int conn, uint8_t type) {
     ssize_t n = read(fd, buf, sizeof(buf));
     if (n <= 0)
       break;
-    send_frame(conn, type, buf, (uint32_t)n);
+    ds_send_frame(conn, type, buf, (uint32_t)n);
   }
   fcntl(fd, F_SETFL, fl);
 }
@@ -306,7 +259,7 @@ static void handle_session(int conn, ds_req_t *r) {
 
   if (is_pty) {
     if (ds_openpty("/dev/ptmx", &master, &slave, NULL) < 0) {
-      send_frame(conn, MSG_ERR, "daemon: openpty failed\n", 23);
+      ds_send_frame(conn, MSG_ERR, "daemon: openpty failed\n", 23);
       send_exit(conn, 1);
       return;
     }
@@ -330,7 +283,7 @@ static void handle_session(int conn, ds_req_t *r) {
      * caller that shares its stdin with a command shell (libsu) relies on. */
     if (pipe2(out, O_CLOEXEC) < 0 || pipe2(err, O_CLOEXEC) < 0 ||
         ((r->flags & REQ_FLAG_STDIN) && pipe2(in, O_CLOEXEC) < 0)) {
-      send_frame(conn, MSG_ERR, "daemon: pipe2 failed\n", 21);
+      ds_send_frame(conn, MSG_ERR, "daemon: pipe2 failed\n", 21);
       send_exit(conn, 1);
       close_pipe(out);
       close_pipe(err);
@@ -364,7 +317,7 @@ static void handle_session(int conn, ds_req_t *r) {
       close_pipe(err);
       close_pipe(in);
     }
-    send_frame(conn, MSG_ERR, "daemon: fork failed\n", 20);
+    ds_send_frame(conn, MSG_ERR, "daemon: fork failed\n", 20);
     send_exit(conn, 1);
     return;
   }
@@ -517,14 +470,14 @@ static void handle_session(int conn, ds_req_t *r) {
         if (events[i].events & EPOLLIN) {
           uint8_t type;
           uint32_t mlen;
-          if (recv_frame_hdr(conn, &type, &mlen) < 0) {
+          if (ds_recv_frame_hdr(conn, &type, &mlen) < 0) {
             kill(child, is_pty ? SIGHUP : SIGTERM);
             waitpid(child, NULL, 0);
             goto session_end;
           }
           if (type == MSG_OUT && mlen <= (uint32_t)sizeof(buf)) {
             /* Input with nowhere to go is read off the wire and dropped. */
-            int got = read_exact(conn, buf, mlen) == 0 && in_fd >= 0;
+            int got = ds_read_exact(conn, buf, mlen) == 0 && in_fd >= 0;
             if (got && mlen == 0) {
               /* The client's stdin hit EOF. A pty has no EOF to pass on, so
                * only the stdin pipe is closed, once what is queued for it
@@ -600,7 +553,7 @@ static void handle_session(int conn, ds_req_t *r) {
             }
           } else if (type == MSG_WINCH && mlen == 4) {
             uint16_t wd[2];
-            if (read_exact(conn, wd, 4) == 0 && is_pty) {
+            if (ds_read_exact(conn, wd, 4) == 0 && is_pty) {
               struct winsize nws = {ntohs(wd[0]), ntohs(wd[1]), 0, 0};
               ioctl(master, TIOCSWINSZ, &nws);
               kill(child, SIGWINCH);
@@ -611,7 +564,7 @@ static void handle_session(int conn, ds_req_t *r) {
             while (rem) {
               uint32_t c =
                   (rem < (uint32_t)sizeof(buf)) ? rem : (uint32_t)sizeof(buf);
-              if (read_exact(conn, buf, c) < 0)
+              if (ds_read_exact(conn, buf, c) < 0)
                 goto session_end;
               rem -= c;
             }
@@ -661,7 +614,7 @@ static void handle_session(int conn, ds_req_t *r) {
           for (;;) {
             ssize_t n = read(master, buf, sizeof(buf));
             if (n > 0) {
-              if (send_frame(conn, MSG_OUT, buf, (uint32_t)n) < 0) {
+              if (ds_send_frame(conn, MSG_OUT, buf, (uint32_t)n) < 0) {
                 kill(child, SIGHUP);
                 waitpid(child, NULL, 0);
                 goto session_end;
@@ -681,7 +634,7 @@ static void handle_session(int conn, ds_req_t *r) {
             ssize_t n = read(fd, buf, sizeof(buf));
             if (n > 0) {
               uint8_t t = (fd == err[0]) ? MSG_ERR : MSG_OUT;
-              if (send_frame(conn, t, buf, (uint32_t)n) < 0) {
+              if (ds_send_frame(conn, t, buf, (uint32_t)n) < 0) {
                 kill(child, is_pty ? SIGHUP : SIGTERM);
                 waitpid(child, NULL, 0);
                 goto session_end;
@@ -760,7 +713,7 @@ session_end:
 static void handle_conn(int conn) {
   ds_req_t req;
   if (recv_req(conn, &req) < 0) {
-    send_frame(conn, MSG_ERR, "daemon: bad request\n", 20);
+    ds_send_frame(conn, MSG_ERR, "daemon: bad request\n", 20);
     send_exit(conn, 1);
     close(conn);
     _exit(1);
@@ -778,7 +731,7 @@ static void handle_conn(int conn) {
   const char *cmd = av ? ds_command_word(req.argc + 1, av) : NULL;
   free(av);
   if (cmd && (strcmp(cmd, "daemon") == 0 || strcmp(cmd, "client") == 0)) {
-    send_frame(conn, MSG_ERR, "daemon: recursive call refused\n", 31);
+    ds_send_frame(conn, MSG_ERR, "daemon: recursive call refused\n", 31);
     send_exit(conn, 1);
     free_req(&req);
     close(conn);
@@ -1063,7 +1016,7 @@ int ds_daemon_run(int foreground, char **argv) {
   }
 
   struct sockaddr_un addr;
-  socklen_t alen = make_addr(&addr);
+  socklen_t alen = ds_abstract_addr(&addr, DS_SOCK_NAME);
   if (bind(srv, (struct sockaddr *)&addr, alen) < 0) {
     ds_error("daemon: bind(@%s): %s", DS_SOCK_NAME, strerror(errno));
     if (errno == EADDRINUSE) {
@@ -1107,7 +1060,7 @@ int ds_daemon_run(int foreground, char **argv) {
     if (!ds_peer_authorized(conn, "droidspaces")) {
       const char *msg = "permission denied: only root or 'droidspaces' group "
                         "members from the host PID ns may connect.\n";
-      send_frame(conn, MSG_ERR, msg, (uint32_t)strlen(msg));
+      ds_send_frame(conn, MSG_ERR, msg, (uint32_t)strlen(msg));
       send_exit(conn, 1);
       close(conn);
       continue;
@@ -1140,7 +1093,7 @@ int ds_daemon_run(int foreground, char **argv) {
  */
 int ds_daemon_probe(void) {
   struct sockaddr_un addr;
-  socklen_t alen = make_addr(&addr);
+  socklen_t alen = ds_abstract_addr(&addr, DS_SOCK_NAME);
   int s = socket(AF_UNIX, SOCK_STREAM | SOCK_CLOEXEC, 0);
   if (s < 0)
     return 0;
@@ -1213,7 +1166,7 @@ int ds_client_run(int argc, char **argv, const char *cmd, int want_stdin) {
    * connect */
   int sock = -1;
   struct sockaddr_un addr;
-  socklen_t alen = make_addr(&addr);
+  socklen_t alen = ds_abstract_addr(&addr, DS_SOCK_NAME);
 
   int s = socket(AF_UNIX, SOCK_STREAM | SOCK_CLOEXEC, 0);
   if (s < 0) {
@@ -1277,7 +1230,7 @@ int ds_client_run(int argc, char **argv, const char *cmd, int want_stdin) {
       if (relay_stdin && errno == EPERM)
         stdin_file = 1;
       else if (relay_stdin)
-        send_frame(sock, MSG_OUT, NULL, 0); /* no stdin at all: EOF now */
+        ds_send_frame(sock, MSG_OUT, NULL, 0); /* no stdin at all: EOF now */
     }
   }
   if (winch_sfd >= 0) {
@@ -1307,7 +1260,7 @@ int ds_client_run(int argc, char **argv, const char *cmd, int want_stdin) {
           struct winsize nws = {24, 80, 0, 0};
           ioctl(STDIN_FILENO, TIOCGWINSZ, &nws);
           uint16_t wd2[2] = {htons(nws.ws_row), htons(nws.ws_col)};
-          send_frame(sock, MSG_WINCH, wd2, 4);
+          ds_send_frame(sock, MSG_WINCH, wd2, 4);
         }
       } else if (fd == STDIN_FILENO) {
         stdin_ready = 1;
@@ -1332,7 +1285,7 @@ int ds_client_run(int argc, char **argv, const char *cmd, int want_stdin) {
           for (;;) {
             uint8_t type;
             uint32_t mlen;
-            if (recv_frame_hdr(sock, &type, &mlen) < 0) {
+            if (ds_recv_frame_hdr(sock, &type, &mlen) < 0) {
               done = 1;
               break;
             }
@@ -1340,7 +1293,7 @@ int ds_client_run(int argc, char **argv, const char *cmd, int want_stdin) {
             if (type == MSG_EXIT) {
               uint32_t nc = 0;
               if (mlen >= 4)
-                read_exact(sock, &nc, 4);
+                ds_read_exact(sock, &nc, 4);
               exit_code = (int)ntohl(nc);
               done = 1;
               break;
@@ -1351,7 +1304,7 @@ int ds_client_run(int argc, char **argv, const char *cmd, int want_stdin) {
             while (rem) {
               uint32_t c =
                   (rem < (uint32_t)sizeof(buf)) ? rem : (uint32_t)sizeof(buf);
-              if (read_exact(sock, buf, c) < 0) {
+              if (ds_read_exact(sock, buf, c) < 0) {
                 done = 1;
                 break;
               }
@@ -1398,13 +1351,13 @@ int ds_client_run(int argc, char **argv, const char *cmd, int want_stdin) {
         /* A failed send means the daemon stopped reading, normally because
          * the command is gone. Its exit frame is still queued for us, so
          * stop relaying and let the socket branch collect it. */
-        stop = send_frame(sock, MSG_OUT, buf, (uint32_t)n) < 0;
+        stop = ds_send_frame(sock, MSG_OUT, buf, (uint32_t)n) < 0;
       } else if (raw_tty_active) {
         done = 1;
       } else {
         /* EOF: tell the daemon, then keep going for output and the exit code.
          */
-        send_frame(sock, MSG_OUT, NULL, 0);
+        ds_send_frame(sock, MSG_OUT, NULL, 0);
         stop = 1;
       }
       if (stop) {

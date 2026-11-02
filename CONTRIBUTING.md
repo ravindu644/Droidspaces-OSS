@@ -527,6 +527,8 @@ a verbosity flag.
 | `is_subpath(parent, child)` | Path escape validation. Realpath based, use this instead of `strncmp` |
 | `is_ramfs`, `is_mountpoint` | Filesystem type and mountpoint tests |
 | `build_proc_root_path(pid, suffix, buf, size)` | Building `/proc/<pid>/root/...` with truncation checked |
+| `ds_open_in_root(pid, path, flags)` | Opening a path inside a container's root one step at a time, refusing a symlink at any step and `..`. Every host write through `/proc/<pid>/root` goes through it: `O_NOFOLLOW` alone guards only the last step |
+| `proc_ppid(pid)`, `proc_uid(pid)` | Parent pid and real uid from `/proc/<pid>`. Use `proc_uid`, not `st_uid` of `/proc/<pid>`, which reads 0 for any non-dumpable process |
 | `ds_resolve_path_arg`, `ds_resolve_argv_paths` | Making user-supplied paths absolute before the daemonize boundary changes the working directory |
 | `access(path, F_OK)` | Existence checks. There is no wrapper and none is wanted |
 
@@ -601,7 +603,7 @@ its value.
 | `ds_cgroup_v1_setup`, `ds_cgroup_v1_join` | Giving a v1 container its own cgroup in every v1 hierarchy before the namespace is unshared, and moving the monitor in or out of them |
 | `get_workspace_dir`, `get_pids_dir`, `get_net_dir`, `get_logs_dir` | The only sanctioned way to build a workspace path. They switch between the Android and Linux roots |
 | `ensure_workspace` | Creating the tree |
-| `is_container_running`, `find_container_by_name`, `find_container_init_pid`, `is_container_init` | Container lookup |
+| `is_container_running`, `is_container_init`, `ds_cmd_get_pid` | Container lookup. A lost pidfile is healed from the monitor's answer, never from inside a guest |
 | `ds_feature_needs(offsetof(struct ds_config, field))` | The generic feature scanner. A new global daemon adds a two-line wrapper here, not a new scanner |
 | `ds_seccomp_apply_minimal`, `ds_seccomp_keyring_shim` | The seccomp filters |
 | `ds_ksu_neutralize_root_escape` | KernelSU hardening. Must run **before** `ds_seccomp_apply_minimal`, whose magic-reboot block would otherwise deny the reboot it needs |
@@ -641,13 +643,21 @@ shell-out on the fast path. The netfilter helpers take an address family (`AF_IN
 
 | Symbol | Contract |
 | --- | --- |
-| `ds_peer_authorized(fd, group_name)` | The only authorization gate in the tree. Allows root or a member of the group, but only when the peer shares our PID namespace. Every failure path denies. The caller is `src/daemon.c` |
+| `ds_peer_authorized(fd, group_name)` | The only authorization gate in the tree. Allows root or a member of the group, but only when the peer shares our PID namespace. Every failure path denies. The callers are `src/daemon.c` and `src/container/command.c`, which checks the clients of a monitor's command socket (its clients prove the server with `server_is_monitor` there) |
+| `ds_cmd_get_config(name, cfg, pid)`, `ds_cmd_get_pid(name)`, `ds_cmd_for_each(visit, arg)` | What a running container booted with and its init pid, from its monitor's command socket `@droidspaces/<name>/command`. The only source for either: the host never reads the guest's own copy |
 | `ds_peer_in_pidns(peer_pid)` | Must fail closed. A pid of zero is not translatable into our namespace, and a failed readlink means we cannot prove membership. Both deny. Failing open here let a caller recycle a dead pid and escape to host root |
 | `ds_bind_mount_socket(src, dst, uid, label)` | The symlink-race-safe write pattern for anything landing in a container-controlled directory |
 | `set_selinux_context`, `get_selinux_context`, `ds_selinux_dyntransition`, `ds_selinux_enter_domain`, `ds_drop_privileges`, `ds_resolve_termux_uid` | SELinux and privilege handling |
 
 Any comment on a security check that reads "cannot determine, so allow" is a bug. Inability
 to prove something at a trust boundary means deny.
+
+The host never acts on what a guest can write. Root inside a container is real root, so
+anything in its root, read through `/proc/<pid>/root`, is input from it. Ask the container's
+monitor (`ds_cmd_*`), read the host config, or look at the host's process tree
+(`is_valid_container_pid`) instead. Reads for display only (`os-release`), or for a choice
+that touches nothing but that container, are the exceptions. A write into a directory the
+container controls goes through `ds_open_in_root`.
 
 ## Known duplicates: do not add a third copy
 

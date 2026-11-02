@@ -9,23 +9,21 @@
 
 #include "container/internal.h"
 
-/* Load the config a running container actually booted with, from the
- * snapshot it keeps in its own /run. Returns 0 and fills *out, which the
- * caller releases with ds_config_free(), or -1 if there is no readable
- * snapshot. */
+/* Load the config the running instance pid actually booted with, from its
+ * monitor, never from the copy in the guest's own /run, which root in the
+ * container can rewrite. Returns 0 and fills *out, which the caller releases
+ * with ds_config_free(), or -1 if no monitor answers for that very pid: one
+ * whose init just died still answers for half a second with its own. */
 static int load_booted_config(const struct ds_config *cfg, pid_t pid,
                               struct ds_config *out) {
-  char run_path[PATH_MAX];
-  if (build_proc_root_path(pid, "/run/droidspaces/container.config", run_path,
-                           sizeof(run_path)) != 0)
-    return -1;
-
   ds_config_init(out);
   safe_strncpy(out->container_name, cfg->container_name,
                sizeof(out->container_name));
   safe_strncpy(out->prog_name, cfg->prog_name, sizeof(out->prog_name));
 
-  if (ds_config_load(run_path, out) < 0) {
+  pid_t booted_pid = 0;
+  if (ds_cmd_get_config(cfg->container_name, out, &booted_pid) < 0 ||
+      booted_pid != pid) {
     ds_config_free(out);
     return -1;
   }
@@ -84,20 +82,20 @@ int stop_rootfs_locked(struct ds_config *caller_cfg, int skip_unmount,
 
   /* Tear down what is running, not what the caller is holding. The caller's
    * config describes what the container should be next: on a restart it is
-   * the edited config file or the snapshot with new flags applied on top. If
+   * the edited config file or the booted one with new flags applied on top. If
    * that changed the network mode, cleaning up with it runs the wrong
    * teardown, e.g. the gateway cleanup for a container wired as NAT, and
-   * leaves its veth, port forwards and shared rules behind. The instance's
-   * own snapshot is the only description of what it was booted as. Without a
-   * readable one (a container from before snapshots existed) the caller's
-   * config is the best we have. */
+   * leaves its veth, port forwards and shared rules behind. What its monitor
+   * holds is the only description of what it was booted as. Without an
+   * answer (a monitor from an older build, or one already tearing down) the
+   * caller's config is the best we have. */
   struct ds_config booted;
   int have_booted = (load_booted_config(caller_cfg, pid, &booted) == 0);
   struct ds_config *cfg = have_booted ? &booted : caller_cfg;
 
   ds_log("Stopping container '%s' (PID %d)...", cfg->container_name, pid);
 
-  /* The snapshot names the image file, not where it is mounted. The mount
+  /* The booted config names the image file, not where it is mounted. The mount
    * point is a function of the name, so look there. A directory container
    * does not claim a leftover image mount under its name: the firmware path
    * and unmount below would then act on a mount it never owned. An image
@@ -118,7 +116,7 @@ int stop_rootfs_locked(struct ds_config *caller_cfg, int skip_unmount,
   } else {
     /* Detect the init system through the live container's root rather than a
      * host path: that is right for a volatile overlay, a --pidfile-only
-     * invocation and a container from before config snapshots alike. */
+     * invocation and a container whose monitor did not answer alike. */
     ds_init_type_t init_type = DS_INIT_UNKNOWN;
     char probe_root[PATH_MAX];
     if (build_proc_root_path(pid, "", probe_root, sizeof(probe_root)) == 0)
@@ -128,8 +126,6 @@ int stop_rootfs_locked(struct ds_config *caller_cfg, int skip_unmount,
       /* sysvinit ignores all signals for shutdown -- it only listens on the
        * initctl FIFO. Write a telinit-compatible init_request struct directly
        * into the container's /run/initctl via /proc/<pid>/root. */
-      char initctl[PATH_MAX];
-      snprintf(initctl, sizeof(initctl), "/proc/%d/root/run/initctl", pid);
 
       /* struct layout from initreq.h: magic(4) cmd(4) runlevel(4) sleeptime(4)
        * data(368) = 384 bytes total. */
@@ -146,16 +142,17 @@ int stop_rootfs_locked(struct ds_config *caller_cfg, int skip_unmount,
           .sleeptime = 3,
       };
 
-      int fd = open(initctl, O_WRONLY | O_NONBLOCK | O_NOFOLLOW | O_CLOEXEC);
-      if (fd < 0) {
-        /* Fallback: try /dev/initctl (historical path, used by Slackware) */
-        snprintf(initctl, sizeof(initctl), "/proc/%d/root/dev/initctl", pid);
-        fd = open(initctl, O_WRONLY | O_NONBLOCK | O_NOFOLLOW | O_CLOEXEC);
-      }
+      /* Fallback: /dev/initctl, the historical path Slackware uses, unless
+       * the container's /dev is the host's devtmpfs (hw_access), where it
+       * would be the host's own. A symlink at any step could aim us at the
+       * host's initctl just as well. */
+      int fd = ds_open_in_root(pid, "/run/initctl", O_WRONLY | O_NONBLOCK);
+      if (fd < 0 && !cfg->hw_access)
+        fd = ds_open_in_root(pid, "/dev/initctl", O_WRONLY | O_NONBLOCK);
 
       /* Only write into an actual FIFO.  The container fully controls
-       * /run/initctl inside its own root: O_NOFOLLOW rejects a symlink at the
-       * final component, and the S_ISFIFO check rejects a regular file the
+       * /run/initctl inside its own root: ds_open_in_root rejects a symlink
+       * at any step, and the S_ISFIFO check rejects a regular file the
        * container may have planted to capture the host-written init_request. */
       struct stat ictl_st;
       if (fd >= 0 && fstat(fd, &ictl_st) == 0 && S_ISFIFO(ictl_st.st_mode)) {

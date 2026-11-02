@@ -117,7 +117,6 @@
 #define DS_PROC_STATUS_FMT "/proc/%d/status"
 #define DS_FW_PATH_FILE "/sys/module/firmware_class/parameters/path"
 #define DS_SYSTEMD_CONTAINER_MARKER "/run/systemd/container"
-#define DS_DROIDSPACES_MARKER "/run/droidspaces"
 
 /* Hardening constants */
 #define DS_DEFAULT_TTY_GID 5
@@ -464,6 +463,7 @@ struct ds_config {
 #include "config/parse.h"
 #include "config/save.h"
 #include "container/cleanup.h"
+#include "container/command.h"
 #include "container/exec.h"
 #include "container/info.h"
 #include "container/inspect.h"
@@ -475,6 +475,7 @@ struct ds_config {
 #include "container/stop.h"
 #include "core/exec.h"
 #include "core/fdpass.h"
+#include "core/frame.h"
 #include "core/fs.h"
 #include "core/json.h"
 #include "core/log.h"

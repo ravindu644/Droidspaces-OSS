@@ -195,6 +195,13 @@ These are choke points. Bypassing one is a bug, not a shortcut.
 - `ds_peer_authorized()` in `src/security/peer_auth.c` is the only authorization gate in the tree, and
   `ds_peer_in_pidns()` backs it. Both must fail closed. A "cannot determine, so allow"
   branch there was a root container escape once already.
+- The host never acts on files a container can write (anything in its root, through
+  `/proc/<pid>/root`): root inside is real root. What a running container booted with, and
+  its init pid, come from its monitor's command socket (`ds_cmd_get_config`,
+  `ds_cmd_get_pid` in `src/container/command.c`), and whether a pid is a container init
+  comes from the host's process tree (`is_valid_container_pid`). The only reads left are for
+  display (`os-release`) or for choices that touch nothing but that container (which signal
+  stops its init).
 - `src/include/droidspaces.h` is the umbrella header. Every `.c` file includes it first, and it
   pulls in the layer headers under `src/include/<layer>/`. A folder's private helpers are
   declared in its `internal.h`, which only that folder's files include, plus files in its

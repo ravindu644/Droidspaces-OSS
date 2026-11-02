@@ -222,9 +222,9 @@ int start_rootfs_locked(struct ds_config *cfg, int *lock_fd, int reuse_mount) {
     goto cleanup;
   }
 
-  /* The uniqueness check above reports the name as in use when a running
-   * container carries this UUID (its deep scan is by UUID marker), so a UUID
-   * is only ever minted here, never replaced. */
+  /* A container gets its UUID once, here, on its first start, and keeps it.
+   * Nothing on the host finds a container by it any more: the uniqueness
+   * check above asks the pidfile and the container's monitor. */
   if (cfg->uuid[0] == '\0')
     generate_uuid(cfg->uuid, sizeof(cfg->uuid));
 

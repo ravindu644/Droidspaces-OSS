@@ -35,6 +35,61 @@ int resolve_pidfile_from_name(const char *name, char *pidfile, size_t size) {
   return (r > 0 && (size_t)r < size) ? 0 : -1;
 }
 
+/* 1 if a live pidfile other than skip names pid */
+static int pid_tracked(pid_t pid, const char *skip) {
+  DIR *d = opendir(get_pids_dir());
+  struct dirent *e;
+  int found = 0;
+  while (d && !found && (e = readdir(d)) != NULL) {
+    char path[PATH_MAX];
+    pid_t p = 0;
+    if (!is_pid_file(e->d_name))
+      continue;
+    snprintf(path, sizeof(path), "%s/%s", get_pids_dir(), e->d_name);
+    found = strcmp(path, skip) != 0 && read_and_validate_pid(path, &p) == 0 &&
+            p == pid;
+  }
+  if (d)
+    closedir(d);
+  return found;
+}
+
+/* The init of the instance running from cfg's rootfs, or 0: a container init
+ * whose root, as the host sees it, is that image's mount or that directory.
+ * For when the pidfile is lost and no monitor answers: it died, it is from
+ * an older build, or init outlived monitor and intermediate both. Whatever
+ * its parent, a root init rooted on this container's own tree is this
+ * container, unless another container's pidfile names it: two directory
+ * containers may share one rootfs. Both sides are the host's
+ * own view: cfg is the host config, and a guest cannot root itself on a tree it
+ * cannot see. */
+/* ponytail: a volatile container's root is an overlay only it can see, so
+ * this misses it; scan still reports it. Match its lowerdir if that bites. */
+static pid_t init_on_rootfs(const struct ds_config *cfg) {
+  char mnt[PATH_MAX];
+  const char *root = cfg->rootfs_path[0] ? cfg->rootfs_path : NULL;
+  if (cfg->is_img_mount || cfg->rootfs_img_path[0])
+    root = ds_img_mount_point(cfg->container_name, mnt, sizeof(mnt)) == 0
+               ? mnt
+               : NULL;
+  struct stat want;
+  pid_t *pids = NULL, found = 0;
+  size_t count = 0;
+  if (!root || stat(root, &want) < 0 || collect_pids(&pids, &count) < 0)
+    return 0;
+  for (size_t i = 0; i < count && !found; i++) {
+    char path[64];
+    struct stat st;
+    snprintf(path, sizeof(path), "/proc/%d/root", (int)pids[i]);
+    if (stat(path, &st) == 0 && st.st_dev == want.st_dev &&
+        st.st_ino == want.st_ino && is_container_init(pids[i]) &&
+        proc_uid(pids[i]) == 0 && !pid_tracked(pids[i], cfg->pidfile))
+      found = pids[i];
+  }
+  free(pids);
+  return found;
+}
+
 int is_container_running(struct ds_config *cfg, pid_t *pid_out) {
   if (cfg->pidfile[0] == '\0') {
     if (cfg->container_name[0] == '\0')
@@ -51,37 +106,20 @@ int is_container_running(struct ds_config *cfg, pid_t *pid_out) {
   if (ret == 0 && pid > 0)
     return 1;
 
-  /*
-   * Fallback discovery:
-   * If the PID file check failed (stale, missing, or not-yet-validated)
-   * but we have a UUID, perform a deep discovery scan as the final authority.
-   */
-  if (cfg->uuid[0] != '\0') {
-    pid_t deep_pid = find_container_init_pid(cfg->uuid);
-    if (deep_pid > 0) {
-      if (pid_out)
-        *pid_out = deep_pid;
-
-      /* Self-healing: pidfile was missing or stale but container is
-       * confirmed alive via UUID scan. Restore it immediately so
-       * subsequent calls hit the fast pidfile path instead of scanning
-       * /proc again. Works even if the file was nuked externally. */
-      char pid_str[32];
-      snprintf(pid_str, sizeof(pid_str), "%d", deep_pid);
-
-      if (cfg->pidfile[0] != '\0') {
-        write_file_atomic(cfg->pidfile, pid_str);
-      } else if (cfg->container_name[0] != '\0') {
-        /* pidfile path itself was empty - resolve and restore both */
-        char restored_pidfile[PATH_MAX];
-        resolve_pidfile_from_name(cfg->container_name, restored_pidfile,
-                                  sizeof(restored_pidfile));
-        write_file_atomic(restored_pidfile, pid_str);
-        safe_strncpy(cfg->pidfile, restored_pidfile, sizeof(cfg->pidfile));
-      }
-
-      return 1;
-    }
+  /* The pidfile is missing or stale. The container's monitor knows its init
+   * pid for certain; if the monitor died, the init still running from this
+   * container's rootfs is the one. A lost pidfile is rewritten from that,
+   * never from markers inside a guest, which root there can forge. */
+  pid_t mon = cfg->container_name[0] ? ds_cmd_get_pid(cfg->container_name) : 0;
+  if (mon <= 0)
+    mon = init_on_rootfs(cfg);
+  if (mon > 0) {
+    if (pid_out)
+      *pid_out = mon;
+    char pid_str[32];
+    snprintf(pid_str, sizeof(pid_str), "%d", mon);
+    write_file_atomic(cfg->pidfile, pid_str);
+    return 1;
   }
 
   return 0;
@@ -153,89 +191,6 @@ int count_running_containers(char *first_name, size_t size) {
   return count;
 }
 
-/* PID Discovery (UUID Scan) */
-
-pid_t find_container_init_pid(const char *uuid) {
-  if (!uuid || uuid[0] == '\0')
-    return 0;
-
-  char marker[PATH_MAX];
-  snprintf(marker, sizeof(marker), "/run/droidspaces/%s", uuid);
-
-  pid_t *pids = NULL;
-  size_t count = 0;
-  char path[PATH_MAX];
-
-  if (collect_pids(&pids, &count) < 0)
-    return 0;
-
-  for (size_t i = 0; i < count; i++) {
-    /* Fast check: does /run/droidspaces exist?
-     * This avoids expensive deep path checks for host processes. */
-    if (build_proc_root_path(pids[i], "/run/droidspaces", path, sizeof(path)) <
-        0)
-      continue;
-
-    if (access(path, F_OK) == 0) {
-      /* Now check for the specific UUID marker */
-      build_proc_root_path(pids[i], marker, path, sizeof(path));
-      if (access(path, F_OK) == 0) {
-        if (is_valid_container_pid(pids[i])) {
-          pid_t found = pids[i];
-          free(pids);
-          return found;
-        }
-      }
-    }
-  }
-
-  free(pids);
-  return 0;
-}
-
-pid_t find_container_by_name(const char *name) {
-  if (!name || name[0] == '\0')
-    return 0;
-
-  pid_t *pids = NULL;
-  size_t count = 0;
-  char path[PATH_MAX];
-
-  if (collect_pids(&pids, &count) < 0)
-    return 0;
-
-  for (size_t i = 0; i < count; i++) {
-    /* Fast check: does /run/droidspaces exist? */
-    if (build_proc_root_path(pids[i], "/run/droidspaces", path, sizeof(path)) <
-        0)
-      continue;
-
-    if (access(path, F_OK) != 0)
-      continue;
-
-    /* Read the tiny name marker - no config parse needed */
-    char name_marker[PATH_MAX];
-    char stored_name[256] = {0};
-    build_proc_root_path(pids[i], "/run/droidspaces/name", name_marker,
-                         sizeof(name_marker));
-
-    if (read_file(name_marker, stored_name, sizeof(stored_name)) >= 0) {
-      /* Strip trailing newline if any */
-      stored_name[strcspn(stored_name, "\n")] = '\0';
-
-      if (strcmp(stored_name, name) == 0 && is_valid_container_pid(pids[i])) {
-        pid_t found = pids[i];
-        free(pids);
-        return found;
-      }
-    }
-  }
-
-  if (pids)
-    free(pids);
-  return 0;
-}
-
 int is_container_init(pid_t pid) {
   char path[PATH_MAX];
   snprintf(path, sizeof(path), "/proc/%d/status", pid);
@@ -278,9 +233,8 @@ int is_container_init(pid_t pid) {
    * Compare the inode of /proc/<pid>/ns/pid vs /proc/1/ns/pid.
    * Available since Linux 3.8 (namespaces(7)).
    * If inodes differ, the process lives in a different PID namespace.
-   * Combined with the /run/droidspaces marker check in
-   * is_valid_container_pid(), this is sufficient to identify a
-   * container init process.
+   * Combined with the monitor check in is_valid_container_pid(), this is
+   * sufficient to identify a container init process.
    */
   struct stat st_pid, st_host;
   char ns_path[PATH_MAX];
@@ -425,23 +379,35 @@ int read_and_validate_pid(const char *pidfile, pid_t *pid_out) {
   return 0;
 }
 
+/* 1 if p is a Droidspaces monitor: named [ds-monitor], root, and in our pid
+ * namespace. A guest can name its processes anything, but none of them is in
+ * ours. The intermediate between a monitor and its init inherits the name. */
+int is_ds_monitor(pid_t p) {
+  char path[64], comm[32] = "";
+  if (p <= 1 || !ds_peer_in_pidns(p) || proc_uid(p) != 0)
+    return 0;
+  snprintf(path, sizeof(path), "/proc/%d/comm", (int)p);
+  return read_file(path, comm, sizeof(comm)) >= 0 &&
+         strcmp(comm, "[ds-monitor]") == 0;
+}
+
 int is_valid_container_pid(pid_t pid) {
-  char path[PATH_MAX];
+  /* A Droidspaces container init is PID 1 of its namespace whose parent is
+   * its intermediate: monitor, intermediate, init. The intermediate carries
+   * the monitor's name and waits on init for as long as it lives, even if
+   * the monitor is killed, so a container stays running (its image mounted,
+   * its name taken) for as long as it really runs. That is the host's own
+   * process tree, which no guest can forge, where a marker inside the guest
+   * was the guest's to delete or plant. A monitor from an older build is
+   * named the same. With monitor and intermediate both killed, init is an
+   * orphan nothing tells apart from another runtime's, and like LXC with
+   * lxc-start gone we lose track of it; scan still finds it by its image
+   * mount. */
+  return is_container_init(pid) && proc_uid(pid) == 0 &&
+         is_ds_monitor(proc_ppid(pid));
+}
 
-  /* Primary marker: /run/droidspaces must exist inside the container.
-   * This is the one authoritative marker written by droidspaces on boot.
-   * We do NOT require /run/systemd/container - Alpine/runit/openrc never
-   * write that file, causing scan to be blind to non-systemd distros. */
-  if (build_proc_root_path(pid, DS_DROIDSPACES_MARKER, path, sizeof(path)) < 0)
-    return 0;
-  if (access(path, F_OK) != 0)
-    return 0;
-
-  /* Secondary check: process must be the init (PID 1) of its namespace.
-   * This is more robust than checking cmdline for "init" which distros
-   * like Void Linux (runit) or Alpine may not provide. */
-  if (!is_container_init(pid))
-    return 0;
-
-  return 1;
+int is_unmanaged_init(pid_t pid) {
+  return is_valid_container_pid(pid) &&
+         !is_ds_monitor(proc_ppid(proc_ppid(pid)));
 }

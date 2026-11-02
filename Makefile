@@ -36,6 +36,7 @@ SRCS = $(SRC_DIR)/main.c \
        $(SRC_DIR)/core/proc.c \
        $(SRC_DIR)/core/exec.c \
        $(SRC_DIR)/core/fdpass.c \
+       $(SRC_DIR)/core/frame.c \
        $(SRC_DIR)/core/json.c \
        $(SRC_DIR)/security/peer_auth.c \
        $(SRC_DIR)/security/selinux.c \
@@ -106,6 +107,7 @@ SRCS = $(SRC_DIR)/main.c \
        $(SRC_DIR)/container/registry.c \
        $(SRC_DIR)/container/recovery.c \
        $(SRC_DIR)/container/lock.c \
+       $(SRC_DIR)/container/command.c \
        $(SRC_DIR)/container/cleanup.c \
        $(SRC_DIR)/container/start.c \
        $(SRC_DIR)/container/stop.c \

@@ -124,7 +124,7 @@ cpu_period=100000
 allow_sandboxing=1
 ```
 
-Boolean keys take `0` or `1`. Keys the backend does not know, such as the app's `run_at_boot`, are kept in place. While a container runs, the config it booted with is visible inside it at `/run/droidspaces/container.config`.
+Boolean keys take `0` or `1`. Keys the backend does not know, such as the app's `run_at_boot`, are kept in place. While a container runs, the config it booted with is visible inside it at `/run/droidspaces/container.config`. That copy is read-only and there for scripts inside the container: changing it has no effect, since the host never reads it.
 
 ## Examples
 

@@ -99,10 +99,8 @@ void sync_resolv_order(int v6_first) {
   const char *stale = v6_first ? k_dns_v4_first : k_dns_v6_first;
   size_t len = sizeof(k_dns_v4_first) - 1;
 
-  char path[64];
-  snprintf(path, sizeof(path), "/proc/%d/root" DS_RESOLV_CONF,
-           (int)g_host_init_pid);
-  int fd = open(path, O_RDWR | O_CLOEXEC | O_NOFOLLOW | O_NONBLOCK);
+  int fd =
+      ds_open_in_root(g_host_init_pid, DS_RESOLV_CONF, O_RDWR | O_NONBLOCK);
   if (fd < 0)
     return;
 

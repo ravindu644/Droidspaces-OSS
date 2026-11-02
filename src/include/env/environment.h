@@ -14,6 +14,4 @@ void ds_env_boot_setup(struct ds_config *cfg);
 void ds_env_save(const char *path, struct ds_config *cfg);
 void parse_env_file_to_config(const char *path, struct ds_config *cfg);
 
-void write_plain_env_file(const char *src, const char *dst);
-
 #endif /* DS_ENV_ENVIRONMENT_H */

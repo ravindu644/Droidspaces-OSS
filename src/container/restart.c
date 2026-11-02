@@ -23,22 +23,23 @@ static int restart_rootfs_locked(struct ds_config *cfg, int *lock_fd, int argc,
   if (stop_rootfs_locked(cfg, 1, DS_STOP_TIMEOUT) < 0) {
     return -1;
   }
-  /* The stop above tore down using the booted snapshot (loaded while the
-   * container was alive). It is gone now, so reloading by name returns the
-   * workspace copy - reload it so host-side container.config edits made while
-   * it ran take effect on this restart, then re-apply the CLI overrides
-   * (--reset included) so every flag behaves exactly as it would on a fresh
-   * start. An explicit --conf never read the booted snapshot in the first
-   * place: cfg already holds that file plus the overrides, so skip the
-   * reload entirely. start_rootfs finds the preserved mount by name, so losing
-   * the snapshot paths is fine. */
+  /* The stop above tore down using the booted config (its monitor's, loaded
+   * while the container was alive). Reload the workspace copy so host-side
+   * container.config edits made while it ran take effect on this restart,
+   * then re-apply the CLI overrides (--reset included) so every flag behaves
+   * exactly as it would on a fresh start. An explicit --conf never read the
+   * booted config in the first place: cfg already holds that file plus the
+   * overrides, so skip the reload entirely. start_rootfs finds the preserved
+   * mount by name, so losing the booted paths is fine. */
   if (!cfg->config_file_specified) {
     /* Clean slate first: the load only overlays keys present in the file, so
      * without the reset every conditionally-written key would keep its value
-     * from the booted snapshot, and port/upstream lists would union across
+     * from the booted config, and port/upstream lists would union across
      * the two loads instead of being replaced. */
     ds_config_reset_defaults(cfg);
-    ds_config_load_by_name(cfg->container_name, cfg);
+    /* The host file the user edits, by path: a monitor still on its way out
+     * would answer with the config this restart means to replace. */
+    ds_config_load_host(cfg->container_name, cfg);
     if (ds_apply_cli_overrides(argc, argv, cfg, 0) != 0)
       return -1;
   }

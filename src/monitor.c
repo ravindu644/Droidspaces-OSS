@@ -165,6 +165,13 @@ void ds_monitor_run(struct ds_config *cfg, int sync_pipe_write) {
    * an internal reboot until the new init is visible, or through cleanup. */
   int lifecycle_fd = -1;
 
+  /* The host asks us, not the guest, what this container booted with and
+   * which pid its init has: see container/command.c. A thread of its own
+   * answers, from what each boot cycle publishes once its init is known.
+   * Started only now: SELinux refuses the domain switch above from a
+   * process with more than one thread. */
+  ds_cmd_serve_start(cfg->container_name);
+
 reboot_loop:;
   /* Close whatever is left of the previous cycle's pipes. The handshake
    * closes each end as it finishes with it, so normally nothing is. */
@@ -173,11 +180,17 @@ reboot_loop:;
   close_and_forget(&cfg->net_done_pipe[0]);
   close_and_forget(&cfg->net_done_pipe[1]);
 
-  /* Networking pipes (created fresh for every boot cycle) */
+  /* Networking pipes (created fresh for every boot cycle). mid_sync_pipe
+   * carries init's pid in every mode, HOST included. */
   int mid_sync_pipe[2] = {-1, -1};
+  if (pipe(mid_sync_pipe) < 0) {
+    ds_error("Failed to create the init pid pipe: %s", strerror(errno));
+    _exit(EXIT_FAILURE);
+  }
+  fcntl(mid_sync_pipe[0], F_SETFD, FD_CLOEXEC);
+  fcntl(mid_sync_pipe[1], F_SETFD, FD_CLOEXEC);
   if (cfg->net_mode != DS_NET_HOST) {
-    if (pipe(cfg->net_ready_pipe) < 0 || pipe(cfg->net_done_pipe) < 0 ||
-        pipe(mid_sync_pipe) < 0) {
+    if (pipe(cfg->net_ready_pipe) < 0 || pipe(cfg->net_done_pipe) < 0) {
       ds_error("Failed to create NAT sync pipes: %s", strerror(errno));
       _exit(EXIT_FAILURE);
     }
@@ -187,8 +200,6 @@ reboot_loop:;
     fcntl(cfg->net_ready_pipe[1], F_SETFD, FD_CLOEXEC);
     fcntl(cfg->net_done_pipe[0], F_SETFD, FD_CLOEXEC);
     fcntl(cfg->net_done_pipe[1], F_SETFD, FD_CLOEXEC);
-    fcntl(mid_sync_pipe[0], F_SETFD, FD_CLOEXEC);
-    fcntl(mid_sync_pipe[1], F_SETFD, FD_CLOEXEC);
 
     ds_log("[NET] Sync pipes created for net_mode=%d", cfg->net_mode);
   }
@@ -246,12 +257,10 @@ reboot_loop:;
     if (init_pid == 0) {
       /* CONTAINER INIT (PID 1 inside namespace) */
       /* Close pipe ends the init process doesn't use */
-      if (cfg->net_mode != DS_NET_HOST) {
-        if (mid_sync_pipe[0] >= 0)
-          close(mid_sync_pipe[0]);
-        if (mid_sync_pipe[1] >= 0)
-          close(mid_sync_pipe[1]);
-      }
+      if (mid_sync_pipe[0] >= 0)
+        close(mid_sync_pipe[0]);
+      if (mid_sync_pipe[1] >= 0)
+        close(mid_sync_pipe[1]);
       /* Init keeps the sync pipe's write end, and it is close-on-exec. The
        * command that started us reads end of file on it when init execs, which
        * is how it knows the boot is over. Do not close it here. */
@@ -280,8 +289,9 @@ reboot_loop:;
       }
     }
 
-    /* Send init PID to monitor so it can target /proc/<pid>/ns/net */
-    if (cfg->net_mode != DS_NET_HOST && mid_sync_pipe[1] >= 0) {
+    /* Send init PID to the monitor, in every mode: it targets
+     * /proc/<pid>/ns/net with it, and its command socket reports it */
+    if (mid_sync_pipe[1] >= 0) {
       if (write(mid_sync_pipe[1], &init_pid, sizeof(pid_t)) != sizeof(pid_t)) {
         ds_warn(
             "[NET] Intermediate: failed to write init_pid to mid_sync_pipe");
@@ -340,6 +350,16 @@ reboot_loop:;
    * This handshake ensures the veth peer is moved into the container's
    * netns while the init process is alive and waiting, avoiding the race
    * where we try to open /proc/<pid>/ns/net before the process exists. */
+  /* HOST mode has no handshake, but its pid comes the same way, straight
+   * from the intermediate rather than from the pidfile. */
+  if (cfg->net_mode == DS_NET_HOST && mid_sync_pipe[0] >= 0) {
+    close(mid_sync_pipe[1]);
+    pid_t p = -1;
+    if (read(mid_sync_pipe[0], &p, sizeof(p)) == (ssize_t)sizeof(p) && p > 0)
+      cfg->container_pid = p;
+    close(mid_sync_pipe[0]);
+  }
+
   if (cfg->net_mode != DS_NET_HOST && mid_sync_pipe[0] >= 0) {
     close(mid_sync_pipe[1]); /* monitor is reader */
 
@@ -420,9 +440,15 @@ reboot_loop:;
   }
 
   /* Capture PID namespace inode for virtualization PID-recycling guard.
-   * container_pid may be 0 on HOST mode until pidfile is written - that's
-   * fine; ds_get_pid_ns_inode(0) returns 0 and update will skip safely. */
+   * container_pid is 0 if the intermediate never sent it; then
+   * ds_get_pid_ns_inode(0) returns 0 and update skips safely. */
   cfg->ns_inode = ds_get_pid_ns_inode(cfg->container_pid);
+
+  /* From here the host can ask what this boot runs with. Before the
+   * lifecycle lock is let go and start returns, so a stop waiting on either
+   * gets this boot's config. */
+  if (cfg->container_pid > 0)
+    ds_cmd_publish(cfg);
 
   /* Ensure monitor is not sitting inside any mount point */
   if (chdir("/") < 0) {
@@ -494,9 +520,9 @@ reboot_loop:;
       if (r < 0 && errno != EINTR)
         break;
 
-      /* HOST mode: monitor never gets container_pid via mid_sync_pipe.
-       * Poll the pidfile (written by parent shortly after sync_pipe read)
-       * until we have a valid PID, then capture ns_inode once. */
+      /* Every mode gets container_pid over mid_sync_pipe. Should that read
+       * have failed, poll the pidfile until it names a valid init, then
+       * capture ns_inode once. */
       if (cfg->container_pid <= 0 && cfg->pidfile[0]) {
         pid_t p = -1;
         if (read_and_validate_pid(cfg->pidfile, &p) == 0 && p > 0) {
@@ -506,6 +532,7 @@ reboot_loop:;
                                   "[VIRT] resolved container_pid=%d "
                                   "ns_inode=%lu from pidfile",
                                   (int)p, cfg->ns_inode);
+          ds_cmd_publish(cfg);
         }
       }
 
@@ -616,6 +643,11 @@ reboot_loop:;
     sigprocmask(SIG_UNBLOCK, &mask, NULL);
   }
 
+  /* This init is gone, so what we booted it with describes nothing that runs
+   * now. Stop answering, which also frees the name for a successor's
+   * monitor. A reboot cycle publishes again. */
+  ds_cmd_publish(NULL);
+
   /* Log what monitor saw */
   if (WIFEXITED(status)) {
     int code = WEXITSTATUS(status);
@@ -670,6 +702,17 @@ reboot_loop:;
                               "Already torn down by a command");
       goto monitor_cleanup_and_exit;
     }
+    /* Our init outlived its intermediate, which someone killed. It still
+     * runs from this mount and network: tearing them down under it, or
+     * booting a second init beside it, is worse than leaving it be. */
+    if (cfg->container_pid > 0 && cfg->ns_inode &&
+        ds_get_pid_ns_inode(cfg->container_pid) == cfg->ns_inode) {
+      write_monitor_debug_log(cfg->container_name,
+                              "Init PID %d outlived its intermediate - "
+                              "leaving it running",
+                              (int)cfg->container_pid);
+      goto monitor_cleanup_and_exit;
+    }
   }
 
   /* Reboot detection (internal reboot) */
@@ -681,20 +724,11 @@ reboot_loop:;
       fflush(stdout);
     }
 
-    /* Synchronize container_pid in Monitor */
-    pid_t new_pid = -1;
-    if (read_and_validate_pid(cfg->pidfile, &new_pid) == 0) {
-      cfg->container_pid = new_pid;
-    }
-
-    /* Re-write the same UUID to sync file for the next boot cycle.
-     * internal_boot reads this across the pivot_root boundary. */
-    if (!cfg->volatile_mode && cfg->rootfs_path[0]) {
-      char uuid_sync[PATH_MAX];
-      snprintf(uuid_sync, sizeof(uuid_sync), "%.4060s/.droidspaces-uuid",
-               cfg->rootfs_path);
-      write_file(uuid_sync, cfg->uuid);
-    }
+    /* That init is gone, and the pidfile still names it. The next cycle
+     * learns the new one from mid_sync_pipe, and the pidfile poll, which
+     * only runs while this is 0, covers an intermediate that never sent it,
+     * so the command socket never hands out a dead pid. */
+    cfg->container_pid = 0;
 
     /* Reload from workspace (canonical path the user edits) */
     {
@@ -705,8 +739,10 @@ reboot_loop:;
       int saved_cap = cfg->env_var_capacity;
       int old_force_cgv1 = cfg->force_cgroupv1;
 
+      /* The host config, never a copy the guest could have written. The
+       * command socket is ours, so there is nothing to ask either. */
       struct ds_config reboot_cfg = *cfg;
-      if (ds_config_load_by_name(cfg->container_name, &reboot_cfg) == 0) {
+      if (ds_config_load_host(cfg->container_name, &reboot_cfg) == 0) {
         reboot_cfg.env_vars = saved_vars;
         reboot_cfg.env_var_count = saved_count;
         reboot_cfg.env_var_capacity = saved_cap;

@@ -124,7 +124,7 @@ cpu_period=100000
 allow_sandboxing=1
 ```
 
-布尔键取 `0` 或 `1`。后端不认识的键（例如 App 的 `run_at_boot`）会原样保留。容器运行时，它启动时使用的配置可以在容器内的 `/run/droidspaces/container.config` 看到。
+布尔键取 `0` 或 `1`。后端不认识的键（例如 App 的 `run_at_boot`）会原样保留。容器运行时，它启动时使用的配置可以在容器内的 `/run/droidspaces/container.config` 看到。这份副本是只读的，供容器内的脚本读取：修改它不会产生任何效果，因为主机从不读取它。
 
 ## 示例
 

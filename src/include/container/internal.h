@@ -18,4 +18,7 @@ int lifecycle_lock_or_complain(struct ds_config *cfg, const char *verb);
 int stop_rootfs_locked(struct ds_config *caller_cfg, int skip_unmount,
                        int timeout_seconds);
 
+int is_ds_monitor(pid_t p);
+int is_unmanaged_init(pid_t pid);
+
 #endif /* DS_CONTAINER_INTERNAL_H */

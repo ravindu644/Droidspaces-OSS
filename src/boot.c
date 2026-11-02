@@ -119,23 +119,12 @@ int internal_boot(struct ds_config *cfg) {
     ds_log("[NET] Child: handshake complete");
   }
 
-  /* 0. Boot Guard: Ensure name is present and unique.
-   * This is a critical security check to prevent anonymous or conflicting
-   * containers from booting, even if the CLI checks were bypassed. */
+  /* 0. Boot Guard: a container needs a name. Whether the name is taken is
+   * start's to check, under the lifecycle lock: from inside this new pid
+   * namespace no host pid or monitor is visible. */
   if (!cfg->container_name[0]) {
     ds_error("CRITICAL: Boot aborted: container name is empty.");
     goto boot_fail;
-  }
-
-  pid_t existing_pid = 0;
-  if (is_container_running(cfg, &existing_pid)) {
-    /* If we find ourselves in the pidfile, it's not a conflict, it's just us
-     * being tracked early (which is fine). */
-    if (existing_pid != getpid()) {
-      ds_error("CRITICAL: Boot aborted: name '%s' is already in use by PID %d.",
-               cfg->container_name, existing_pid);
-      goto boot_fail;
-    }
   }
 
   /* 1. Isolated mount namespace */
@@ -200,16 +189,9 @@ int internal_boot(struct ds_config *cfg) {
     goto boot_fail;
   }
 
-  /* 6. Read UUID from sync file if not already provided (parity with v2) */
-  if (cfg->uuid[0] == '\0') {
-    read_file(".droidspaces-uuid", cfg->uuid, sizeof(cfg->uuid));
-  }
-  if (access(".droidspaces-uuid", F_OK) == 0) {
-    if (unlink(".droidspaces-uuid") < 0) {
-      /* This might fail if the rootfs is RO (image mount), but internal_boot
-       * already skips writing it in that case. */
-    }
-  }
+  /* 6. Older builds handed the uuid across pivot_root in this file. cfg
+   * carries it in memory, so only the leftover goes. */
+  unlink(".droidspaces-uuid");
 
   /* 7. pivot_root parks the old root in .old_root, so that one must exist;
    * the rest are mountpoints a rootfs normally ships anyway. */
@@ -468,23 +450,17 @@ int internal_boot(struct ds_config *cfg) {
     ds_log("Booting '%s' (init: %s)...", cfg->container_name,
            cfg->custom_init[0] ? cfg->custom_init : DS_DEFAULT_INIT);
 
-  /* 20b. Write identity markers for PID discovery. The command that started us
-   * does not watch for these, it waits for the exec at the end. */
+  /* 20b. The config this boot uses, for the guest to read: scripts inside
+   * check net_mode= or enable_x11= here. It is information only, read-only,
+   * and the host never reads it back. Root in here can rewrite it, so what
+   * the container booted with comes from its monitor (container/command.c). */
   mkdir("run/droidspaces", 0755);
   if (cfg->sandboxing_allowed)
     mount_pristine_proc_sys();
-  if (cfg->uuid[0] != '\0') {
-    char marker_path[PATH_MAX];
-    snprintf(marker_path, sizeof(marker_path), "run/droidspaces/%s", cfg->uuid);
-    write_file(marker_path, ""); /* empty UUID marker */
-  }
-
-  /* Save a normalized copy of the config inside /run for metadata recovery. */
-  if (ds_config_save("run/droidspaces/container.config", cfg) < 0) {
+  if (ds_config_save("run/droidspaces/container.config", cfg) < 0)
     ds_warn("Boot: Failed to save internal configuration backup");
-  }
-
-  write_file("run/droidspaces/name", cfg->container_name);
+  else
+    chmod("run/droidspaces/container.config", 0444);
 
   /* Legacy compatibility: write version to the marker directory root */
   write_file("run/droidspaces/version", DS_VERSION);

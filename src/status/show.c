@@ -48,21 +48,24 @@ int show_containers(struct ds_config *cfg) {
     memset(st, 0, sizeof(*st));
     safe_strncpy(st->name, tmp_cfg.container_name, sizeof(st->name));
     st->pid = pid;
-    /* The booted snapshot carries the display name and hostname the container
-     * actually got, the same source ds_config_load_by_name() prefers for a
-     * running one. The table needs it too: a name copied from it into -n is
-     * what gets saved on the next start. */
-    char snap[PATH_MAX];
-    if (build_proc_root_path(pid, "/run/droidspaces/container.config", snap,
-                             sizeof(snap)) == 0 &&
-        ds_config_peek_path(snap, &tmp_cfg) == 0) {
-      safe_strncpy(st->name, tmp_cfg.container_name, sizeof(st->name));
-      safe_strncpy(st->hostname, tmp_cfg.hostname, sizeof(st->hostname));
-      ds_anland_load_sock(&tmp_cfg);
-      safe_strncpy(st->anland_sock, tmp_cfg.anland_sock,
+    /* The pidfile only carries the sanitized name. The display name and the
+     * hostname the container actually got come from what it booted with,
+     * which its monitor holds, or from the host config when no monitor
+     * answers: ds_config_peek, the same source a by-name load uses. The table
+     * needs it: a name copied from it into -n is what gets saved on the next
+     * start. */
+    struct ds_config booted;
+    ds_config_init(&booted);
+    if (ds_config_peek(tmp_cfg.container_name, &booted) == 0 &&
+        booted.container_name[0]) {
+      safe_strncpy(st->name, booted.container_name, sizeof(st->name));
+      safe_strncpy(st->hostname, booted.hostname, sizeof(st->hostname));
+      ds_anland_load_sock(&booted);
+      safe_strncpy(st->anland_sock, booted.anland_sock,
                    sizeof(st->anland_sock));
-      st->x11 = tmp_cfg.x11;
+      st->x11 = booted.x11;
     }
+    ds_config_free(&booted);
     ds_config_free(&tmp_cfg);
     if (!st->hostname[0])
       safe_strncpy(st->hostname, st->name, sizeof(st->hostname));

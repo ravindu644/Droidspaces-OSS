@@ -213,7 +213,10 @@ static void print_page(int page, const char *bin) {
     p_printf("%sMetadata Recovery:%s\n", bold, reset);
     p_printf("  %s scan\n", bin);
     p_printf(
-        "  (Detects containers even if host-side config/PIDs are lost)\n\n");
+        "  (Re-registers running containers whose host-side config or PID\n"
+        "   file was lost, from what each container's monitor holds: the\n"
+        "   config it booted with and its init PID. Nothing is read from\n"
+        "   inside a container.)\n\n");
     break;
 
   case 3: /* Networking */

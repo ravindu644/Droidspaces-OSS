@@ -14,8 +14,6 @@ int resolve_pidfile_from_name(const char *name, char *pidfile, size_t size);
 int is_container_running(struct ds_config *cfg, pid_t *pid_out);
 int is_container_init(pid_t pid);
 int count_running_containers(char *first_name, size_t size);
-pid_t find_container_init_pid(const char *uuid);
-pid_t find_container_by_name(const char *name);
 int check_selinux_permissive_needs(void);
 int check_x11_needs(void);
 int check_virgl_needs(void);

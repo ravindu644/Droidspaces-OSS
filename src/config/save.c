@@ -148,26 +148,38 @@ static void sync_dir_of(const char *path) {
   }
 }
 
-int ds_config_save(const char *config_path, struct ds_config *cfg) {
-  /* Sort bind mounts before saving so they are persisted in a sane order. */
-  sort_bind_mounts(cfg);
-
+/* cfg as its config file holds it: the keys this build manages, then the ones
+ * it does not know (the Android app's metadata among them) verbatim. *known
+ * gets the length of the first part. Caller frees; NULL on failure. */
+char *ds_config_serialize(struct ds_config *cfg, size_t *len, size_t *known) {
   char *buf = NULL;
   size_t size = 0, known_size = 0;
   FILE *f = open_memstream(&buf, &size);
   if (!f)
-    return -1;
+    return NULL;
   ds_config_serialize_known(f, cfg);
   if (fflush(f) == 0)
     known_size = size;
-  /* Keys this build does not know, the Android app's metadata among them,
-   * ride along verbatim. */
   for (struct ds_config_line *n = cfg->unknown_head; n; n = n->next)
     fputs(n->line, f);
   if (fclose(f) != 0 || !known_size) {
     free(buf);
-    return -1;
+    return NULL;
   }
+  *len = size;
+  if (known)
+    *known = known_size;
+  return buf;
+}
+
+int ds_config_save(const char *config_path, struct ds_config *cfg) {
+  /* Sort bind mounts before saving so they are persisted in a sane order. */
+  sort_bind_mounts(cfg);
+
+  size_t size = 0, known_size = 0;
+  char *buf = ds_config_serialize(cfg, &size, &known_size);
+  if (!buf)
+    return -1;
 
   /* The app edits its own keys in this file while a container runs, and the
    * stale copy of them in cfg must not land on top. Only a change in the keys
@@ -178,14 +190,9 @@ int ds_config_save(const char *config_path, struct ds_config *cfg) {
   if (access(config_path, F_OK) == 0 &&
       ds_config_peek_path(config_path, &disk) == 0) {
     sort_bind_mounts(&disk);
-    char *dbuf = NULL;
-    size_t dsize = 0;
-    FILE *df = open_memstream(&dbuf, &dsize);
-    if (df) {
-      ds_config_serialize_known(df, &disk);
-      same = fclose(df) == 0 && dsize == known_size &&
-             memcmp(dbuf, buf, known_size) == 0;
-    }
+    size_t dsize = 0, dknown = 0;
+    char *dbuf = ds_config_serialize(&disk, &dsize, &dknown);
+    same = dbuf && dknown == known_size && memcmp(dbuf, buf, known_size) == 0;
     free(dbuf);
     ds_config_free(&disk);
   }
@@ -200,22 +207,12 @@ int ds_config_save(const char *config_path, struct ds_config *cfg) {
 }
 
 int ds_config_save_by_name(const char *name, struct ds_config *cfg) {
-  if (!name || name[0] == '\0')
-    return -1;
-  if (!validate_container_name(name))
-    return -1;
-
-  char safe_name[256];
-  sanitize_container_name(name, safe_name, sizeof(safe_name));
-
-  char container_dir[PATH_MAX];
-  snprintf(container_dir, sizeof(container_dir), "%s/Containers/%s",
-           get_workspace_dir(), safe_name);
-  mkdir_p(container_dir, 0755);
-
   char config_path[PATH_MAX];
-  snprintf(config_path, sizeof(config_path), "%.3800s/container.config",
-           container_dir);
-
+  if (ds_config_host_path(name, config_path, sizeof(config_path)) < 0)
+    return -1;
+  char dir[PATH_MAX];
+  safe_strncpy(dir, config_path, sizeof(dir));
+  *strrchr(dir, '/') = '\0';
+  mkdir_p(dir, 0755);
   return ds_config_save(config_path, cfg);
 }

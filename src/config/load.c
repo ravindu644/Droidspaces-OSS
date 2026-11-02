@@ -65,7 +65,14 @@ int ds_config_load(const char *config_path, struct ds_config *cfg) {
     }
     return -1;
   }
+  int ret = ds_config_load_file(f, cfg);
+  fclose(f);
+  return ret;
+}
 
+/* The parser behind ds_config_load, for a config that is not a file: the one
+ * a monitor sends over its command socket. */
+int ds_config_load_file(FILE *f, struct ds_config *cfg) {
   /* Clear existing unknown lines to avoid duplication on re-load */
   free_config_unknown_lines(cfg);
 
@@ -274,7 +281,6 @@ int ds_config_load(const char *config_path, struct ds_config *cfg) {
     }
   }
 
-  fclose(f);
   return 0;
 }
 
@@ -322,36 +328,39 @@ char *ds_config_auto_path(const char *rootfs_path) {
   return final_path;
 }
 
-int ds_config_load_by_name(const char *name, struct ds_config *cfg) {
-  if (!name || name[0] == '\0')
+int ds_config_host_path(const char *name, char *buf, size_t size) {
+  if (!name || name[0] == '\0' || !validate_container_name(name))
     return -1;
-  if (!validate_container_name(name))
-    return -1;
-
   char safe_name[256];
   sanitize_container_name(name, safe_name, sizeof(safe_name));
+  int r = snprintf(buf, size, "%s/Containers/%s/container.config",
+                   get_workspace_dir(), safe_name);
+  return (r > 0 && (size_t)r < size) ? 0 : -1;
+}
 
+int ds_config_load_host(const char *name, struct ds_config *cfg) {
   char config_path[PATH_MAX];
-  snprintf(config_path, sizeof(config_path),
-           "%s/Containers/%s/container.config", get_workspace_dir(), safe_name);
+  if (ds_config_host_path(name, config_path, sizeof(config_path)) < 0)
+    return -1;
+  return ds_config_load(config_path, cfg);
+}
 
-  /* Single source of truth: if the container is running, load the immutable
-   * snapshot it actually booted with (/run/droidspaces/container.config inside
-   * its mount ns) so host-side edits to container.config while it runs never
-   * desync stop/cleanup/info. Keep config_file pointing at the workspace copy
-   * so later saves still target the host file. Fall back to the workspace copy
-   * when not running or the snapshot is unreadable. */
-  pid_t pid = find_container_by_name(name);
-  if (pid > 0) {
-    char run_path[PATH_MAX];
-    if (build_proc_root_path(pid, "/run/droidspaces/container.config", run_path,
-                             sizeof(run_path)) == 0 &&
-        access(run_path, F_OK) == 0 && ds_config_load(run_path, cfg) == 0) {
-      safe_strncpy(cfg->config_file, config_path, sizeof(cfg->config_file));
-      return 0;
-    }
+int ds_config_load_by_name(const char *name, struct ds_config *cfg) {
+  char config_path[PATH_MAX];
+  if (ds_config_host_path(name, config_path, sizeof(config_path)) < 0)
+    return -1;
+
+  /* A running container is described by what it booted with, so host-side
+   * edits to container.config while it runs never desync stop, cleanup or
+   * info. That comes from its monitor, never from the guest's own
+   * /run/droidspaces/container.config: root in the container can rewrite
+   * that one. config_file keeps pointing at the host file, so later saves
+   * land there. No monitor answering means not running, or started by an
+   * older build: the host config. */
+  if (ds_cmd_get_config(name, cfg, NULL) == 0) {
+    safe_strncpy(cfg->config_file, config_path, sizeof(cfg->config_file));
+    return 0;
   }
-
   return ds_config_load(config_path, cfg);
 }
 

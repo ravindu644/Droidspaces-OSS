@@ -285,26 +285,3 @@ void free_config_env_vars(struct ds_config *cfg) {
   cfg->env_var_count = 0;
   cfg->env_var_capacity = 0;
 }
-
-/* Copy an env file as plain KEY=VALUE lines, dropping any `export ` prefix.
- * ds_metadata_sync uses it to restore the host's env file from the copy a
- * running container keeps at /run/droidspaces.env. */
-void write_plain_env_file(const char *src, const char *dst) {
-  FILE *in = fopen(src, "re");
-  if (!in)
-    return;
-  FILE *out = fopen(dst, "we");
-  if (!out) {
-    fclose(in);
-    return;
-  }
-  char line[2048];
-  while (fgets(line, sizeof(line), in)) {
-    char *p = line;
-    if (strncmp(p, "export ", 7) == 0)
-      p += 7;
-    fputs(p, out);
-  }
-  fclose(in);
-  fclose(out);
-}

@@ -498,6 +498,8 @@ libsu 的全局配置在 `DroidspacesApplication.kt` 中，那是唯一应该设
 | `is_subpath(parent, child)` | 路径逃逸校验。基于 realpath，用它而不是 `strncmp` |
 | `is_ramfs`、`is_mountpoint` | 文件系统类型与挂载点判断 |
 | `build_proc_root_path(pid, suffix, buf, size)` | 构造 `/proc/<pid>/root/...` 并检查截断 |
+| `ds_open_in_root(pid, path, flags)` | 在容器根目录内逐级打开路径，任何一级是软链接或 `..` 都拒绝。凡是经由 `/proc/<pid>/root` 的主机写入都走它：单靠 `O_NOFOLLOW` 只能保护最后一级 |
+| `proc_ppid(pid)`、`proc_uid(pid)` | 从 `/proc/<pid>` 读取父进程 pid 与真实 uid。请用 `proc_uid`，不要用 `/proc/<pid>` 的 `st_uid`，任何不可 dump 的进程在那里都显示为 0 |
 | `ds_resolve_path_arg`、`ds_resolve_argv_paths` | 在守护进程化改变工作目录之前，把用户传入的相对路径转成绝对路径 |
 | `access(path, F_OK)` | 存在性检查。没有封装，也不需要 |
 
@@ -571,7 +573,7 @@ libsu 的全局配置在 `DroidspacesApplication.kt` 中，那是唯一应该设
 | `ds_cgroup_v1_setup`、`ds_cgroup_v1_join` | 在 unshare 命名空间之前，为 v1 容器在每个 v1 层级中建立它自己的 cgroup，以及把监视器移入或移出这些 cgroup |
 | `get_workspace_dir`、`get_pids_dir`、`get_net_dir`、`get_logs_dir` | 构造工作目录路径的唯一认可方式。它们会在 Android 与 Linux 根目录之间切换 |
 | `ensure_workspace` | 创建目录树 |
-| `is_container_running`、`find_container_by_name`、`find_container_init_pid`、`is_container_init` | 容器查找 |
+| `is_container_running`、`is_container_init`、`ds_cmd_get_pid` | 容器查找。丢失的 pidfile 依据 monitor 的回答修复，绝不依据客体内部的内容 |
 | `ds_feature_needs(offsetof(struct ds_config, field))` | 通用的特性扫描。新增全局守护进程时在这里加一个两行的封装，而不是另写扫描器 |
 | `ds_seccomp_apply_minimal`、`ds_seccomp_keyring_shim` | seccomp 过滤器 |
 | `ds_ksu_neutralize_root_escape` | KernelSU 加固。必须在 `ds_seccomp_apply_minimal` **之前**运行，否则后者的 magic reboot 拦截会挡掉它需要的那次 reboot 调用 |
@@ -608,12 +610,18 @@ libsu 的全局配置在 `DroidspacesApplication.kt` 中，那是唯一应该设
 
 | 符号 | 契约 |
 | --- | --- |
-| `ds_peer_authorized(fd, group_name)` | 全仓库唯一的授权入口。允许 root 或指定组的成员，但前提是对端与我们处于同一 PID 命名空间。每一条失败路径都拒绝。调用方是 `src/daemon.c` |
+| `ds_peer_authorized(fd, group_name)` | 全仓库唯一的授权入口。允许 root 或指定组的成员，但前提是对端与我们处于同一 PID 命名空间。每一条失败路径都拒绝。调用方是 `src/daemon.c` 和 `src/container/command.c`，后者检查 monitor 命令套接字的客户端（客户端则在那里用 `server_is_monitor` 验证服务端） |
+| `ds_cmd_get_config(name, cfg, pid)`、`ds_cmd_get_pid(name)`、`ds_cmd_for_each(visit, arg)` | 运行中容器启动时使用的配置及其 init pid，取自它的 monitor 命令套接字 `@droidspaces/<name>/command`。这是两者唯一的来源：主机从不读取客体自己的那份副本 |
 | `ds_peer_in_pidns(peer_pid)` | 必须失败即拒绝。pid 为 0 表示对端无法映射进我们的命名空间，readlink 失败表示我们无法证明其归属，两种情况都拒绝。这里一旦失败即放行，调用方就能复用已死的 pid 逃逸到主机 root |
 | `ds_bind_mount_socket(src, dst, uid, label)` | 向容器可控目录写入时防软链接竞态的标准做法 |
 | `set_selinux_context`、`get_selinux_context`、`ds_selinux_dyntransition`、`ds_selinux_enter_domain`、`ds_drop_privileges`、`ds_resolve_termux_uid` | SELinux 与权限处理 |
 
 任何安全检查上写着"无法确定，那就放行"的注释都是 Bug。在信任边界上无法证明，就意味着拒绝。
+
+主机从不依据客体能写的东西行事。容器内的 root 就是真正的 root，所以通过 `/proc/<pid>/root`
+读到的它根目录下的任何内容，都是它给出的输入。请改为询问该容器的 monitor（`ds_cmd_*`）、读取主机
+上的配置，或查看主机自己的进程树（`is_valid_container_pid`）。仅用于显示的读取（`os-release`），
+或只影响该容器自身的选择，是仅有的例外。写入容器可控的目录时，必须通过 `ds_open_in_root`。
 
 ## 已知重复：不要再加第三份
 
