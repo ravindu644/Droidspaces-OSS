@@ -174,24 +174,9 @@
 #define C_DIM "\033[2m"
 #define C_BOLD "\033[1m"
 
-/* Logging macros & Centralized Engine */
-
-extern int ds_log_silent;
 /* Also mutes this container's log, see ds_log_internal. */
 #define DS_LOG_PEEK 2
-extern char ds_log_container_name[256];
-extern int ds_log_container_fd;
-
-void ds_log_internal(const char *prefix, const char *color, int is_err,
-                     const char *fmt, ...);
-void ds_die_internal(const char *fmt, ...);
-void rotate_log(const char *path, size_t max_size);
 int check_ns(int flag, const char *name);
-
-#define ds_log(fmt, ...) ds_log_internal("+", C_GREEN, 0, fmt, ##__VA_ARGS__)
-#define ds_warn(fmt, ...) ds_log_internal("!", C_YELLOW, 1, fmt, ##__VA_ARGS__)
-#define ds_error(fmt, ...) ds_log_internal("-", C_RED, 1, fmt, ##__VA_ARGS__)
-#define ds_die(fmt, ...) ds_die_internal(fmt, ##__VA_ARGS__)
 
 /* Data structures */
 
@@ -463,19 +448,24 @@ struct ds_config {
   unsigned long ns_inode;     /* PID namespace inode for PID-recycling guard */
 };
 
-/* utils.c */
-
-void safe_strncpy(char *dst, const char *src, size_t size);
-int ds_parse_iface_csv(const char *val, char ifaces[][IFNAMSIZ], int *count,
-                       int max);
-char *ds_resolve_path_arg(const char *path);
-void ds_resolve_argv_paths(int argc, char **argv);
-long ds_clk_tck(void);
-long ds_get_container_uptime(pid_t pid);
-/* Field 22 of /proc/<pid>/stat in clock ticks since boot, 0 if unreadable. */
-unsigned long long proc_starttime(pid_t pid);
-const char *proc_stat_field(pid_t pid, int n, char *buf, size_t size);
-void ds_format_uptime(long uptime_sec, char *buf, size_t size);
+#include "android/firmware.h"
+#include "android/socket.h"
+#include "android/spawn.h"
+#include "cli/options.h"
+#include "cli/usage.h"
+#include "config/config.h"
+#include "config/parse.h"
+#include "container/inspect.h"
+#include "container/registry.h"
+#include "core/exec.h"
+#include "core/fdpass.h"
+#include "core/fs.h"
+#include "core/log.h"
+#include "core/paths.h"
+#include "core/proc.h"
+#include "core/string.h"
+#include "security/peer_auth.h"
+#include "security/selinux.h"
 
 /* status.c */
 
@@ -506,40 +496,6 @@ void get_os_pretty(const char *osrelease_path, char *buf, size_t size);
 void ds_json_str(const char *key, const char *val, int *first);
 void ds_json_int(const char *key, long long val, int *first);
 void ds_json_status(const struct ds_status *st, int *first);
-int is_ramfs(const char *path);
-int is_subpath(const char *parent, const char *child);
-int write_file(const char *path, const char *content);
-int read_file(const char *path, char *buf, size_t size);
-int write_file_atomic(const char *path, const char *content);
-ssize_t write_all(int fd, const void *buf, size_t count);
-int generate_uuid(char *buf, size_t size);
-int get_kernel_version(int *major, int *minor);
-int mkdir_p(const char *path, mode_t mode);
-int remove_recursive(const char *path);
-int collect_pids(pid_t **pids_out, size_t *count_out);
-int build_proc_root_path(pid_t pid, const char *suffix, char *buf, size_t size);
-int grep_file(const char *path, const char *pattern);
-int read_and_validate_pid(const char *pidfile, pid_t *pid_out);
-void firmware_path_add(const char *fw_path);
-void firmware_path_remove(const char *fw_path);
-int run_command(char *const argv[]);
-int run_command_quiet(char *const argv[]);
-int run_command_log(char *const argv[]);
-int set_selinux_context(const char *path, const char *context);
-#define DS_MAX_PASSED_FDS 8
-int ds_send_fds(int sock, const void *data, size_t len, const int *fds,
-                int count);
-ssize_t ds_recv_fds(int sock, void *data, size_t len, int *fds, int max,
-                    int *count);
-int ds_send_fd(int sock, int fd);
-int ds_recv_fd(int sock);
-void print_ds_banner(void);
-int is_systemd_rootfs(const char *path);
-
-ds_init_type_t detect_container_init(const char *path);
-int get_user_shell(const char *user, char *shell_buf, size_t size);
-void check_kernel_recommendation(void);
-void write_monitor_debug_log(const char *name, const char *fmt, ...);
 void ds_monitor_run(struct ds_config *cfg, int sync_pipe_write);
 int ds_container_lock(const char *name, int wait);
 void ds_container_unlock(int fd);
@@ -554,58 +510,7 @@ int wait_for_socket_or_death(pid_t pid, const char *path, int timeout_ms,
                              int interval_us);
 void cleanup_container_resources(struct ds_config *cfg, pid_t pid,
                                  int skip_unmount, int force_cleanup);
-void ds_open_container_log(struct ds_config *cfg);
-void ds_close_container_log(void);
-void container_log_path(const char *name, const char *file, char *buf,
-                        size_t size);
-void sort_bind_mounts(struct ds_config *cfg);
-void sanitize_container_name(const char *name, char *out, size_t size);
-int validate_container_name(const char *name);
-int reject_container_name(const char *name);
-int parse_and_validate_names(const char *optarg, char *out_buf,
-                             size_t out_size);
 int ds_multi_stop(const char *raw_names);
-int validate_bind_destination(const char *dest);
-int count_folders(const char *path);
-
-/* Daemon lifecycle helpers */
-typedef void (*ds_child_fn)(int ready_fd, void *user_data);
-pid_t ds_daemon_read_pid(const char *filename);
-void ds_daemon_write_pid(const char *filename, pid_t pid, const char *flags);
-void ds_daemon_remove_pid(const char *filename);
-pid_t ds_resolve_daemon_pid(pid_t cached, const char *pidfile);
-void ds_global_daemon_stop(int (*check_fn)(void), pid_t cached_pid,
-                           pid_t *pid_out, const char *pidfile,
-                           const char *sock_path, const char *tag);
-pid_t ds_global_daemon_reuse(int (*check_fn)(void), const char *pidfile,
-                             const char *flags, const char *sock_path,
-                             const char *tag);
-void ds_oom_protect(void);
-void ds_oom_unprotect(void);
-int ds_thread_create(pthread_t *tid, void *(*fn)(void *), void *arg);
-/* Common preamble for a forked long-lived daemon child (audio/GPU/X11 helper):
- * ignore terminal-disconnect signals so it outlives the launching session and
- * protect it from the OOM killer.  Must run while still root. */
-void ds_daemon_child_preamble(void);
-/* Return 1 if peer_pid shares this process's PID namespace (or if it cannot be
- * determined), 0 only on a positive mismatch.  Used by the abstract-socket
- * authorizers to reject host-net container peers. */
-int ds_peer_in_pidns(pid_t peer_pid);
-/* Authorize a connected AF_UNIX peer: allow root, or a member of group_name,
- * but only when the peer shares our PID namespace.  Returns 1 if authorized. */
-int ds_peer_authorized(int fd, const char *group_name);
-void ds_spawn_log_relay(int pipe_read_fd, const char *log_file,
-                        const char *tag);
-pid_t ds_spawn_daemon(ds_child_fn child_fn, void *user_data,
-                      const char *log_file, const char *tag, const char *label);
-int ds_bind_mount_socket(const char *src, const char *dst, uid_t uid,
-                         const char *label);
-/* Bridge a Termux host socket (DS_TERMUX_TMP_OLDROOT/<leaf>) into the container
- * at dst (owned by the host socket's uid), then export env_key=env_val.
- * Best-effort: warns and skips if the source is absent.  Always returns 0. */
-int ds_bridge_termux_socket(const char *leaf, const char *dst,
-                            const char *env_key, const char *env_val,
-                            const char *label);
 
 /* config.c */
 
@@ -636,8 +541,6 @@ void free_config_binds(struct ds_config *cfg);
 void free_config_env_vars(struct ds_config *cfg);
 void free_config_unknown_lines(struct ds_config *cfg);
 void ds_config_free(struct ds_config *cfg);
-int ds_split_flags(const char *str, char ***out_argv, int *out_argc);
-void ds_free_split_flags(char **argv, int argc);
 char *ds_config_auto_path(const char *rootfs_path);
 void ds_config_reset_defaults(struct ds_config *cfg);
 void apply_reset_config(struct ds_config *cfg);
@@ -648,8 +551,6 @@ int parse_privileged(const char *value, struct ds_config *cfg);
 int is_android(void);
 void android_native_personality(void);
 void android_optimizations(int enable);
-void ds_set_selinux_permissive(int enable);
-int ds_get_selinux_status(void);
 void android_remount_data_suid(void);
 int android_setup_storage(const char *rootfs_path);
 int ds_seccomp_keyring_shim(int privileged_mask);
@@ -668,10 +569,8 @@ int ds_seccomp_mount_api_shim(const struct ds_config *cfg);
 void ds_ksu_neutralize_root_escape(void);
 
 /* SELinux + Termux privilege helpers */
-int get_selinux_context(const char *path, char *buf, size_t size);
 const char *ds_extract_mls(const char *ctx);
 void ds_selinux_dyntransition(const char *mls);
-void ds_selinux_enter_domain(void);
 int ds_drop_privileges(int uid);
 int ds_resolve_termux_uid(void);
 
@@ -721,8 +620,6 @@ int ds_cgroup_cpu_times(const char *container_name, long long *user_us,
 int ds_cgroup_get_usage(const char *container_name, long long *mem,
                         long long *file_cache, long long *cpu_us,
                         long long *pids);
-long long ds_parse_size(const char *str);
-void ds_format_size(long long bytes, char *buf, size_t sz);
 
 /* virtualize.c: the LXCFS-style views of /proc and /sys/devices/system/cpu */
 

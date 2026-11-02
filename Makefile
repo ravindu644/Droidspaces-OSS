@@ -29,7 +29,24 @@ endif
 
 # Every source listed by hand: a stray .c in the tree must not get linked in
 SRCS = $(SRC_DIR)/main.c \
-       $(SRC_DIR)/utils.c \
+       $(SRC_DIR)/core/log.c \
+       $(SRC_DIR)/core/string.c \
+       $(SRC_DIR)/core/fs.c \
+       $(SRC_DIR)/core/paths.c \
+       $(SRC_DIR)/core/proc.c \
+       $(SRC_DIR)/core/exec.c \
+       $(SRC_DIR)/core/fdpass.c \
+       $(SRC_DIR)/security/peer_auth.c \
+       $(SRC_DIR)/security/selinux.c \
+       $(SRC_DIR)/config/config.c \
+       $(SRC_DIR)/config/parse.c \
+       $(SRC_DIR)/android/firmware.c \
+       $(SRC_DIR)/android/spawn.c \
+       $(SRC_DIR)/android/socket.c \
+       $(SRC_DIR)/container/inspect.c \
+       $(SRC_DIR)/container/registry.c \
+       $(SRC_DIR)/cli/options.c \
+       $(SRC_DIR)/cli/usage.c \
        $(SRC_DIR)/android/android.c \
        $(SRC_DIR)/seccomp.c \
        $(SRC_DIR)/mount.c \
