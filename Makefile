@@ -42,6 +42,7 @@ SRCS = $(SRC_DIR)/main.c \
        $(SRC_DIR)/config/parse.c \
        $(SRC_DIR)/config/load.c \
        $(SRC_DIR)/config/save.c \
+       $(SRC_DIR)/env/environment.c \
        $(SRC_DIR)/android/firmware.c \
        $(SRC_DIR)/android/spawn.c \
        $(SRC_DIR)/android/socket.c \
@@ -62,7 +63,6 @@ SRCS = $(SRC_DIR)/main.c \
        $(SRC_DIR)/boot.c \
        $(SRC_DIR)/container.c \
        $(SRC_DIR)/monitor.c \
-       $(SRC_DIR)/environment.c \
        $(SRC_DIR)/documentation.c \
        $(SRC_DIR)/hardware.c \
        $(SRC_DIR)/net/iptables.c \

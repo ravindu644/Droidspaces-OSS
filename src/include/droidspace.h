@@ -467,6 +467,7 @@ struct ds_config {
 #include "core/paths.h"
 #include "core/proc.h"
 #include "core/string.h"
+#include "env/environment.h"
 #include "security/peer_auth.h"
 #include "security/selinux.h"
 #include "status/show.h"
@@ -515,10 +516,6 @@ int wait_for_socket_or_death(pid_t pid, const char *path, int timeout_ms,
 void cleanup_container_resources(struct ds_config *cfg, pid_t pid,
                                  int skip_unmount, int force_cleanup);
 int ds_multi_stop(const char *raw_names);
-
-/* config.c */
-
-void free_config_env_vars(struct ds_config *cfg);
 
 /* android.c */
 
@@ -820,13 +817,6 @@ void write_plain_env_file(const char *src, const char *dst);
 void ds_apply_capability_hardening(int hw_access, int privileged_mask,
                                    int sandboxing);
 int internal_boot(struct ds_config *cfg);
-
-/* environment.c */
-
-void load_etc_environment(void);
-void ds_env_boot_setup(struct ds_config *cfg);
-void ds_env_save(const char *path, struct ds_config *cfg);
-void parse_env_file_to_config(const char *path, struct ds_config *cfg);
 
 /* container.c */
 
