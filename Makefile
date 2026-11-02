@@ -120,7 +120,7 @@ SRCS = $(SRC_DIR)/main.c \
        $(SRC_DIR)/cli/options.c \
        $(SRC_DIR)/cli/usage.c \
        $(SRC_DIR)/android/android.c \
-       $(SRC_DIR)/boot.c \
+       $(SRC_DIR)/boot/init.c \
        $(SRC_DIR)/monitor.c \
        $(SRC_DIR)/documentation.c \
        $(SRC_DIR)/daemon.c \

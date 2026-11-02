@@ -114,7 +114,7 @@ def cap_mask(dropped=()):
     return f"{mask:016x}"
 
 
-# Caps droidspaces drops from the bounding set (boot.c). SYS_PTRACE stays with --allow-sandboxing.
+# Caps droidspaces drops from the bounding set (security/caps.c). SYS_PTRACE stays with --allow-sandboxing.
 CAPS_DROPPED_ALWAYS = (16,)
 CAPS_DROPPED_NO_HW = (2, 16, 17, 19, 20, 32, 33, 35, 36, 37)
 

@@ -104,11 +104,11 @@ static int systemd_version(void) {
   return v;
 }
 
-/* One answer for the shim and for the LIBMOUNT_FORCE_MOUNT2 plumbing in boot.c
- * and ds_env_save, so the two cannot drift apart. Only a systemd 259+ PID 1
- * needs it: older systemd falls back on ENOSYS by itself, and under the filter
- * a util-linux 2.39+ mount(8) that misses the variable fails, so the filter
- * must not go where nothing needs it. */
+/* One answer for the shim and for the LIBMOUNT_FORCE_MOUNT2 plumbing in
+ * boot/init.c and ds_env_save, so the two cannot drift apart. Only a systemd
+ * 259+ PID 1 needs it: older systemd falls back on ENOSYS by itself, and under
+ * the filter a util-linux 2.39+ mount(8) that misses the variable fails, so the
+ * filter must not go where nothing needs it. */
 int ds_mount_api_shim_wanted(const struct ds_config *cfg) {
   return cfg->init_type == DS_INIT_SYSTEMD && !cfg->custom_init[0] &&
          !(cfg->privileged_mask & DS_PRIV_NOSEC) &&
@@ -120,8 +120,8 @@ int ds_mount_api_shim_wanted(const struct ds_config *cfg) {
  * fails; on EPERM it takes the fallbacks it has for unprivileged user
  * managers.  libmount is the reverse, it falls back to mount(2) only on
  * ENOSYS, so every unit and login shell under this PID 1 gets
- * LIBMOUNT_FORCE_MOUNT2=always (boot.c, ds_env_save).  A mount(8) behind an
- * environment reset, sudo's env_reset for one, misses it and fails; that is
+ * LIBMOUNT_FORCE_MOUNT2=always (boot/init.c, ds_env_save).  A mount(8) behind
+ * an environment reset, sudo's env_reset for one, misses it and fails; that is
  * the known ceiling.  mount_setattr() stays untouched, systemd handles its
  * ENOSYS correctly. */
 int ds_seccomp_mount_api_shim(const struct ds_config *cfg) {

@@ -175,7 +175,7 @@ void ds_net_derive_handshake(pid_t init_pid, struct ds_config *cfg,
   veth_peer_name(cfg, init_pid, hs->peer_name, sizeof(hs->peer_name));
   /* Use the already-resolved static IP - not the PID-hash fallback.
    * ip_str is informational on the child side (voided in
-   * setup_veth_child_side_named) but the boot.c log line prints it,
+   * setup_veth_child_side_named) but the boot/init.c log line prints it,
    * so it should reflect the actual IP the DHCP server will offer. */
   if (cfg && cfg->net_mode == DS_NET_NAT && cfg->static_nat_ip[0])
     safe_strncpy(hs->ip_str, cfg->static_nat_ip, sizeof(hs->ip_str));

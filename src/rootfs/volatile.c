@@ -137,7 +137,7 @@ static int is_mount_in_namespace(const char *path) {
 /**
  * cleanup_volatile_overlay() - Simplified OverlayFS cleanup.
  *
- * The overlay is mounted INSIDE the container's mount namespace (boot.c).
+ * The overlay is mounted INSIDE the container's mount namespace (boot/init.c).
  * When the container dies, the kernel tears down the namespace and the
  * mounts vanish automatically.
  *

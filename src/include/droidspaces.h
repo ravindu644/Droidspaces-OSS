@@ -451,6 +451,7 @@ struct ds_config {
 #include "android/helpers.h"
 #include "android/socket.h"
 #include "android/spawn.h"
+#include "boot/init.h"
 #include "cgroup/discover.h"
 #include "cgroup/lifecycle.h"
 #include "cgroup/limits.h"
@@ -568,10 +569,6 @@ int ds_setup_virgl_socket(struct ds_config *cfg);
 int ds_pulse_daemon_start(struct ds_config *cfg);
 void ds_pulse_daemon_stop(struct ds_config *cfg);
 int ds_setup_pulse_socket(struct ds_config *cfg);
-
-/* boot.c */
-
-int internal_boot(struct ds_config *cfg);
 
 /* main.c */
 

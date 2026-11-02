@@ -90,7 +90,7 @@ int setup_gpu_groups(void) {
 /*
  * setup_hardware_access()
  *
- * Top-level entry point called from boot.c AFTER pivot_root.
+ * Top-level entry point called from boot/init.c AFTER pivot_root.
  * Orchestrates GPU group creation and X11 socket mounting.
  *
  * All operations are non-fatal: failures produce warnings but don't
