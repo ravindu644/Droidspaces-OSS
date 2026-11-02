@@ -269,3 +269,13 @@ void ds_ksu_neutralize_root_escape(void) {
    * never be reused by a descendant for GRANT_ROOT. */
   close(fd);
 }
+
+/* The seccomp half of the hardening every process that enters a container
+ * gets: init at boot, and each enter and run, which arrive by setns and
+ * inherit nothing from init. KSU goes first, because the filter denies the
+ * magic reboot() its ioctl needs. Capabilities are dropped after this. */
+void ds_seccomp_harden(const struct ds_config *cfg) {
+  ds_ksu_neutralize_root_escape();
+  ds_seccomp_apply_minimal(cfg->privileged_mask, cfg->sandboxing_allowed);
+  ds_seccomp_keyring_shim(cfg->privileged_mask);
+}

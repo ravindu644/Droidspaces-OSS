@@ -164,12 +164,7 @@ int enter_rootfs(struct ds_config *cfg, const char *user) {
      * inherited only via fork/exec from PID 1 - entering processes arrive via
      * setns() and are NOT children of init, so they inherit nothing. */
     ds_log_silent = 1;
-    /* Neutralize the KSU container-escape path BEFORE seccomp is applied:
-     * the ioctl needs the [ksu_driver] fd that the magic reboot() installs,
-     * and the seccomp filter below denies that very magic reboot. */
-    ds_ksu_neutralize_root_escape();
-    ds_seccomp_apply_minimal(cfg->privileged_mask, cfg->sandboxing_allowed);
-    ds_seccomp_keyring_shim(cfg->privileged_mask);
+    ds_seccomp_harden(cfg);
     ds_apply_capability_hardening(cfg->hw_access, cfg->privileged_mask,
                                   cfg->sandboxing_allowed);
     ds_log_silent = 0;
@@ -351,12 +346,7 @@ int run_in_rootfs(struct ds_config *cfg, char **argv, const char *as_user) {
     /* Apply identical security hardening as internal_boot() and enter_rootfs().
      * Same reasoning: run processes are not children of container PID 1. */
     ds_log_silent = 1;
-    /* Neutralize the KSU container-escape path BEFORE seccomp is applied:
-     * the ioctl needs the [ksu_driver] fd that the magic reboot() installs,
-     * and the seccomp filter below denies that very magic reboot. */
-    ds_ksu_neutralize_root_escape();
-    ds_seccomp_apply_minimal(cfg->privileged_mask, cfg->sandboxing_allowed);
-    ds_seccomp_keyring_shim(cfg->privileged_mask);
+    ds_seccomp_harden(cfg);
     ds_apply_capability_hardening(cfg->hw_access, cfg->privileged_mask,
                                   cfg->sandboxing_allowed);
     ds_log_silent = 0;

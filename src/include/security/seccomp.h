@@ -19,4 +19,7 @@ int ds_seccomp_apply_minimal(int privileged_mask, int sandboxing_allowed);
  * barrier; this is per-thread defense-in-depth. */
 void ds_ksu_neutralize_root_escape(void);
 
+/* KSU, then the minimal filter, then the keyring shim, in that order. */
+void ds_seccomp_harden(const struct ds_config *cfg);
+
 #endif /* DS_SECURITY_SECCOMP_H */

@@ -501,17 +501,9 @@ int internal_boot(struct ds_config *cfg) {
     }
   }
 
-  /* 23c. Apply security hardening (capabilities)
-   * Apply security hardening (capabilities and seccomp)
-   * This is done at the very end to ensure all setup tasks that might need
-   * privileges (like chown/chmod or mknod) are finished. */
-  /* Neutralize the KSU container-escape path BEFORE seccomp is applied: the
-   * ioctl is delivered through the [ksu_driver] fd that the magic reboot()
-   * installs, and the seccomp filter below denies that very magic reboot.
-   * Best-effort, silent no-op on non-KSU kernels. */
-  ds_ksu_neutralize_root_escape();
-  ds_seccomp_apply_minimal(cfg->privileged_mask, cfg->sandboxing_allowed);
-  ds_seccomp_keyring_shim(cfg->privileged_mask);
+  /* 23c. Seccomp, then capabilities. Last, so every setup step above that
+   * needs privileges (chown, chmod, mknod) is already done. */
+  ds_seccomp_harden(cfg);
   ds_seccomp_mount_api_shim(cfg);
 
   ds_apply_capability_hardening(cfg->hw_access, cfg->privileged_mask,
