@@ -8,6 +8,7 @@
 #ifndef DS_ANLAND_ANLAND_H
 #define DS_ANLAND_ANLAND_H
 
+/* anland.c */
 int ds_anland_daemon_start(struct ds_config *cfg);
 void ds_anland_daemon_stop(struct ds_config *cfg);
 int ds_setup_anland_socket(struct ds_config *cfg);

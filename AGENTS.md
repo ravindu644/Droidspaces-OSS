@@ -203,12 +203,13 @@ These are choke points. Bypassing one is a bug, not a shortcut.
   display (`os-release`) or for choices that touch nothing but that container (which signal
   stops its init).
 - `src/include/droidspaces.h` is the umbrella header. Every `.c` file includes it first, and it
-  pulls in the layer headers under `src/include/<layer>/`. A folder's private helpers are
+  pulls in one public header per folder, `src/include/<folder>/<folder>.h`, where each
+  source file's prototypes sit under a `/* file.c */` label. A folder's private helpers are
   declared in its `internal.h`, which only that folder's files include, plus files in its
   subfolders that have no `internal.h` of their own (`net/route/` uses `net/internal.h`).
-  A new constant or type goes in the header of the layer that owns it (`net/net.h`,
-  `android/termux.h`, `config/config.h` for `struct ds_config`), even when other layers use
-  it; the umbrella is for project-wide ones. Grep `src/include/` before writing a helper.
+  A new constant or type goes in the header of the folder that owns it (`net/net.h`,
+  `config/config.h` for `struct ds_config`), even when other folders use it; the umbrella is
+  for project-wide ones. Grep `src/include/` before writing a helper.
 - Logging is `ds_log`, `ds_warn`, `ds_error`, `ds_die`. Never a bare `fprintf` or `exit`.
 - `run_command_quiet` and `run_command_log` are the only sanctioned way to run an external
   binary. There is no `system()` in this tree and there must not be one.

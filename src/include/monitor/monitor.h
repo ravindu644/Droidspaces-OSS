@@ -8,6 +8,7 @@
 #ifndef DS_MONITOR_MONITOR_H
 #define DS_MONITOR_MONITOR_H
 
+/* monitor.c */
 void ds_monitor_run(struct ds_config *cfg, int sync_pipe_write);
 
 #endif /* DS_MONITOR_MONITOR_H */

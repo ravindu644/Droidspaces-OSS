@@ -187,7 +187,7 @@ count++;
 install_policy_rules(cfg);
 ```
 
-The backend already does this well in places. `src/include/security/seccomp.h` documents ordering
+The backend already does this well in places. `src/include/security/security.h` documents ordering
 constraints (`ds_ksu_neutralize_root_escape` must run before `ds_seccomp_apply_minimal`, and
 says why), and `ds_bind_mount_socket` explains the `O_NOFOLLOW` choice in terms of the race
 it closes. That is the bar.
@@ -201,11 +201,12 @@ change in the wrong place is a second bug.
 
 - C89 block comments (`/* ... */`). There are no `//` comments in `src/`.
 - `static` by default. A function becomes non-static only when its prototype is added to a
-  header under `src/include/`: the layer's public header, or the folder's `internal.h` when
-  only that folder calls it.
-- A new constant or type goes in the header of the layer that owns it (`net/net.h`,
-  `android/termux.h`, `config/config.h` for `struct ds_config` and the types it embeds),
-  even when other layers use it. `src/include/droidspaces.h` is for project-wide ones.
+  header under `src/include/`: the folder's public header, `<folder>/<folder>.h`, under the
+  `/* file.c */` label of the file that defines it, or the folder's `internal.h` when only
+  that folder calls it.
+- A new constant or type goes in the header of the folder that owns it (`net/net.h`,
+  `config/config.h` for `struct ds_config` and the types it embeds), even when other folders
+  use it. `src/include/droidspaces.h` is for project-wide ones.
 - New cross-module functions take the `ds_` prefix. Legacy un-prefixed names (`read_file`,
   `mkdir_p`, `run_command_quiet`, `domount`) stay as they are; do not rename them and do not
   imitate them for new work.
@@ -490,7 +491,7 @@ validation. Prefer the wrappers.
 
 | Symbol | Header line | Use it when |
 | --- | --- | --- |
-| `ds_log(fmt, ...)` | `core/log.h` | Normal progress output |
+| `ds_log(fmt, ...)` | `core/core.h` | Normal progress output |
 | `ds_warn(fmt, ...)` | | Recoverable problem. Goes to stderr, never silenced |
 | `ds_error(fmt, ...)` | | Failure the caller handles |
 | `ds_die(fmt, ...)` | | Fatal. Logs then exits. Never write `fprintf` plus `exit` by hand |

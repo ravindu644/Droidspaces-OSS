@@ -172,7 +172,7 @@ count++;
 install_policy_rules(cfg);
 ```
 
-后端有些地方已经做得很好了。`src/include/security/seccomp.h` 记录了调用顺序约束（
+后端有些地方已经做得很好了。`src/include/security/security.h` 记录了调用顺序约束（
 `ds_ksu_neutralize_root_escape` 必须在 `ds_seccomp_apply_minimal` 之前运行，并写明了
 原因），`ds_bind_mount_socket` 用它所堵住的竞态来解释为什么要用 `O_NOFOLLOW`。这就是标准。
 
@@ -185,9 +185,10 @@ install_policy_rules(cfg);
 
 - 使用 C89 块注释（`/* ... */`）。`src/` 中没有 `//` 注释。
 - 默认 `static`。只有当函数的原型被加进 `src/include/` 下的头文件时，才去掉 `static`：
-  该层的公开头文件；如果只有同一目录的文件调用，就放进该目录的 `internal.h`。
-- 新的常量或类型放进拥有它的那一层的头文件（`net/net.h`、`android/termux.h`；
-  `struct ds_config` 及其内嵌的类型放在 `config/config.h`），即使其他层也会用到。
+  该目录的公开头文件 `<folder>/<folder>.h`，放在定义它的那个文件的 `/* file.c */` 标签下；
+  如果只有同一目录的文件调用，就放进该目录的 `internal.h`。
+- 新的常量或类型放进拥有它的那个目录的头文件（`net/net.h`；`struct ds_config` 及其内嵌的
+  类型放在 `config/config.h`），即使其他目录也会用到。
   `src/include/droidspaces.h` 只放全项目通用的内容。
 - 新的跨模块函数使用 `ds_` 前缀。遗留的无前缀名称（`read_file`、`mkdir_p`、`run_command_quiet`、
   `domount`）保持原样，不要重命名，也不要在新代码中模仿它们。
@@ -462,7 +463,7 @@ libsu 的全局配置在 `DroidspacesApplication.kt` 中，那是唯一应该设
 
 | 符号 | 头文件 | 何时使用 |
 | --- | --- | --- |
-| `ds_log(fmt, ...)` | `core/log.h` | 正常进度输出 |
+| `ds_log(fmt, ...)` | `core/core.h` | 正常进度输出 |
 | `ds_warn(fmt, ...)` | | 可恢复的问题。输出到 stderr，永不被静音 |
 | `ds_error(fmt, ...)` | | 由调用方处理的失败 |
 | `ds_die(fmt, ...)` | | 致命错误。记录后退出。绝不要手写 `fprintf` 加 `exit` |

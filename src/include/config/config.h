@@ -196,6 +196,7 @@ struct ds_config {
   unsigned long ns_inode;     /* PID namespace inode for PID-recycling guard */
 };
 
+/* config.c */
 void sanitize_container_name(const char *name, char *out, size_t size);
 int validate_container_name(const char *name);
 int reject_container_name(const char *name);
@@ -204,5 +205,50 @@ void ds_config_init(struct ds_config *cfg);
 void ds_config_free(struct ds_config *cfg);
 void ds_config_reset_defaults(struct ds_config *cfg);
 void apply_reset_config(struct ds_config *cfg);
+
+/* load.c */
+int ds_config_load(const char *config_path, struct ds_config *cfg);
+int ds_config_load_file(FILE *f, struct ds_config *cfg);
+/* <workspace>/Containers/<sanitized name>/container.config. -1 for a name
+ * validate_container_name refuses. */
+int ds_config_host_path(const char *name, char *buf, size_t size);
+/* The host config of name, by path, never the booted one: for the reloads
+ * that want the user's latest edits. */
+int ds_config_load_host(const char *name, struct ds_config *cfg);
+int ds_config_load_by_name(const char *name, struct ds_config *cfg);
+int ds_config_peek(const char *name, struct ds_config *cfg);
+int ds_config_peek_path(const char *config_path, struct ds_config *cfg);
+void free_config_unknown_lines(struct ds_config *cfg);
+char *ds_config_auto_path(const char *rootfs_path);
+
+/* parse.c */
+void sort_bind_mounts(struct ds_config *cfg);
+int validate_bind_destination(const char *dest);
+
+/* --net / net_mode= value to its mode, -1 if unknown. */
+int ds_parse_net_mode(const char *s);
+const char *ds_net_mode_name(enum ds_net_mode mode);
+
+/* --macvlan-mode / macvlan_mode= value to MACVLAN_MODE_*, 0 if unknown. */
+uint32_t ds_parse_macvlan_mode(const char *s);
+const char *ds_macvlan_mode_name(uint32_t mode);
+
+/* One SRC:DEST[:ro] or HOST[:CONTAINER][/proto] spec into cfg, cut up in
+ * place. 0 stored, 1 skipped as a duplicate or overlap (port forwards only,
+ * already warned about), -1 with the reason in err. */
+int ds_parse_bind_spec(char *spec, struct ds_config *cfg, char *err,
+                       size_t err_size);
+int ds_parse_port_forward(char *spec, struct ds_config *cfg, char *err,
+                          size_t err_size);
+void ds_privileged_names(int mask, char *buf, size_t size, const char *sep);
+int ds_config_add_bind(struct ds_config *cfg, const char *src, const char *dest,
+                       int ro);
+void free_config_binds(struct ds_config *cfg);
+int parse_privileged(const char *value, struct ds_config *cfg);
+
+/* save.c */
+char *ds_config_serialize(struct ds_config *cfg, size_t *len, size_t *known);
+int ds_config_save(const char *config_path, struct ds_config *cfg);
+int ds_config_save_by_name(const char *name, struct ds_config *cfg);
 
 #endif /* DS_CONFIG_CONFIG_H */
