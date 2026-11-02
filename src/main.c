@@ -164,7 +164,7 @@ static void enforce_nat_safety(struct ds_config *cfg) {
 
 /* stop with a comma-separated name list: stop each one in turn, 1 if any
  * of them failed. */
-int ds_multi_stop(const char *raw_names) {
+static int ds_multi_stop(const char *raw_names) {
   char tmp[4096];
   snprintf(tmp, sizeof(tmp), "%s", raw_names);
   int ret = 0;

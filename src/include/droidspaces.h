@@ -449,8 +449,12 @@ struct ds_config {
 #include "android/android.h"
 #include "android/firmware.h"
 #include "android/helpers.h"
+#include "android/pulseaudio.h"
 #include "android/socket.h"
 #include "android/spawn.h"
+#include "android/virgl.h"
+#include "android/x11.h"
+#include "anland/anland.h"
 #include "boot/init.h"
 #include "cgroup/discover.h"
 #include "cgroup/lifecycle.h"
@@ -532,34 +536,5 @@ struct ds_config {
 #include "tty/pty.h"
 #include "virt/affinity.h"
 #include "virt/vproc.h"
-
-/* x11.c */
-
-int ds_x11_daemon_start(struct ds_config *cfg);
-void ds_x11_daemon_stop(struct ds_config *cfg);
-int ds_setup_x11_socket(struct ds_config *cfg);
-
-/* anland/anland.c */
-
-int ds_anland_daemon_start(struct ds_config *cfg);
-void ds_anland_daemon_stop(struct ds_config *cfg);
-int ds_setup_anland_socket(struct ds_config *cfg);
-void ds_anland_load_sock(struct ds_config *cfg);
-
-/* virgl-android.c */
-
-int ds_virgl_daemon_start(struct ds_config *cfg);
-void ds_virgl_daemon_stop(struct ds_config *cfg);
-int ds_setup_virgl_socket(struct ds_config *cfg);
-
-/* pulseaudio-android.c */
-
-int ds_pulse_daemon_start(struct ds_config *cfg);
-void ds_pulse_daemon_stop(struct ds_config *cfg);
-int ds_setup_pulse_socket(struct ds_config *cfg);
-
-/* main.c */
-
-int ds_multi_stop(const char *raw_names);
 
 #endif /* DROIDSPACES_H */
