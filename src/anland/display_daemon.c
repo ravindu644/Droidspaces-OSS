@@ -26,8 +26,8 @@
 
 #include "droidspaces.h"
 
-#include "display_daemon.h"
-#include "protocol.h"
+#include "anland/display_daemon.h"
+#include "anland/protocol.h"
 
 #define MAX_EVENTS 16
 /* Consumer fd set: { buf_ready, fence, data, shm, audio }. */
