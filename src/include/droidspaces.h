@@ -446,6 +446,7 @@ struct ds_config {
   unsigned long ns_inode;     /* PID namespace inode for PID-recycling guard */
 };
 
+#include "android/android.h"
 #include "android/firmware.h"
 #include "android/helpers.h"
 #include "android/socket.h"
@@ -482,6 +483,7 @@ struct ds_config {
 #include "core/json.h"
 #include "core/log.h"
 #include "core/paths.h"
+#include "core/platform.h"
 #include "core/proc.h"
 #include "core/string.h"
 #include "daemon/client.h"
@@ -530,20 +532,6 @@ struct ds_config {
 #include "tty/pty.h"
 #include "virt/affinity.h"
 #include "virt/vproc.h"
-
-/* android.c */
-
-int is_android(void);
-void android_native_personality(void);
-void android_optimizations(int enable);
-void android_remount_data_suid(void);
-int android_setup_storage(const char *rootfs_path);
-
-/* SELinux + Termux privilege helpers */
-const char *ds_extract_mls(const char *ctx);
-void ds_selinux_dyntransition(const char *mls);
-int ds_drop_privileges(int uid);
-int ds_resolve_termux_uid(void);
 
 /* x11.c */
 

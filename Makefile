@@ -38,6 +38,7 @@ SRCS = $(SRC_DIR)/main.c \
        $(SRC_DIR)/core/fdpass.c \
        $(SRC_DIR)/core/frame.c \
        $(SRC_DIR)/core/json.c \
+       $(SRC_DIR)/core/platform.c \
        $(SRC_DIR)/security/peer_auth.c \
        $(SRC_DIR)/security/selinux.c \
        $(SRC_DIR)/config/config.c \
