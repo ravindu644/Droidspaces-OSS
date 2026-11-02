@@ -112,7 +112,7 @@ make aarch64           # cross builds: aarch64, x86_64, armhf, x86, riscv64
 make debug-hardened    # ASan, UBSan, LSan build for chasing memory bugs
 make all-build         # every architecture
 make all-tarball       # all-build plus a release tarball
-make bump NEW=x.y.z    # set DS_VERSION in droidspace.h
+make bump NEW=x.y.z    # set DS_VERSION in droidspaces.h
 make format            # clang-format over src/, using the repo .clang-format
 make clean
 ```
@@ -133,7 +133,7 @@ warnings. A warning is a build failure, not a review comment.
 
 Adding a new `.c` file means adding it to `SRCS` in the Makefile. There is no wildcard.
 
-The version string is scraped from `DS_VERSION` in `src/include/droidspace.h`. `make bump
+The version string is scraped from `DS_VERSION` in `src/include/droidspaces.h`. `make bump
 NEW=x.y.z` rewrites it; nothing else carries the version.
 
 ### Android app
@@ -187,7 +187,7 @@ count++;
 install_policy_rules(cfg);
 ```
 
-The backend already does this well in places. `src/include/droidspace.h` documents ordering
+The backend already does this well in places. `src/include/droidspaces.h` documents ordering
 constraints (`ds_ksu_neutralize_root_escape` must run before `ds_seccomp_apply_minimal`, and
 says why), and `ds_bind_mount_socket` explains the `O_NOFOLLOW` choice in terms of the race
 it closes. That is the bar.
@@ -201,7 +201,7 @@ change in the wrong place is a second bug.
 
 - C89 block comments (`/* ... */`). There are no `//` comments in `src/`.
 - `static` by default. A function becomes non-static only when it is added to
-  `src/include/droidspace.h`.
+  `src/include/droidspaces.h`.
 - New cross-module functions take the `ds_` prefix. Legacy un-prefixed names (`read_file`,
   `mkdir_p`, `run_command`, `domount`) stay as they are; do not rename them and do not
   imitate them for new work.
@@ -209,8 +209,8 @@ change in the wrong place is a second bug.
   paired lifecycle, `print_*` for pure output, `free_*` for teardown.
 - Constants are `DS_` plus SCREAMING_SNAKE. Structs are `struct ds_*`. The `_t` suffix is
   only for typedefs.
-- Header guards are named `#ifndef DROIDSPACE_H` style with a matching
-  `#endif /* DROIDSPACE_H */`. No `#pragma once`.
+- Header guards are named `#ifndef DROIDSPACES_H` style with a matching
+  `#endif /* DROIDSPACES_H */`. No `#pragma once`.
 - There is no `xmalloc` family. Use plain `malloc` with an explicit NULL check, and prefer
   fixed-size buffers wherever the size is bounded. `struct ds_config` is almost entirely
   fixed-size for this reason.
@@ -486,7 +486,7 @@ validation. Prefer the wrappers.
 
 | Symbol | Header line | Use it when |
 | --- | --- | --- |
-| `ds_log(fmt, ...)` | `droidspace.h` | Normal progress output |
+| `ds_log(fmt, ...)` | `droidspaces.h` | Normal progress output |
 | `ds_warn(fmt, ...)` | | Recoverable problem. Goes to stderr, never silenced |
 | `ds_error(fmt, ...)` | | Failure the caller handles |
 | `ds_die(fmt, ...)` | | Fatal. Logs then exits. Never write `fprintf` plus `exit` by hand |

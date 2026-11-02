@@ -24,7 +24,7 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
-#include "droidspace.h"
+#include "droidspaces.h"
 
 #include "display_daemon.h"
 #include "protocol.h"

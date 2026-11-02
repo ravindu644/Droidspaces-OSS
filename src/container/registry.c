@@ -5,7 +5,7 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
-#include "droidspace.h"
+#include "droidspaces.h"
 
 #include "container/internal.h"
 
@@ -309,7 +309,7 @@ int is_container_init(pid_t pid) {
  *  -1: no containers with the feature are installed
  *
  * Adding support for a new feature costs zero lines here - just define
- * a DS_FEAT_* constant in droidspace.h and call ds_feature_needs().
+ * a DS_FEAT_* constant in droidspaces.h and call ds_feature_needs().
  */
 int ds_feature_needs(size_t cfg_flag_offset) {
   /* Phase 1: any running container with the feature? */

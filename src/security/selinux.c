@@ -5,7 +5,7 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
-#include "droidspace.h"
+#include "droidspaces.h"
 #include <sys/xattr.h>
 
 int get_selinux_context(const char *path, char *buf, size_t size) {

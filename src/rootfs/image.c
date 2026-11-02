@@ -5,7 +5,7 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
-#include "droidspace.h"
+#include "droidspaces.h"
 #include <linux/loop.h>
 
 /* Forward declarations for loop helpers used in find_available_mountpoint */

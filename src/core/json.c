@@ -5,7 +5,7 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
-#include "droidspace.h"
+#include "droidspaces.h"
 
 /* JSON output. We only ever write flat objects of strings and integers, so
  * these two functions and ds_json_status() in status/collect.c are the whole

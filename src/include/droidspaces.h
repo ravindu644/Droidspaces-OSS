@@ -5,8 +5,8 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
-#ifndef DROIDSPACE_H
-#define DROIDSPACE_H
+#ifndef DROIDSPACES_H
+#define DROIDSPACES_H
 
 #ifndef _GNU_SOURCE
 #define _GNU_SOURCE
@@ -754,4 +754,4 @@ int ds_client_run(int argc, char **argv, const char *cmd, int want_stdin);
 const char *ds_command_word(int argc, char **argv);
 int ds_daemon_probe(void);
 
-#endif /* DROIDSPACE_H */
+#endif /* DROIDSPACES_H */

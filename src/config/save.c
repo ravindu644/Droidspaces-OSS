@@ -5,7 +5,7 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
-#include "droidspace.h"
+#include "droidspaces.h"
 
 /* A key written here must also be parsed by ds_config_load() in config/load.c.
  * Otherwise it is read back as an unknown line and saved twice. */

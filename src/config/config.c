@@ -5,7 +5,7 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
-#include "droidspace.h"
+#include "droidspaces.h"
 
 void ds_config_free(struct ds_config *cfg) {
   free_config_binds(cfg);

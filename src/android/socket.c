@@ -5,7 +5,7 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
-#include "droidspace.h"
+#include "droidspaces.h"
 
 /*
  * Create a file node at dst (if absent), chown+chmod 0666, then bind-mount

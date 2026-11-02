@@ -22,7 +22,7 @@
  * One walk pair serves every container at once, so the app's heartbeat costs
  * the same for ten containers as for one. */
 
-#include "droidspace.h"
+#include "droidspaces.h"
 #include <ifaddrs.h>
 #include <time.h>
 

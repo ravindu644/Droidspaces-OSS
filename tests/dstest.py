@@ -64,7 +64,7 @@ def ds_json(*args):
 
 
 def tree_version():
-    header = (REPO / "src/include/droidspace.h").read_text()
+    header = (REPO / "src/include/droidspaces.h").read_text()
     return re.search(r'#define\s+DS_VERSION\s+"([^"]+)"', header).group(1)
 
 

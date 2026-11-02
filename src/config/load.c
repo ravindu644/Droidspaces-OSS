@@ -5,13 +5,13 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
-#include "droidspace.h"
+#include "droidspaces.h"
 
 #include "config/internal.h"
 
 /* Forward declarations */
 static void add_unknown_line(struct ds_config *cfg, const char *line);
-/* ds_net_validate_static_ip is defined in network.c - declared in droidspace.h
+/* ds_net_validate_static_ip is defined in network.c - declared in droidspaces.h
  */
 #include <libgen.h>
 

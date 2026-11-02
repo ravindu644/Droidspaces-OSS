@@ -5,7 +5,7 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
-#include "droidspace.h"
+#include "droidspaces.h"
 
 #define DS_VTTY_COUNT                                                          \
   6 /* /dev/tty1..6: masked in hw mode, null device nodes otherwise */

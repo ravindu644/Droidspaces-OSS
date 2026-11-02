@@ -5,7 +5,7 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
-#include "droidspace.h"
+#include "droidspaces.h"
 #include <time.h>
 
 void rotate_log(const char *path, size_t max_size) {

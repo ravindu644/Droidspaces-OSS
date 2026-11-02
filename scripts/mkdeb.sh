@@ -81,7 +81,7 @@ if ! command -v dpkg-deb >/dev/null 2>&1; then
     exit 1
 fi
 
-VERSION=$(grep "DS_VERSION" "src/include/droidspace.h" | awk '{print $3}' | tr -d '"')
+VERSION=$(grep "DS_VERSION" "src/include/droidspaces.h" | awk '{print $3}' | tr -d '"')
 if [ -z "$VERSION" ]; then
     echo "[-] Error: Could not determine Droidspaces version."
     exit 1

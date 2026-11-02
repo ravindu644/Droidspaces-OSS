@@ -15,7 +15,7 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
-#include "droidspace.h"
+#include "droidspaces.h"
 #include <dirent.h>
 #include <linux/videodev2.h>
 

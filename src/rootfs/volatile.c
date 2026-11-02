@@ -5,7 +5,7 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
-#include "droidspace.h"
+#include "droidspaces.h"
 
 int check_volatile_mode(struct ds_config *cfg) {
   if (!cfg->volatile_mode)

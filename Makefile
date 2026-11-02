@@ -9,8 +9,8 @@ OUT_DIR     = output
 # Default compiler. Do not allow recursive builds to accidentally get empty CC.
 CC ?= cc
 
-# DS_VERSION in droidspace.h is the one place the version lives; `make bump` rewrites it
-VERSION := $(shell grep "DS_VERSION" $(SRC_DIR)/include/droidspace.h | awk '{print $$3}' | tr -d '"')
+# DS_VERSION in droidspaces.h is the one place the version lives; `make bump` rewrites it
+VERSION := $(shell grep "DS_VERSION" $(SRC_DIR)/include/droidspaces.h | awk '{print $$3}' | tr -d '"')
 
 NPROC := $(shell nproc 2>/dev/null || sysctl -n hw.logicalcpu 2>/dev/null || echo 4)
 
@@ -157,7 +157,7 @@ help:
 	@echo "  NO_STRIP=1     - Keep symbols"
 	@echo ""
 	@echo "Other:"
-	@echo "  make bump NEW=x.y.z - Set the version (droidspace.h)"
+	@echo "  make bump NEW=x.y.z - Set the version (droidspaces.h)"
 	@echo "  make clean     - Remove build artifacts"
 	@echo "  make debug-hardened - Build with ASan/UBSan/LSan to find bugs"
 	@echo "  make format    - Run clang-format on all .c/.h/.cpp files"
@@ -235,7 +235,7 @@ all-tarball: all-build
 
 bump:
 	@echo "$(NEW)" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$$' || { echo "Usage: make bump NEW=x.y.z"; exit 1; }
-	@sed -i 's/define DS_VERSION ".*"/define DS_VERSION "$(NEW)"/' $(SRC_DIR)/include/droidspace.h
+	@sed -i 's/define DS_VERSION ".*"/define DS_VERSION "$(NEW)"/' $(SRC_DIR)/include/droidspaces.h
 	@echo "[+] Version $(VERSION) -> $(NEW). Commit it, then tag v$(NEW) to release."
 
 format:

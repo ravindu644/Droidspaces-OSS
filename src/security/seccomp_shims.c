@@ -5,7 +5,7 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
-#include "droidspace.h"
+#include "droidspaces.h"
 #include <linux/audit.h>
 #include <linux/filter.h>
 #include <linux/seccomp.h>

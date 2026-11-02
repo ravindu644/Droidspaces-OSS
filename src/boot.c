@@ -5,7 +5,7 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
-#include "droidspace.h"
+#include "droidspaces.h"
 
 /* A child user namespace may mount a fresh proc or sysfs only if some
  * instance of it in this mount namespace is "fully visible": the root of the

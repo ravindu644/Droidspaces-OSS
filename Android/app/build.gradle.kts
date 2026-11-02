@@ -15,7 +15,7 @@ val gitCommitCount = runCatching {
 
 // One version for the app and the backend it ships: DS_VERSION from the C header
 val dsVersionName = Regex("#define\\s+DS_VERSION\\s+\"([^\"]+)\"")
-    .find(file("../../src/include/droidspace.h").readText())?.groupValues?.get(1) ?: "1.0.0"
+    .find(file("../../src/include/droidspaces.h").readText())?.groupValues?.get(1) ?: "1.0.0"
 // ponytail: 10000 commits per release before the suffix spills into the next slot; still monotonic, just ugly
 val dsVersionCodeVal = dsVersionName.split(".").let { parts ->
     try {

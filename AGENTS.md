@@ -24,7 +24,7 @@ make native            # build for the host arch, this is the real build command
 make aarch64           # cross builds: aarch64, x86_64, armhf, x86, riscv64
 make debug-hardened    # ASan, UBSan, LSan
 make all-build         # every arch
-make bump NEW=x.y.z    # set DS_VERSION in droidspace.h
+make bump NEW=x.y.z    # set DS_VERSION in droidspaces.h
 make format            # clang-format over src/
 ```
 
@@ -195,7 +195,7 @@ These are choke points. Bypassing one is a bug, not a shortcut.
 - `ds_peer_authorized()` in `src/utils.c` is the only authorization gate in the tree, and
   `ds_peer_in_pidns()` backs it. Both must fail closed. A "cannot determine, so allow"
   branch there was a root container escape once already.
-- `src/include/droidspace.h` is the catch-all header and every `.c` file includes only it.
+- `src/include/droidspaces.h` is the catch-all header and every `.c` file includes only it.
   Grep it before writing a helper.
 - Logging is `ds_log`, `ds_warn`, `ds_error`, `ds_die`. Never a bare `fprintf` or `exit`.
 - `run_command`, `run_command_quiet`, `run_command_log` are the only sanctioned way to run

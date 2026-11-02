@@ -6,7 +6,7 @@
  */
 
 #define _GNU_SOURCE
-#include "droidspace.h"
+#include "droidspaces.h"
 #include <fcntl.h>
 #include <grp.h>
 #include <sys/personality.h>

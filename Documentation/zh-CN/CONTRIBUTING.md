@@ -101,7 +101,7 @@ make aarch64           # 交叉构建：aarch64、x86_64、armhf、x86、riscv64
 make debug-hardened    # 带 ASan、UBSan、LSan 的构建，用于排查内存问题
 make all-build         # 构建全部架构
 make all-tarball       # all-build 再加上发布用 tarball
-make bump NEW=x.y.z    # 设置 droidspace.h 中的 DS_VERSION
+make bump NEW=x.y.z    # 设置 droidspaces.h 中的 DS_VERSION
 make format            # 用仓库的 .clang-format 对 src/ 执行 clang-format
 make clean
 ```
@@ -121,7 +121,7 @@ make clean
 
 新增 `.c` 文件时必须把它加进 Makefile 的 `SRCS`。这里没有通配符。
 
-版本号从 `src/include/droidspace.h` 中的 `DS_VERSION` 提取。`make bump NEW=x.y.z` 会改写它；
+版本号从 `src/include/droidspaces.h` 中的 `DS_VERSION` 提取。`make bump NEW=x.y.z` 会改写它；
 其他地方都不带版本号。
 
 ### Android App
@@ -172,7 +172,7 @@ count++;
 install_policy_rules(cfg);
 ```
 
-后端有些地方已经做得很好了。`src/include/droidspace.h` 记录了调用顺序约束（
+后端有些地方已经做得很好了。`src/include/droidspaces.h` 记录了调用顺序约束（
 `ds_ksu_neutralize_root_escape` 必须在 `ds_seccomp_apply_minimal` 之前运行，并写明了
 原因），`ds_bind_mount_socket` 用它所堵住的竞态来解释为什么要用 `O_NOFOLLOW`。这就是标准。
 
@@ -184,13 +184,13 @@ install_policy_rules(cfg);
 ### C 语言约定
 
 - 使用 C89 块注释（`/* ... */`）。`src/` 中没有 `//` 注释。
-- 默认 `static`。只有当函数被加进 `src/include/droidspace.h` 时，才去掉 `static`。
+- 默认 `static`。只有当函数被加进 `src/include/droidspaces.h` 时，才去掉 `static`。
 - 新的跨模块函数使用 `ds_` 前缀。遗留的无前缀名称（`read_file`、`mkdir_p`、`run_command`、
   `domount`）保持原样，不要重命名，也不要在新代码中模仿它们。
 - `is_*` 用于判定函数，`check_*` 用于可能打印输出的探测函数，`setup_*` 与 `cleanup_*`
   成对表示生命周期，`print_*` 用于纯输出，`free_*` 用于释放。
 - 常量用 `DS_` 加全大写下划线。结构体用 `struct ds_*`。`_t` 后缀只用于 typedef。
-- 头文件保护宏形如 `#ifndef DROIDSPACE_H`，并以带名字的 `#endif /* DROIDSPACE_H */` 结束。
+- 头文件保护宏形如 `#ifndef DROIDSPACES_H`，并以带名字的 `#endif /* DROIDSPACES_H */` 结束。
   不使用 `#pragma once`。
 - 没有 `xmalloc` 之类的封装。使用普通的 `malloc` 并显式检查 NULL；只要大小有上界，就优先
   使用定长缓冲区。`struct ds_config` 几乎全是定长字段，原因正在于此。
@@ -458,7 +458,7 @@ libsu 的全局配置在 `DroidspacesApplication.kt` 中，那是唯一应该设
 
 | 符号 | 头文件 | 何时使用 |
 | --- | --- | --- |
-| `ds_log(fmt, ...)` | `droidspace.h` | 正常进度输出 |
+| `ds_log(fmt, ...)` | `droidspaces.h` | 正常进度输出 |
 | `ds_warn(fmt, ...)` | | 可恢复的问题。输出到 stderr，永不被静音 |
 | `ds_error(fmt, ...)` | | 由调用方处理的失败 |
 | `ds_die(fmt, ...)` | | 致命错误。记录后退出。绝不要手写 `fprintf` 加 `exit` |

@@ -27,7 +27,7 @@ object AppUpdateChecker {
     }.getOrNull()
 
     // Release tags are vX.Y.Z and the installed versionName is X.Y.Z, straight
-    // from DS_VERSION in droidspace.h. Pull the first dotted triple out of
+    // from DS_VERSION in droidspaces.h. Pull the first dotted triple out of
     // either, so a prefix or suffix on the tag never breaks the compare.
     private fun versionNumber(text: String): Int? =
         Regex("(\\d+)\\.(\\d+)\\.(\\d+)").find(text)?.let { m ->

@@ -5,7 +5,7 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
-#include "droidspace.h"
+#include "droidspaces.h"
 #include <pwd.h>
 
 /* The symlink target of <rootfs>/sbin/init, or the start of the file when it

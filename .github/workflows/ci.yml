@@ -39,11 +39,11 @@ jobs:
       with:
         fetch-depth: 0
 
-    # One version, DS_VERSION in droidspace.h. A tag must match it, so a
+    # One version, DS_VERSION in droidspaces.h. A tag must match it, so a
     # forgotten `make bump` fails here instead of shipping.
     - name: Settle the version
       run: |
-        VERSION=$(grep "DS_VERSION" src/include/droidspace.h | awk '{print $3}' | tr -d '"')
+        VERSION=$(grep "DS_VERSION" src/include/droidspaces.h | awk '{print $3}' | tr -d '"')
         if [ -n "$TAG" ]; then
           [ "${TAG#v}" = "$VERSION" ] || { echo "Tag $TAG does not match DS_VERSION $VERSION (run make bump NEW=${TAG#v})"; exit 1; }
         fi

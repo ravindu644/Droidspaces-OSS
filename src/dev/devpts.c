@@ -5,7 +5,7 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
-#include "droidspace.h"
+#include "droidspaces.h"
 
 int setup_devpts(int hw_access) {
   const char *pts_path = "/dev/pts";

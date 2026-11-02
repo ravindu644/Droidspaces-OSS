@@ -5,7 +5,7 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
-#include "droidspace.h"
+#include "droidspaces.h"
 
 /* Mask a sensitive path by self-binding and remounting read-only.
  * Silently skips if the path doesn't exist.  The resulting mount entry

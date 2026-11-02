@@ -13,7 +13,7 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
-#include "droidspace.h"
+#include "droidspaces.h"
 #include <arpa/inet.h>
 #include <fnmatch.h>
 #include <linux/ethtool.h>
@@ -347,7 +347,7 @@ static int iface_is_running(const char *ifname) {
  * its connectivity downstream (hotspot / USB tethering - Android acts as
  * the router, these face clients, not the internet).  tun/ppp are VPN
  * tunnels which container traffic intentionally bypasses (see the
- * DS_RULE_PRIO_* rationale in droidspace.h).  The rest are loopback,
+ * DS_RULE_PRIO_* rationale in droidspaces.h).  The rest are loopback,
  * placeholders, and our own bridge/veth devices. */
 
 static const char *const k_uplink_patterns[] = {
@@ -417,7 +417,7 @@ int ds_get_dns_servers(const char *custom_dns, char *out, size_t size) {
     }
   }
 
-  /* 1. Global stable fallbacks (defined in droidspace.h) */
+  /* 1. Global stable fallbacks (defined in droidspaces.h) */
   if (count == 0 && size >= sizeof(k_dns_v4_first)) {
     memcpy(out, k_dns_v4_first, sizeof(k_dns_v4_first));
     count = 3;
