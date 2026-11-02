@@ -274,13 +274,7 @@ int start_rootfs_locked(struct ds_config *cfg, int *lock_fd, int reuse_mount) {
 
   /* Parse environment file while host paths are reachable (before pivot_root)
    */
-  if (cfg->env_file[0] != '\0') {
-    free_config_env_vars(cfg);
-    int _prev = ds_log_silent;
-    ds_log_silent = 1;
-    parse_env_file_to_config(cfg->env_file, cfg);
-    ds_log_silent = _prev;
-  }
+  parse_env_file_to_config(cfg);
 
   /* Pre-populate volatile_dir for monitor cleanup (actual overlay setup
    * happens inside internal_boot's isolated mount namespace) */

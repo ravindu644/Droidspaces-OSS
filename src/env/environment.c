@@ -127,13 +127,15 @@ void ds_env_save(const char *path, struct ds_config *cfg) {
   chmod(path, 0755);
 }
 
-/* parse_env_file_to_config() - parse user environment variables into memory
- *
- * Called before fork() while host paths are still accessible.
- * Supports unlimited line length and variable count via dynamic allocation. */
-void parse_env_file_to_config(const char *path, struct ds_config *cfg) {
-  if (!path || path[0] == '\0' || !cfg)
+/* parse_env_file_to_config() - load cfg->env_file into cfg->env_vars,
+ * replacing what was there. Call while host paths are still reachable: before
+ * pivot_root on boot, before setns on enter and run. Supports unlimited line
+ * length and variable count via dynamic allocation. */
+void parse_env_file_to_config(struct ds_config *cfg) {
+  const char *path = cfg->env_file;
+  if (path[0] == '\0')
     return;
+  free_config_env_vars(cfg);
 
   FILE *f = fopen(path, "re");
   if (!f) {
@@ -144,6 +146,10 @@ void parse_env_file_to_config(const char *path, struct ds_config *cfg) {
     return;
   }
 
+  /* The progress lines go to the log file only; warnings about bad lines
+   * still reach the terminal. */
+  int prev_silent = ds_log_silent;
+  ds_log_silent = 1;
   ds_log("Parsing environment file: %s", path);
 
   char *line = NULL;
@@ -270,6 +276,7 @@ void parse_env_file_to_config(const char *path, struct ds_config *cfg) {
   } else {
     ds_log("Loaded %d environment variable(s)", cfg->env_var_count);
   }
+  ds_log_silent = prev_silent;
 }
 
 void free_config_env_vars(struct ds_config *cfg) {

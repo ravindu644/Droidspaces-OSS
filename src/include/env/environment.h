@@ -12,6 +12,6 @@ void free_config_env_vars(struct ds_config *cfg);
 void load_etc_environment(void);
 void ds_env_boot_setup(struct ds_config *cfg);
 void ds_env_save(const char *path, struct ds_config *cfg);
-void parse_env_file_to_config(const char *path, struct ds_config *cfg);
+void parse_env_file_to_config(struct ds_config *cfg);
 
 #endif /* DS_ENV_ENVIRONMENT_H */

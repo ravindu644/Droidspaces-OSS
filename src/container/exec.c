@@ -105,13 +105,7 @@ int enter_rootfs(struct ds_config *cfg, const char *user) {
   }
 
   /* Parse environment file while host paths are reachable */
-  if (cfg->env_file[0] != '\0') {
-    free_config_env_vars(cfg);
-    int prev_silent = ds_log_silent;
-    ds_log_silent = 1;
-    parse_env_file_to_config(cfg->env_file, cfg);
-    ds_log_silent = prev_silent;
-  }
+  parse_env_file_to_config(cfg);
 
   /* PTY allocation is deferred until after entering the container namespaces.
    * This ensures the slave PTY is part of the container's private devpts
@@ -325,13 +319,7 @@ int run_in_rootfs(struct ds_config *cfg, char **argv, const char *as_user) {
   /* Removed verbose status log to allow raw output stream */
 
   /* Parse environment file while host paths are reachable */
-  if (cfg->env_file[0] != '\0') {
-    free_config_env_vars(cfg);
-    int prev_silent = ds_log_silent;
-    ds_log_silent = 1;
-    parse_env_file_to_config(cfg->env_file, cfg);
-    ds_log_silent = prev_silent;
-  }
+  parse_env_file_to_config(cfg);
 
   /* The terminal delivers ^C and ^\ to the whole foreground group, the
    * command included. Only the command should die of them; the two processes
