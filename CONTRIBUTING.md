@@ -643,7 +643,7 @@ shell-out on the fast path. The netfilter helpers take an address family (`AF_IN
 
 | Symbol | Contract |
 | --- | --- |
-| `ds_peer_authorized(fd, group_name)` | The only authorization gate in the tree. Allows root or a member of the group, but only when the peer shares our PID namespace. Every failure path denies. The callers are `src/daemon.c` and `src/container/command.c`, which checks the clients of a monitor's command socket (its clients prove the server with `server_is_monitor` there) |
+| `ds_peer_authorized(fd, group_name)` | The only authorization gate in the tree. Allows root or a member of the group, but only when the peer shares our PID namespace. Every failure path denies. The callers are `src/daemon/server.c` and `src/container/command.c`, which checks the clients of a monitor's command socket (its clients prove the server with `server_is_monitor` there) |
 | `ds_cmd_get_config(name, cfg, pid)`, `ds_cmd_get_pid(name)`, `ds_cmd_for_each(visit, arg)` | What a running container booted with and its init pid, from its monitor's command socket `@droidspaces/<name>/command`. The only source for either: the host never reads the guest's own copy |
 | `ds_peer_in_pidns(peer_pid)` | Must fail closed. A pid of zero is not translatable into our namespace, and a failed readlink means we cannot prove membership. Both deny. Failing open here let a caller recycle a dead pid and escape to host root |
 | `ds_bind_mount_socket(src, dst, uid, label)` | The symlink-race-safe write pattern for anything landing in a container-controlled directory |

@@ -610,7 +610,7 @@ libsu 的全局配置在 `DroidspacesApplication.kt` 中，那是唯一应该设
 
 | 符号 | 契约 |
 | --- | --- |
-| `ds_peer_authorized(fd, group_name)` | 全仓库唯一的授权入口。允许 root 或指定组的成员，但前提是对端与我们处于同一 PID 命名空间。每一条失败路径都拒绝。调用方是 `src/daemon.c` 和 `src/container/command.c`，后者检查 monitor 命令套接字的客户端（客户端则在那里用 `server_is_monitor` 验证服务端） |
+| `ds_peer_authorized(fd, group_name)` | 全仓库唯一的授权入口。允许 root 或指定组的成员，但前提是对端与我们处于同一 PID 命名空间。每一条失败路径都拒绝。调用方是 `src/daemon/server.c` 和 `src/container/command.c`，后者检查 monitor 命令套接字的客户端（客户端则在那里用 `server_is_monitor` 验证服务端） |
 | `ds_cmd_get_config(name, cfg, pid)`、`ds_cmd_get_pid(name)`、`ds_cmd_for_each(visit, arg)` | 运行中容器启动时使用的配置及其 init pid，取自它的 monitor 命令套接字 `@droidspaces/<name>/command`。这是两者唯一的来源：主机从不读取客体自己的那份副本 |
 | `ds_peer_in_pidns(peer_pid)` | 必须失败即拒绝。pid 为 0 表示对端无法映射进我们的命名空间，readlink 失败表示我们无法证明其归属，两种情况都拒绝。这里一旦失败即放行，调用方就能复用已死的 pid 逃逸到主机 root |
 | `ds_bind_mount_socket(src, dst, uid, label)` | 向容器可控目录写入时防软链接竞态的标准做法 |

@@ -483,6 +483,8 @@ struct ds_config {
 #include "core/paths.h"
 #include "core/proc.h"
 #include "core/string.h"
+#include "daemon/client.h"
+#include "daemon/server.h"
 #include "dev/dev.h"
 #include "dev/devpts.h"
 #include "env/environment.h"
@@ -573,6 +575,7 @@ int ds_multi_stop(const char *raw_names);
 /* The CLI override pass. Idempotent over the same argv. */
 int ds_apply_cli_overrides(int argc, char **argv, struct ds_config *cfg,
                            int strict);
+const char *ds_command_word(int argc, char **argv);
 
 /* documentation.c */
 
@@ -582,16 +585,5 @@ void print_documentation(const char *argv0);
 
 int check_requirements_hw(int hw_access);
 int check_requirements_detailed(int json_output);
-
-/* daemon.c - daemon, client, and probe entry points */
-
-int ds_daemon_run(int foreground, char **argv);
-/* cmd is the sub-command main() discovered, so a payload word like "run"
- * inside the command does not decide whether the session is interactive.
- * want_stdin is --stdin: relay our stdin to a pipe-mode run instead of
- * handing it /dev/null. */
-int ds_client_run(int argc, char **argv, const char *cmd, int want_stdin);
-const char *ds_command_word(int argc, char **argv);
-int ds_daemon_probe(void);
 
 #endif /* DROIDSPACES_H */

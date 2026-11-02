@@ -124,7 +124,10 @@ SRCS = $(SRC_DIR)/main.c \
        $(SRC_DIR)/monitor/console.c \
        $(SRC_DIR)/monitor/monitor.c \
        $(SRC_DIR)/documentation.c \
-       $(SRC_DIR)/daemon.c \
+       $(SRC_DIR)/daemon/protocol.c \
+       $(SRC_DIR)/daemon/session.c \
+       $(SRC_DIR)/daemon/server.c \
+       $(SRC_DIR)/daemon/client.c \
        $(SRC_DIR)/check.c \
        $(SRC_DIR)/android/x11.c \
        $(SRC_DIR)/android/virgl.c \
