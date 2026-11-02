@@ -424,3 +424,24 @@ int read_and_validate_pid(const char *pidfile, pid_t *pid_out) {
     *pid_out = (pid_t)val;
   return 0;
 }
+
+int is_valid_container_pid(pid_t pid) {
+  char path[PATH_MAX];
+
+  /* Primary marker: /run/droidspaces must exist inside the container.
+   * This is the one authoritative marker written by droidspaces on boot.
+   * We do NOT require /run/systemd/container - Alpine/runit/openrc never
+   * write that file, causing scan to be blind to non-systemd distros. */
+  if (build_proc_root_path(pid, DS_DROIDSPACES_MARKER, path, sizeof(path)) < 0)
+    return 0;
+  if (access(path, F_OK) != 0)
+    return 0;
+
+  /* Secondary check: process must be the init (PID 1) of its namespace.
+   * This is more robust than checking cmdline for "init" which distros
+   * like Void Linux (runit) or Alpine may not provide. */
+  if (!is_container_init(pid))
+    return 0;
+
+  return 1;
+}

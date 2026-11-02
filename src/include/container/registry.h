@@ -30,4 +30,6 @@ int ds_feature_needs(size_t cfg_flag_offset);
 
 int next_running(DIR *d, struct ds_config *cfg, pid_t *pid);
 
+int is_valid_container_pid(pid_t pid);
+
 #endif /* DS_CONTAINER_REGISTRY_H */

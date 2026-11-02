@@ -105,13 +105,20 @@ SRCS = $(SRC_DIR)/main.c \
        $(SRC_DIR)/container/inspect.c \
        $(SRC_DIR)/container/registry.c \
        $(SRC_DIR)/container/recovery.c \
+       $(SRC_DIR)/container/lock.c \
+       $(SRC_DIR)/container/cleanup.c \
+       $(SRC_DIR)/container/start.c \
+       $(SRC_DIR)/container/stop.c \
+       $(SRC_DIR)/container/exec.c \
+       $(SRC_DIR)/container/info.c \
+       $(SRC_DIR)/container/restart.c \
+       $(SRC_DIR)/android/helpers.c \
        $(SRC_DIR)/status/collect.c \
        $(SRC_DIR)/status/show.c \
        $(SRC_DIR)/cli/options.c \
        $(SRC_DIR)/cli/usage.c \
        $(SRC_DIR)/android/android.c \
        $(SRC_DIR)/boot.c \
-       $(SRC_DIR)/container.c \
        $(SRC_DIR)/monitor.c \
        $(SRC_DIR)/documentation.c \
        $(SRC_DIR)/daemon.c \

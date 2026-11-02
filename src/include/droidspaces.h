@@ -384,8 +384,8 @@ struct ds_config {
   char custom_init[PATH_MAX]; /* --init=PATH override (default: /sbin/init) */
 
   /* NAT networking synchronization pipes
-   * Both pairs are initialised to {-1,-1} in main() after memset.
-   * Pipes are only created in container.c when net_mode != DS_NET_HOST. */
+   * Both pairs start as {-1,-1} (ds_config_init). The monitor creates them
+   * only when net_mode != DS_NET_HOST. */
   int net_ready_pipe[2]; /* child → monitor: "I am in my new netns"  */
   int net_done_pipe[2];  /* monitor → child: "veth peer is in place" */
 
@@ -449,6 +449,7 @@ struct ds_config {
 };
 
 #include "android/firmware.h"
+#include "android/helpers.h"
 #include "android/socket.h"
 #include "android/spawn.h"
 #include "cgroup/discover.h"
@@ -462,9 +463,16 @@ struct ds_config {
 #include "config/load.h"
 #include "config/parse.h"
 #include "config/save.h"
+#include "container/cleanup.h"
+#include "container/exec.h"
+#include "container/info.h"
 #include "container/inspect.h"
+#include "container/lock.h"
 #include "container/recovery.h"
 #include "container/registry.h"
+#include "container/restart.h"
+#include "container/start.h"
+#include "container/stop.h"
 #include "core/exec.h"
 #include "core/fdpass.h"
 #include "core/fs.h"
@@ -517,23 +525,9 @@ struct ds_config {
 #include "virt/affinity.h"
 #include "virt/vproc.h"
 
-/* monitor.c, container.c and main.c */
+/* monitor.c */
 
 void ds_monitor_run(struct ds_config *cfg, int sync_pipe_write);
-int ds_container_lock(const char *name, int wait);
-void ds_container_unlock(int fd);
-int ds_container_lock_orphan(const char *name);
-void ds_container_claim_supervision(const char *name);
-void ds_container_release_supervision(void);
-void ds_container_prune_supervision(const char *name);
-int ds_container_lock_helpers(const char *name);
-void ds_container_wait_helpers(const char *name, int timeout_ms);
-void ds_android_helpers_sync(struct ds_config *cfg);
-int wait_for_socket_or_death(pid_t pid, const char *path, int timeout_ms,
-                             int interval_us);
-void cleanup_container_resources(struct ds_config *cfg, pid_t pid,
-                                 int skip_unmount, int force_cleanup);
-int ds_multi_stop(const char *raw_names);
 
 /* android.c */
 
@@ -578,22 +572,10 @@ int ds_setup_pulse_socket(struct ds_config *cfg);
 
 int internal_boot(struct ds_config *cfg);
 
-/* container.c */
+/* main.c */
 
-void write_plain_env_file(const char *src, const char *dst);
-int is_valid_container_pid(pid_t pid);
-int start_rootfs(struct ds_config *cfg);
-int stop_rootfs(struct ds_config *cfg, int skip_unmount);
-int stop_rootfs_with_timeout(struct ds_config *cfg, int skip_unmount,
-                             int timeout_seconds);
-int enter_namespace(pid_t pid, struct ds_config *cfg);
-int enter_rootfs(struct ds_config *cfg, const char *user);
-int run_in_rootfs(struct ds_config *cfg, char **argv, const char *as_user);
-int show_info(struct ds_config *cfg, int trust_cfg_pid);
-/* argc/argv: the process's original arguments, so restart can re-apply CLI
- * overrides after its post-stop config reload. */
-int restart_rootfs(struct ds_config *cfg, int argc, char **argv);
-/* The CLI override pass, lives in main.c. Idempotent over the same argv. */
+int ds_multi_stop(const char *raw_names);
+/* The CLI override pass. Idempotent over the same argv. */
 int ds_apply_cli_overrides(int argc, char **argv, struct ds_config *cfg,
                            int strict);
 
