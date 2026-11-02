@@ -133,7 +133,7 @@ object StorageChecker {
 
         // A directory rootfs is pivot_root'ed into, so its binaries execute straight off
         // this mount. An image is mounted separately and does not inherit the flag.
-        // nodev is deliberately not checked: setup_dev() in src/mount.c mounts <rootfs>/dev
+        // nodev is deliberately not checked: setup_dev() in src/dev/dev.c mounts <rootfs>/dev
         // as its own devtmpfs, so device nodes never land on this filesystem, and Android
         // mounts /data itself nodev.
         "noexec" in options ->

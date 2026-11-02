@@ -16,7 +16,7 @@ import com.droidspaces.app.ui.theme.JetBrainsMono
 
 /**
  * The tags in a privileged= value, read the way parse_privileged() in
- * src/config.c reads them: comma separated, trimmed, case does not matter.
+ * src/config/parse.c reads them: comma separated, trimmed, case does not matter.
  */
 fun privilegedTags(value: String): List<String> =
     value.split(",").map { it.trim().lowercase() }.filter { it.isNotEmpty() }

@@ -74,7 +74,7 @@ object ValidationUtils {
 
     /**
      * Key of a `KEY=VALUE` env-file line, null if the backend would skip it.
-     * Mirrors parse_env_file_to_config() in src/environment.c: blank and `#`
+     * Mirrors parse_env_file_to_config() in src/env/environment.c: blank and `#`
      * lines are ignored, an `export ` prefix is tolerated, and the key must be
      * `[A-Za-z_][A-Za-z0-9_]*`.
      */
@@ -87,7 +87,7 @@ object ValidationUtils {
 
     /**
      * Whether the backend will mount over [dest] inside the container. Mirrors
-     * validate_bind_destination() in src/utils.c: absolute, at least one real
+     * validate_bind_destination() in src/config/parse.c: absolute, at least one real
      * path segment (so not "/" or "//", which would cover the rootfs itself),
      * no "." or ".." segments, no control characters, shorter than PATH_MAX.
      * Also no ',' or ':', which the bind_mounts=src:dest[:ro],... line uses
