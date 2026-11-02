@@ -608,7 +608,7 @@ libsu 的全局配置在 `DroidspacesApplication.kt` 中，那是唯一应该设
 | `ds_net_validate_static_ip`、`ds_net_check_ip_collision`、`ds_net_resolve_static_ip` | 静态 NAT IP 处理。调用 resolve 之后必须保存配置才能持久化结果 |
 | `ds_dhcp_server_start`、`ds_dhcp_server_stop` | 单租约 DHCP 服务。拆除 veth 之前先停它，否则接收会阻塞。传入 IPv6 前缀时还会发送路由通告 |
 | `ds_ra_build`、`ds_ra_is_solicit` | DHCP 线程使用的路由通告帧及路由请求判断。有意不携带链路层地址选项 |
-| `ds_get_dns_servers`、`ds_net_disable_tx_checksum` | DNS、校验和卸载 |
+| `ds_get_dns_servers`、`ds_net_prepare_host_veth` | DNS，以及准备新建的宿主机侧 veth（关闭 TX 校验和卸载，设置 RPS） |
 
 ### C 后端：安全守卫
 

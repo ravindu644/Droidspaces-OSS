@@ -641,7 +641,7 @@ shell-out on the fast path. The netfilter helpers take an address family (`AF_IN
 | `ds_net_validate_static_ip`, `ds_net_check_ip_collision`, `ds_net_resolve_static_ip` | Static NAT IP handling. After `resolve`, the config must be saved to persist the result |
 | `ds_dhcp_server_start`, `ds_dhcp_server_stop` | The single-lease DHCP server. Stop it before veth teardown so the receive unblocks. Given an IPv6 prefix it also sends Router Advertisements |
 | `ds_ra_build`, `ds_ra_is_solicit` | The Router Advertisement frame and the solicitation test the DHCP thread uses. No link-layer option, on purpose |
-| `ds_get_dns_servers`, `ds_net_disable_tx_checksum` | DNS, checksum offload |
+| `ds_get_dns_servers`, `ds_net_prepare_host_veth` | DNS, and preparing a new host-side veth (TX checksum off, RPS) |
 
 ### C backend: security guards
 
