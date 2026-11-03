@@ -28,6 +28,12 @@
 
 #define REQ_FLAG_PTY (1u << 0)
 #define REQ_FLAG_STDIN (1u << 1) /* pipe mode: client relays its stdin */
+/* The client's umask rides in bits 16-24 of the flags word, not in bytes of
+ * its own: after a live binary swap an old daemon parses a new client's
+ * request, and it ignores unknown flag bits but would read extra bytes as the
+ * start of the stdin stream. */
+#define REQ_FLAG_UMASK (1u << 2)
+#define REQ_UMASK_SHIFT 16
 #define EXIT_PENDING (-1)
 
 typedef struct {

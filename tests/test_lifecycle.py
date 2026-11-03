@@ -140,6 +140,16 @@ class Run(DsTest):
     def test_environment_defaults(self):
         self.assertEqual(self.c.sh("echo $container; echo $HOME; pwd"), "droidspaces\n/root\n/")
 
+    def test_caller_umask_reaches_the_command(self):
+        # The daemon used to hand every command its own umask 0, so everything
+        # created through run was world-writable.
+        for mask in (0o022, 0o077):
+            old = os.umask(mask)
+            try:
+                self.assertEqual(self.c.sh("umask"), f"{mask:04o}")
+            finally:
+                os.umask(old)
+
     def test_command_arguments_are_opaque(self):
         # "Anything after run belongs to the command", the daemon's recursion guard included.
         self.assertEqual(self.c.run("echo", "daemon", "client").stdout.strip(), "daemon client")
@@ -154,6 +164,20 @@ class Run(DsTest):
     def test_missing_command(self):
         p = ds("-n", self.c.name, "run")
         self.assertNotEqual(p.returncode, 0)
+
+
+class StartUmask(DsTest):
+    def test_strict_caller_umask_does_not_reach_the_container(self):
+        # A container's setup and init get 022 whoever starts it: a 077 shell
+        # would leave / and /run/droidspaces 0700 for non-root users.
+        c = self.container("umask", start=False)  # not the cached base rootfs
+        old = os.umask(0o077)
+        try:
+            c.start()
+        finally:
+            os.umask(old)
+        self.assertEqual(c.sh("grep Umask /proc/1/status | cut -f2"), "0022")
+        self.assertEqual(c.sh("stat -c %a /run/droidspaces"), "755")
 
 
 class Enter(DsTest):

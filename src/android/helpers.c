@@ -54,8 +54,12 @@ void ds_android_helpers_sync(struct ds_config *cfg) {
     ds_x11_daemon_stop(cfg);
   }
   if (cfg->virgl) {
-    if (ds_virgl_daemon_start(cfg) == 0)
-      wait_for_socket_or_death(cfg->virgl_pid, TX11_VIRGL_SOCKET, 2000, 20000);
+    /* The server runs as root and binds 0755 under our umask, but non-root
+     * guest users and Termux must connect, which needs write permission. */
+    if (ds_virgl_daemon_start(cfg) == 0 &&
+        wait_for_socket_or_death(cfg->virgl_pid, TX11_VIRGL_SOCKET, 2000,
+                                 20000) == 0)
+      chmod(TX11_VIRGL_SOCKET, 0666);
   } else {
     ds_virgl_daemon_stop(cfg);
   }

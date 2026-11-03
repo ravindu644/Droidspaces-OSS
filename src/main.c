@@ -457,6 +457,13 @@ int main(int argc, char **argv) {
     goto cleanup;
   }
 
+  /* Pinned like runc does, not the caller's: setup creates the container's /
+   * (volatile), /run/droidspaces, bind parents and host cgroup dirs with
+   * literal modes, and init hands this to every service. A 077 root shell
+   * would lock every non-root user out. */
+  if (strcmp(cmd, "start") == 0 || strcmp(cmd, "restart") == 0)
+    umask(022);
+
   /* start/restart: single container only */
   if (strcmp(cmd, "start") == 0) {
     if (multi) {

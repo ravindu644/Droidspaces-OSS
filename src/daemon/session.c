@@ -142,6 +142,11 @@ void handle_session(int conn, ds_req_t *r) {
       close(out[1]);
       close(err[1]);
     }
+    /* The command runs as if the client had run it, like lxc-attach does in
+     * the caller's own process. A client too old to send its umask gets the
+     * daemon's 022. */
+    if (r->flags & REQ_FLAG_UMASK)
+      umask((r->flags >> REQ_UMASK_SHIFT) & 0777);
     /* Prevent the spawned child from proxying back to the daemon */
     setenv("DS_NO_PROXY", "1", 1);
     reexec(av);

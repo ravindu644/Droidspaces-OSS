@@ -170,7 +170,10 @@ static void daemonize(int foreground) {
       exit(0); /* second parent exits */
   }
 
-  umask(0);
+  /* Not 0: every command and container start the daemon serves inherits this
+   * when the client did not send its own, and 0 made all of their files
+   * world-writable. Not left to the launcher either, root managers differ. */
+  umask(022);
   if (chdir("/") < 0) { /* ignore */
   }
 
@@ -359,10 +362,10 @@ int ds_daemon_run(int foreground, char **argv) {
 
   signal(SIGUSR2, sigusr2_handler);
 
-  /* Write PID file so the Android app can signal us.  The daemon runs with
-   * umask 0, so create it 0644 explicitly (not the fopen default 0666): a
-   * world-writable pidfile would let any local user overwrite it and redirect
-   * the app's signals (SIGUSR2/kill) to an arbitrary PID.  O_NOFOLLOW guards
+  /* Write PID file so the Android app can signal us.  Create it 0644
+   * explicitly rather than trusting the umask: a world-writable pidfile would
+   * let any local user overwrite it and redirect the app's signals
+   * (SIGUSR2/kill) to an arbitrary PID.  O_NOFOLLOW guards
    * against a symlink planted in the workspace dir; no O_EXCL so a restart can
    * replace a stale pidfile. */
   {

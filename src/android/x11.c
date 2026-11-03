@@ -93,6 +93,7 @@ static void xserver_child_wrapper(int ready_fd, void *user_data) {
 
   /* Socket dir -- created as root before we drop privs */
   mkdir_p(TX11_SOCK_DIR, 01777);
+  chmod(TX11_SOCK_DIR, 01777); /* the umask strips it, Xtrans wants 1777 */
   if (chown(TX11_SOCK_DIR, (uid_t)args->uid, (gid_t)args->uid) < 0) {
     /* ignore */
   }
@@ -240,6 +241,7 @@ int ds_setup_x11_socket(struct ds_config *cfg) {
       return 0;
     }
     mkdir_p(DS_X11_CONTAINER_DIR, 01777);
+    chmod(DS_X11_CONTAINER_DIR, 01777); /* the umask strips it, users need :1 */
     snprintf(dst, sizeof(dst), "%s/X0", DS_X11_CONTAINER_DIR);
     if (ds_bind_mount_socket(src, dst, 0, "X11") < 0)
       return -1;

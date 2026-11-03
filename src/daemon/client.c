@@ -104,8 +104,11 @@ int ds_client_run(int argc, char **argv, const char *cmd, int want_stdin) {
 
   /* EPIPE means the daemon already closed. Its verdict (an error frame and
    * the exit code) is queued on our socket, so fall through and relay it. */
-  uint32_t flags =
-      (interactive ? REQ_FLAG_PTY : 0u) | (relay_stdin ? REQ_FLAG_STDIN : 0u);
+  mode_t mask = umask(0); /* musl has no getumask(), read it by swapping */
+  umask(mask);
+  uint32_t flags = (interactive ? REQ_FLAG_PTY : 0u) |
+                   (relay_stdin ? REQ_FLAG_STDIN : 0u) | REQ_FLAG_UMASK |
+                   ((uint32_t)(mask & 0777) << REQ_UMASK_SHIFT);
   if (send_request(sock, argc, argv, flags) < 0 && errno != EPIPE)
     goto send_err;
 
