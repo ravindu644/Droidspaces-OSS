@@ -20,7 +20,9 @@ void print_usage(void) {
          DS_PROJECT_NAME, DS_VERSION);
   printf("by " C_CYAN "%s" C_RESET "\n", DS_AUTHOR);
   printf("\n" C_BLUE "%s" C_RESET "\n", DS_REPO);
-  printf(C_DIM "Built on: %s %s" C_RESET "\n\n", __DATE__, __TIME__);
+  /* __DATE__ space-pads single-digit days ("Nov  3 2026"), skip the pad */
+  printf(C_DIM "Built on: %.4s%s %s" C_RESET "\n\n", __DATE__,
+         __DATE__ + 4 + (__DATE__[4] == ' '), __TIME__);
   printf("Usage: droidspaces [options] <command> [args]\n\n");
 
   printf(C_BOLD
