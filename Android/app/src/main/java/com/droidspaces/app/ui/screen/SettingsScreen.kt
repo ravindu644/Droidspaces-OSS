@@ -107,6 +107,7 @@ fun SettingsScreen(
 
     // Language picker state
     var showLanguageDialog by remember { mutableStateOf(false) }
+    var chosenLanguage by remember { mutableStateOf<String?>(null) }
     var currentAppLocale by remember { mutableStateOf(LocaleHelper.getCurrentAppLocale(context)) }
 
     // Daemon mode + symlink state, collected reactively from prefs
@@ -421,13 +422,14 @@ fun SettingsScreen(
     if (showLanguageDialog) {
         LanguagePickerDialog(
             onDismiss = { showLanguageDialog = false },
-            onLanguageSelected = { languageCode ->
-                // Change language using modern AppCompatDelegate API
-                // This automatically saves preference, recreates activity, and updates resources
-                LocaleHelper.changeLanguage(languageCode)
-                // Activity will recreate automatically, no need to call recreate()
-            }
+            onLanguageSelected = { chosenLanguage = it }
         )
+    }
+    // Not from the OK button: below Android 13 the change recreates the activity at once. On Android
+    // 12 a dialog removed during that relaunch stays on screen for 2 s and keeps the window manager's
+    // focus, so the next Back is an ANR. An effect runs after the frame that removed the dialog.
+    LaunchedEffect(chosenLanguage) {
+        chosenLanguage?.let { LocaleHelper.changeLanguage(it) }
     }
 }
 
