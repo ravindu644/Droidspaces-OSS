@@ -121,8 +121,7 @@ else
 fi
 
 # Auto-boot containers: the same script the native init path runs, sourced so
-# its success and failed counters land in the summary below. It waits for the
-# network itself.
+# its success and failed counters land in the summary below.
 . "${MODDIR}/droidspaces_autoboot.sh"
 
 stop_dmesg_logger

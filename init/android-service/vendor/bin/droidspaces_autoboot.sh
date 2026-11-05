@@ -33,25 +33,6 @@ strip_colors() {
     $BB sed "s/$($BB printf '\033')\[[0-9;]*[mK]//g"
 }
 
-wait_for_network() {
-    log "Waiting for network..."
-
-    [ -x /system/bin/ip ] || log "WARNING: /system/bin/ip missing, waiting blind"
-    local timeout=25
-    local count=0
-    while [ $count -lt $timeout ]; do
-        if /system/bin/ip route get 8.8.8.8 2>/dev/null | $BB grep -qv "ds-br0"; then
-            log "Network is ready (${count}s). Waiting 10s for stability..."
-            sleep 10
-            return 0
-        fi
-        sleep 1
-        count=$((count + 1))
-    done
-    log "WARNING: Network not ready after ${timeout}s, proceeding anyway"
-    return 1
-}
-
 # One function, so a missing binary can return early whether this file runs on
 # its own or is sourced. The counters are globals for service.sh's summary.
 autoboot() {
@@ -61,10 +42,6 @@ if [ ! -x "${DROIDSPACE_BINARY}" ]; then
     log "ERROR: Binary not found or not executable at ${DROIDSPACE_BINARY}, aborting"
     return 1
 fi
-
-# Without this, the containers are starting too early
-# Breaking container's networking :)
-wait_for_network
 
 # Scan and boot containers in priority order
 #
