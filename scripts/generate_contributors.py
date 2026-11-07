@@ -7,9 +7,11 @@ Run before building the APK:
 """
 
 import base64
+import functools
 import json
 import os
 import re
+import time
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -36,12 +38,19 @@ def get(url, params=None, accept="application/vnd.github+json"):
 
 
 def get_json(url, params=None):
-    try:
-        with get(url, params) as r:
-            return json.load(r)
-    except urllib.error.HTTPError as e:
-        print(f"  Warning: {url}: {e}")
-        return None
+    for attempt in range(2):
+        try:
+            with get(url, params) as r:
+                return json.load(r)
+        except urllib.error.HTTPError as e:
+            # Search allows 30 requests a minute. Wait out the window once
+            # rather than dropping every contributor resolved after it.
+            reset = e.headers.get("X-RateLimit-Reset")
+            if attempt == 0 and e.headers.get("X-RateLimit-Remaining") == "0" and reset:
+                time.sleep(min(max(int(reset) - time.time(), 0) + 1, 65))
+                continue
+            print(f"  Warning: {url}: {e}")
+            return None
 
 
 def paginate(url):
@@ -62,6 +71,7 @@ def resolve_noreply(email):
     return (u["login"], u["avatar_url"]) if u else None
 
 
+@functools.cache
 def resolve_email(email):
     """Search GitHub by email (works only for publicly linked emails)."""
     resolved = resolve_noreply(email)
@@ -100,13 +110,13 @@ def main():
             add(author["login"], author["avatar_url"])
         # Unlinked --author email fallback
         elif not author and git_author.get("email"):
-            resolved = resolve_email(git_author["email"])
+            resolved = resolve_email(git_author["email"].lower())
             if resolved:
                 add(*resolved)
 
         # Co-authored-by trailers
         for email in COAUTHOR_RE.findall(message):
-            resolved = resolve_email(email)
+            resolved = resolve_email(email.lower())
             if resolved:
                 add(*resolved)
 
