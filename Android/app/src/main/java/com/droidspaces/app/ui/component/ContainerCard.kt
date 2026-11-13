@@ -49,6 +49,7 @@ data class ContainerCardActions(
     val onRestart: () -> Unit = {},
     val onEdit: () -> Unit = {},
     val onEnter: () -> Unit = {},
+    val onReset: () -> Unit = {},
     val onUninstall: () -> Unit = {},
     val onMigrate: () -> Unit = {},
     val onResize: () -> Unit = {},
@@ -328,6 +329,13 @@ fun ContainerCard(
                         label = context.getString(R.string.export_container),
                         tint = MaterialTheme.colorScheme.tertiary,
                         onClick = actions.onExport
+                    )
+
+                    ActionItem(
+                        icon = rememberVectorPainter(Icons.Default.SettingsBackupRestore),
+                        label = context.getString(R.string.reset_container_menu),
+                        tint = MaterialTheme.colorScheme.error,
+                        onClick = actions.onReset
                     )
 
                     ActionItem(

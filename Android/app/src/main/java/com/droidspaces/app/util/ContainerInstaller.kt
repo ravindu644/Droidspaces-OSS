@@ -103,15 +103,8 @@ object ContainerInstaller {
 
             // Step 4: Read the tarball where it lies. Only a provider that hands out a
             // pipe (cloud storage) still costs a full copy through cacheDir.
-            val archive = FilePickerUtils.realPath(context, tarballUri) ?: run {
-                logger.i("Copying tarball to temporary location...")
-                val copy = File("${context.cacheDir}/container_${sanitizedName}.tar${getTarballExtension(context, tarballUri)}")
-                tempTarball = copy
-                context.contentResolver.openInputStream(tarballUri)?.use { input ->
-                    FileOutputStream(copy).use { input.copyTo(it) }
-                } ?: throw Exception("Failed to open tarball input stream")
-                copy.absolutePath
-            }
+            val (archive, staged) = resolveArchive(context, tarballUri, sanitizedName, logger)
+            tempTarball = staged
             logger.i("Tarball: $archive")
 
             // Step 4.5: Verify the tarball is actually a Linux rootfs before we
@@ -119,35 +112,7 @@ object ContainerInstaller {
             validateRootfsTarball(context, archive, logger)
 
             // Step 5: Extract tarball (either to directory or sparse image)
-            if (config.useSparseImage) {
-                SparseImageInstaller.extract(
-                    context = context,
-                    tarball = archive,
-                    imgPath = rootfsPath,
-                    mountPoint = "${containerPath}/rootfs",
-                    sizeGB = config.sparseImageSizeGB ?: 8,
-                    logger = logger
-                )
-            } else {
-                // Create rootfs subdirectory
-                val mkdirRootfsResult = Shell.cmd("mkdir -p ${quote(rootfsPath)} 2>&1").exec()
-                if (!mkdirRootfsResult.isSuccess) {
-                    throw Exception("Failed to create rootfs directory: ${mkdirRootfsResult.errorText()}")
-                }
-
-                logger.i("Extracting tarball to $rootfsPath...")
-                val extractResult = Shell.cmd(extractCommand(archive, rootfsPath)).exec()
-                if (!extractResult.isSuccess) {
-                    val errorMsg = extractResult.err.joinToString("\n")
-                    logger.e("Extraction failed: $errorMsg")
-                    throw Exception("Failed to extract tarball: $errorMsg")
-                }
-
-                logger.i("Tarball extracted successfully")
-
-                // Apply post-extraction fixes
-                applyPostExtractionFixes(context, rootfsPath, logger)
-            }
+            unpackRootfs(context, archive, config, logger)
 
             // Step 6: Write container config
             logger.i("Writing container configuration...")
@@ -221,6 +186,145 @@ object ContainerInstaller {
             } catch (e: Exception) {
                 // Ignore cleanup errors
             }
+        }
+    }
+
+    /**
+     * A clean reinstall: replace [config]'s rootfs with a fresh extraction of [archive],
+     * keeping the container's name, config, .env and bind mounts. The old rootfs is removed
+     * first, so a failed extraction leaves the container without one rather than half
+     * mixed; the config survives and the reset can simply be run again.
+     */
+    suspend fun resetContainer(
+        context: Context,
+        archive: RootfsArchive,
+        config: ContainerInfo,
+        logger: ViewModelLogger
+    ): Result<Unit> = withContext(Dispatchers.IO) {
+        val sanitizedName = ContainerManager.sanitizeContainerName(config.name)
+        val rootfsPath = config.rootfsPath
+        val rootfsParent = rootfsPath.substringBeforeLast('/')
+        var tempTarball: File? = null
+        // Only a rootfs we already removed (or started replacing) may be deleted on
+        // failure. An invalid archive must leave the existing container untouched.
+        var rootfsReplaced = false
+
+        try {
+            // The volume held this container a minute ago, but it can be unplugged or
+            // read-only by now, and deleting the old rootfs is the point of no return.
+            val target = StorageChecker.probe(rootfsParent)
+            when {
+                target.support == StorageSupport.UNUSABLE -> {
+                    val why = target.reason ?: "'${target.fsType}' cannot hold a container."
+                    logger.e(why)
+                    return@withContext Result.failure(Exception(why))
+                }
+                target.support == StorageSupport.IMAGE_ONLY && !config.useSparseImage -> {
+                    val why = target.reason
+                        ?: "'${target.fsType}' cannot hold a rootfs directory. Use a sparse image."
+                    logger.e(why)
+                    return@withContext Result.failure(Exception(why))
+                }
+            }
+
+            val (archivePath, staged) = when (archive) {
+                is RootfsArchive.Saved -> archive.path to null
+                is RootfsArchive.Picked -> resolveArchive(context, archive.uri, sanitizedName, logger)
+            }
+            tempTarball = staged
+            logger.i("Tarball: $archivePath")
+            validateRootfsTarball(context, archivePath, logger)
+
+            logger.i("Removing the old root filesystem...")
+            val remove = if (config.useSparseImage) "rm -f" else "rm -rf"
+            val removeResult = Shell.cmd("$remove ${quote(rootfsPath)} 2>&1").exec()
+            if (!removeResult.isSuccess) {
+                throw Exception("Failed to remove the old rootfs: ${removeResult.errorText()}")
+            }
+            rootfsReplaced = true
+
+            unpackRootfs(context, archivePath, config, logger)
+
+            val test = if (config.useSparseImage) "-f" else "-d"
+            if (!Shell.cmd("test $test ${quote(rootfsPath)}").exec().isSuccess) {
+                throw Exception("Rootfs not found after extraction")
+            }
+
+            logger.i("Container reset successfully!")
+            Result.success(Unit)
+        } catch (e: Exception) {
+            logger.e("Reset failed: ${e.message}")
+            logger.e(e.stackTraceToString())
+            // A partially extracted rootfs would trip the next attempt, so take it back
+            // out. The config stays, so the user can pick another archive and try again.
+            if (rootfsReplaced) {
+                val remove = if (config.useSparseImage) "rm -f" else "rm -rf"
+                Shell.cmd("$remove ${quote(rootfsPath)} 2>&1").exec()
+            }
+            Result.failure(e)
+        } finally {
+            try {
+                tempTarball?.delete()
+            } catch (e: Exception) {
+                // Ignore cleanup errors
+            }
+        }
+    }
+
+    /** [path] the archive can be read from, plus a temporary copy the caller must delete. */
+    private suspend fun resolveArchive(
+        context: Context,
+        tarballUri: Uri,
+        sanitizedName: String,
+        logger: ViewModelLogger
+    ): Pair<String, File?> {
+        FilePickerUtils.realPath(context, tarballUri)?.let { return it to null }
+        logger.i("Copying tarball to temporary location...")
+        val copy = File("${context.cacheDir}/container_${sanitizedName}.tar${getTarballExtension(context, tarballUri)}")
+        try {
+            context.contentResolver.openInputStream(tarballUri)?.use { input ->
+                FileOutputStream(copy).use { input.copyTo(it) }
+            } ?: throw Exception("Failed to open tarball input stream")
+        } catch (e: Exception) {
+            // A half-copied archive fills cacheDir and is useless to every caller.
+            copy.delete()
+            throw e
+        }
+        return copy.absolutePath to copy
+    }
+
+    /** Unpack [archive] into [config]'s rootfs, as a directory or a sparse image. */
+    private suspend fun unpackRootfs(
+        context: Context,
+        archive: String,
+        config: ContainerInfo,
+        logger: ViewModelLogger
+    ) {
+        if (config.useSparseImage) {
+            SparseImageInstaller.extract(
+                context = context,
+                tarball = archive,
+                imgPath = config.rootfsPath,
+                mountPoint = "${ContainerManager.getContainerDirectory(config.name)}/rootfs",
+                sizeGB = config.sparseImageSizeGB ?: 8,
+                logger = logger
+            )
+        } else {
+            val mkdirResult = Shell.cmd("mkdir -p ${quote(config.rootfsPath)} 2>&1").exec()
+            if (!mkdirResult.isSuccess) {
+                throw Exception("Failed to create rootfs directory: ${mkdirResult.errorText()}")
+            }
+
+            logger.i("Extracting tarball to ${config.rootfsPath}...")
+            val extractResult = Shell.cmd(extractCommand(archive, config.rootfsPath)).exec()
+            if (!extractResult.isSuccess) {
+                val errorMsg = extractResult.err.joinToString("\n")
+                logger.e("Extraction failed: $errorMsg")
+                throw Exception("Failed to extract tarball: $errorMsg")
+            }
+
+            logger.i("Tarball extracted successfully")
+            applyPostExtractionFixes(context, config.rootfsPath, logger)
         }
     }
 
