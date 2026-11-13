@@ -31,9 +31,11 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.buildAnnotatedString
@@ -55,8 +57,10 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.droidspaces.app.ui.viewmodel.SystemStatsViewModel
 import com.droidspaces.app.util.ContainerInfo
+import com.droidspaces.app.util.ContainerArchives
 import com.droidspaces.app.util.PreferencesManager
 import com.droidspaces.app.util.FilePickerUtils
+import com.droidspaces.app.util.RootfsArchive
 import com.droidspaces.app.ui.component.ContainerCard
 import com.droidspaces.app.ui.component.ContainerCardActions
 import com.droidspaces.app.ui.component.DialogFooterRow
@@ -104,6 +108,8 @@ fun ContainersScreen(
 
     // UI-only state (dialog triggers / pending pickers).
     var showUninstallConfirmation by remember { mutableStateOf<ContainerInfo?>(null) }
+    var showResetConfirmation by remember { mutableStateOf<ContainerInfo?>(null) }
+    var pendingResetContainer by remember { mutableStateOf<ContainerInfo?>(null) }
     var pendingSparseOperation by remember { mutableStateOf<Pair<ContainerInfo, SparseOp>?>(null) }
     var pendingExportContainer by remember { mutableStateOf<ContainerInfo?>(null) }
     var pendingExportEnv by remember { mutableStateOf(false) }
@@ -137,6 +143,43 @@ fun ContainersScreen(
                 val (isValid, fileName) = FilePickerUtils.isValidTarball(context, uri)
                 if (isValid && fileName != null) {
                     onNavigateToInstallation(uri)
+                } else {
+                    val errorMessage = if (fileName != null) {
+                        context.getString(R.string.file_picker_error, fileName)
+                    } else {
+                        context.getString(R.string.file_picker_error_unknown)
+                    }
+                    scope.showError(snackbarHostState, errorMessage)
+                }
+            }
+        }
+    }
+
+    // A reset runs the same way whether the archive was saved before or just picked.
+    val startReset: (ContainerInfo, RootfsArchive) -> Unit = { container, archive ->
+        scope.launch {
+            opsViewModel.executeReset(
+                container = container,
+                archive = archive,
+                onError = { scope.showError(snackbarHostState, it) },
+                onSuccess = { scope.showSuccess(snackbarHostState, it) },
+                onRefresh = { containerViewModel.refresh() }
+            )
+        }
+    }
+
+    // Same picker, but the chosen archive replaces an existing container's rootfs
+    // instead of starting the installation wizard.
+    val resetFileLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri: Uri? ->
+        val container = pendingResetContainer
+        pendingResetContainer = null
+        if (uri != null && container != null) {
+            scope.launch {
+                val (isValid, fileName) = FilePickerUtils.isValidTarball(context, uri)
+                if (isValid && fileName != null) {
+                    startReset(container, RootfsArchive.Picked(uri))
                 } else {
                     val errorMessage = if (fileName != null) {
                         context.getString(R.string.file_picker_error, fileName)
@@ -233,6 +276,10 @@ fun ContainersScreen(
                                 },
                                 onEnter = {
                                     onNavigateToContainerDetails(container.name)
+                                },
+                                onReset = {
+                                    onExpandedContainerNameChange(null)
+                                    showResetConfirmation = container
                                 },
                                 onUninstall = {
                                     onExpandedContainerNameChange(null)
@@ -385,6 +432,35 @@ fun ContainersScreen(
             )
         }
 
+        // Reset confirmation dialog. The archive from the install or the last reset is
+        // offered first; picking a different file is one checkbox away. Wait for that
+        // lookup before showing, so the dialog never swaps its message under the user.
+        showResetConfirmation?.let { container ->
+            var savedArchive by remember(container.name) { mutableStateOf<String?>(null) }
+            var archiveLoaded by remember(container.name) { mutableStateOf(false) }
+            LaunchedEffect(container.name) {
+                savedArchive = ContainerArchives.saved(context, container.name)
+                archiveLoaded = true
+            }
+            val saved = savedArchive
+            if (archiveLoaded) {
+                ResetConfirmationDialog(
+                    containerName = container.name,
+                    savedArchive = saved,
+                    onConfirm = { useSaved ->
+                        showResetConfirmation = null
+                        if (useSaved && saved != null) {
+                            startReset(container, RootfsArchive.Saved(saved))
+                        } else {
+                            pendingResetContainer = container
+                            resetFileLauncher.launch("*/*")
+                        }
+                    },
+                    onDismiss = { showResetConfirmation = null }
+                )
+            }
+        }
+
         // Uninstall confirmation dialog
         showUninstallConfirmation?.let { container ->
             UninstallConfirmationDialog(
@@ -522,6 +598,79 @@ private fun UninstallConfirmationDialog(
     onDismiss: () -> Unit
 ) {
     val context = LocalContext.current
+    ContainerDestructiveDialog(
+        title = context.getString(R.string.uninstall_container_title),
+        messageTemplate = context.getString(R.string.uninstall_container_message),
+        confirmLabel = context.getString(R.string.uninstall),
+        containerName = containerName,
+        onConfirm = onConfirm,
+        onDismiss = onDismiss
+    )
+}
+
+@Composable
+private fun ResetConfirmationDialog(
+    containerName: String,
+    savedArchive: String?,
+    onConfirm: (useSavedArchive: Boolean) -> Unit,
+    onDismiss: () -> Unit
+) {
+    val context = LocalContext.current
+    var chooseAnother by remember(savedArchive) { mutableStateOf(false) }
+    ContainerDestructiveDialog(
+        title = context.getString(R.string.reset_container_title),
+        messageTemplate = context.getString(
+            if (savedArchive != null) R.string.reset_container_message_saved
+            else R.string.reset_container_message
+        ),
+        confirmLabel = context.getString(R.string.reset),
+        containerName = containerName,
+        onConfirm = { onConfirm(savedArchive != null && !chooseAnother) },
+        onDismiss = onDismiss,
+        extraContent = {
+            if (savedArchive != null) {
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
+                Text(
+                    text = context.getString(R.string.reset_archive_in_use, savedArchive.substringAfterLast('/')),
+                    style = MaterialTheme.typography.bodyMedium
+                )
+                Row(
+                    modifier = Modifier.toggleable(
+                        value = chooseAnother,
+                        role = Role.Checkbox,
+                        onValueChange = { chooseAnother = it }
+                    ),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Checkbox(
+                        checked = chooseAnother,
+                        onCheckedChange = null
+                    )
+                    Text(
+                        text = context.getString(R.string.reset_choose_another_archive),
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                }
+            }
+        }
+    )
+}
+
+/**
+ * The "type the container name to continue" dialog shared by reset and uninstall.
+ * [messageTemplate] carries the container name as its one `%1$s`, shown bold.
+ */
+@Composable
+private fun ContainerDestructiveDialog(
+    title: String,
+    messageTemplate: String,
+    confirmLabel: String,
+    containerName: String,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit,
+    extraContent: @Composable () -> Unit = {}
+) {
+    val context = LocalContext.current
     var confirmText by remember { mutableStateOf("") }
     val isConfirmed = confirmText == containerName
 
@@ -531,7 +680,7 @@ private fun UninstallConfirmationDialog(
         footer = {
             DialogFooterRow(
                 dismissLabel = context.getString(R.string.cancel),
-                confirmLabel = context.getString(R.string.uninstall),
+                confirmLabel = confirmLabel,
                 onDismiss = onDismiss,
                 onConfirm = onConfirm,
                 confirmEnabled = isConfirmed,
@@ -548,15 +697,14 @@ private fun UninstallConfirmationDialog(
                     tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(24.dp)
                 )
                 Text(
-                    text = context.getString(R.string.uninstall_container_title),
+                    text = title,
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold
                 )
             }
             Text(
                 text = buildAnnotatedString {
-                    val template = context.getString(R.string.uninstall_container_message)
-                    val parts = template.split("%1\$s")
+                    val parts = messageTemplate.split("%1\$s")
                     append(parts.getOrElse(0) { "" })
                     withStyle(SpanStyle(fontWeight = FontWeight.Bold)) { append(containerName) }
                     append(parts.getOrElse(1) { "" })
@@ -573,6 +721,7 @@ private fun UninstallConfirmationDialog(
                 // A container name is case-sensitive; the keyboard must not upper-case it.
                 capitalization = KeyboardCapitalization.None
             )
+            extraContent()
     }
     }
 

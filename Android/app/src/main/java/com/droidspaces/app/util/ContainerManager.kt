@@ -298,6 +298,16 @@ object ContainerManager {
     }
 
     /**
+     * The container's config as the backend last wrote it, without a status probe. Callers
+     * that are about to rewrite or replace the rootfs read here rather than trust the
+     * [ContainerInfo] they were handed, which may be minutes old.
+     */
+    suspend fun readContainerConfig(name: String): ContainerInfo? = withContext(Dispatchers.IO) {
+        val configPath = "${getContainerDirectory(name)}/${Constants.CONTAINER_CONFIG_FILE}"
+        loadContainerConfig(configPath, sanitizeContainerName(name))
+    }
+
+    /**
      * Load container configuration from config file.
      */
     private fun loadContainerConfig(configPath: String, defaultName: String): ContainerInfo? {
