@@ -84,3 +84,61 @@ allow untrusted_app droidspacesd fd use
 allow surfaceflinger droidspacesd fd use
 allow hal_graphics_composer_default droidspacesd fd use
 allow untrusted_app su unix_stream_socket { read write }
+
+# ---------------------------------------------------------------------------
+# Suppress the expected denials of the permissive container domain.
+#
+# droidspacesd is permissive: accesses the policy does not allow are still
+# permitted, but SELinux writes an AVC record for each one.  Inside a
+# container that is thousands of records per minute.  On kernels with a small
+# audit backlog (audit_backlog_limit=64 on many Android kernels)
+# audit_log_start() sleeps waiting for kauditd to drain the queue, which can
+# freeze the whole device (hard reset by the PMIC watchdog).
+#
+# These rules only drop the audit record for this domain; the permission
+# decision is unchanged and other domains keep logging normally.  The
+# signatures below were collected from the actual crash logs.
+# ---------------------------------------------------------------------------
+dontaudit droidspacesd app_data_file:dir { add_name remove_name search write };
+dontaudit droidspacesd app_data_file:file { create getattr open rename write };
+dontaudit droidspacesd app_data_file:sock_file { write };
+dontaudit droidspacesd audio_service:service_manager { find };
+dontaudit droidspacesd audioserver_service:service_manager { find };
+dontaudit droidspacesd cgroup_v2:dir { add_name create open read remove_name rmdir search setattr write };
+dontaudit droidspacesd cgroup_v2:file { getattr open read watch write };
+dontaudit droidspacesd cgroup:dir { search };
+dontaudit droidspacesd device_config_service:service_manager { find };
+dontaudit droidspacesd deviceidle_service:service_manager { find };
+dontaudit droidspacesd devpts:chr_file { getattr ioctl lock open read write };
+dontaudit droidspacesd droidspacesd_exec:file { entrypoint execute execute_no_trans map open read };
+dontaudit droidspacesd fuse:filesystem { mount };
+dontaudit droidspacesd mediametrics_service:service_manager { find };
+dontaudit droidspacesd node:udp_socket { node_bind };
+dontaudit droidspacesd port:tcp_socket { name_connect };
+dontaudit droidspacesd proc_cmdline:file { read };
+dontaudit droidspacesd proc_filesystems:file { getattr open read };
+dontaudit droidspacesd proc_meminfo:file { open read };
+dontaudit droidspacesd proc_net:file { getattr open read };
+dontaudit droidspacesd proc_overcommit_memory:file { open read };
+dontaudit droidspacesd proc_stat:file { getattr open read };
+dontaudit droidspacesd proc:file { getattr ioctl open read };
+dontaudit droidspacesd sysfs_thermal:dir { open read search };
+dontaudit droidspacesd sysfs_thermal:file { read };
+dontaudit droidspacesd sysfs:file { getattr open read };
+dontaudit droidspacesd system_data_file:blk_file { create unlink };
+dontaudit droidspacesd system_data_file:dir { add_name getattr ioctl open read remove_name search write };
+dontaudit droidspacesd system_data_file:file { append create execute execute_no_trans getattr ioctl map open read rename setattr unlink write };
+dontaudit droidspacesd system_data_file:lnk_file { create getattr read unlink };
+dontaudit droidspacesd tmpfs:chr_file { getattr ioctl lock map open read write };
+dontaudit droidspacesd tmpfs:dir { add_name create read remove_name rmdir watch write };
+dontaudit droidspacesd tmpfs:file { create getattr ioctl lock open read rename setattr unlink watch write };
+dontaudit droidspacesd tmpfs:lnk_file { create getattr read rename unlink };
+dontaudit droidspacesd tmpfs:sock_file { create write };
+dontaudit droidspacesd unlabeled:file { getattr open read };
+dontaudit droidspacesd unlabeled:filesystem { getattr };
+dontaudit droidspacesd vendor_sysfs_data:dir { search };
+dontaudit droidspacesd vendor_sysfs_data:file { getattr open read };
+dontaudit droidspacesd vendor_sysfs_graphics:dir { search };
+dontaudit droidspacesd vendor_sysfs_graphics:file { getattr open read };
+dontaudit droidspacesd vendor_sysfs_usb_supply:dir { search };
+dontaudit droidspacesd vendor_sysfs_usb_supply:file { getattr open read };
