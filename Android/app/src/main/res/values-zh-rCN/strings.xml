@@ -567,7 +567,7 @@
     <string name="enable_anland_description">在 Anland 应用中显示 Wayland 桌面</string>
     <string name="launch_anland_window">启动</string>
     <string name="anland_needs_gpu">需要 GPU 或硬件访问权限。</string>
-    <string name="anland_replaces_x11">当 Anland 显示开启时此选项禁用。一个容器只能使用一个显示方案。</string>
+    <string name="anland_replaces_x11">当 Anland 显示开启时此选项禁用。一个容器只能使用一个显示通道。</string>
     <string name="limit_memory_on">低于设备 %1$s 上限</string>
     <string name="limit_cpu_on">低于设备 %1$s 上限</string>
     <string name="limit_cpu_off">无限制：共享所有 %1$s</string>
@@ -673,7 +673,7 @@
     <string name="add_interfaces_lead">按顺序点击尝试的接口。</string>
     <string name="upstream_max">最多可添加 %1$d 个接口。取消勾选一个即可添加另一个。</string>
     <string name="bind_path_separator">路径不能包含逗号“,”或冒号“:”</string>
-    <string name="x11_replaces_anland">当使用 Termux:X11 时此选项禁用。一个容器只能使用一个显示方案。</string>
+    <string name="x11_replaces_anland">当使用 Termux:X11 时此选项禁用。一个容器只能使用一个显示通道。</string>
     <string name="limit_swap">允许交换空间（swap）</string>
     <string name="limit_swap_on">达到内存上限后可能会使用设备的交换空间</string>
     <string name="limit_swap_off">达到内存上限后，设备的交换空间将保持空闲</string>

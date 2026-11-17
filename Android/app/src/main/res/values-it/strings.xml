@@ -715,4 +715,5 @@
     <string name="anland_needs_gpu">Richiede Accesso GPU o Accesso Hardware.</string>
     <string name="anland_replaces_x11">Disattivato mentre Anland Display è attivo. Un container utilizza un percorso di visualizzazione.</string>
     <string name="x11_replaces_anland">Disattivato mentre Configure Termux:X11 è attivo. Un container utilizza un unico percorso di visualizzazione.</string>
+    <string name="launch_x11_description">Mostra il desktop X11 nell\'app Termux:X11</string>
 </resources>
