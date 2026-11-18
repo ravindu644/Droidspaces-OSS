@@ -4,6 +4,14 @@
  * Manages the PulseAudio daemon lifecycle on Android (spawning, logging, and
  * stopping) and host-to-container socket bridging.
  *
+ * Refactored for Android 15 / SM6150:
+ *  - Reuses an existing unified UID 2000 OpenSL ES socket (/data/local/tmp/awl/pulse.sock)
+ *    when present to prevent duplicate PulseAudio daemons.
+ *  - Loads module-sles-sink + module-sles-source directly (-n), avoiding the
+ *    module-aaudio-sink background futex deadlock and removing the extra pactl fork.
+ *  - Drops privileges to UID 2000 (AID_SHELL, SYSTEM_FIXED RECORD_AUDIO) when
+ *    spawning a new daemon so hardware microphone capture works natively.
+ *
  * Copyright (C) 2026 ravindu644 <droidcasts@protonmail.com>
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
@@ -11,32 +19,43 @@
 #define _GNU_SOURCE
 #include "droidspaces.h"
 #include <fcntl.h>
+#include <sys/socket.h>
 #include <sys/stat.h>
+#include <sys/un.h>
 #include <sys/wait.h>
 #include <unistd.h>
 
 #include "internal.h"
 
+#define AID_SHELL_UID 2000
+#define UNIFIED_HOST_PULSE_SOCK "/data/local/tmp/awl/pulse.sock"
+
 /* helpers */
 
-/*
- * Resolve the Termux UID from packages.list.
- * Returns the UID on success, -1 on failure.
- * PulseAudio needs to run as the Termux app UID so Android's audio HAL
- * grants it access to OpenSL ES / AAudio.
- */
-static int pa_resolve_termux_uid(void) {
-  int uid = ds_resolve_termux_uid();
-  if (uid < 0)
+static int probe_unix_socket(const char *path) {
+  if (!path || access(path, F_OK) != 0)
     return -1;
+  int fd = socket(AF_UNIX, SOCK_STREAM | SOCK_CLOEXEC, 0);
+  if (fd < 0)
+    return -1;
+  struct sockaddr_un addr;
+  memset(&addr, 0, sizeof(addr));
+  addr.sun_family = AF_UNIX;
+  snprintf(addr.sun_path, sizeof(addr.sun_path), "%s", path);
+  int ok = (connect(fd, (struct sockaddr *)&addr, sizeof(addr)) == 0) ? 0 : -1;
+  close(fd);
+  return ok;
+}
 
+static int pa_resolve_audio_uid(void) {
   if (access(TX11_PULSE_BIN, F_OK) != 0) {
     ds_warn("PulseAudio: binary not found at %s. Is pulseaudio installed in "
             "Termux?",
             TX11_PULSE_BIN);
     return -1;
   }
-  return uid;
+  /* Prefer AID_SHELL (UID 2000) which holds SYSTEM_FIXED RECORD_AUDIO on Android */
+  return AID_SHELL_UID;
 }
 
 /*
@@ -54,10 +73,6 @@ static const char *find_skcodec(void) {
   return NULL;
 }
 
-/*
- * Inject libskcodec.so into LD_PRELOAD so the OpenSL ES module can dlopen
- * libskandroidcodec.so which has it as a hidden dependency on Samsung firmware.
- */
 static void inject_skcodec_preload(void) {
   const char *lib = find_skcodec();
   if (!lib)
@@ -80,30 +95,21 @@ struct pulse_args {
   int uid;
 };
 
-/*
- * Set up the forked child, perform the SELinux dance, and exec PulseAudio.
- * ready_fd: O_CLOEXEC write-end; EOF on execv success, byte on failure.
- * This function never returns on success.
- */
 static void pulse_child_wrapper(int ready_fd, void *user_data) {
   struct pulse_args *args = (struct pulse_args *)user_data;
 
   ds_daemon_child_preamble();
 
-  /* Set up the Termux environment before dropping privileges */
   setenv("TMPDIR", TX11_PREFIX "/tmp", 1);
   setenv("HOME", TX11_HOME, 1);
   setenv("PREFIX", TX11_PREFIX, 1);
   setenv("PULSE_SERVER", "unix:" TX11_PULSE_SOCKET, 1);
 
-  /* Ensure the tmp directory exists (root creates it before priv drop) */
   mkdir_p(TX11_PREFIX "/tmp", 0755);
+  chmod(TX11_PREFIX "/tmp", 01777);
 
-  /* Stay in droidspacesd (permissive) -- no domain transition needed.
-   * untrusted_app_27 blocks execv of Termux binaries under enforcing. */
   ds_selinux_enter_domain();
 
-  /* Drop root -> Termux UID. */
   if (ds_drop_privileges(args->uid) < 0) {
     perror("[PulseAudio] privilege drop failed");
     if (write(ready_fd, "\x01", 1) < 0) { /* ignore */
@@ -111,21 +117,19 @@ static void pulse_child_wrapper(int ready_fd, void *user_data) {
     _exit(1);
   }
 
-  /* Inject libskcodec.so if present -- fixes OpenSL ES on Samsung One UI 6.1+
-   */
   inject_skcodec_preload();
 
-  fprintf(stdout, "[PulseAudio] uid=%d socket=%s\n", (int)getuid(),
-          TX11_PULSE_SOCKET);
+  fprintf(stdout, "[PulseAudio] uid=%d socket=%s (OpenSL ES sink+source)\n",
+          (int)getuid(), TX11_PULSE_SOCKET);
   fflush(stdout);
 
-  /* Launch PulseAudio in non-daemon foreground mode.
-   * - module-native-protocol-unix: UNIX socket at our custom path
-   * - --exit-idle-time=-1: never exit on idle (we manage lifecycle ourselves)
-   * - --daemonize=no: stay in foreground so our log relay captures all output
-   */
+  /* Launch PulseAudio directly with OpenSL ES sink + source (-n skips AAudio default.pa) */
   char *argv[] = {
       TX11_PULSE_BIN,
+      "-n",
+      "--load=module-sles-sink sink_name=android",
+      "--load=module-sles-source source_name=android_mic",
+      "--load=module-suspend-on-idle timeout=5",
       "--load=module-native-protocol-unix socket=" TX11_PULSE_SOCKET
       " auth-anonymous=1",
       "--exit-idle-time=-1",
@@ -143,52 +147,10 @@ static void pulse_child_wrapper(int ready_fd, void *user_data) {
   _exit(1);
 }
 
-/* pactl post-start helper */
-
-/*
- * Run 'pactl set-default-sink AAudio_sink' once the socket is up.
- * Forked as a short-lived child; parent doesn't wait -- fire and forget.
- */
-static void run_pactl_set_default(int uid) {
-  pid_t p = fork();
-  if (p < 0)
-    return;
-  if (p == 0) {
-    /* Redirect to /dev/null -- we don't need pactl output in the log */
-    int devnull = open("/dev/null", O_RDWR);
-    if (devnull >= 0) {
-      dup2(devnull, STDIN_FILENO);
-      dup2(devnull, STDOUT_FILENO);
-      dup2(devnull, STDERR_FILENO);
-      close(devnull);
-    }
-
-    /* Stay in droidspacesd (permissive) */
-    ds_selinux_enter_domain();
-    if (ds_drop_privileges(uid) < 0)
-      _exit(1);
-
-    setenv("PULSE_SERVER", "unix:" TX11_PULSE_SOCKET, 1);
-    setenv("HOME", TX11_HOME, 1);
-
-    char *argv[] = {TX11_PACTL_BIN, "set-default-sink", TX11_PULSE_DEFAULT_SINK,
-                    NULL};
-    execv(TX11_PACTL_BIN, argv);
-    _exit(1);
-  }
-  /* Parent: reap to avoid zombie. We don't care about exit code. */
-  waitpid(p, NULL, 0);
-}
-
 /* stale config nuke */
 
 #define PA_CONFIG_DIR TX11_HOME "/.config/pulse"
 
-/*
- * Remove PulseAudio's stale runtime dir before each start.
- * A leftover cookie/pid from a previous crash causes PA to refuse
- * to bind its socket and exit silently with status=1.
- */
 static void nuke_pulse_config(void) {
   if (access(PA_CONFIG_DIR, F_OK) != 0)
     return;
@@ -215,7 +177,18 @@ int ds_pulse_daemon_start(struct ds_config *cfg) {
     return -1;
   }
 
-  /* Reuse existing global daemon if still alive */
+  /* Zero-duplicate optimization: reuse live unified UID 2000 OpenSL ES socket if reachable */
+  if (probe_unix_socket(UNIFIED_HOST_PULSE_SOCK) == 0) {
+    mkdir_p(TX11_PREFIX "/tmp", 0755);
+    unlink(TX11_PULSE_SOCKET);
+    if (symlink(UNIFIED_HOST_PULSE_SOCK, TX11_PULSE_SOCKET) == 0) {
+      ds_log("[PulseAudio] reusing live unified host socket %s (0 duplicate daemons)",
+             UNIFIED_HOST_PULSE_SOCK);
+      return 1;
+    }
+  }
+
+  /* Reuse existing managed daemon if still alive */
   pid_t existing = ds_daemon_read_pid("pulse.ppid");
   if (existing > 0) {
     ds_log("PulseAudio: daemon already running (PID %d)", (int)existing);
@@ -223,15 +196,14 @@ int ds_pulse_daemon_start(struct ds_config *cfg) {
     return 1;
   }
 
-  int uid = pa_resolve_termux_uid();
+  int uid = pa_resolve_audio_uid();
   if (uid < 0)
     return -1;
 
-  /* Clean up stale socket from a previous crashed run */
   unlink(TX11_PULSE_SOCKET);
   nuke_pulse_config();
 
-  ds_log("[PulseAudio] launching daemon (uid=%d)", uid);
+  ds_log("[PulseAudio] launching OpenSL ES daemon (uid=%d)", uid);
   pid_t child = spawn_pulse(uid);
   if (child <= 0)
     return -1;
@@ -239,14 +211,11 @@ int ds_pulse_daemon_start(struct ds_config *cfg) {
   cfg->pulse_pid = child;
   ds_daemon_write_pid("pulse.ppid", child, NULL);
 
-  /* Wait for the UNIX socket to appear, then set the default sink.
-   * If PA hasn't created the socket in 3s (or dies), pactl is skipped. */
   if (wait_for_socket_or_death(child, TX11_PULSE_SOCKET, 3000, 100000) == 0) {
-    ds_log("[PulseAudio] socket appeared - setting default sink to %s",
-           TX11_PULSE_DEFAULT_SINK);
-    run_pactl_set_default(uid);
+    chmod(TX11_PULSE_SOCKET, 0777);
+    ds_log("[PulseAudio] OpenSL ES socket ready (no pactl fork needed)");
   } else {
-    ds_warn("PulseAudio: socket did not appear in 3s - skipping pactl");
+    ds_warn("PulseAudio: socket did not appear in 3s");
   }
 
   return 0;
@@ -254,6 +223,10 @@ int ds_pulse_daemon_start(struct ds_config *cfg) {
 
 void ds_pulse_daemon_stop(struct ds_config *cfg) {
   if (!cfg)
+    return;
+  /* Do not tear down an externally supervised unified socket symlink */
+  struct stat st;
+  if (lstat(TX11_PULSE_SOCKET, &st) == 0 && S_ISLNK(st.st_mode))
     return;
   ds_global_daemon_stop(check_pulse_needs, cfg->pulse_pid, &cfg->pulse_pid,
                         "pulse.ppid", TX11_PULSE_SOCKET, "[PulseAudio]");
@@ -265,8 +238,6 @@ int ds_setup_pulse_socket(struct ds_config *cfg) {
   if (!is_android() || !cfg->pulseaudio)
     return 0;
 
-  /* Post-pivot_root: the host socket lives under DS_TERMUX_TMP_OLDROOT.  Bridge
-   * it in and export PULSE_SERVER for all container processes. */
   return ds_bridge_termux_socket(".pulse-socket", DS_PULSE_SOCKET,
                                  "PULSE_SERVER", "unix:" DS_PULSE_SOCKET,
                                  "PulseAudio");
