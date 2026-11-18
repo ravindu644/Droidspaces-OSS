@@ -15,6 +15,9 @@ object ContainerSystemdManager : ContainerInitManager("chksystemd.sh", "command 
         val dependencies: List<String>
     )
 
+    /** States systemd manages itself: nothing to enable, nothing to disable. */
+    private val STATIC_LIKE_STATES = setOf("static", "generated", "transient", "indirect", "alias")
+
     suspend fun getAllServices(containerName: String): List<ServiceInfo> = coroutineScope {
         val (running, enabled, disabled, masked, static) = listOf("--running", "--enabled", "--disabled", "--masked", "--static")
             .map { async { runScript(containerName, it) } }.awaitAll()
@@ -24,9 +27,30 @@ object ContainerSystemdManager : ContainerInitManager("chksystemd.sh", "command 
         static.keys.forEach { all[it] = service(it, running[it] ?: "", enabled = false, running = it in running, static = true) }
         disabled.keys.forEach { all[it] = service(it, running[it] ?: "", enabled = false, running = it in running) }
         masked.keys.forEach { all[it] = service(it, "", enabled = false, running = false, masked = true) }
+        // `list-unit-files` leaves out units systemd manages itself: enabled-runtime units
+        // (console-getty, from the getty generator) and template instances (user@0.service;
+        // only user@.service is listed). Ask those directly, or every boot calls them abnormal.
+        (running.keys - all.keys).forEach { name ->
+            val state = unitFileState(containerName, name) ?: return@forEach
+            when {
+                state == "masked" || state == "masked-runtime" ->
+                    all[name] = service(name, "", enabled = false, running = false, masked = true)
+                state == "enabled" || state == "enabled-runtime" ||
+                    state == "linked" || state == "linked-runtime" ->
+                    all[name] = service(name, running[name] ?: "", enabled = true, running = true)
+                state in STATIC_LIKE_STATES ->
+                    all[name] = service(name, running[name] ?: "", enabled = false, running = true, static = true)
+            }
+        }
         running.forEach { (name, desc) -> all.getOrPut(name) { service(name, desc, enabled = false, running = true) } }
         all.values.sortedBy { it.name }
     }
+
+    /** A unit's UnitFileState, or null when the name is unsafe or systemctl cannot answer. */
+    private suspend fun unitFileState(containerName: String, unit: String): String? =
+        if (!isSafeServiceName(unit)) null
+        else exec(containerName, "systemctl show $unit -p UnitFileState --value 2>/dev/null")
+            .output.firstOrNull()?.trim()?.takeIf { it.isNotEmpty() }
 
     private suspend fun systemctl(containerName: String, action: String, unit: String) =
         action(containerName, unit) { "systemctl $action $it" }
