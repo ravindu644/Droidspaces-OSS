@@ -449,6 +449,10 @@
     <string name="error_gateway_iface_taken">接口已被另一个段“%1$s”使用。请使用其他接口。</string>
     <string name="openwrt_services">OpenWrt 服务</string>
     <string name="unknown_legend">未知</string>
+    <string name="linked_legend">已链接</string>
+    <string name="indirect_legend">间接</string>
+    <string name="no_linked_services">没有已链接的服务</string>
+    <string name="no_indirect_services">没有间接状态的服务</string>
     <string name="reload_service">重新加载服务</string>
     <string name="no_unknown_services">没有未知状态的服务</string>
     <string name="openwrt">OpenWrt</string>

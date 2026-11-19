@@ -424,6 +424,10 @@
     <string name="openwrt_services">OpenWrt 服務</string>
     <string name="openwrt">OpenWrt</string>
     <string name="unknown_legend">未知</string>
+    <string name="linked_legend">已連結</string>
+    <string name="indirect_legend">間接</string>
+    <string name="no_linked_services">沒有已連結的服務</string>
+    <string name="no_indirect_services">沒有間接狀態的服務</string>
     <string name="reload_service">重載服務</string>
     <string name="no_unknown_services">沒有狀態未知的服務</string>
     <string name="gateway_settings_description">將此容器的流量路由到另一個充當路由器的容器（例如 OpenWrt）。</string>

@@ -321,6 +321,7 @@ fun statusColorFor(status: ServiceStatus): Color = when (status) {
     ServiceStatus.ABNORMAL -> Color(0xFFFF7043)
     ServiceStatus.STATIC -> Color(0xFF607D8B)
     ServiceStatus.MASKED -> MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
+    ServiceStatus.LINKED, ServiceStatus.INDIRECT -> MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
     ServiceStatus.UNKNOWN -> Color(0xFF90A4AE)
 }
 
@@ -331,6 +332,8 @@ private fun statusLabelRes(status: ServiceStatus): Int = when (status) {
     ServiceStatus.ABNORMAL -> R.string.abnormal_legend
     ServiceStatus.STATIC -> R.string.static_legend
     ServiceStatus.MASKED -> R.string.masked_legend
+    ServiceStatus.LINKED -> R.string.linked_legend
+    ServiceStatus.INDIRECT -> R.string.indirect_legend
     ServiceStatus.UNKNOWN -> R.string.unknown_legend
 }
 
@@ -416,18 +419,27 @@ private fun InitServiceCard(
                 ) {
                     Row(modifier = Modifier.fillMaxWidth().padding(4.dp), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                         val unmask = row.unmask
+                        // A bare template has no instance to start.
+                        val bareTemplate = row.name.endsWith("@.service")
                         if (row.isMasked && unmask != null) {
                             val label = context.getString(R.string.unmask)
                             PillButton(Icons.Default.LockOpen, label, MaterialTheme.colorScheme.primary, MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f), Modifier.weight(1f)) { onAction(label, unmask) }
                         } else {
-                            val label = context.getString(if (row.isRunning) R.string.stop else R.string.start)
-                            PillButton(
-                                if (row.isRunning) Icons.Default.Stop else Icons.Default.PlayArrow, label,
-                                if (row.isRunning) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary,
-                                (if (row.isRunning) MaterialTheme.colorScheme.errorContainer else MaterialTheme.colorScheme.primaryContainer).copy(alpha = 0.4f),
-                                Modifier.weight(1f)
-                            ) { onAction(label, row.startStop) }
-                            if (!row.isStatic) {
+                            if (!bareTemplate) {
+                                val label = context.getString(if (row.isRunning) R.string.stop else R.string.start)
+                                PillButton(
+                                    if (row.isRunning) Icons.Default.Stop else Icons.Default.PlayArrow, label,
+                                    if (row.isRunning) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary,
+                                    (if (row.isRunning) MaterialTheme.colorScheme.errorContainer else MaterialTheme.colorScheme.primaryContainer).copy(alpha = 0.4f),
+                                    Modifier.weight(1f)
+                                ) { onAction(label, row.startStop) }
+                            }
+                            // Indirect can describe a bare template without usable install rules,
+                            // and an Unknown state has no installation record to act on.
+                            if (!row.isStatic &&
+                                row.status != ServiceStatus.INDIRECT &&
+                                row.status != ServiceStatus.UNKNOWN
+                            ) {
                                 val toggle = context.getString(if (row.isEnabled) R.string.disable_service else R.string.enable_service)
                                 PillButton(if (row.isEnabled) Icons.Default.Block else Icons.Default.CheckCircle, toggle, null, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.05f), Modifier.weight(1f)) { onAction(toggle, row.enableDisable) }
                             }

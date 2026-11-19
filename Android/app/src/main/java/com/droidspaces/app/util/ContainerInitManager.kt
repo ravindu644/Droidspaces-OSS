@@ -9,7 +9,7 @@ import kotlinx.coroutines.withTimeoutOrNull
 import kotlin.coroutines.resume
 
 /** How a service stands, the union over the four init systems. */
-enum class ServiceStatus { ENABLED_RUNNING, ENABLED_STOPPED, DISABLED_STOPPED, ABNORMAL, STATIC, MASKED, UNKNOWN }
+enum class ServiceStatus { ENABLED_RUNNING, ENABLED_STOPPED, DISABLED_STOPPED, ABNORMAL, STATIC, MASKED, LINKED, INDIRECT, UNKNOWN }
 
 data class ServiceInfo(
     val name: String,

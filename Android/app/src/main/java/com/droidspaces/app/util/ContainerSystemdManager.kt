@@ -15,21 +15,51 @@ object ContainerSystemdManager : ContainerInitManager("chksystemd.sh", "command 
         val dependencies: List<String>
     )
 
+    /** States systemd manages itself: nothing to enable, nothing to disable. */
+    private val STATIC_LIKE_STATES = setOf("static", "generated", "transient", "alias")
+
     suspend fun getAllServices(containerName: String): List<ServiceInfo> = coroutineScope {
-        val (running, enabled, disabled, masked, static) = listOf("--running", "--enabled", "--disabled", "--masked", "--static")
+        val (running, unitFiles) = listOf("--running", "--all")
             .map { async { runScript(containerName, it) } }.awaitAll()
             .map { (ok, lines) -> if (ok) pairs(lines) else emptyMap() }
-        val all = mutableMapOf<String, ServiceInfo>()
-        enabled.keys.forEach { all[it] = service(it, running[it] ?: "", enabled = true, running = it in running) }
-        static.keys.forEach { all[it] = service(it, running[it] ?: "", enabled = false, running = it in running, static = true) }
-        disabled.keys.forEach { all[it] = service(it, running[it] ?: "", enabled = false, running = it in running) }
-        masked.keys.forEach { all[it] = service(it, "", enabled = false, running = false, masked = true) }
-        running.forEach { (name, desc) -> all.getOrPut(name) { service(name, desc, enabled = false, running = true) } }
-        all.values.sortedBy { it.name }
+        val states = unitFiles.toMutableMap()
+        // The full file list covers stopped units too; running template instances may be absent.
+        (running.keys - states.keys).forEach { name ->
+            states[name] = unitFileState(containerName, name) ?: ""
+        }
+        states.map { (name, state) ->
+            val info = service(
+                name, running[name] ?: "",
+                enabled = state == "enabled" || state == "enabled-runtime",
+                running = name in running,
+                masked = state == "masked" || state == "masked-runtime",
+                static = state in STATIC_LIKE_STATES,
+            )
+            when (state) {
+                // A link makes the unit available, not enabled; Disable would remove the link.
+                "linked", "linked-runtime" -> info.copy(status = ServiceStatus.LINKED)
+                "indirect" -> info.copy(status = ServiceStatus.INDIRECT)
+                "enabled", "enabled-runtime", "disabled", "masked", "masked-runtime" -> info
+                in STATIC_LIKE_STATES -> info
+                else -> info.copy(status = ServiceStatus.UNKNOWN)
+            }
+        }.sortedBy { it.name }
     }
 
+    /** A unit's UnitFileState, or null when the name is unsafe or systemctl cannot answer. */
+    private suspend fun unitFileState(containerName: String, unit: String): String? =
+        if (!isSafeServiceName(unit)) null
+        else exec(containerName, "systemctl show $unit -p UnitFileState --value 2>/dev/null")
+            .output.firstOrNull()?.trim()?.takeIf { it.isNotEmpty() }
+
     private suspend fun systemctl(containerName: String, action: String, unit: String) =
-        action(containerName, unit) { "systemctl $action $it" }
+        action(containerName, unit) {
+            // Runtime symlinks live in /run, so undo them in the same scope.
+            if (action == "disable" || action == "unmask")
+                "state=\$(systemctl show $it -p UnitFileState --value) && " +
+                    "case \"\$state\" in *-runtime) systemctl $action --runtime $it ;; *) systemctl $action $it ;; esac"
+            else "systemctl $action $it"
+        }
 
     suspend fun startService(containerName: String, serviceName: String) = systemctl(containerName, "start --no-block", serviceName)
     suspend fun stopService(containerName: String, serviceName: String) = systemctl(containerName, "stop", serviceName)
