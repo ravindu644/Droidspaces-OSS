@@ -16,7 +16,7 @@ object ContainerSystemdManager : ContainerInitManager("chksystemd.sh", "command 
     )
 
     /** States systemd manages itself: nothing to enable, nothing to disable. */
-    private val STATIC_LIKE_STATES = setOf("static", "generated", "transient", "indirect", "alias")
+    private val STATIC_LIKE_STATES = setOf("static", "generated", "transient", "alias")
 
     suspend fun getAllServices(containerName: String): List<ServiceInfo> = coroutineScope {
         val (running, enabled, disabled, masked, static) = listOf("--running", "--enabled", "--disabled", "--masked", "--static")
@@ -35,8 +35,7 @@ object ContainerSystemdManager : ContainerInitManager("chksystemd.sh", "command 
             when {
                 state == "masked" || state == "masked-runtime" ->
                     all[name] = service(name, "", enabled = false, running = false, masked = true)
-                state == "enabled" || state == "enabled-runtime" ||
-                    state == "linked" || state == "linked-runtime" ->
+                state == "enabled" || state == "enabled-runtime" ->
                     all[name] = service(name, running[name] ?: "", enabled = true, running = true)
                 state in STATIC_LIKE_STATES ->
                     all[name] = service(name, running[name] ?: "", enabled = false, running = true, static = true)
@@ -53,7 +52,13 @@ object ContainerSystemdManager : ContainerInitManager("chksystemd.sh", "command 
             .output.firstOrNull()?.trim()?.takeIf { it.isNotEmpty() }
 
     private suspend fun systemctl(containerName: String, action: String, unit: String) =
-        action(containerName, unit) { "systemctl $action $it" }
+        action(containerName, unit) {
+            // Runtime symlinks live in /run, so undo them in the same scope.
+            if (action == "disable" || action == "unmask")
+                "state=\$(systemctl show $it -p UnitFileState --value) && " +
+                    "case \"\$state\" in *-runtime) systemctl $action --runtime $it ;; *) systemctl $action $it ;; esac"
+            else "systemctl $action $it"
+        }
 
     suspend fun startService(containerName: String, serviceName: String) = systemctl(containerName, "start --no-block", serviceName)
     suspend fun stopService(containerName: String, serviceName: String) = systemctl(containerName, "stop", serviceName)
