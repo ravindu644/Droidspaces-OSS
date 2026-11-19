@@ -58,10 +58,13 @@ fun SystemdScreen(
     val filters = listOf(
         InitServiceFilterChip("RUNNING", R.string.running, statusColorFor(ServiceStatus.ENABLED_RUNNING), R.string.no_running_services) { it.isRunning && it.isEnabled && !it.isMasked },
         InitServiceFilterChip("ENABLED", R.string.enabled_legend, statusColorFor(ServiceStatus.ENABLED_STOPPED), R.string.no_enabled_services) { it.isEnabled && !it.isRunning && !it.isMasked },
-        InitServiceFilterChip("DISABLED", R.string.disabled_legend, statusColorFor(ServiceStatus.DISABLED_STOPPED), R.string.no_disabled_services) { !it.isEnabled && !it.isRunning && !it.isMasked && !it.isStatic },
-        InitServiceFilterChip("ABNORMAL", R.string.abnormal_legend, statusColorFor(ServiceStatus.ABNORMAL), R.string.no_abnormal_services) { it.isRunning && !it.isEnabled && !it.isStatic && !it.isMasked },
+        InitServiceFilterChip("DISABLED", R.string.disabled_legend, statusColorFor(ServiceStatus.DISABLED_STOPPED), R.string.no_disabled_services) { it.status == ServiceStatus.DISABLED_STOPPED },
+        InitServiceFilterChip("ABNORMAL", R.string.abnormal_legend, statusColorFor(ServiceStatus.ABNORMAL), R.string.no_abnormal_services) { it.status == ServiceStatus.ABNORMAL },
         InitServiceFilterChip("STATIC", R.string.static_legend, statusColorFor(ServiceStatus.STATIC), R.string.no_static_services) { it.isStatic },
         InitServiceFilterChip("MASKED", R.string.masked_legend, statusColorFor(ServiceStatus.MASKED), R.string.no_masked_services) { it.isMasked },
+        InitServiceFilterChip("LINKED", R.string.linked_legend, statusColorFor(ServiceStatus.LINKED), R.string.no_linked_services) { it.status == ServiceStatus.LINKED },
+        InitServiceFilterChip("INDIRECT", R.string.indirect_legend, statusColorFor(ServiceStatus.INDIRECT), R.string.no_indirect_services) { it.status == ServiceStatus.INDIRECT },
+        InitServiceFilterChip("UNKNOWN", R.string.unknown_legend, statusColorFor(ServiceStatus.UNKNOWN), R.string.no_unknown_services) { it.status == ServiceStatus.UNKNOWN },
         InitServiceFilterChip("ALL", R.string.all_legend, null, R.string.no_services_found) { true },
     )
 

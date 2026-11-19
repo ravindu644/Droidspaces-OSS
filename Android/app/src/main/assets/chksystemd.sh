@@ -8,13 +8,13 @@ echo "${name}|${desc}"
 done
 ;;
 --enabled)
-systemctl list-unit-files --type=service --state=enabled --state=enabled-runtime --no-legend --no-pager 2>/dev/null | awk '{print $1}'
+systemctl list-unit-files --type=service --state=enabled --no-legend --no-pager 2>/dev/null | awk '{print $1}'
 ;;
 --disabled)
 systemctl list-unit-files --type=service --state=disabled --no-legend --no-pager 2>/dev/null | awk '{print $1}'
 ;;
 --masked)
-systemctl list-unit-files --type=service --state=masked --state=masked-runtime --no-legend --no-pager 2>/dev/null | awk '{print $1}'
+systemctl list-unit-files --type=service --state=masked --no-legend --no-pager 2>/dev/null | awk '{print $1}'
 ;;
 --static)
 systemctl list-unit-files --type=service --state=static --no-legend --no-pager 2>/dev/null | awk '{print $1}'

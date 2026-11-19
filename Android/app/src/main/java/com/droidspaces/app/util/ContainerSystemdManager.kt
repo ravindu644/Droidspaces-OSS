@@ -19,30 +19,31 @@ object ContainerSystemdManager : ContainerInitManager("chksystemd.sh", "command 
     private val STATIC_LIKE_STATES = setOf("static", "generated", "transient", "alias")
 
     suspend fun getAllServices(containerName: String): List<ServiceInfo> = coroutineScope {
-        val (running, enabled, disabled, masked, static) = listOf("--running", "--enabled", "--disabled", "--masked", "--static")
+        val (running, unitFiles) = listOf("--running", "--all")
             .map { async { runScript(containerName, it) } }.awaitAll()
             .map { (ok, lines) -> if (ok) pairs(lines) else emptyMap() }
-        val all = mutableMapOf<String, ServiceInfo>()
-        enabled.keys.forEach { all[it] = service(it, running[it] ?: "", enabled = true, running = it in running) }
-        static.keys.forEach { all[it] = service(it, running[it] ?: "", enabled = false, running = it in running, static = true) }
-        disabled.keys.forEach { all[it] = service(it, running[it] ?: "", enabled = false, running = it in running) }
-        masked.keys.forEach { all[it] = service(it, "", enabled = false, running = false, masked = true) }
-        // `list-unit-files` leaves out units systemd manages itself: enabled-runtime units
-        // (console-getty, from the getty generator) and template instances (user@0.service;
-        // only user@.service is listed). Ask those directly, or every boot calls them abnormal.
-        (running.keys - all.keys).forEach { name ->
-            val state = unitFileState(containerName, name) ?: return@forEach
-            when {
-                state == "masked" || state == "masked-runtime" ->
-                    all[name] = service(name, "", enabled = false, running = false, masked = true)
-                state == "enabled" || state == "enabled-runtime" ->
-                    all[name] = service(name, running[name] ?: "", enabled = true, running = true)
-                state in STATIC_LIKE_STATES ->
-                    all[name] = service(name, running[name] ?: "", enabled = false, running = true, static = true)
-            }
+        val states = unitFiles.toMutableMap()
+        // The full file list covers stopped units too; running template instances may be absent.
+        (running.keys - states.keys).forEach { name ->
+            states[name] = unitFileState(containerName, name) ?: ""
         }
-        running.forEach { (name, desc) -> all.getOrPut(name) { service(name, desc, enabled = false, running = true) } }
-        all.values.sortedBy { it.name }
+        states.map { (name, state) ->
+            val info = service(
+                name, running[name] ?: "",
+                enabled = state == "enabled" || state == "enabled-runtime",
+                running = name in running,
+                masked = state == "masked" || state == "masked-runtime",
+                static = state in STATIC_LIKE_STATES,
+            )
+            when (state) {
+                // A link makes the unit available, not enabled; Disable would remove the link.
+                "linked", "linked-runtime" -> info.copy(status = ServiceStatus.LINKED)
+                "indirect" -> info.copy(status = ServiceStatus.INDIRECT)
+                "enabled", "enabled-runtime", "disabled", "masked", "masked-runtime" -> info
+                in STATIC_LIKE_STATES -> info
+                else -> info.copy(status = ServiceStatus.UNKNOWN)
+            }
+        }.sortedBy { it.name }
     }
 
     /** A unit's UnitFileState, or null when the name is unsafe or systemctl cannot answer. */

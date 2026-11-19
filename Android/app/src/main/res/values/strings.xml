@@ -463,6 +463,10 @@
     <string name="enabled_legend">Enabled</string>
     <string name="disabled_legend">Disabled</string>
     <string name="static_legend">Static</string>
+    <string name="linked_legend">Linked</string>
+    <string name="indirect_legend">Indirect</string>
+    <string name="no_linked_services">No linked services</string>
+    <string name="no_indirect_services">No indirect services</string>
     <string name="abnormal_legend">Abnormal</string>
     <string name="unknown_legend">Unknown</string>
     <string name="masked_legend">Masked</string>

@@ -321,6 +321,7 @@ fun statusColorFor(status: ServiceStatus): Color = when (status) {
     ServiceStatus.ABNORMAL -> Color(0xFFFF7043)
     ServiceStatus.STATIC -> Color(0xFF607D8B)
     ServiceStatus.MASKED -> MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
+    ServiceStatus.LINKED, ServiceStatus.INDIRECT -> MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
     ServiceStatus.UNKNOWN -> Color(0xFF90A4AE)
 }
 
@@ -331,6 +332,8 @@ private fun statusLabelRes(status: ServiceStatus): Int = when (status) {
     ServiceStatus.ABNORMAL -> R.string.abnormal_legend
     ServiceStatus.STATIC -> R.string.static_legend
     ServiceStatus.MASKED -> R.string.masked_legend
+    ServiceStatus.LINKED -> R.string.linked_legend
+    ServiceStatus.INDIRECT -> R.string.indirect_legend
     ServiceStatus.UNKNOWN -> R.string.unknown_legend
 }
 
@@ -427,7 +430,8 @@ private fun InitServiceCard(
                                 (if (row.isRunning) MaterialTheme.colorScheme.errorContainer else MaterialTheme.colorScheme.primaryContainer).copy(alpha = 0.4f),
                                 Modifier.weight(1f)
                             ) { onAction(label, row.startStop) }
-                            if (!row.isStatic) {
+                            // Indirect can describe a bare template without usable install rules.
+                            if (!row.isStatic && row.status != ServiceStatus.INDIRECT) {
                                 val toggle = context.getString(if (row.isEnabled) R.string.disable_service else R.string.enable_service)
                                 PillButton(if (row.isEnabled) Icons.Default.Block else Icons.Default.CheckCircle, toggle, null, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.05f), Modifier.weight(1f)) { onAction(toggle, row.enableDisable) }
                             }
