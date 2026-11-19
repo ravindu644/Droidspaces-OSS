@@ -419,19 +419,27 @@ private fun InitServiceCard(
                 ) {
                     Row(modifier = Modifier.fillMaxWidth().padding(4.dp), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                         val unmask = row.unmask
+                        // A bare template has no instance to start.
+                        val bareTemplate = row.name.endsWith("@.service")
                         if (row.isMasked && unmask != null) {
                             val label = context.getString(R.string.unmask)
                             PillButton(Icons.Default.LockOpen, label, MaterialTheme.colorScheme.primary, MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f), Modifier.weight(1f)) { onAction(label, unmask) }
                         } else {
-                            val label = context.getString(if (row.isRunning) R.string.stop else R.string.start)
-                            PillButton(
-                                if (row.isRunning) Icons.Default.Stop else Icons.Default.PlayArrow, label,
-                                if (row.isRunning) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary,
-                                (if (row.isRunning) MaterialTheme.colorScheme.errorContainer else MaterialTheme.colorScheme.primaryContainer).copy(alpha = 0.4f),
-                                Modifier.weight(1f)
-                            ) { onAction(label, row.startStop) }
-                            // Indirect can describe a bare template without usable install rules.
-                            if (!row.isStatic && row.status != ServiceStatus.INDIRECT) {
+                            if (!bareTemplate) {
+                                val label = context.getString(if (row.isRunning) R.string.stop else R.string.start)
+                                PillButton(
+                                    if (row.isRunning) Icons.Default.Stop else Icons.Default.PlayArrow, label,
+                                    if (row.isRunning) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary,
+                                    (if (row.isRunning) MaterialTheme.colorScheme.errorContainer else MaterialTheme.colorScheme.primaryContainer).copy(alpha = 0.4f),
+                                    Modifier.weight(1f)
+                                ) { onAction(label, row.startStop) }
+                            }
+                            // Indirect can describe a bare template without usable install rules,
+                            // and an Unknown state has no installation record to act on.
+                            if (!row.isStatic &&
+                                row.status != ServiceStatus.INDIRECT &&
+                                row.status != ServiceStatus.UNKNOWN
+                            ) {
                                 val toggle = context.getString(if (row.isEnabled) R.string.disable_service else R.string.enable_service)
                                 PillButton(if (row.isEnabled) Icons.Default.Block else Icons.Default.CheckCircle, toggle, null, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.05f), Modifier.weight(1f)) { onAction(toggle, row.enableDisable) }
                             }
