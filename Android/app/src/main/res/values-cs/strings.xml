@@ -690,4 +690,6 @@
     <string name="runit_services">Služby runit</string>
     <string name="runit">runit</string>
     <string name="toggle_run_at_boot">Přepnout spouštění při startu</string>
+    <string name="termux_x11_option">Termux:X11</string>
+    <string name="launch_x11_description">Zobrazit plochu X11 v aplikaci Termux:X11</string>
 </resources>

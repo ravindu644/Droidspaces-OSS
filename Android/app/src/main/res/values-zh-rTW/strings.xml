@@ -676,4 +676,6 @@
     <string name="runit_services">Runit 服務</string>
     <string name="runit">runit</string>
     <string name="toggle_run_at_boot">切換 run-at-boot</string>
+    <string name="termux_x11_option">Termux:X11</string>
+    <string name="launch_x11_description">在Termux:X11 app中顯示X11桌面</string>
 </resources>
