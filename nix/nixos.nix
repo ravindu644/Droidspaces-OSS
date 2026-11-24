@@ -44,6 +44,7 @@
       # Minimal configuration that doesn't cause systemd degradation
       working-droidspaces-rootfs-minimal = {
         modulesPath,
+        options,
         pkgs,
         ...
       }: {
@@ -109,16 +110,29 @@
           HandlePowerKeyLongPressHibernate = "ignore";
         };
 
-        # Journald configuration (skip Audit, KMsg, etc)
-        services.journald.settings.Journal = {
-          ReadKMsg="no";
-          Audit="no";
-          Storage="volatile";
-          SystemMaxUse="50M";
-          RuntimeMaxUse="10M";
-          MaxRetentionSec="7day";
-          MaxLevelStore="info";
-        };
+        # The pinned tarballs use the older journald options. Downstream
+        # imports on newer nixpkgs require the structured settings instead.
+        services.journald = let
+          extraSettings = {
+            ReadKMsg = "no";
+            SystemMaxUse = "50M";
+            RuntimeMaxUse = "10M";
+            MaxRetentionSec = "7day";
+            MaxLevelStore = "info";
+          };
+        in
+          if options.services.journald ? settings
+          then {
+            settings.Journal = extraSettings // {
+              Storage = "volatile";
+              Audit = "no";
+            };
+          }
+          else {
+            storage = "volatile";
+            audit = false;
+            extraConfig = lib.generators.toKeyValue {} extraSettings;
+          };
 
         services.logrotate.settings.header.maxsize = "50M";
 
