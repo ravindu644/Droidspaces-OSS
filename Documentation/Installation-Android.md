@@ -16,7 +16,7 @@ You need two things.
 
 **Root.** KernelSU is the recommended root method. Magisk and APatch work as well. Their root shells carry a seccomp filter that blocks what a container runtime needs, which is why the backend runs as a daemon started at boot rather than from the shell. That is the default, and the reboot the app asks for after installing is all it takes.
 
-**A kernel with container support.** Most stock kernels are missing options that Droidspaces needs, especially PID and IPC namespaces. The [kernel configuration guide](Kernel-Configuration.md) lists them and explains how to build a kernel with them. If you would rather not build one, the [community-supported devices](community-supported-devices.md) page links to kernels other users have built. The app tells you on first launch whether your kernel is supported.
+**A kernel with container support.** Most stock kernels are missing options that Droidspaces needs, especially PID and IPC namespaces. The [kernel configuration guide](Kernel-Configuration.md) lists them and explains how to build a kernel with them. If you would rather not build one, the [community-supported devices](community-supported-devices.md) page links to kernels other users have built. If you cannot flash a kernel at all, read [this section](Kernel-Configuration.md#if-you-cannot-flash-a-kernel) first. The app tells you on first launch whether your kernel is supported.
 
 > [!CAUTION]
 >

@@ -270,6 +270,25 @@ CONFIG_TMPFS_XATTR=y
 
 没有这两个选项，其他一切仍然可用。`--cpus` 和 `--pids-limit` 会被跳过并给出警告，App 会把这两个开关置灰。内存限制只需要 `CONFIG_MEMCG`，GKI 已经具备。要让受限容器不进入 swap，还需要 `CONFIG_MEMCG_SWAP`，并在 5.8 之前的内核命令行上加上 `swapaccount=1`（除非设置了 `CONFIG_MEMCG_SWAP_ENABLED`）；否则容器仍可能越过限制溢入 swap，启动日志会说明这一点，App 也会把 **允许交换空间（swap）** 置灰。
 
+## 如果你无法刷写内核
+
+引导加载程序已锁定，或只有临时 root 时，无法刷写内核。下面这些第三方项目改为在原厂 GKI 内核上加载内核模块，模拟缺失的 PID 和 IPC 命名空间：
+
+| 项目 | 适用于 |
+|------|--------|
+| [lkm4ctr](https://github.com/cyanmint/lkm4ctr) | GKI 5.10 到 6.18 |
+| [droid_lkm](https://github.com/Dere3046/_patchHarmony) | GKI 5.10 到 6.18 |
+| [Droidspaces-LKM](https://github.com/Shikochin/Droidspaces-LKM) | 6.12 内核的 PLZ110，另有适用于 GKI 5.10 到 6.18 的实验版本 |
+| [droidspaces-6.12-pmb110](https://github.com/ai-luo2006/droidspaces-6.12-pmb110) | 6.12 内核的一加 PMB110 |
+
+> [!WARNING]
+>
+> **Droidspaces 不支持这些模块。** 我们不接受来自使用这类模块的设备的错误报告，也不会为了让某个模块能用而修复或改动 Droidspaces。这完全由模块的开发者负责，遇到问题请向他们反馈。
+>
+> Droidspaces 团队没有审查过这些项目。它们会改动正在运行的内核：用错模块可能导致手机死机或重启，而且即使所有检查都通过，模拟的命名空间也可能无法像真正的命名空间那样隔离。使用风险自负。
+
+请使用为你的确切内核版本构建的模块。模块在重启后不会保持加载，每次都需要重新加载。
+
 ## 检查会看什么
 
 `droidspaces check` 和 App 的"要求"页面探测的是正在运行的内核，而不是它的配置。每项探测需要什么，以及缺少它时会失去什么：

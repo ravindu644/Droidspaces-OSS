@@ -266,6 +266,25 @@ Turn them on only if you can rebuild every kernel module on the device from the 
 
 Without these two options everything else works. `--cpus` and `--pids-limit` are skipped with a warning and the app greys out the two toggles. Memory limits need only `CONFIG_MEMCG`, which GKI already has. Keeping a limited container out of swap also needs `CONFIG_MEMCG_SWAP`, plus `swapaccount=1` on the kernel command line before 5.8 unless `CONFIG_MEMCG_SWAP_ENABLED` is set; without it the container can still spill into swap past its limit, the start log says so, and the app greys out **Allow swap**.
 
+## If you cannot flash a kernel
+
+On a locked bootloader, or with only temporary root, flashing a kernel is not an option. These third-party projects load kernel modules that emulate the missing PID and IPC namespaces on a stock GKI kernel instead:
+
+| Project | Made for |
+|---------|----------|
+| [lkm4ctr](https://github.com/cyanmint/lkm4ctr) | GKI 5.10 to 6.18 |
+| [droid_lkm](https://github.com/Dere3046/_patchHarmony) | GKI 5.10 to 6.18 |
+| [Droidspaces-LKM](https://github.com/Shikochin/Droidspaces-LKM) | PLZ110 on 6.12, with experimental builds for GKI 5.10 to 6.18 |
+| [droidspaces-6.12-pmb110](https://github.com/ai-luo2006/droidspaces-6.12-pmb110) | OnePlus PMB110 on 6.12 |
+
+> [!WARNING]
+>
+> **Droidspaces does not support these modules.** No bug reports are accepted from a device that uses one, and Droidspaces will not be fixed or changed to make one work. That is up to the developers of the module, so report problems to them.
+>
+> The Droidspaces team has not reviewed these projects. They change a running kernel: the wrong module can freeze or reboot the phone, and an emulated namespace may not isolate like a real one even when every check passes. Use them at your own risk.
+
+Use a build made for your exact kernel version. Modules do not stay loaded across a reboot, so they have to be loaded again each time.
+
 ## What the check looks for
 
 `droidspaces check`, and the app's Requirements screen, probe the running kernel rather than its config. What each probe needs, and what you lose without it:
