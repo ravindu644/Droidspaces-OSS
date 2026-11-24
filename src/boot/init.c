@@ -210,10 +210,18 @@ int internal_boot(struct ds_config *cfg) {
     goto boot_fail;
   }
 
+  /* 8b. Per-feature hardware toggles (--dev-input, --dev-usb, ...). Needs
+   * the host /dev, so before pivot_root. --hw-access already has it all. */
+  if (!cfg->hw_access)
+    ds_hw_toggles_setup_dev("./dev", cfg);
+
   /* 9. Log hardware access mode (BEFORE pivot_root) */
   if (!cfg->reboot_cycle) {
     if (cfg->hw_access)
       ds_log("Setting up hardware access...");
+    else if (ds_hw_toggles_active(cfg))
+      ds_log("Setting up selective hardware access%s...",
+             cfg->gpu_mode ? " (+GPU)" : "");
     else if (cfg->gpu_mode)
       ds_log("Setting up GPU-only access...");
     else
@@ -306,6 +314,11 @@ int internal_boot(struct ds_config *cfg) {
               "(networking may be limited)");
     }
   }
+
+  /* Per-feature toggles: pin just the /sys paths they need as RW, before the
+   * remount below (pins survive it, like the net pin above). */
+  if (!cfg->hw_access)
+    ds_hw_toggles_setup_sys(cfg);
 
   /* Remount /sys as RO for systemd's benefit, but ONLY if we are in
    * foreground mode + systemd (where we used pinned sub-mounts) or if
@@ -507,7 +520,8 @@ int internal_boot(struct ds_config *cfg) {
   ds_seccomp_mount_api_shim(cfg);
 
   ds_apply_capability_hardening(cfg->hw_access, cfg->privileged_mask,
-                                cfg->sandboxing_allowed);
+                                cfg->sandboxing_allowed,
+                                cfg->dev_block[0] != '\0');
 
   /* 24. Redirect standard I/O to /dev/console */
   int console_fd =

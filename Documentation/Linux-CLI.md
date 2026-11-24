@@ -76,6 +76,11 @@ Each flag that configures the container is saved in its config file on `start`, 
 | `-H`, `--hw-access` | | `enable_hw_access` |
 | `--allow-vts` | with `--hw-access`, leave the host's `tty1` to `tty6` visible | `allow_vts` |
 | `--gpu` | | `enable_gpu_mode` |
+| `--dev-input` | `/dev/input`, `/dev/uinput` | `enable_dev_input` |
+| `--dev-usb` | `/dev/bus/usb`, `ttyUSB*`, `ttyACM*`, `hidraw*` | `enable_dev_usb` |
+| `--dev-sensors` | IIO / sensor nodes | `enable_dev_sensors` |
+| `--dev-block` | comma separated block device paths, `/dev/sda1,/dev/sdb2` | `dev_block` |
+| `--firmware` | add the rootfs `/lib/firmware` to the kernel search path | `enable_firmware` |
 | `-X`, `--x11` | | `enable_x11` |
 | `--tx11-flags` | extra arguments for Termux:X11 | `tx11_extra_flags` |
 | `--virgl` | Android only | `enable_virgl` |

@@ -76,6 +76,24 @@ The six host virtual terminals, `tty1` to `tty6`, stay hidden even with hardware
 
 `--gpu`, key `enable_gpu_mode`. The middle ground. The container keeps its private `/dev` and only the GPU render nodes are mirrored into it, so programs can use the GPU and nothing else on the host is exposed. Mirrored nodes are owned by root and a `droidspaces-gpu` group; add other users to that group with `usermod`. Hardware Access turns this on as well.
 
+### Selective hardware access
+
+Hardware Access is all or nothing. These toggles split it, so a container gets only what it needs. Each one brings its own `/dev` nodes and its own `/sys` write access, there is no separate `/sys` switch. `/sys` is readable in every mode; a toggle only makes the paths it needs writable. They do nothing when Hardware Access is on, which already covers all of them.
+
+| Toggle | Config key | What it gives |
+|--------|------------|---------------|
+| `--dev-input` | `enable_dev_input` | `/dev/input` (bound live, so hotplug works) and `/dev/uinput`; `/sys/class/input` and the input devices behind it writable |
+| `--dev-usb` | `enable_dev_usb` | `/dev/bus/usb` (bound live), `ttyUSB*`, `ttyACM*`, `hidraw*`; `/sys/bus/usb` and the USB root hubs (so everything plugged below them) writable |
+| `--dev-sensors` | `enable_dev_sensors` | `iio:device*` and `/dev/sensors`; `/sys/bus/iio` writable. Device dependent: Android sensors usually go through the HAL over binder, not `/dev`, so the log says when nothing was found |
+| `--dev-block=LIST` | `dev_block` | Only the listed block devices, as comma separated `/dev/...` paths, plus `CAP_SYS_RAWIO`. `/dev/block/mmcblk1p1` appears as `/dev/mmcblk1p1`. The disk's `/sys` entry is writable |
+| `--firmware` | `enable_firmware` | Adds the rootfs `/lib/firmware` to the host kernel's firmware search path. Android kernels only, and the path is host wide while the container runs |
+
+Notes:
+
+- Copied nodes (block devices, `ttyUSB*`, sensors) are owned by root and the `droidspaces-gpu` group, like the GPU nodes. The live-bound directories (`/dev/input`, `/dev/bus/usb`) keep the host's owner and mode.
+- Only `/dev` and `/sys` entries present at boot are covered, except what appears below a pinned directory. A USB device plugged in after start works through the bound `/dev/bus/usb`; a new block device does not appear.
+- `--dev-block` is the dangerous one: the listed disks are writable raw devices. List a single partition, not the whole disk.
+
 Known GPU families: Mesa DRI render nodes on Intel, AMD and most ARM SoCs, Qualcomm Adreno (`kgsl`), ARM Mali, NVIDIA, PowerVR and the DMA heaps these drivers need.
 
 ### Configure Termux:X11

@@ -150,6 +150,11 @@ const struct option long_options[] = {
     {"privileged", required_argument, 0, 264},
     {"nat-ip", required_argument, 0, 262},
     {"gpu", no_argument, 0, 263},
+    {"dev-input", no_argument, 0, 285},
+    {"dev-usb", no_argument, 0, 286},
+    {"dev-sensors", no_argument, 0, 287},
+    {"firmware", no_argument, 0, 288},
+    {"dev-block", required_argument, 0, 289},
     {"virgl", no_argument, 0, 270},
     {"virgl-flags", required_argument, 0, 272},
     {"pulse-audio", no_argument, 0, 273},
@@ -415,6 +420,29 @@ int ds_apply_cli_overrides(int argc, char **argv, struct ds_config *cfg,
        * container's isolated /dev.  Safe to combine with --hw-access (which
        * already does full GPU wiring). */
       cfg->gpu_mode = 1;
+      break;
+    case 285:
+      cfg->dev_input = 1;
+      break;
+    case 286:
+      cfg->dev_usb = 1;
+      break;
+    case 287:
+      cfg->dev_sensors = 1;
+      break;
+    case 288:
+      cfg->hw_firmware = 1;
+      break;
+    case 289:
+      /* --dev-block=/dev/sda1,/dev/block/mmcblk1p1: only these disks. An
+       * empty value clears the list. */
+      if (ds_dev_block_validate(optarg) < 0) {
+        ds_error("--dev-block: expected comma separated /dev/... paths "
+                 "(max %d chars): %s",
+                 (int)sizeof(cfg->dev_block) - 1, optarg);
+        return -1;
+      }
+      safe_strncpy(cfg->dev_block, optarg, sizeof(cfg->dev_block));
       break;
     case 265:
       /* --json: JSON output */

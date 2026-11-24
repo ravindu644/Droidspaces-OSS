@@ -10,7 +10,7 @@
 
 /* caps.c */
 void ds_apply_capability_hardening(int hw_access, int privileged_mask,
-                                   int sandboxing);
+                                   int sandboxing, int keep_rawio);
 
 /* jail.c */
 int ds_apply_jail_mask(int hw_access, int privileged_mask, int sandboxing);

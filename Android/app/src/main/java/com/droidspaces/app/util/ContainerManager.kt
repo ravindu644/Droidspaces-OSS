@@ -33,6 +33,11 @@ data class ContainerInfo(
     val enableAndroidStorage: Boolean = false,
     val enableHwAccess: Boolean = false,
     val enableGpuMode: Boolean = false,
+    val enableDevInput: Boolean = false,
+    val enableDevUsb: Boolean = false,
+    val enableDevSensors: Boolean = false,
+    val enableFirmware: Boolean = false,
+    val devBlock: String = "",
     val enableTermuxX11: Boolean = false,
     val tx11ExtraFlags: String = "",
     val enableVirgl: Boolean = false,
@@ -86,6 +91,11 @@ data class ContainerInfo(
         appendLine("enable_android_storage=${if (enableAndroidStorage) "1" else "0"}")
         appendLine("enable_hw_access=${if (enableHwAccess) "1" else "0"}")
         appendLine("enable_gpu_mode=${if (enableGpuMode) "1" else "0"}")
+        appendLine("enable_dev_input=${if (enableDevInput) "1" else "0"}")
+        appendLine("enable_dev_usb=${if (enableDevUsb) "1" else "0"}")
+        appendLine("enable_dev_sensors=${if (enableDevSensors) "1" else "0"}")
+        appendLine("enable_firmware=${if (enableFirmware) "1" else "0"}")
+        if (devBlock.isNotBlank()) appendLine("dev_block=$devBlock")
         appendLine("enable_x11=${if (enableTermuxX11) "1" else "0"}")
         if (tx11ExtraFlags.isNotBlank()) appendLine("tx11_extra_flags=$tx11ExtraFlags")
         appendLine("enable_virgl=${if (enableVirgl) "1" else "0"}")
@@ -379,6 +389,11 @@ object ContainerManager {
                 enableAndroidStorage = configMap["enable_android_storage"] == "1",
                 enableHwAccess = configMap["enable_hw_access"] == "1",
                 enableGpuMode = configMap["enable_gpu_mode"] == "1",
+                enableDevInput = configMap["enable_dev_input"] == "1",
+                enableDevUsb = configMap["enable_dev_usb"] == "1",
+                enableDevSensors = configMap["enable_dev_sensors"] == "1",
+                enableFirmware = configMap["enable_firmware"] == "1",
+                devBlock = configMap["dev_block"] ?: "",
                 enableTermuxX11 = (configMap["enable_x11"] ?: configMap["enable_termux_x11"]) == "1",
                 tx11ExtraFlags = configMap["tx11_extra_flags"] ?: "",
                 enableVirgl = configMap["enable_virgl"] == "1",

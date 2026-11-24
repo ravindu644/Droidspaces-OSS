@@ -30,11 +30,12 @@ void cleanup_container_resources(struct ds_config *cfg, pid_t pid,
     }
   }
 
-  /* 1. Cleanup firmware path (hw_access mode only; skip on force-cleanup
+  /* 1. Cleanup firmware path (hw_access or --firmware only; skip on force-cleanup
    * since accessing a zombie-held rootfs can hang).
    * Use cfg->rootfs_path directly - it is already fully resolved and valid for
    * both dir-based and img-based modes at this point. */
-  if (!force_cleanup && cfg->hw_access && cfg->rootfs_path[0]) {
+  if (!force_cleanup && (cfg->hw_access || cfg->hw_firmware) &&
+      cfg->rootfs_path[0]) {
     char fw_path[PATH_MAX + 16];
     snprintf(fw_path, sizeof(fw_path), "%s/lib/firmware", cfg->rootfs_path);
     firmware_path_remove(fw_path);

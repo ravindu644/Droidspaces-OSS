@@ -189,6 +189,13 @@ fun ContainerCard(
                     if (container.enableAndroidStorage) add(context.getString(R.string.storage_option))
                     if (container.enableHwAccess) add(context.getString(R.string.hw_option))
                     if (container.enableGpuMode || container.enableHwAccess) add(context.getString(R.string.gpu_option))
+                    if (!container.enableHwAccess) {
+                        if (container.enableDevInput) add(context.getString(R.string.dev_input_option))
+                        if (container.enableDevUsb) add(context.getString(R.string.dev_usb_option))
+                        if (container.enableDevSensors) add(context.getString(R.string.dev_sensors_option))
+                        if (container.devBlock.isNotBlank()) add(context.getString(R.string.dev_block_option))
+                        if (container.enableFirmware) add(context.getString(R.string.firmware_option))
+                    }
                     if (container.enableTermuxX11) add(context.getString(R.string.x11_option))
                     if (container.enableAnland) add(context.getString(R.string.anland_option))
                     if (container.enableVirgl) add(context.getString(R.string.virgl_option))

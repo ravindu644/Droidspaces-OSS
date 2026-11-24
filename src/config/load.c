@@ -137,6 +137,18 @@ int ds_config_load_file(FILE *f, struct ds_config *cfg) {
       cfg->hw_access = parse_bool(val);
     } else if (strcmp(key, "enable_gpu_mode") == 0) {
       cfg->gpu_mode = parse_bool(val);
+    } else if (strcmp(key, "enable_dev_input") == 0) {
+      cfg->dev_input = parse_bool(val);
+    } else if (strcmp(key, "enable_dev_usb") == 0) {
+      cfg->dev_usb = parse_bool(val);
+    } else if (strcmp(key, "enable_dev_sensors") == 0) {
+      cfg->dev_sensors = parse_bool(val);
+    } else if (strcmp(key, "enable_firmware") == 0) {
+      cfg->hw_firmware = parse_bool(val);
+    } else if (strcmp(key, "dev_block") == 0) {
+      /* A bad list is dropped, never half applied. */
+      if (ds_dev_block_validate(val) == 0)
+        safe_strncpy(cfg->dev_block, val, sizeof(cfg->dev_block));
     } else if (strcmp(key, "enable_x11") == 0 ||
                strcmp(key, "enable_termux_x11") == 0) { /* old key */
       cfg->x11 = parse_bool(val);

@@ -324,6 +324,17 @@ static void print_page(int page, const char *bin) {
              bin);
     p_printf("  (Maps ONLY GPU nodes into an isolated tmpfs /dev)\n\n");
 
+    p_printf("%sSelective hardware (instead of --hw-access):%s\n", bold, reset);
+    p_printf("  --dev-input               /dev/input/*, /dev/uinput\n");
+    p_printf("  --dev-usb                 /dev/bus/usb, ttyUSB*, ttyACM*, "
+             "hidraw*\n");
+    p_printf("  --dev-sensors             IIO / sensor nodes\n");
+    p_printf("  --dev-block=/dev/sda1,..  Only the listed disks (keeps "
+             "CAP_SYS_RAWIO)\n");
+    p_printf("  --firmware                Host firmware search path\n");
+    p_printf("  (Each toggle brings its own /sys write access. Ignored with "
+             "--hw-access)\n\n");
+
     p_printf("%sX11 Display (--x11):%s\n", bold, reset);
     p_printf("  %s --name=mycontainer --rootfs=/path/to/rootfs --x11 start\n",
              bin);

@@ -16,7 +16,7 @@
  * never be fully cleared.  We therefore never attempt a full clear; removal
  * is best-effort and skipped when it would leave an empty string.
  *
- * Only called when --hw-access is active AND /lib/firmware exists in the
+ * Only called when --hw-access or --firmware is active AND /lib/firmware exists in the
  * rootfs - both conditions are enforced at every call site.
  * Not supported on desktop Linux - both functions are no-ops there. */
 

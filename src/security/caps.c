@@ -18,9 +18,11 @@
  * In Standard Mode (hw_access=0), we drop several sensitive capabilities.
  * In Hardware Mode (hw_access=1), we preserve most to ensure full
  * low-level hardware access (USB, Serial, Bluetooth, Flashing).
+ * keep_rawio (--dev-block) keeps only CAP_SYS_RAWIO in Standard Mode, for raw
+ * block device ioctls.
  */
 void ds_apply_capability_hardening(int hw_access, int privileged_mask,
-                                   int sandboxing) {
+                                   int sandboxing, int keep_rawio) {
   if (privileged_mask & DS_PRIV_NOCAPS) {
     ds_log("[SEC] --privileged=nocaps: skipping capability drops.");
     return;
@@ -72,6 +74,8 @@ void ds_apply_capability_hardening(int hw_access, int privileged_mask,
      * switched uid, and root only gets ptrace-read on another uid's process
      * through this cap. */
     if (sandboxing && caps_to_drop[i] == CAP_SYS_PTRACE)
+      continue;
+    if (keep_rawio && caps_to_drop[i] == CAP_SYS_RAWIO)
       continue;
     if (prctl(PR_CAPBSET_DROP, caps_to_drop[i], 0, 0, 0) < 0) {
       if (errno != EINVAL) {

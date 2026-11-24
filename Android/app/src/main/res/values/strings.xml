@@ -166,6 +166,11 @@
     <string name="storage_option">Storage</string>
     <string name="hw_option">HW</string>
     <string name="gpu_option">GPU</string>
+    <string name="dev_input_option">Input</string>
+    <string name="dev_usb_option">USB</string>
+    <string name="dev_sensors_option">Sensors</string>
+    <string name="dev_block_option">Disk</string>
+    <string name="firmware_option">Firmware</string>
     <string name="x11_option">X11</string>
     <string name="virgl_option">VirGL</string>
     <string name="pulseaudio_option">PulseAudio</string>
@@ -217,6 +222,17 @@
     <string name="hardware_access_description">Full hardware access</string>
     <string name="gpu_access">GPU Access</string>
     <string name="gpu_access_description">Mirror GPU nodes into isolated /dev (no full hardware passthrough)</string>
+    <string name="dev_input_access">Input Devices</string>
+    <string name="dev_input_access_description">Expose /dev/input and /dev/uinput only</string>
+    <string name="dev_usb_access">USB Devices</string>
+    <string name="dev_usb_access_description">Expose USB, serial adapters and hidraw only</string>
+    <string name="dev_sensors_access">Sensors</string>
+    <string name="dev_sensors_access_description">Expose IIO / sensor nodes only (device dependent)</string>
+    <string name="firmware_access">Firmware Path</string>
+    <string name="firmware_access_description">Add the rootfs /lib/firmware to the kernel search path</string>
+    <string name="dev_block_label">Block devices</string>
+    <string name="dev_block_placeholder">/dev/sda1,/dev/block/mmcblk1p1</string>
+    <string name="dev_block_hint">Only these disks are exposed (raw access, can destroy data). Empty = none.</string>
     <string name="termux_x11">Configure Termux:X11</string>
     <string name="termux_x11_description">Enable X11 socket mounting for Termux:X11</string>
     <string name="enable_pulseaudio">Configure PulseAudio</string>

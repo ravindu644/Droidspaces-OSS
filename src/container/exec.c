@@ -166,7 +166,8 @@ int enter_rootfs(struct ds_config *cfg, const char *user) {
     ds_log_silent = 1;
     ds_seccomp_harden(cfg);
     ds_apply_capability_hardening(cfg->hw_access, cfg->privileged_mask,
-                                  cfg->sandboxing_allowed);
+                                  cfg->sandboxing_allowed,
+                                  cfg->dev_block[0] != '\0');
     ds_log_silent = 0;
 
     /* The intermediate, not the shell, owns the session and the terminal.
@@ -348,7 +349,8 @@ int run_in_rootfs(struct ds_config *cfg, char **argv, const char *as_user) {
     ds_log_silent = 1;
     ds_seccomp_harden(cfg);
     ds_apply_capability_hardening(cfg->hw_access, cfg->privileged_mask,
-                                  cfg->sandboxing_allowed);
+                                  cfg->sandboxing_allowed,
+                                  cfg->dev_block[0] != '\0');
     ds_log_silent = 0;
 
     pid_t cmd_pid = fork();

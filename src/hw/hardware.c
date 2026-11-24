@@ -102,8 +102,9 @@ int setup_hardware_access(struct ds_config *cfg) {
    *    hw_access: full hardware passthrough - always set up GPU groups.
    *    gpu_mode:  isolated tmpfs with GPU nodes mirrored in - also needs the
    *               unified droidspaces-gpu group so the container user can
-   *               actually open those nodes. */
-  if (cfg->hw_access || cfg->gpu_mode)
+   *               actually open those nodes.
+   *    toggles:   --dev-input/usb/sensors/block copies carry the same group. */
+  if (cfg->hw_access || cfg->gpu_mode || ds_hw_toggles_active(cfg))
     setup_gpu_groups();
 
   /* 2. Bridge the host X11 socket when --x11 is set */

@@ -38,6 +38,12 @@ static void ds_config_serialize_known(FILE *f, struct ds_config *cfg) {
   }
   fprintf(f, "enable_hw_access=%d\n", cfg->hw_access);
   fprintf(f, "enable_gpu_mode=%d\n", cfg->gpu_mode);
+  fprintf(f, "enable_dev_input=%d\n", cfg->dev_input);
+  fprintf(f, "enable_dev_usb=%d\n", cfg->dev_usb);
+  fprintf(f, "enable_dev_sensors=%d\n", cfg->dev_sensors);
+  fprintf(f, "enable_firmware=%d\n", cfg->hw_firmware);
+  if (cfg->dev_block[0])
+    fprintf(f, "dev_block=%s\n", cfg->dev_block);
   fprintf(f, "selinux_permissive=%d\n", cfg->selinux_permissive);
   fprintf(f, "allow_sandboxing=%d\n", cfg->sandboxing_allowed);
   fprintf(f, "allow_vts=%d\n", cfg->allow_vts);

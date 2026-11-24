@@ -93,6 +93,12 @@ struct ds_config {
   int foreground; /* --foreground */
   int hw_access;  /* --hw-access */
   int gpu_mode;   /* --gpu: mirror GPU nodes into isolated tmpfs /dev */
+  /* Per-feature split of --hw-access, each carries its own /dev and /sys */
+  int dev_input;        /* --dev-input: /dev/input and /dev/uinput */
+  int dev_usb;          /* --dev-usb: /dev/bus/usb, ttyUSB, ttyACM, hidraw */
+  int dev_sensors;      /* --dev-sensors: IIO / sensor nodes */
+  int hw_firmware;      /* --firmware: add rootfs /lib/firmware to the kernel */
+  char dev_block[1024]; /* --dev-block=PATH[,PATH...]: whitelisted disks */
   int x11; /* -X, --x11: bridge host X11 socket (launches Termux:X11 on Android)
             */
   char *tx11_extra_flags;  /* --tx11-flags "..." (heap, NULL if unset) */

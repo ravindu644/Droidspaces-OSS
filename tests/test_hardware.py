@@ -55,6 +55,58 @@ class HardwareAccess(DsTest):
         self.assertEqual(c.info()["hw_access"], "GPU")
         self.assertEqual(c.saved_config()["enable_gpu_mode"], "1")
 
+    def test_toggles_keep_the_private_dev(self):
+        # Features.md "Selective hardware access": the toggles work on the isolated tmpfs /dev
+        c = self.container("sel", "--dev-input", "--dev-usb", "--dev-sensors", "--firmware")
+        self.assertEqual(c.fstype("/dev"), "tmpfs")
+        self.assertNotEqual(dev_major(c, "/dev/tty1"), 4, "host VT must not be reachable")
+        d = c.info()
+        self.assertEqual(d["hw_access"], "none")
+        self.assertEqual((d["dev_input"], d["dev_usb"], d["dev_sensors"], d["firmware"]), (1, 1, 1, 1))
+        saved = c.saved_config()
+        for key in ("enable_dev_input", "enable_dev_usb", "enable_dev_sensors", "enable_firmware"):
+            self.assertEqual(saved[key], "1", key)
+        # None of these hands back a capability
+        self.assertEqual(int(c.sh("grep ^CapBnd /proc/self/status | cut -f2"), 16) >> 17 & 1, 0, "CAP_SYS_RAWIO")
+
+    def test_dev_input_binds_the_host_directory(self):
+        if not os.path.isdir("/dev/input"):
+            self.skipTest("host has no /dev/input")
+        c = self.container("input", "--dev-input")
+        self.assertEqual(c.sh("[ -d /dev/input ] && echo dir"), "dir")
+        self.assertEqual(sorted(c.sh("ls /dev/input").split()), sorted(os.listdir("/dev/input")))
+
+    def test_dev_usb_binds_the_host_directory(self):
+        if not os.path.isdir("/dev/bus/usb"):
+            self.skipTest("host has no /dev/bus/usb")
+        c = self.container("usb", "--dev-usb")
+        self.assertEqual(c.sh("[ -d /dev/bus/usb ] && echo dir"), "dir")
+        self.assertEqual(c.sh("[ -e /dev/dri ] || echo none"), "none", "USB must not open the GPU")
+
+    def test_dev_block_exposes_only_the_listed_disk(self):
+        disks = [n for n in sorted(glob.glob("/dev/loop[0-9]*")) if os.path.exists(n)]
+        if not disks:
+            self.skipTest("host has no /dev/loop* block device")
+        disk = disks[0]
+        other = [n for n in sorted(glob.glob("/dev/loop[0-9]*")) if n != disk]
+        c = self.container("blk", f"--dev-block={disk}")
+        base = os.path.basename(disk)
+        self.assertEqual(c.sh(f"[ -b /dev/{base} ] && echo blk"), "blk")
+        self.assertEqual(c.sh(f"stat -c '%G %a' /dev/{base}"), "droidspaces-gpu 660")
+        for n in other[:3]:
+            self.assertEqual(c.sh(f"[ -e /dev/{os.path.basename(n)} ] || echo none"), "none")
+        # Only this toggle keeps CAP_SYS_RAWIO
+        self.assertEqual(int(c.sh("grep ^CapBnd /proc/self/status | cut -f2"), 16) >> 17 & 1, 1, "CAP_SYS_RAWIO")
+        self.assertEqual(c.info()["dev_block"], disk)
+        self.assertEqual(c.saved_config()["dev_block"], disk)
+
+    def test_dev_block_rejects_bad_paths(self):
+        c = self.container("blkbad", start=False)
+        for bad in ("foo", "/etc/passwd", "/dev/../etc/passwd", "/dev/sda1,", "/dev/"):
+            p = c.start(f"--dev-block={bad}", expect=None)
+            self.assertIn("--dev-block: expected comma separated", p.stdout + p.stderr, bad)
+            self.assertIsNone(c.pid(), bad)
+
     def test_x11_socket_is_bridged(self):
         if not os.path.exists("/tmp/.X11-unix/X0"):
             self.skipTest("host has no X11 socket at /tmp/.X11-unix/X0")

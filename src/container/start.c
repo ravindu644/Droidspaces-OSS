@@ -286,11 +286,11 @@ int start_rootfs_locked(struct ds_config *cfg, int *lock_fd, int reuse_mount) {
 
   /* 4. Parent-side PTY allocation (LXC Model) */
 
-  /* Firmware path - hw_access mode only.
+  /* Firmware path - hw_access mode or --firmware only.
    * By this point cfg->rootfs_path is fully resolved and the
    * image is mounted if applicable.  firmware_path_add() internally checks
    * that /lib/firmware exists in the rootfs before touching the sysfs node. */
-  if (cfg->hw_access) {
+  if (cfg->hw_access || cfg->hw_firmware) {
     char fw_path[PATH_MAX + 16];
     snprintf(fw_path, sizeof(fw_path), "%s/lib/firmware", cfg->rootfs_path);
     firmware_path_add(fw_path);

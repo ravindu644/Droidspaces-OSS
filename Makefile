@@ -67,6 +67,7 @@ SRCS = $(SRC_DIR)/main.c \
        $(SRC_DIR)/virt/vproc.c \
        $(SRC_DIR)/hw/gpu.c \
        $(SRC_DIR)/hw/hardware.c \
+       $(SRC_DIR)/hw/toggles.c \
        $(SRC_DIR)/tty/pty.c \
        $(SRC_DIR)/tty/proxy.c \
        $(SRC_DIR)/tty/console.c \

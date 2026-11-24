@@ -208,6 +208,44 @@ fun ContainerConfigForm(
             onCheckedChange = { clearFocus(); onStateChange(state.copy(enableGpuMode = it)) }
         )
         GroupDivider()
+        // Selective hardware: each one brings only the /dev nodes and /sys write
+        // access it needs. Full Hardware Access already covers all of them.
+        SwitchItem(
+            icon = Icons.Default.Devices,
+            title = context.getString(R.string.dev_input_access),
+            summary = context.getString(R.string.dev_input_access_description),
+            checked = state.enableHwAccess || state.enableDevInput,
+            enabled = !state.enableHwAccess,
+            onCheckedChange = { clearFocus(); onStateChange(state.copy(enableDevInput = it)) }
+        )
+        GroupDivider()
+        SwitchItem(
+            icon = Icons.Default.Devices,
+            title = context.getString(R.string.dev_usb_access),
+            summary = context.getString(R.string.dev_usb_access_description),
+            checked = state.enableHwAccess || state.enableDevUsb,
+            enabled = !state.enableHwAccess,
+            onCheckedChange = { clearFocus(); onStateChange(state.copy(enableDevUsb = it)) }
+        )
+        GroupDivider()
+        SwitchItem(
+            icon = Icons.Default.Devices,
+            title = context.getString(R.string.dev_sensors_access),
+            summary = context.getString(R.string.dev_sensors_access_description),
+            checked = state.enableHwAccess || state.enableDevSensors,
+            enabled = !state.enableHwAccess,
+            onCheckedChange = { clearFocus(); onStateChange(state.copy(enableDevSensors = it)) }
+        )
+        GroupDivider()
+        SwitchItem(
+            icon = Icons.Default.Devices,
+            title = context.getString(R.string.firmware_access),
+            summary = context.getString(R.string.firmware_access_description),
+            checked = state.enableHwAccess || state.enableFirmware,
+            enabled = !state.enableHwAccess,
+            onCheckedChange = { clearFocus(); onStateChange(state.copy(enableFirmware = it)) }
+        )
+        GroupDivider()
         SwitchItem(
             painter = painterResource(R.drawable.ic_x11),
             title = context.getString(R.string.termux_x11),
@@ -492,6 +530,20 @@ fun ContainerConfigForm(
                     leadingIcon = Icons.Default.Terminal,
                     keyboardType = KeyboardType.Uri
                 )
+                AnimatedVisibility(visible = !state.enableHwAccess) {
+                    // Whitelist of raw disks. Comma separated /dev paths; empty = none.
+                    val blockError = state.devBlock.isNotEmpty() && !Regex("^/dev/[^,\\s]+(,/dev/[^,\\s]+)*$").matches(state.devBlock)
+                    MonoField(
+                        value = state.devBlock,
+                        onValueChange = { v -> onStateChange(state.copy(devBlock = v.filter { !it.isWhitespace() })) },
+                        label = context.getString(R.string.dev_block_label),
+                        placeholder = context.getString(R.string.dev_block_placeholder),
+                        supporting = context.getString(R.string.dev_block_hint),
+                        isError = blockError,
+                        leadingIcon = Icons.Default.Devices,
+                        keyboardType = KeyboardType.Uri
+                    )
+                }
                 AnimatedVisibility(visible = state.enableTermuxX11) {
                     MonoField(
                         value = state.tx11ExtraFlags,

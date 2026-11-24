@@ -227,9 +227,10 @@ int stop_rootfs_locked(struct ds_config *caller_cfg, int skip_unmount,
     }
   }
 
-  /* 4. Firmware cleanup (hw_access mode only).
+  /* 4. Firmware cleanup (hw_access or --firmware only).
    * Skip when unkillable - accessing zombie-held rootfs can hang. */
-  if (cfg->img_mount_point[0] && !unkillable && cfg->hw_access) {
+  if (cfg->img_mount_point[0] && !unkillable &&
+      (cfg->hw_access || cfg->hw_firmware)) {
     char fw_path[PATH_MAX + 16];
     snprintf(fw_path, sizeof(fw_path), "%s/lib/firmware", cfg->img_mount_point);
     firmware_path_remove(fw_path);

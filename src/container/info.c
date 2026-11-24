@@ -155,6 +155,11 @@ int show_info(struct ds_config *cfg, int trust_cfg_pid) {
     ds_json_str("hw_access",
                 cfg->hw_access ? "full" : (cfg->gpu_mode ? "GPU" : "none"),
                 &first);
+    ds_json_int("dev_input", cfg->dev_input, &first);
+    ds_json_int("dev_usb", cfg->dev_usb, &first);
+    ds_json_int("dev_sensors", cfg->dev_sensors, &first);
+    ds_json_int("firmware", cfg->hw_firmware, &first);
+    ds_json_str("dev_block", cfg->dev_block, &first);
 
     if (is_android()) {
       if (cfg->tx11_extra_flags)
@@ -319,6 +324,29 @@ int show_info(struct ds_config *cfg, int trust_cfg_pid) {
     } else if (cfg->gpu_mode) {
       printf("  HW access: GPU\n");
       feat_count++;
+    }
+    if (!cfg->hw_access) {
+      if (cfg->dev_input) {
+        printf("  HW input: /dev/input, /dev/uinput\n");
+        feat_count++;
+      }
+      if (cfg->dev_usb) {
+        printf("  HW usb: /dev/bus/usb, ttyUSB*, ttyACM*, hidraw*\n");
+        feat_count++;
+      }
+      if (cfg->dev_sensors) {
+        printf("  HW sensors: iio / sensor nodes\n");
+        feat_count++;
+      }
+      if (cfg->dev_block[0]) {
+        printf("  " C_RED "HW block:" C_RESET " %s (CAP_SYS_RAWIO kept)\n",
+               cfg->dev_block);
+        feat_count++;
+      }
+      if (cfg->hw_firmware) {
+        printf("  HW firmware: host search path\n");
+        feat_count++;
+      }
     }
 
     /* 7. X11 */
