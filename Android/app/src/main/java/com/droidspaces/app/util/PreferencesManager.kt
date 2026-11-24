@@ -189,12 +189,28 @@ class PreferencesManager private constructor(context: Context) {
         prefs.edit().putString("terminal_last_user_$containerName", user).apply()
     }
 
+    /**
+     * Absolute path of the rootfs archive this container was installed or last reset from,
+     * so Reset can reuse it instead of asking for the file again. Null when the archive
+     * came from a pipe-backed provider and no path survived.
+     */
+    fun getContainerArchive(containerName: String): String? =
+        prefs.getString("${KEY_CONTAINER_ARCHIVE_PREFIX}$containerName", null)
+
+    fun setContainerArchive(containerName: String, path: String?) {
+        prefs.edit().apply {
+            if (path == null) remove("${KEY_CONTAINER_ARCHIVE_PREFIX}$containerName")
+            else putString("${KEY_CONTAINER_ARCHIVE_PREFIX}$containerName", path)
+        }.apply()
+    }
+
     // Uninstall drops everything kept under the name, so a new container that reuses it
     // starts clean. A new per-container key belongs here too.
     fun forgetContainer(containerName: String) {
         prefs.edit()
             .remove("${KEY_CONTAINER_LOG_PREFIX}$containerName")
             .remove("${KEY_CONTAINER_OS_INFO_PREFIX}$containerName")
+            .remove("${KEY_CONTAINER_ARCHIVE_PREFIX}$containerName")
             .remove("terminal_last_user_$containerName")
             .commit()
     }
@@ -351,6 +367,7 @@ class PreferencesManager private constructor(context: Context) {
         private const val KEY_CHECK_APP_UPDATES = "check_app_updates"
         private const val KEY_CONTAINER_LOG_PREFIX = "container_log_"
         private const val KEY_CONTAINER_OS_INFO_PREFIX = "container_os_info_"
+        private const val KEY_CONTAINER_ARCHIVE_PREFIX = "container_archive_"
         private const val KEY_CACHED_CONTAINER_NAMES = "cached_container_names"
         private const val KEY_CACHED_CONTAINER_CONFIG_PREFIX = "cached_container_config_"
         private const val KEY_CUSTOM_REPOS = "custom_rootfs_repos"

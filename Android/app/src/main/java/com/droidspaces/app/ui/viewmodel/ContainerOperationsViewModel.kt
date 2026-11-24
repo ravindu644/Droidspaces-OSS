@@ -13,6 +13,7 @@ import com.droidspaces.app.R
 import com.droidspaces.app.service.TerminalSessionService
 import com.droidspaces.app.util.ContainerCommandBuilder
 import com.droidspaces.app.util.ContainerInfo
+import com.droidspaces.app.util.ContainerArchives
 import com.droidspaces.app.util.ContainerInstaller
 import com.droidspaces.app.util.ContainerManager
 import com.droidspaces.app.util.ContainerOSInfoManager
@@ -21,6 +22,7 @@ import com.droidspaces.app.util.ContainerUsersManager
 import com.droidspaces.app.util.ContainerOperationExecutor
 import com.droidspaces.app.util.FilePickerUtils
 import com.droidspaces.app.util.PreferencesManager
+import com.droidspaces.app.util.RootfsArchive
 import com.droidspaces.app.util.SystemInfoManager
 import com.droidspaces.app.util.ViewModelLogger
 import kotlinx.coroutines.Dispatchers
@@ -227,6 +229,75 @@ class ContainerOperationsViewModel(app: Application) : AndroidViewModel(app) {
             if (collectedLogs.isNotEmpty()) uninstallLogsDialog = collectedLogs
             else onError(string(R.string.failed_to_uninstall_container, container.name))
             onRefresh()
+        }
+    }
+
+    /**
+     * A clean reinstall: wipe [container]'s rootfs and extract [archive] in its place,
+     * keeping its name, settings and mounted folders. The archive is kept for the next
+     * reset when it has a path root can read again.
+     */
+    suspend fun executeReset(
+        container: ContainerInfo,
+        archive: RootfsArchive,
+        onError: (String) -> Unit,
+        onSuccess: (String) -> Unit,
+        onRefresh: () -> Unit,
+    ) {
+        runningOperationContainer = container.name
+        val logs = logsFor(container.name)
+        logs.clear()
+        prefsManager.clearContainerLogs(container.name)
+
+        val logger = ViewModelLogger { level, message -> logs.add(level to message) }
+
+        try {
+            if (!stopIfRunning(container, logger)) {
+                // Same failure dialog the uninstall uses; a stop can fail for its own reasons.
+                uninstallLogsDialog = logs.map { it.second }
+                onRefresh()
+                return
+            }
+            uninstallState = UninstallState.Idle
+
+            // The config on disk is the only copy of where the rootfs really is and
+            // whether it is an image; the card's copy can be older than the last start.
+            val config = ContainerManager.readContainerConfig(container.name)
+            if (config == null) {
+                onError(string(R.string.failed_to_reset_container, container.name))
+                onRefresh()
+                return
+            }
+
+            logs.clear()
+            showLogViewerFor = container.name
+            logger.i(string(R.string.resetting_container))
+
+            // The console is the progress display, as with export, so no second
+            // progress dialog sits on top of it.
+            val result = ContainerInstaller.resetContainer(appContext, archive, config, logger)
+
+            if (result.isFailure) {
+                onError(string(R.string.failed_to_reset_container, container.name))
+            } else {
+                ContainerOSInfoManager.clearCache(container.name, appContext)
+                ContainerUsersManager.clearCache(container.name)
+                ContainerDiskUsageManager.forget(config.rootfsPath)
+                prefsManager.forgetContainer(container.name)
+                // forgetContainer drops the archive key too, so this has to come after it.
+                ContainerArchives.remember(appContext, container.name, archive)
+                onSuccess(string(R.string.container_reset_success, container.name))
+            }
+            onRefresh()
+        } catch (e: Exception) {
+            logger.e("Reset error: ${e.message}")
+            logger.e(e.stackTraceToString())
+            onError(string(R.string.failed_to_reset_container, container.name))
+            onRefresh()
+        } finally {
+            prefsManager.saveContainerLogs(container.name, logs.toList())
+            delay(500)
+            runningOperationContainer = null
         }
     }
 

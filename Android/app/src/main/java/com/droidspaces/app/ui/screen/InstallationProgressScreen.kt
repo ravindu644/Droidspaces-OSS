@@ -19,7 +19,9 @@ import androidx.compose.ui.unit.dp
 import com.droidspaces.app.R
 import com.droidspaces.app.ui.component.TerminalConsole
 import com.droidspaces.app.util.ContainerInfo
+import com.droidspaces.app.util.ContainerArchives
 import com.droidspaces.app.util.ContainerInstaller
+import com.droidspaces.app.util.RootfsArchive
 import com.droidspaces.app.util.ViewModelLogger
 import com.droidspaces.app.util.FilePickerUtils
 import kotlinx.coroutines.launch
@@ -80,6 +82,8 @@ fun InstallationProgressScreen(
             )
 
             installationState = if (result.isSuccess) {
+                // Keep where the archive lives so Reset can reuse it while it still exists.
+                ContainerArchives.remember(context, config.name, RootfsArchive.Picked(tarballUri))
                 logger.i("Installation completed successfully!")
                 InstallationState.SUCCESS
             } else {

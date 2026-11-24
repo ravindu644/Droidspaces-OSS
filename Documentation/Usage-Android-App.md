@@ -36,6 +36,7 @@ Press and hold a card for its menu:
 - **Migrate to a sparse image**: converts a directory container to an ext4 image file.
 - **Resize the sparse image**: changes the ceiling of an image container.
 - **Export container as tarball**: packs the rootfs and its settings into a `.tar.gz` you can install on another phone. Environment variables are left out unless you choose to include them, since they often hold secrets.
+- **Reset Container**: a clean reinstall. Stops the container if it is running, erases its rootfs and extracts a rootfs archive in its place. It reuses the archive the container was installed or last reset from, and asks you to pick one if that file is gone or you tick **Choose a different archive**. The name, settings and bind mounts are kept; everything inside the container is lost. You type the name to confirm.
 - **Uninstall Container**: stops the container if it is running and deletes its rootfs and settings. You type the name to confirm. See [uninstallation](Uninstallation.md) for what stays behind.
 
 The **+** button adds a container, from the **Repository** or **Install from file**.

@@ -153,6 +153,16 @@
     <string name="view_logs">View logs</string>
     <string name="edit_container_configuration">Edit Container Configuration</string>
     <string name="uninstall_container_menu">Uninstall Container</string>
+    <string name="reset_container_menu">Reset Container</string>
+    <string name="reset_container_title">Reset Container?</string>
+    <string name="reset_container_message">This will erase everything inside container \"%1$s\" and reinstall its root filesystem from an archive you choose. The container\'s name, settings and mounted folders are kept. This action cannot be undone.\n\nIf the container is running, it will be stopped first.</string>
+    <string name="reset_container_message_saved">This will erase everything inside container \"%1$s\" and reinstall its root filesystem from the archive it came from. The container\'s name, settings and mounted folders are kept. This action cannot be undone.\n\nIf the container is running, it will be stopped first.</string>
+    <string name="reset_archive_in_use">Archive: %1$s</string>
+    <string name="reset_choose_another_archive">Choose a different archive</string>
+    <string name="reset">Reset</string>
+    <string name="resetting_container">Resetting...</string>
+    <string name="failed_to_reset_container">Failed to reset container %1$s</string>
+    <string name="container_reset_success">Container %1$s reset successfully</string>
 
     <!-- Container Card -->
     <string name="status_running">RUNNING</string>
