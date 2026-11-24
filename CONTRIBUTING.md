@@ -378,6 +378,7 @@ conventions: 24.dp for dialog and screen horizontal padding, 16.dp for card inne
 | --- | --- | --- |
 | `ContainerCommandBuilder.quote(value)` | `util/ContainerCommandBuilder.kt` | **Every** dynamic value going into a root command. POSIX single-quote wrap that escapes embedded quotes |
 | `ContainerCommandBuilder.buildStart/Stop/Restart/Usage/GetIpCommand(...)` | same | Driving the backend binary. Do not assemble these by hand |
+| `ContainerCommandBuilder.buildDeleteCommand(path, useSparseImage)` | same | Deleting a container's files on uninstall. Clears the immutable and append-only flags a guest can leave in a directory rootfs, which stop a bare `rm -rf` |
 | `ContainerCommandBuilder.getConfigPath(container)` | same | The canonical container config path |
 | `ContainerOperationExecutor.executeCommand(command, operation, logger, ...)` | `util/ContainerOperationExecutor.kt` | Any long root command whose output must stream into the UI |
 | `ContainerOperationExecutor.checkCommandSuccess(command)` | same | Fire and check, no logging |

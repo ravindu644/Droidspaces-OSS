@@ -266,7 +266,7 @@ object ContainerManager {
             return
         }
 
-        val result = Shell.cmd("rm -rf ${ContainerCommandBuilder.quote(rootfsPath)} 2>&1").exec()
+        val result = Shell.cmd(ContainerCommandBuilder.buildDeleteCommand(rootfsPath, name == "rootfs.img")).exec()
         logResult(result, logger)
         if (!result.isSuccess) {
             // The volume may simply be unplugged. Say so and carry on: refusing to
@@ -634,8 +634,7 @@ object ContainerManager {
             // Delete the parent directory (which contains rootfs and config)
             logger.i("Container path: $containerPath")
 
-            // Use rm -rf to recursively delete the entire container directory
-            val deleteCommand = "rm -rf ${ContainerCommandBuilder.quote(containerPath)} 2>&1"
+            val deleteCommand = ContainerCommandBuilder.buildDeleteCommand(containerPath, container.useSparseImage)
             logger.i("Executing: $deleteCommand")
 
             val deleteResult = Shell.cmd(deleteCommand).exec()
