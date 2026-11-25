@@ -72,6 +72,54 @@ static void pf_state_append(FILE *f, const char *variant, const char *proto,
   fflush(f);
 }
 
+/* Return-path MASQUERADE for a forward. It used to match every source, which
+ * rewrote LAN clients to the gateway address and hid their real IPs from the
+ * container (Pi-hole saw one client). Loopback clients and other containers
+ * still need it: their replies would otherwise skip the host and get dropped.
+ * LAN clients already route back through the host, so they keep their real
+ * address. The loopback source is 127/8, not addrtype LOCAL: that is where the
+ * OUTPUT-chain DNAT sends from, and it needs no xt_addrtype module. */
+static const char *const pf_masq_src[3][4] = {
+    {"-s", "127.0.0.0/8", NULL, NULL},
+    {"-s", DS_DEFAULT_SUBNET, NULL, NULL},
+    /* no source match: the rule older builds inserted, still removed so a
+     * container started before an upgrade is cleaned up on stop */
+    {NULL, NULL, NULL, NULL},
+};
+
+/* op is "-I" or "-D". Inserts skip the legacy row. Returns the number of
+ * insert rules that went in; deletes return 0. */
+static int pf_masq(const char *op, const char *proto, const char *container_ip,
+                   const char *cont_port_str) {
+  int insert = (strcmp(op, "-I") == 0);
+  int added = 0;
+  for (int i = 0; i < (insert ? 2 : 3); i++) {
+    char *argv[24];
+    int n = 0;
+    argv[n++] = "iptables";
+    argv[n++] = "-t";
+    argv[n++] = "nat";
+    argv[n++] = (char *)(uintptr_t)op;
+    argv[n++] = "POSTROUTING";
+    if (insert)
+      argv[n++] = "1";
+    argv[n++] = "-p";
+    argv[n++] = (char *)(uintptr_t)proto;
+    for (int j = 0; j < 4 && pf_masq_src[i][j]; j++)
+      argv[n++] = (char *)(uintptr_t)pf_masq_src[i][j];
+    argv[n++] = "-d";
+    argv[n++] = (char *)(uintptr_t)container_ip;
+    argv[n++] = "--dport";
+    argv[n++] = (char *)(uintptr_t)cont_port_str;
+    argv[n++] = "-j";
+    argv[n++] = "MASQUERADE";
+    argv[n] = NULL;
+    if (run_command_quiet(argv) == 0)
+      added++;
+  }
+  return insert ? added : 0;
+}
+
 /* Read the state file and issue iptables -D for every recorded rule.
  * Returns 1 if the state file existed (regardless of delete outcomes),
  * 0 if the file was absent (caller should fall back to other strategies). */
@@ -136,13 +184,7 @@ static int pf_state_remove(const char *container_ip) {
       run_command_quiet(del);
     } else if (strcmp(variant, "local_post") == 0) {
       /* Localhost POSTROUTING MASQUERADE for return traffic */
-      char cont_ip_buf[INET_ADDRSTRLEN];
-      safe_strncpy(cont_ip_buf, container_ip, sizeof(cont_ip_buf));
-      char *del[] = {"iptables",    "-t",      "nat",         "-D",
-                     "POSTROUTING", "-p",      proto,         "-d",
-                     cont_ip_buf,   "--dport", cont_port_str, "-j",
-                     "MASQUERADE",  NULL};
-      run_command_quiet(del);
+      pf_masq("-D", proto, container_ip, cont_port_str);
     }
   }
 
@@ -321,24 +363,17 @@ int ds_ipt_add_portforwards(struct ds_port_forward *pfs, int count,
       ds_warn("portforward: localhost OUTPUT DNAT failed for port %s",
               host_port_str);
 
-    char *lo_masq[] = {"iptables",    "-t",
-                       "nat",         "-I",
-                       "POSTROUTING", "1",
-                       "-p",          pf->proto,
-                       "-d",          (char *)(uintptr_t)container_ip,
-                       "--dport",     cont_port_str,
-                       "-j",          "MASQUERADE",
-                       NULL};
-    int masq_ok = (run_command_quiet(lo_masq) == 0);
-    if (!masq_ok)
-      ds_warn("portforward: localhost POSTROUTING MASQUERADE failed for "
-              "port %s",
-              cont_port_str);
+    int masq_added = pf_masq("-I", pf->proto, container_ip, cont_port_str);
+    if (masq_added != 2)
+      ds_warn("portforward: POSTROUTING MASQUERADE %s for port %s",
+              masq_added ? "incomplete" : "failed", cont_port_str);
 
     if (lo_ok)
       pf_state_append(state_f, "local_out", pf->proto, host_port_str, to_dest,
                       cont_port_str);
-    if (masq_ok)
+    /* Record even a partial insert: removal walks every source variant, so
+     * one surviving rule is still cleaned up if the config changes. */
+    if (masq_added)
       pf_state_append(state_f, "local_post", pf->proto, host_port_str, to_dest,
                       cont_port_str);
   }
@@ -440,13 +475,7 @@ int ds_ipt_remove_portforwards(struct ds_config *cfg) {
     run_command_quiet(del_lo);
 
     /* Localhost POSTROUTING MASQUERADE */
-    char *del_masq[] = {
-        "iptables",   "-t",          "nat",
-        "-D",         "POSTROUTING", "-p",
-        pf->proto,    "-d",          (char *)(uintptr_t)container_ip,
-        "--dport",    cont_port_str, "-j",
-        "MASQUERADE", NULL};
-    run_command_quiet(del_masq);
+    pf_masq("-D", pf->proto, container_ip, cont_port_str);
   }
 
   /* Nothing to sweep for a container that was booted without forwards: cfg
