@@ -73,7 +73,7 @@
 /* Constants */
 
 #define DS_PROJECT_NAME "Droidspaces"
-#define DS_VERSION "7.1.0"
+#define DS_VERSION "7.2.0"
 #define DS_MIN_KERNEL_MAJOR 3
 #define DS_MIN_KERNEL_MINOR 10
 

@@ -264,6 +264,11 @@ pid_t ds_spawn_daemon(ds_child_fn child_fn, void *user_data,
     dup2(pipefd[1], STDOUT_FILENO);
     dup2(pipefd[1], STDERR_FILENO);
     close(pipefd[1]);
+    /* The daemon already runs from "/", but a direct start would hand the
+     * helper the caller's directory. ART dies at startup when that is gone or
+     * out of the Termux uid's reach, and it would keep the mount busy. */
+    if (chdir("/") < 0) { /* ignore */
+    }
     child_fn(readyfd[1], user_data);
     /* unreachable if child_fn calls execv/_exit */
     _exit(1);

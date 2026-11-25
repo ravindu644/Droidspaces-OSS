@@ -10,6 +10,10 @@ type su domain
 type droidspacesd_exec exec_type
 permissive droidspacesd
 
+# The domain is permissive, so its own denials never block anything and only
+# flood the log. Denials with droidspacesd as the target are still logged.
+dontaudit droidspacesd * * *
+
 # droidspacesd_exec
 allow droidspacesd_exec droidspacesd_exec file { entrypoint execute execute_no_trans getattr map open read relabelfrom relabelto }
 allow droidspacesd_exec labeledfs filesystem associate

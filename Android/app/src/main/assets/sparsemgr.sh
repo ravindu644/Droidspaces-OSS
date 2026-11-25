@@ -326,6 +326,10 @@ cmd_migrate() {
         exit 1
     }
 
+    # NixOS marks /var/empty immutable, so not even root can delete it as it is. A mount
+    # left under here would let chattr unprotect host files, so then leave the flags alone.
+    { [ -z "$BB" ] || "$BB" grep -qF " $backup_dir/" /proc/mounts ||
+        "$BB" chattr -R -ia "$backup_dir"; } >/dev/null 2>&1
     _rm -rf "$backup_dir"
     trap - EXIT
 

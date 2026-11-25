@@ -16,7 +16,7 @@ Android 上的一切都在应用内完成，从安装后端到在运行中的容
 
 **Root：** 推荐使用 KernelSU 获取 root。Magisk 和 APatch 也可以。它们的 root shell 带有 seccomp 过滤器，会拦截容器运行时所需的操作，因此后端以守护进程的形式在开机时启动，而不是从 shell 启动。这是默认方式，安装后按应用提示重启一次即可。
 
-**支持容器的内核：** 多数原厂内核缺少 Droidspaces 所需的选项，尤其是 PID 和 IPC 命名空间。[内核配置指南](./Kernel-Configuration.md)列出了这些选项，并说明如何构建带这些选项的内核。如果你不想自己编译，[社区支持的设备](./community-supported-devices.md)页面会链接到其他用户构建好的内核。应用会在首次启动时告诉你内核是否受支持。
+**支持容器的内核：** 多数原厂内核缺少 Droidspaces 所需的选项，尤其是 PID 和 IPC 命名空间。[内核配置指南](./Kernel-Configuration.md)列出了这些选项，并说明如何构建带这些选项的内核。如果你不想自己编译，[社区支持的设备](./community-supported-devices.md)页面会链接到其他用户构建好的内核。如果你根本无法刷写内核，请先阅读[这一节](./Kernel-Configuration.md#如果你无法刷写内核)。应用会在首次启动时告诉你内核是否受支持。
 
 > [!CAUTION]
 >
