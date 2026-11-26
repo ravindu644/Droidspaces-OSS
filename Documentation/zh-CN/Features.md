@@ -46,7 +46,9 @@ keywords: droidspaces, settings, features, network, mode, hardware, access, gpu,
 
 ### 端口转发
 
-`--port=[HOST:]CONTAINER[/tcp|udp]`，键 `port_forwards`。仅限 NAT 模式。让容器内的服务可以通过宿主机的某个端口访问，宿主机自身及其所在的任何网络都能访问。`--port=22` 表示两端使用同一端口，`--port=8080:80` 把宿主机 8080 映射到容器 80，`--port=1000-2000:1000-2000` 映射一段大小相同的端口范围。未指定协议时 TCP 和 UDP 都会转发。可以重复该参数，或用逗号分隔多个条目。
+`--port=[HOST:]CONTAINER[/tcp|udp|tcp6|udp6]`，键 `port_forwards`。仅限 NAT 模式。`tcp`（默认）和 `udp` 用于 IPv4，`tcp6` 和 `udp6` 用于 IPv6。`--port=22` 表示两端使用相同的 TCP 端口，`--port=1000-2000:1000-2000` 映射长度相同的端口范围。要配置双栈，可以重复该参数或用逗号分隔多个条目。
+
+`--port=2222:22/tcp6` 将发往宿主机可路由 IPv6 地址的 2222 端口的入站连接转给容器的 22 端口。需要内核支持 IPv6 NAT，且 `ip6tables` 可使用 DNAT 和 `addrtype`。IPv4 也支持通过宿主机环回地址访问。
 
 ### 禁用 IPv6
 

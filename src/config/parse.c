@@ -453,8 +453,10 @@ int ds_parse_port_forward(char *spec, struct ds_config *cfg, char *err,
   if (slash) {
     *slash = '\0';
     proto = slash + 1;
-    if (strcmp(proto, "tcp") != 0 && strcmp(proto, "udp") != 0) {
-      snprintf(err, err_size, "Invalid protocol '%s' (use tcp or udp)", proto);
+    if (strcmp(proto, "tcp") != 0 && strcmp(proto, "udp") != 0 &&
+        strcmp(proto, "tcp6") != 0 && strcmp(proto, "udp6") != 0) {
+      snprintf(err, err_size,
+               "Invalid protocol '%s' (use tcp, udp, tcp6 or udp6)", proto);
       return -1;
     }
   }

@@ -104,9 +104,11 @@ class Nat(DsTest):
                          "PREROUTING DNAT from another host interface")
 
     def test_port_syntax_variants_are_saved(self):
-        c = self.container("ports", "--port=22", "--port=80:8080/tcp", "--port=1000-1001:2000-2001/udp")
-        self.assertEqual(c.info()["port_forwards"], "22:22/tcp,80:8080/tcp,1000-1001:2000-2001/udp")
-        self.assertEqual(c.saved_config()["port_forwards"], "22:22/tcp,80:8080/tcp,1000-1001:2000-2001/udp")
+        c = self.container("ports", "--port=22", "--port=80:8080/tcp", "--port=1000-1001:2000-2001/udp",
+                           "--port=22:22/tcp6,1000-1001:2000-2001/udp6")
+        expected = "22:22/tcp,80:8080/tcp,1000-1001:2000-2001/udp,22:22/tcp6,1000-1001:2000-2001/udp6"
+        self.assertEqual(c.info()["port_forwards"], expected)
+        self.assertEqual(c.saved_config()["port_forwards"], expected)
 
     def test_port_is_dropped_outside_nat(self):
         c = self.container("port-none", start=False)

@@ -35,9 +35,11 @@ struct ds_net_handshake {
  * ID random; ours is fixed (64:73:70 is "dsp") for the same reason the IPv4
  * side is a fixed 172.28.0.0/16: the monitor, the cleanup path and the docs
  * all need to name it without reading state.
- *   Bridge mode:  ds-br0 is fd64:7370::1 and containers share fd64:7370::/64.
- *   Bridgeless:   each container gets fd64:7370:0:XXYY::/64, where XX.YY are
- *                 the last two octets of its 172.28.XX.YY address.
+ *   Each container gets its own fd64:7370:0:XXYY::/64, where XX.YY are the
+ *   last two octets of its 172.28.XX.YY address (XX >= 1).
+ *   Bridge mode:  ds-br0 holds fd64:7370::1 in the reserved 0000 subnet and
+ *                 routes fd64:7370::/48.
+ *   Bridgeless:   each container's /64 is routed at its host veth.
  * Containers always route through fe80::1, which sits on the bridge or on the
  * bridgeless host veth. */
 #define DS_NAT6_SUBNET "fd64:7370::/48"
@@ -137,6 +139,8 @@ void parse_cidr(const char *cidr, uint32_t *ip_out, uint32_t *mask_out);
 /* ipt/portfwd.c */
 int ds_ipt_add_portforwards(struct ds_port_forward *pfs, int count,
                             const char *container_ip);
+int ds_ipt_sync_portforwards6(const struct ds_port_forward *pfs, int count,
+                              const char *container_ip, const char *ip6);
 int ds_ipt_remove_portforwards(struct ds_config *cfg);
 
 /* ipt/rules.c */

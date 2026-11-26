@@ -82,7 +82,7 @@ static int install_policy_rules(ds_nl_ctx_t *ctx) {
     ret = -1;
 
   /* The same TO and FROM pair for the NAT66 prefix. No tether rule: hotspot
-   * clients reach forwarded ports over IPv4, and --port is IPv4 only. */
+   * clients reach forwarded ports over IPv4. */
   if (g_host_nat6) {
     struct in6_addr net6;
     inet_pton(AF_INET6, DS_NAT6_PREFIX, &net6);
@@ -194,15 +194,21 @@ void do_uplink_reprobe(void) {
    * "something is definitely missing"; -1 is "tables unreadable", where a
    * blind reinstall through those binary fallbacks would stack duplicates. */
   const char *iface = host_filter_iface();
-  if (iface[0] &&
+  int reinstall =
+      iface[0] &&
       (ds_ipt_host_rules_present(AF_INET, iface, DS_DEFAULT_SUBNET,
-                                 g_host_port_forward_count > 0) == 0 ||
+                                 g_host_port_forward_count >
+                                     g_host_port_forward6_count) == 0 ||
        (g_host_nat6 &&
-        ds_ipt_host_rules_present(AF_INET6, iface, DS_NAT6_SUBNET, 0) == 0))) {
+        ds_ipt_host_rules_present(AF_INET6, iface, DS_NAT6_SUBNET,
+                                  g_host_port_forward6_active) == 0));
+  if (reinstall) {
     ds_warn("[NET] Route monitor: host netfilter rules are missing "
             "(netd restart or firewall app?) - reinstalling");
     install_netfilter_rules();
   }
+  if (g_host_port_forward6_count > 0 && g_host_nat6)
+    sync_ipv6_portforwards(reinstall);
 
   /* Everything below points Android's per-network tables at the uplink. A
    * Linux host has one main table, which already follows the default route. */

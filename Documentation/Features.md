@@ -46,7 +46,9 @@ A change takes effect the next time the container starts. In the app, the contai
 
 ### Port Forwarding
 
-`--port=[HOST:]CONTAINER[/tcp|udp]`, key `port_forwards`. NAT mode only. Makes a service inside the container reachable on a port of the host, from the host itself and from any network it is on. `--port=22` maps the same port on both sides, `--port=8080:80` maps host 8080 to container 80, and `--port=1000-2000:1000-2000` maps a range of the same size. Without a protocol, both TCP and UDP are forwarded. Repeat the flag or separate entries with commas.
+`--port=[HOST:]CONTAINER[/tcp|udp|tcp6|udp6]`, key `port_forwards`. NAT mode only. Use `tcp` (the default) or `udp` for IPv4, and `tcp6` or `udp6` for IPv6. `--port=22` maps the same TCP port on both sides, and `--port=1000-2000:1000-2000` maps an equal-sized range. Repeat the flag or separate entries with commas to configure both address families.
+
+`--port=2222:22/tcp6` forwards inbound connections to port 2222 on a routable IPv6 address assigned to the host. It requires IPv6 NAT and the `ip6tables` DNAT and `addrtype` extensions. IPv4 also supports access through the host's loopback address.
 
 ### Disable IPv6
 

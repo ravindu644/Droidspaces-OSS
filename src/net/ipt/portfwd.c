@@ -50,34 +50,63 @@ static int addrtype_available(void) {
  * user edits (or empties) the port-forward list in the container config
  * while the container is running (config-drift).
  *
- * State file path : <workspace>/Net/pf_<container_ip>.state
+ * State file path : <workspace>/Net/pf_<container_ip>.state (pf6_ for IPv6)
  * Format          : one line per inserted rule, 5 space-separated fields:
- *   <addrtype|basic> <proto> <host_port_str> <to_dest> <cont_port_str>
+ *   <variant> <proto> <host_port_str> <to_dest> <cont_port_str>
  *
  * The file is created/truncated at ds_ipt_add_portforwards() time and
  * unlinked after ds_ipt_remove_portforwards() consumes it. */
 
-static void pf_state_path(const char *container_ip, char *buf, size_t len) {
-  snprintf(buf, len, "%s/pf_%s.state", get_net_dir(), container_ip);
+static void pf_state_path(const char *container_ip, int ipv6, char *buf,
+                          size_t len) {
+  snprintf(buf, len, "%s/pf%s_%s.state", get_net_dir(), ipv6 ? "6" : "",
+           container_ip);
 }
 
-/* Append one successfully-inserted rule to the state file. */
-static void pf_state_append(FILE *f, const char *variant, const char *proto,
-                            const char *host_port_str, const char *to_dest,
-                            const char *cont_port_str) {
+static int pf_state_append(FILE *f, const char *variant, const char *proto,
+                           const char *host_port_str, const char *to_dest,
+                           const char *cont_port_str) {
   if (!f)
-    return;
-  fprintf(f, "%s %s %s %s %s\n", variant, proto, host_port_str, to_dest,
-          cont_port_str);
-  fflush(f);
+    return -1;
+  if (fprintf(f, "%s %s %s %s %s\n", variant, proto, host_port_str, to_dest,
+              cont_port_str) < 0)
+    return -1;
+  return fflush(f);
+}
+
+/* Only intercept packets addressed to the host. A broad fallback would
+ * also redirect traffic the host is routing for other IPv6 devices. */
+static int pf_dnat6(char *op, char *proto, char *host_port, char *target) {
+  char *args[] = {"ip6tables",
+                  "-t",
+                  "nat",
+                  op,
+                  "PREROUTING",
+                  "!",
+                  "-d",
+                  "fe80::/10",
+                  "-p",
+                  proto,
+                  "-m",
+                  "addrtype",
+                  "--dst-type",
+                  "LOCAL",
+                  "--dport",
+                  host_port,
+                  "-j",
+                  "DNAT",
+                  "--to-destination",
+                  target,
+                  NULL};
+  return run_command_quiet(args);
 }
 
 /* Read the state file and issue iptables -D for every recorded rule.
  * Returns 1 if the state file existed (regardless of delete outcomes),
  * 0 if the file was absent (caller should fall back to other strategies). */
-static int pf_state_remove(const char *container_ip) {
+static int pf_state_remove(const char *container_ip, int ipv6) {
   char path[PATH_MAX];
-  pf_state_path(container_ip, path, sizeof(path));
+  pf_state_path(container_ip, ipv6, path, sizeof(path));
 
   FILE *f = fopen(path, "r");
   if (!f)
@@ -95,8 +124,10 @@ static int pf_state_remove(const char *container_ip) {
                to_dest, cont_port_str) != 5)
       continue;
 
-    /* Delete PREROUTING DNAT + FORWARD ACCEPT - mirror the variant inserted */
-    if (strcmp(variant, "addrtype") == 0) {
+    if (ipv6) {
+      if (strcmp(variant, "dnat6") == 0)
+        pf_dnat6("-D", proto, host_port_str, to_dest);
+    } else if (strcmp(variant, "addrtype") == 0) {
       char *del[] = {"iptables",    "-t",         "nat",   "-D",
                      "PREROUTING",  "-p",         proto,   "-m",
                      "addrtype",    "--dst-type", "LOCAL", "--dport",
@@ -193,14 +224,14 @@ int ds_ipt_add_portforwards(struct ds_port_forward *pfs, int count,
    * stack a second copy of every survivor - and removal only issues one -D
    * per recorded rule, so the extras would leak on container stop.  No state
    * file (first install) makes this a no-op. */
-  pf_state_remove(container_ip);
+  pf_state_remove(container_ip, 0);
 
   /* Open the state file for this container (truncate any stale copy).
    * Every rule we successfully insert is recorded so that
    * ds_ipt_remove_portforwards can delete exactly those rules even if the
    * port-forward list is edited in the config while the container runs. */
   char state_path[PATH_MAX];
-  pf_state_path(container_ip, state_path, sizeof(state_path));
+  pf_state_path(container_ip, 0, state_path, sizeof(state_path));
   FILE *state_f = fopen(state_path, "w");
   if (!state_f)
     ds_warn("[IPT] Could not open port-forward state file %s: %s - "
@@ -221,6 +252,8 @@ int ds_ipt_add_portforwards(struct ds_port_forward *pfs, int count,
 
   for (int i = 0; i < count; i++) {
     struct ds_port_forward *pf = &pfs[i];
+    if (ds_port_forward_is_ipv6(pf))
+      continue;
 
     char host_port_str[16], cont_port_str[16], to_dest[80];
     pf_fmt_ports(pf, container_ip, host_port_str, cont_port_str, to_dest);
@@ -349,6 +382,62 @@ int ds_ipt_add_portforwards(struct ds_port_forward *pfs, int count,
   return 0;
 }
 
+int ds_ipt_sync_portforwards6(const struct ds_port_forward *pfs, int count,
+                              const char *container_ip, const char *ip6) {
+  if (!container_ip[0])
+    return 0;
+
+  /* Use the persisted IPv4 address as the state key even for IPv6-only
+   * rules, so stop can find the rules after the guest's SLAAC address is gone.
+   */
+  pf_state_remove(container_ip, 1);
+  if (!ip6[0])
+    return 0;
+
+  char path[PATH_MAX];
+  pf_state_path(container_ip, 1, path, sizeof(path));
+  FILE *state = fopen(path, "we");
+  if (!state) {
+    ds_warn("portforward: cannot record IPv6 rules in %s: %s", path,
+            strerror(errno));
+    return 0;
+  }
+
+  char addr[INET6_ADDRSTRLEN + 2];
+  snprintf(addr, sizeof(addr), "[%s]", ip6);
+  int installed = 0;
+  for (int i = 0; i < count; i++) {
+    const struct ds_port_forward *pf = &pfs[i];
+    if (!ds_port_forward_is_ipv6(pf))
+      continue;
+    char *proto = pf->proto[0] == 't' ? "tcp" : "udp";
+    char host[16], port[16], target[80];
+    pf_fmt_ports(pf, addr, host, port, target);
+    /* Record before insert so an interrupted setup leaves a deletable rule. */
+    if (pf_state_append(state, "dnat6", proto, host, target, port) < 0) {
+      ds_warn("portforward: could not save IPv6 rule for %s", host);
+      break;
+    }
+    int ok = pf_dnat6("-C", proto, host, target) == 0 ||
+             pf_dnat6("-I", proto, host, target) == 0;
+    if (!ok && !modules_probed) {
+      probe_iptables_modules();
+      ok = pf_dnat6("-C", proto, host, target) == 0 ||
+           pf_dnat6("-I", proto, host, target) == 0;
+    }
+    if (ok) {
+      ds_log("portforward: %s %s -> %s", pf->proto, host, target);
+      installed++;
+    } else {
+      ds_warn("portforward: IPv6 DNAT failed for %s %s (requires ip6tables "
+              "DNAT and addrtype support)",
+              proto, host);
+    }
+  }
+  fclose(state);
+  return installed;
+}
+
 /* Public API: ds_ipt_remove_portforwards
  *
  * Three-pass cleanup strategy, in order of reliability:
@@ -385,14 +474,19 @@ int ds_ipt_remove_portforwards(struct ds_config *cfg) {
     return 0;
 
   /* Pass 1: state file */
-  int had_state = pf_state_remove(container_ip);
+  pf_state_remove(container_ip, 1);
+  int had_state = pf_state_remove(container_ip, 0);
 
   /* Pass 2: cfg->port_forwards safety net */
   /* Attempt both addrtype and basic DNAT variants for every rule currently in
    * the config. Whichever variant wasn't actually inserted will return a
    * non-zero exit code from iptables; run_command_quiet ignores it. */
+  int has_ipv4 = 0;
   for (int i = 0; i < cfg->port_forward_count; i++) {
     struct ds_port_forward *pf = &cfg->port_forwards[i];
+    if (ds_port_forward_is_ipv6(pf))
+      continue;
+    has_ipv4 = 1;
 
     char host_port_str[16], cont_port_str[16], to_dest[80];
     pf_fmt_ports(pf, container_ip, host_port_str, cont_port_str, to_dest);
@@ -454,7 +548,7 @@ int ds_ipt_remove_portforwards(struct ds_config *cfg) {
    * older version that wrote no state file, a crash before the file was
    * written) leave the forwards in it. Without this every NAT stop paid four
    * sh pipelines for nothing. */
-  if (!had_state && cfg->port_forward_count == 0)
+  if (!had_state && !has_ipv4)
     return 0;
 
   /* Pass 3: iptables-save shell sweep (fallback)
