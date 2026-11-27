@@ -97,13 +97,16 @@ static const struct {
 
 static int vproc_wanted(const struct ds_config *cfg, int flags) {
   return !((flags & V_MEM) && cfg->memory_limit <= 0) &&
-         !((flags & V_CPU) && cfg->cpu_quota <= 0) &&
+         !((flags & V_CPU) &&
+           (cfg->cpu_quota <= 0 || CPU_COUNT(&cfg->cpuset_cpus))) &&
          !((flags & V_SWAPCAP) && cfg->swap_uncapped);
 }
 
 int ds_virtualize_init(struct ds_config *cfg) {
   int has_mem = (cfg->memory_limit > 0);
-  int has_cpu = (cfg->cpu_quota > 0);
+  /* The synthetic 0-N topology describes a quota, not selected host CPU IDs.
+   * Keep real topology and the full cpuset affinity when placement is set. */
+  int has_cpu = (cfg->cpu_quota > 0 && !CPU_COUNT(&cfg->cpuset_cpus));
 
   /* Apply CPU affinity masking so syscall-based tools (nproc) are fooled */
   if (has_cpu)

@@ -50,6 +50,17 @@ static void ds_config_serialize_known(FILE *f, struct ds_config *cfg) {
     fprintf(f, "cpu_quota=%lld\n", cfg->cpu_quota);
   if (cfg->cpu_period > 0)
     fprintf(f, "cpu_period=%lld\n", cfg->cpu_period);
+  if (cfg->cpuset_invalid) {
+    fprintf(f, "cpuset_cpus=invalid\n");
+  } else if (CPU_COUNT(&cfg->cpuset_cpus)) {
+    char cpus[DS_CPU_LIST_LEN];
+    if (ds_format_cpu_list(&cfg->cpuset_cpus, cpus, sizeof(cpus)) == 0)
+      fprintf(f, "cpuset_cpus=%s\n", cpus);
+  }
+  if (cfg->cpu_p_cores || cfg->cpu_e_cores) {
+    fprintf(f, "cpu_p_cores=%d\n", cfg->cpu_p_cores);
+    fprintf(f, "cpu_e_cores=%d\n", cfg->cpu_e_cores);
+  }
   if (cfg->pids_limit > 0)
     fprintf(f, "pids_limit=%lld\n", cfg->pids_limit);
 

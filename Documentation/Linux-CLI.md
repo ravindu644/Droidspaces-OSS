@@ -91,6 +91,8 @@ Each flag that configures the container is saved in its config file on `start`, 
 | `--memory` | size with `K`, `M`, `G` or `T`, minimum `4M` | `memory_limit`, in bytes |
 | `--allow-swap` | | `allow_swap` |
 | `--cpus` | cores, fractions allowed | `cpu_quota` and `cpu_period`, in microseconds |
+| `--cpuset-cpus` | CPU IDs/ranges, e.g. `0-3,6`; empty clears pinning | `cpuset_cpus` |
+| `--cpu-cores` | Physical core counts, e.g. `1P,2E` or `2E`; empty clears | `cpu_p_cores`, `cpu_e_cores` |
 | `--pids-limit` | process count, minimum 16 | `pids_limit` |
 | `-P`, `--selinux-permissive` | | `selinux_permissive` |
 | `--allow-sandboxing` | | `allow_sandboxing` |

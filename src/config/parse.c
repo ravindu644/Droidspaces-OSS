@@ -9,6 +9,66 @@
 
 #include "internal.h"
 
+int ds_parse_cpu_list(const char *value, cpu_set_t *mask) {
+  cpu_set_t parsed;
+  CPU_ZERO(&parsed);
+  const char *p = value;
+  if (!p || !*p)
+    return -1;
+  while (*p) {
+    if (!isdigit((unsigned char)*p))
+      return -1;
+    char *end;
+    errno = 0;
+    long first = strtol(p, &end, 10), last = first;
+    if (errno || first >= CPU_SETSIZE)
+      return -1;
+    if (*end == '-') {
+      p = end + 1;
+      if (!isdigit((unsigned char)*p))
+        return -1;
+      last = strtol(p, &end, 10);
+      if (errno || last < first || last >= CPU_SETSIZE)
+        return -1;
+    }
+    for (long cpu = first; cpu <= last; cpu++)
+      CPU_SET((int)cpu, &parsed);
+    if (!*end) {
+      *mask = parsed;
+      return 0;
+    }
+    if (*end != ',' || !end[1])
+      return -1;
+    p = end + 1;
+  }
+  return -1;
+}
+
+int ds_format_cpu_list(const cpu_set_t *mask, char *buf, size_t size) {
+  if (!size)
+    return -1;
+  buf[0] = '\0';
+  size_t off = 0;
+  for (int first = 0; first < CPU_SETSIZE; first++) {
+    if (!CPU_ISSET(first, mask))
+      continue;
+    int last = first;
+    while (last + 1 < CPU_SETSIZE && CPU_ISSET(last + 1, mask))
+      last++;
+    int n = last == first
+                ? snprintf(buf + off, size - off, "%s%d", off ? "," : "", first)
+                : snprintf(buf + off, size - off, "%s%d-%d", off ? "," : "",
+                           first, last);
+    if (n < 0 || (size_t)n >= size - off) {
+      buf[0] = '\0';
+      return -1;
+    }
+    off += (size_t)n;
+    first = last;
+  }
+  return 0;
+}
+
 int ds_parse_net_mode(const char *s) {
   if (strcmp(s, "nat") == 0)
     return DS_NET_NAT;

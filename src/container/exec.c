@@ -133,7 +133,8 @@ int enter_rootfs(struct ds_config *cfg, const char *user) {
 
     /* cgroup attach before entering namespaces */
     ds_log_silent = 1;
-    ds_cgroup_attach(cfg->container_name);
+    if (ds_cgroup_attach(cfg) < 0 && CPU_COUNT(&cfg->cpuset_cpus))
+      _exit(EXIT_FAILURE);
     ds_log_silent = 0;
     ds_virtualize_join(pid);
     android_native_personality();
@@ -335,7 +336,8 @@ int run_in_rootfs(struct ds_config *cfg, char **argv, const char *as_user) {
      * crossing into its namespaces, so the command is accounted to the
      * container instead of leaking to the host's cgroup root. */
     ds_log_silent = 1;
-    ds_cgroup_attach(cfg->container_name);
+    if (ds_cgroup_attach(cfg) < 0 && CPU_COUNT(&cfg->cpuset_cpus))
+      _exit(EXIT_FAILURE);
     ds_log_silent = 0;
     ds_virtualize_join(pid);
     android_native_personality();

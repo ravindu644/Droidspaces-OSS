@@ -17,12 +17,21 @@ int ds_cgroup_ctrl_dir(const char *ctrl, const char *container_name, char *dir,
                        size_t size);
 
 /* lifecycle.c */
-int ds_cgroup_attach(const char *container_name);
+int ds_cgroup_attach(const struct ds_config *cfg);
 
 /* Remove the entire /sys/fs/cgroup/droidspaces/<name>/ subtree on stop. */
 void ds_cgroup_cleanup_container(const char *container_name);
-void ds_cgroup_setup(struct ds_config *cfg);
-void ds_cgroup_join(const char *container_name);
+int ds_cgroup_setup(struct ds_config *cfg);
+int ds_cgroup_join(const struct ds_config *cfg);
+
+/* cpu_cores.c */
+int ds_cpu_parse_cores(const char *value, struct ds_config *cfg);
+int ds_cpu_resolve_cores(struct ds_config *cfg);
+
+/* cpuset.c */
+int ds_cgroup_validate_cpuset(const struct ds_config *cfg);
+/* Effective CPUs, read from the host's controller. -1 if unavailable. */
+int ds_cgroup_get_cpuset(const char *name, char *buf, size_t size);
 
 /* limits.c */
 void ds_cgroup_apply_limits(struct ds_config *cfg);

@@ -90,10 +90,10 @@ int ds_config_load_file(FILE *f, struct ds_config *cfg) {
 
   cfg->config_file_existed = 1;
 
-  char line[2048];
+  char line[DS_CPU_LIST_LEN + 64];
 
   while (fgets(line, sizeof(line), f)) {
-    char line_copy[2048];
+    char line_copy[sizeof(line)];
     safe_strncpy(line_copy, line, sizeof(line_copy));
     char *trimmed = trim_whitespace(line_copy);
 
@@ -180,6 +180,27 @@ int ds_config_load_file(FILE *f, struct ds_config *cfg) {
         cfg->cpu_quota = v;
       else
         ds_warn("config: ignoring invalid cpu_quota '%s'", val);
+    } else if (strcmp(key, "cpuset_cpus") == 0) {
+      /* Preserve the failure, not the text, so stop and --reset still work
+       * while start refuses to silently discard a malformed pinning request. */
+      CPU_ZERO(&cfg->cpuset_cpus);
+      if ((!strchr(line, '\n') && !feof(f)) ||
+          (val[0] && ds_parse_cpu_list(val, &cfg->cpuset_cpus) < 0))
+        cfg->cpuset_invalid = 1;
+    } else if (strcmp(key, "cpu_p_cores") == 0 ||
+               strcmp(key, "cpu_e_cores") == 0) {
+      char *end;
+      errno = 0;
+      long count = strtol(val, &end, 10);
+      if ((!strchr(line, '\n') && !feof(f)) ||
+          !isdigit((unsigned char)val[0]) || errno || *end || count < 0 ||
+          count > CPU_SETSIZE) {
+        cfg->cpuset_invalid = 1;
+      } else if (strcmp(key, "cpu_p_cores") == 0) {
+        cfg->cpu_p_cores = (int)count;
+      } else {
+        cfg->cpu_e_cores = (int)count;
+      }
     } else if (strcmp(key, "cpu_period") == 0) {
       long long v = parse_ll_positive(val);
       if (v > 0)

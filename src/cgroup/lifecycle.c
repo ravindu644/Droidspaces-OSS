@@ -17,7 +17,9 @@
  * outlives a restart is reused with its old limits, and a limit that is no
  * longer configured is never written back to "max". So: nothing of ours
  * inside, nothing reused, limits only ever written to a new cgroup. */
-void ds_cgroup_setup(struct ds_config *cfg) {
+int ds_cgroup_setup(struct ds_config *cfg) {
+  if (ds_cpu_resolve_cores(cfg) < 0)
+    return -1;
   ds_cgroup_cleanup_container(cfg->container_name);
 
   if (cfg->force_cgroupv1 || !ds_cgroup_host_is_v2())
@@ -37,11 +39,14 @@ void ds_cgroup_setup(struct ds_config *cfg) {
      * /sys/fs/cgroup -> /sys/fs/cgroup/droidspaces */
     char enable[64] = "", buf[256], dir[PATH_MAX], safe_name[256];
     if (read_file("/sys/fs/cgroup/cgroup.controllers", buf, sizeof(buf)) > 0)
-      snprintf(enable, sizeof(enable), "%s%s%s",
+      snprintf(enable, sizeof(enable), "%s%s%s%s",
                cfg->memory_limit && ctrl_in_list(buf, "memory") ? "+memory "
                                                                 : "",
                cfg->cpu_quota && ctrl_in_list(buf, "cpu") ? "+cpu " : "",
-               cfg->pids_limit && ctrl_in_list(buf, "pids") ? "+pids" : "");
+               cfg->pids_limit && ctrl_in_list(buf, "pids") ? "+pids " : "",
+               CPU_COUNT(&cfg->cpuset_cpus) && ctrl_in_list(buf, "cpuset")
+                   ? "+cpuset"
+                   : "");
 
     mkdir("/sys/fs/cgroup/droidspaces", 0755);
     if (enable[0]) {
@@ -58,13 +63,17 @@ void ds_cgroup_setup(struct ds_config *cfg) {
   }
 
   ds_cgroup_apply_limits(cfg);
+  return apply_cpuset(cfg);
 }
 
 /* Move the caller into the container's cgroups: every v1 one it has (all of
  * them on a v1 container, the ones holding a limit on a cgroup2 one) and,
  * under 'leaf', its cgroup2 dir. */
-static int cgroup_join(const char *container_name, const char *leaf) {
+static int cgroup_join(const struct ds_config *cfg, const char *leaf) {
+  const char *container_name = cfg->container_name;
   v1_each(container_name, V1_JOIN);
+  if (join_cpuset(cfg) < 0)
+    return -1;
 
   char safe_name[256], path[PATH_MAX], pid_s[32];
   sanitize_container_name(container_name, safe_name, sizeof(safe_name));
@@ -83,10 +92,12 @@ static int cgroup_join(const char *container_name, const char *leaf) {
 
 /* The per-boot intermediate calls this before it unshares, so that init and
  * the cgroup namespace both start at the root of the container's cgroups. */
-void ds_cgroup_join(const char *container_name) {
-  if (cgroup_join(container_name, NULL) < 0)
+int ds_cgroup_join(const struct ds_config *cfg) {
+  int ret = cgroup_join(cfg, NULL);
+  if (ret < 0)
     ds_warn("[CGROUP] Could not join the container's cgroup: %s",
             strerror(errno));
+  return ret;
 }
 
 /* Put the calling process inside the container's cgroups before it setns()es
@@ -104,8 +115,8 @@ void ds_cgroup_join(const char *container_name) {
  * has no leading dot because rmdir_cgroup_tree() skips dot entries.
  * ponytail: no ds-enter-N retry on EBUSY like LXC has, that only hits if the
  * container makes child cgroups inside our leaf. */
-int ds_cgroup_attach(const char *container_name) {
-  return cgroup_join(container_name, "/ds-enter");
+int ds_cgroup_attach(const struct ds_config *cfg) {
+  return cgroup_join(cfg, "/ds-enter");
 }
 
 /* Recursive bottom-up rmdir of a cgroup subtree.  cgroup directories can
