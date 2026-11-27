@@ -163,7 +163,15 @@ reboot_loop:;
   /* This boot's cgroups, built from nothing, with the limits the config
    * holds now. Done here and not once up front so that a restart, an
    * internal reboot and a start after a crash all get the same clean slate. */
-  ds_cgroup_setup(cfg);
+  if (ds_cgroup_setup(cfg) < 0) {
+    /* The original start cleans up a failed first boot. During an internal
+     * reboot it is gone, and we still hold the lifecycle lock. */
+    if (cfg->reboot_cycle)
+      cleanup_container_resources(cfg, 0, 0, 0);
+    else
+      ds_cgroup_cleanup_container(cfg->container_name);
+    _exit(EXIT_FAILURE);
+  }
 
   pid_t mid_pid = fork();
   if (mid_pid < 0)
@@ -177,7 +185,8 @@ reboot_loop:;
      * The cgroup namespace (Linux 4.6+) is unshared here, after the join: its
      * root is wherever we sit at that moment, and from the root cgroup it
      * would isolate nothing. */
-    ds_cgroup_join(cfg->container_name);
+    if (ds_cgroup_join(cfg) < 0 && CPU_COUNT(&cfg->cpuset_cpus))
+      _exit(EXIT_FAILURE);
 
     int clone_flags = CLONE_NEWPID;
     if (cfg->net_mode != DS_NET_HOST)
@@ -682,6 +691,9 @@ reboot_loop:;
       /* The host config, never a copy the guest could have written. The
        * command socket is ours, so there is nothing to ask either. */
       struct ds_config reboot_cfg = *cfg;
+      CPU_ZERO(&reboot_cfg.cpuset_cpus);
+      reboot_cfg.cpuset_invalid = 0;
+      reboot_cfg.cpu_p_cores = reboot_cfg.cpu_e_cores = 0;
       if (ds_config_load_host(cfg->container_name, &reboot_cfg) == 0) {
         reboot_cfg.env_vars = saved_vars;
         reboot_cfg.env_var_count = saved_count;

@@ -378,6 +378,9 @@ int check_requirements_detailed(int json_output) {
       access("/proc/sys/kernel/sched_cfs_bandwidth_slice_us", F_OK) == 0 &&
           ds_cgroup_has_controller("cpu"),
       "OPT");
+  print_ds_check("cpuset", "CPU pinning support",
+                 "CONFIG_CPUSETS; required for --cpuset-cpus",
+                 ds_cgroup_has_controller("cpuset"), "OPT");
   /* A container's CPU time comes from cpu.stat in cgroup2, which the root
    * only has where every cgroup has it (4.15 and later), or else from the
    * v1 cpuacct controller. */

@@ -48,6 +48,7 @@ struct ds_tty_info {
 
 #define DS_MAX_PORT_FORWARDS 32
 #define DS_MAX_UPSTREAM_IFACES 32
+#define DS_CPU_LIST_LEN (CPU_SETSIZE * 5)
 
 struct ds_port_forward {
   uint16_t host_port;          /* port on the Android/Linux host  */
@@ -189,6 +190,10 @@ struct ds_config {
   long long memory_limit; /* bytes */
   long long cpu_quota;    /* us per period */
   long long cpu_period;   /* us (default 100000) */
+  cpu_set_t cpuset_cpus;  /* empty = no CPU pinning */
+  int cpuset_invalid;     /* malformed saved input must not boot unpinned */
+  int cpu_p_cores;
+  int cpu_e_cores;
   long long pids_limit;
 
   /* Resource virtualization (auto-enabled when limits are set) */
@@ -222,6 +227,12 @@ void free_config_unknown_lines(struct ds_config *cfg);
 char *ds_config_auto_path(const char *rootfs_path);
 
 /* parse.c */
+/* Nonempty CPU IDs and inclusive ranges, e.g. 0-3,6. -1 if invalid, leaving
+ * the destination unchanged. */
+int ds_parse_cpu_list(const char *value, cpu_set_t *mask);
+/* Canonical CPU-list text at a file or kernel boundary. 0 on success, -1 if
+ * the supplied buffer is too small. */
+int ds_format_cpu_list(const cpu_set_t *mask, char *buf, size_t size);
 void sort_bind_mounts(struct ds_config *cfg);
 void free_config_env_vars(struct ds_config *cfg);
 void parse_env_file_to_config(struct ds_config *cfg);

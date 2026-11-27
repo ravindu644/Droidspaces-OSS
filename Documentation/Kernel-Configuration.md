@@ -48,6 +48,7 @@ CONFIG_CGROUP_SCHED=y
 CONFIG_FAIR_GROUP_SCHED=y
 CONFIG_CGROUP_FREEZER=y
 CONFIG_CGROUP_NET_PRIO=y
+CONFIG_CPUSETS=y
 
 # Resource limits: --memory, --cpus, --pids-limit, in that order, then the
 # accounting that reports CPU usage on kernels before 4.15.
@@ -306,6 +307,7 @@ Use a build made for your exact kernel version. Modules do not stay loaded acros
 | FUSE, TUN | `CONFIG_FUSE_FS`, `CONFIG_TUN` | FUSE filesystems and VPNs inside the container do not work. |
 | User namespaces | `CONFIG_USER_NS` | Allow Sandboxing is unavailable. |
 | Memory, CPU and process limits | `CONFIG_MEMCG`, `CONFIG_CFS_BANDWIDTH`, `CONFIG_CGROUP_PIDS`, and no `cgroup_disable=` for them on the kernel command line | That limit is skipped. |
+| CPU pinning (`--cpuset-cpus`) | `CONFIG_CPUSETS` and a reachable cpuset controller | A start requesting pinning fails. |
 | Swap limit | `CONFIG_MEMCG_SWAP` with swap accounting on, `swapaccount=1` before 5.8 | A memory-limited container can still use swap. |
 | CPU usage accounting | `CONFIG_CGROUP_CPUACCT` on kernels before 4.15 | `info` shows no CPU usage. |
 

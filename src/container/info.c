@@ -93,6 +93,10 @@ int show_info(struct ds_config *cfg, int trust_cfg_pid) {
   ds_cgroup_get_limits(cfg->container_name, &lim_mem, &lim_quota, &lim_period,
                        &lim_pids, &swap_capped);
   int swap_allowed = !swap_capped;
+  char cpuset[DS_CPU_LIST_LEN] = "";
+  if (CPU_COUNT(&cfg->cpuset_cpus) &&
+      ds_cgroup_get_cpuset(cfg->container_name, cpuset, sizeof(cpuset)) < 0)
+    cpuset[0] = '\0';
 
   /* The acronym stays upper case in the output, the config file has nat. */
   const char *net =
@@ -177,6 +181,7 @@ int show_info(struct ds_config *cfg, int trust_cfg_pid) {
     ds_json_int("memory_limit", lim_mem, &first);
     ds_json_int("cpu_quota", lim_quota, &first);
     ds_json_int("cpu_period", lim_period, &first);
+    ds_json_str("cpuset_cpus", cpuset, &first);
     ds_json_int("pids_limit", lim_pids, &first);
     ds_json_int("swap_allowed", swap_allowed, &first);
     ds_json_int("sandboxing_allowed", cfg->sandboxing_allowed, &first);
@@ -412,7 +417,7 @@ int show_info(struct ds_config *cfg, int trust_cfg_pid) {
 
     /* Resource limits in force. Live usage only for the info command: right
      * after a start or restart there is nothing meaningful to report yet. */
-    if (lim_mem || lim_quota || lim_pids) {
+    if (lim_mem || lim_quota || lim_pids || cpuset[0]) {
       long long mu = -1, cache = 0, cu = -1, pu = -1;
       if (!trust_cfg_pid)
         ds_cgroup_get_usage(cfg->container_name, &mu, &cache, &cu, &pu);
@@ -442,6 +447,8 @@ int show_info(struct ds_config *cfg, int trust_cfg_pid) {
                  ((double)cu / 1e6 / (double)uptime) / cores * 100.0);
         printf("\n");
       }
+      if (cpuset[0])
+        printf("  CPUs   : %s\n", cpuset);
       if (lim_pids) {
         printf("  PIDs   : %lld", lim_pids);
         if (pu >= 0)

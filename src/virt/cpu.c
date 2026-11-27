@@ -10,11 +10,14 @@
 
 #include "internal.h"
 
-/* Compute container CPU count from quota/period, capped at host CPUs. */
+/* Compute container CPU count from placement and quota, capped at host CPUs. */
 int container_cpus(struct ds_config *cfg) {
   int host = (int)sysconf(_SC_NPROCESSORS_ONLN);
   if (host < 1)
     host = 1;
+  int selected = CPU_COUNT(&cfg->cpuset_cpus);
+  if (selected > 0 && selected < host)
+    host = selected;
   if (cfg->cpu_quota <= 0 || cfg->cpu_period <= 0)
     return host;
   int n = (int)((cfg->cpu_quota + cfg->cpu_period - 1) / cfg->cpu_period);

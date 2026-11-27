@@ -60,6 +60,8 @@ SRCS = $(SRC_DIR)/main.c \
        $(SRC_DIR)/cgroup/v1.c \
        $(SRC_DIR)/cgroup/lifecycle.c \
        $(SRC_DIR)/cgroup/limits.c \
+       $(SRC_DIR)/cgroup/cpuset.c \
+       $(SRC_DIR)/cgroup/cpu_cores.c \
        $(SRC_DIR)/cgroup/stats.c \
        $(SRC_DIR)/virt/mem.c \
        $(SRC_DIR)/virt/cpu.c \
@@ -171,7 +173,7 @@ find-cc = $(shell \
 		echo "$(1)-gcc"; \
 	fi)
 
-.PHONY: all help clean native x86_64 aarch64 armhf x86 riscv64 all-build all-tarball debug-hardened format bump test
+.PHONY: all help clean native x86_64 aarch64 armhf x86 riscv64 all-build all-tarball debug-hardened format bump test test-cpu-cores
 
 all: help
 
@@ -207,6 +209,14 @@ help:
 #   sudo cp output/droidspaces /usr/bin/droidspaces && sudo systemctl restart droidspaces
 test:
 	python3 -m unittest discover -s tests -v
+
+test-cpu-cores:
+	$(Q)mkdir -p $(OUT_DIR)
+	$(Q)$(CC) -std=gnu99 -O2 -Wall -Wextra -Werror -I$(SRC_DIR)/include \
+		-ffunction-sections -fdata-sections tests/test_cpu_cores.c \
+		$(SRC_DIR)/config/parse.c $(SRC_DIR)/cgroup/cpu_cores.c \
+		-Wl,--gc-sections -o $(OUT_DIR)/test-cpu-cores
+	$(Q)$(OUT_DIR)/test-cpu-cores
 
 $(OBJ_DIR)/%.o: $(SRC_DIR)/%.c
 	$(msg_cc)

@@ -13,7 +13,7 @@
  * mems and refuses every attach until it has both. Copy the root's into our
  * parent and let children clone from there. Android mounts cpuset with
  * noprefix, hence both spellings. Fails quietly on every other hierarchy. */
-static void v1_seed_cpuset(const char *mnt) {
+void v1_seed_cpuset(const char *mnt) {
   static const char *const files[] = {"cpuset.cpus", "cpuset.mems", "cpus",
                                       "mems", NULL};
   char path[PATH_MAX + 64], buf[256];

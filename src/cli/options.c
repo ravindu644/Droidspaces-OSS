@@ -165,6 +165,8 @@ const struct option long_options[] = {
     {"json", no_argument, 0, 265},
     {"memory", required_argument, 0, 266},
     {"cpus", required_argument, 0, 267},
+    {"cpuset-cpus", required_argument, 0, 285},
+    {"cpu-cores", required_argument, 0, 286},
     {"pids-limit", required_argument, 0, 268},
     {"init", required_argument, 0, 269},
     {"help", no_argument, 0, 'v'},
@@ -450,6 +452,27 @@ int ds_apply_cli_overrides(int argc, char **argv, struct ds_config *cfg,
       }
       break;
     }
+    case 285: {
+      cpu_set_t mask;
+      CPU_ZERO(&mask);
+      if (strlen(optarg) >= DS_CPU_LIST_LEN ||
+          (optarg[0] && ds_parse_cpu_list(optarg, &mask) < 0)) {
+        ds_error("--cpuset-cpus: expected CPU IDs/ranges, e.g. 0-3,6: %s",
+                 optarg);
+        return -1;
+      }
+      cfg->cpuset_cpus = mask;
+      cfg->cpuset_invalid = 0;
+      cfg->cpu_p_cores = cfg->cpu_e_cores = 0;
+      break;
+    }
+    case 286:
+      if (ds_cpu_parse_cores(optarg, cfg) < 0) {
+        ds_error("--cpu-cores: expected physical core counts, e.g. 1P,2E: %s",
+                 optarg);
+        return -1;
+      }
+      break;
     case 268: {
       char *end;
       errno = 0;
