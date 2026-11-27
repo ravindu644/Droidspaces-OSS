@@ -18,6 +18,24 @@ object ContainerCommandBuilder {
     }
 
     /**
+     * rm -rf of a container path, exiting with rm's own code. A guest can leave immutable or
+     * append-only files behind (NixOS marks /var/empty) and not even root can unlink those,
+     * so a directory rootfs has the flags cleared first. A sparse image goes as one file.
+     *
+     * The guest wrote that tree, so this is the busybox we ship, whose chattr never follows
+     * a symlink, and not whatever the ROM has. A trailing slash on [path] would defeat that.
+     */
+    fun buildDeleteCommand(path: String, useSparseImage: Boolean): String {
+        val rm = "rm -rf ${quote(path)} 2>&1"
+        if (useSparseImage) return rm
+        val bb = Constants.BUSYBOX_BINARY_PATH
+        // Nothing of ours stays mounted here, but through a mount the user left behind,
+        // chattr would unprotect host files that rm cannot delete on its own.
+        val mounted = "$bb grep -qF -e ${quote(" $path ")} -e ${quote(" $path/")} /proc/mounts"
+        return "{ $mounted || $bb chattr -R -ia ${quote(path)}; } >/dev/null 2>&1; $rm"
+    }
+
+    /**
      * Get the absolute path to the container's configuration file.
      */
     fun getConfigPath(container: ContainerInfo): String {
@@ -29,20 +47,8 @@ object ContainerCommandBuilder {
      * Build start command for a container based on its configuration.
      * Uses the central config file instead of passing all flags individually.
      */
-    fun buildStartCommand(container: ContainerInfo): String {
-        val parts = mutableListOf<String>()
-
-        // Binary path
-        parts.add(DROIDSPACES_BINARY_PATH)
-
-        // Config file path
-        parts.add("--config=${quote(getConfigPath(container))}")
-
-        // Command
-        parts.add("start")
-
-        return parts.joinToString(" ")
-    }
+    fun buildStartCommand(container: ContainerInfo): String =
+        "$DROIDSPACES_BINARY_PATH --config=${quote(getConfigPath(container))} start"
 
     /**
      * Build stop command for a container.
@@ -58,18 +64,10 @@ object ContainerCommandBuilder {
         return "$DROIDSPACES_BINARY_PATH --config=${quote(getConfigPath(container))} restart"
     }
 
-    /**
-     * Build unified usage command for a container (UPTIME, RAM, CPU).
-     */
-    fun buildUsageCommand(containerName: String): String {
-        return "$DROIDSPACES_BINARY_PATH --name=${quote(containerName)} usage"
-    }
+    /** JSON status of every running container: OS, hostname, IP, uptime, CPU, RAM. */
+    fun buildShowCommand(): String = "$DROIDSPACES_BINARY_PATH --json show"
 
-    /**
-     * Build command to get IP addresses of a container.
-     */
-    fun buildGetIpCommand(containerName: String): String {
-        return "$DROIDSPACES_BINARY_PATH --name=${quote(containerName)} run 'ip -4 addr show 2>/dev/null | awk \"/inet / && \\\$2 !~ /^127/ {split(\\\$2,a,\\\"/\\\"); print a[1]}\" | tr \"\\n\" \" \" || echo'"
-    }
+    /** JSON of every kernel capability probe, one 0/1 per key. */
+    fun buildCheckCommand(): String = "$DROIDSPACES_BINARY_PATH --json check"
 }
 

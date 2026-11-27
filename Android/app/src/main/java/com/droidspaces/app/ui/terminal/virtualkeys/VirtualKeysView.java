@@ -204,7 +204,7 @@ public final class VirtualKeysView extends GridLayout {
     };
   }
 
-  /** Get {@link #mVirtualKeysViewClient}. */
+  /** Kotlin's `view.virtualKeysViewClient = x` needs the getter next to the setter. */
   public IVirtualKeysView getVirtualKeysViewClient() {
     return mVirtualKeysViewClient;
   }
@@ -214,22 +214,9 @@ public final class VirtualKeysView extends GridLayout {
     mVirtualKeysViewClient = extraKeysViewClient;
   }
 
-  /** Get {@link #mRepetitiveKeys}. */
-  public List<String> getRepetitiveKeys() {
-    if (mRepetitiveKeys == null) return null;
-    return mRepetitiveKeys.stream().map(String::new).collect(Collectors.toList());
-  }
-
   /** Set {@link #mRepetitiveKeys}. Must not be {@code null}. */
   public void setRepetitiveKeys(@NonNull List<String> repetitiveKeys) {
     mRepetitiveKeys = repetitiveKeys;
-  }
-
-  /** Get {@link #mSpecialButtons}. */
-  public Map<SpecialButton, SpecialButtonState> getSpecialButtons() {
-    if (mSpecialButtons == null) return null;
-    return mSpecialButtons.entrySet().stream()
-        .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
   }
 
   /** Set {@link #mSpecialButtonsKeys}. Must not be {@code null}. */
@@ -241,18 +228,12 @@ public final class VirtualKeysView extends GridLayout {
             .collect(Collectors.toSet());
   }
 
-  /** Get {@link #mSpecialButtonsKeys}. */
-  public Set<String> getSpecialButtonsKeys() {
-    if (mSpecialButtonsKeys == null) return null;
-    return mSpecialButtonsKeys.stream().map(String::new).collect(Collectors.toSet());
-  }
-
   /** Get {@link #mButtonTextColor}. */
   public int getButtonTextColor() {
     return mButtonTextColor;
   }
 
-  /** Set {@link #mButtonTextColor}. */
+  /** Set {@link #mButtonTextColor}; Kotlin writes it as `buttonTextColor = x`. */
   public void setButtonTextColor(int buttonTextColor) {
     mButtonTextColor = buttonTextColor;
   }
@@ -262,39 +243,14 @@ public final class VirtualKeysView extends GridLayout {
     return mButtonActiveTextColor;
   }
 
-  /** Set {@link #mButtonActiveTextColor}. */
-  public void setButtonActiveTextColor(int buttonActiveTextColor) {
-    mButtonActiveTextColor = buttonActiveTextColor;
-  }
-
   /** Get {@link #mButtonBackgroundColor}. */
   public int getButtonBackgroundColor() {
     return mButtonBackgroundColor;
   }
 
-  /** Set {@link #mButtonBackgroundColor}. */
-  public void setButtonBackgroundColor(int buttonBackgroundColor) {
-    mButtonBackgroundColor = buttonBackgroundColor;
-  }
-
   /** Get {@link #mButtonActiveBackgroundColor}. */
   public int getButtonActiveBackgroundColor() {
     return mButtonActiveBackgroundColor;
-  }
-
-  /** Set {@link #mButtonActiveBackgroundColor}. */
-  public void setButtonActiveBackgroundColor(int buttonActiveBackgroundColor) {
-    mButtonActiveBackgroundColor = buttonActiveBackgroundColor;
-  }
-
-  /** Set {@link #mButtonTextAllCaps}. */
-  public void setButtonTextAllCaps(boolean buttonTextAllCaps) {
-    mButtonTextAllCaps = buttonTextAllCaps;
-  }
-
-  /** Get {@link #mLongPressTimeout}. */
-  public int getLongPressTimeout() {
-    return mLongPressTimeout;
   }
 
   /** Set {@link #mLongPressTimeout}. */
@@ -307,15 +263,10 @@ public final class VirtualKeysView extends GridLayout {
     }
   }
 
-  /** Get {@link #mLongPressRepeatDelay}. */
-  public int getLongPressRepeatDelay() {
-    return mLongPressRepeatDelay;
-  }
-
   /** Set {@link #mLongPressRepeatDelay}. */
   public void setLongPressRepeatDelay(int longPressRepeatDelay) {
-    if (mLongPressRepeatDelay >= MIN_LONG_PRESS__REPEAT_DELAY
-        && mLongPressRepeatDelay <= MAX_LONG_PRESS__REPEAT_DELAY) {
+    if (longPressRepeatDelay >= MIN_LONG_PRESS__REPEAT_DELAY
+        && longPressRepeatDelay <= MAX_LONG_PRESS__REPEAT_DELAY) {
       mLongPressRepeatDelay = longPressRepeatDelay;
     } else {
       mLongPressRepeatDelay = DEFAULT_LONG_PRESS_REPEAT_DELAY;

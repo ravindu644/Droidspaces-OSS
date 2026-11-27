@@ -4,8 +4,11 @@
     <string name="app_name">Droidspaces</string>
 
     <!-- Welcome Screen -->
-    <string name="welcome_tagline">Linux containers. Native. No overhead.</string>
+    <string name="welcome_headline">Real Linux on your phone</string>
+    <string name="welcome_body">Droidspaces runs full distributions in containers on your device\'s own kernel. No emulator, no virtual machine.</string>
     <string name="get_started">Get Started</string>
+    <string name="next">Next</string>
+    <string name="page_counter">%1$d of %2$d</string>
     <!-- Welcome feature cards -->
     <string name="feat_containers_title">Real Linux containers</string>
     <string name="feat_containers_desc">Same kernel namespace tech as LXC, Podman and Docker. No emulation, no chroot.</string>
@@ -13,7 +16,7 @@
     <string name="feat_overhead_desc">Talks to the host Linux kernel directly. No hypervisor, no virtual machine layer.</string>
     <string name="feat_unkillable_title">Unkillable by design</string>
     <string name="feat_unkillable_desc">Supports native init.rc integration and 2-layer userspace daemons. Completely unkillable.</string>
-    <string name="feat_init_title">systemd / OpenWrt procd / OpenRC as PID 1</string>
+    <string name="feat_init_title">systemd / OpenWrt procd / OpenRC / runit as PID 1</string>
     <string name="feat_init_desc">Full init system support. Real service management, not a simulated environment.</string>
     <string name="feat_isolation_title">Complete isolation</string>
     <string name="feat_isolation_desc">Private PID tree, mount table, hostname, IPC, and cgroup hierarchy per container.</string>
@@ -25,14 +28,12 @@
     <string name="feat_autoboot_desc">Automatically start containers on boot, even if the screen is locked and data is encrypted.</string>
 
     <!-- Root Check Screen -->
-    <string name="root_check_title">Root Access Check</string>
+    <string name="root_access_title">Root access</string>
     <string name="checking_root">Checking root access...</string>
-    <string name="root_granted">Root Access Granted</string>
     <string name="root_denied">Root Access Denied</string>
     <string name="root_required_message">Root access is required to manage containers.</string>
     <string name="check_root_access">Check Root Access</string>
-    <string name="check_root_access_click">Click below to check root access</string>
-    <string name="root_available_message">You can now use Droidspaces</string>
+    <string name="root_access_body">Droidspaces needs root to create containers. Your root manager will ask you to allow it.</string>
     <string name="skip">Skip</string>
     <string name="continue_button">Continue</string>
 
@@ -45,7 +46,6 @@
     <string name="close">Close</string>
     <string name="refresh">Refresh</string>
     <string name="search">Search</string>
-    <string name="clear">Clear</string>
 
     <!-- Main Tab Screen -->
     <string name="container_singular">Container</string>
@@ -60,6 +60,8 @@
     <string name="root_unavailable">Root access is unavailable.</string>
     <string name="grant_root_message">Grant root access to continue exploring droidspaces !</string>
     <string name="unknown">Unknown</string>
+    <string name="easter_egg_warning">The backend is fine, no need to spam it 🙂</string>
+    <string name="easter_egg_reward">You asked for it 🎵</string>
     <string name="update_available_message">Backend update available, click here to update</string>
     <string name="backend_attention_required">Backend: Action required</string>
     <string name="tap_to_fix_system">Tap to fix system configuration</string>
@@ -84,6 +86,27 @@
     <string name="dark_theme_description">Enable dark theme</string>
     <string name="terminal_dark_theme">Terminal Dark Mode</string>
     <string name="terminal_dark_theme_description">Use dark colors for the terminal page only</string>
+    <string name="terminal_appearance_summary">Dark mode, font size and custom fonts</string>
+    <string name="terminal_font_size">Font size</string>
+    <string name="terminal_font_size_description">Initial text size for new terminal sessions. Pinch to zoom adjusts each session separately.</string>
+    <string name="terminal_font">Font</string>
+    <string name="terminal_font_family">Font family</string>
+    <string name="terminal_section_theme">Theme</string>
+    <string name="terminal_section_misc">Misc</string>
+    <string name="terminal_font_description">Applies to new terminal sessions. Import any monospace .ttf or .otf file.</string>
+    <string name="terminal_font_default">JetBrains Mono (Default)</string>
+    <string name="terminal_font_import">Import a custom font</string>
+    <string name="terminal_font_import_error">Not a valid font file: %1$s</string>
+    <string name="terminal_font_delete">Remove font</string>
+    <string name="terminal_confirm_close">Confirm Before Closing</string>
+    <string name="terminal_confirm_close_description">Ask for confirmation when closing a terminal tab</string>
+    <string name="terminal_tap_keyboard">Open Keyboard On Tap</string>
+    <string name="terminal_tap_keyboard_description">Tapping the terminal opens the keyboard. Turn off in editors, so a tap only moves the cursor, and use the on-screen button instead</string>
+    <string name="terminal_keyboard_left">Keyboard Button On The Left</string>
+    <string name="terminal_keyboard_left_description">Move the keyboard button to the bottom left corner, for left-handed use</string>
+    <string name="terminal_toggle_keyboard">Toggle keyboard</string>
+    <string name="terminal_close_tab_title">Close session?</string>
+    <string name="terminal_close_tab_message">The shell running in this tab will end.</string>
     <string name="amoled_mode">AMOLED Mode</string>
     <string name="amoled_mode_description">Pure black background for OLED displays</string>
     <string name="dynamic_color">Apply System\'s Default Color Palette</string>
@@ -92,7 +115,7 @@
     <string name="daemon_mode">Daemon Mode</string>
     <string name="daemon_mode_description">Run Droidspaces as a persistent system-level daemon to bypass seccomp blocks from Magisk/APatch, GrapheneOS, etc. This enables high-privilege operations by fetching and running commands from userspace (Reboot required).</string>
     <string name="symlink_integration">Integrate Droidspaces to the system path</string>
-    <string name="symlink_integration_description">Create a symlink at /system/bin to access the droidspaces command in Android root shell. WARNING: ENABLING THIS CAUSES BOOTLOOP IF YOUR MOUNT SYSTEM IS OVERLAYFS meta modules. Only use this option when using Magic Mount-based mount system (Reboot required)</string>
+    <string name="symlink_integration_description">Create a symlink at /system/bin to access the droidspaces command in Android root shell. WARNING: ENABLING THIS CAUSES BOOTLOOP IF YOUR MOUNT SYSTEM IS OVERLAYFS meta modules. Only use this option when using Magic Mount-based mount system or kernel based "nomount" mount system (Reboot required)</string>
     <string name="about_section">About</string>
     <string name="about_droidspaces">About Droidspaces</string>
     <string name="about_description">LXC-Style container manager for Android</string>
@@ -112,7 +135,6 @@
     <string name="no_containers_installed">No containers installed</string>
     <string name="install_container_description">Install a container using the button below</string>
     <string name="install_container">Install Container</string>
-    <string name="install">Install</string>
     <string name="file_picker_error">Please select a .tar.xz or .tar.gz file. Selected: %1$s</string>
     <string name="file_picker_error_unknown">Please select a .tar.xz or .tar.gz file. Could not determine file type.</string>
     <string name="stopping_container">Stopping container...</string>
@@ -134,10 +156,8 @@
 
     <!-- Container Card -->
     <string name="status_running">RUNNING</string>
-    <string name="status_restarting">RESTARTING</string>
     <string name="status_stopped">STOPPED</string>
     <string name="pid_label">PID: %1$d</string>
-    <string name="hostname_label">Hostname: %1$s</string>
     <string name="options_label">Options: %1$s</string>
     <string name="start">Start</string>
     <string name="stop">Stop</string>
@@ -152,9 +172,10 @@
     <string name="selinux_permissive_option">SELinux Permissive</string>
     <string name="volatile_option">Volatile</string>
     <string name="cgroup_v1_option">Cgroup V1</string>
-    <string name="deadlock_shield_option">Deadlock Shield</string>
     <string name="privileged_option">Privileged</string>
-    <string name="userns_option">User Namespaces</string>
+    <string name="anland_option">Anland</string>
+    <string name="termux_x11_option">Termux:X11</string>
+    <string name="userns_option">Sandboxing</string>
     <string name="installation_setup_summary">Installation Summary</string>
     <string name="review_configuration">Review Configuration</string>
     <string name="tarball_label">Tarball</string>
@@ -189,7 +210,7 @@
     <string name="changes_take_effect_after_restart">Changes will take effect after restart</string>
     <string name="disable_ipv6">Disable IPv6</string>
     <string name="disable_ipv6_description">Disable IPv6 in this container. Disabling IPv6 may break VPN apps running in the host.</string>
-    <string name="disable_ipv6_nat_forced">IPv6 is always disabled in NAT and None network modes.</string>
+    <string name="disable_ipv6_description_isolated">Disable IPv6 in this container.</string>
     <string name="android_storage">Android Storage</string>
     <string name="android_storage_description">Mount Android storage</string>
     <string name="hardware_access">Hardware Access</string>
@@ -204,31 +225,72 @@
     <string name="tx11_extra_flags_placeholder">e.g. -dpi 160 -force-sysvshm</string>
     <string name="enable_virgl">Configure VirGL 3D Acceleration</string>
     <string name="enable_virgl_description">Enable 3D hardware acceleration via VirGL</string>
+    <string name="termux_not_installed">Not available. Termux is not installed.</string>
+    <string name="termux_x11_not_installed">Not available. Needs both the Termux and Termux:X11 apps installed.</string>
     <string name="virgl_extra_flags_label">VirGL Extra Flags</string>
     <string name="virgl_extra_flags_placeholder">e.g. --multi-clients --angle-vulkan</string>
     <string name="selinux_permissive">SELinux Permissive</string>
     <string name="selinux_permissive_description">Set SELinux permissive</string>
-    <string name="allow_userns">Allow User Namespaces</string>
-    <string name="allow_userns_description">Allow unprivileged user namespaces, which Flatpak/bwrap/Firefox requires. However, you may be vulnerable to certain exploits like Fragnesia without a patched kernel</string>
-    <string name="allow_userns_description_not_supported">Not supported. CONFIG_USER_NS is not enabled in the kernel</string>
+    <string name="allow_userns">Allow Sandboxing</string>
+    <string name="allow_userns_description">Lets unprivileged Docker, Podman, Flatpak, bwrap and browser sandboxes run inside the container. This weakens isolation, so enable it only for containers you trust.</string>
+    <string name="allow_userns_description_not_supported">Not available. This kernel has no user namespace support (CONFIG_USER_NS).</string>
     <string name="run_at_boot">Run at Boot</string>
     <string name="run_at_boot_description">Start container on boot</string>
+    <string name="enable_anland">Anland Display</string>
+    <string name="enable_anland_description">Show a Wayland desktop in the Anland app</string>
+    <string name="launch_x11_description">Show the X11 desktop in the Termux:X11 app</string>
+    <string name="launch_anland_window">Launch</string>
+    <string name="anland_not_installed">Not available. Needs the Anland 5.x app installed. Anland 6.x is not supported.</string>
+    <string name="anland_needs_gpu">Needs GPU Access or Hardware Access.</string>
+    <string name="anland_replaces_x11">Off while Anland Display is on. A container uses one display path.</string>
+    <string name="x11_replaces_anland">Off while Configure Termux:X11 is on. A container uses one display path.</string>
     <string name="auto_boot_priority">Auto Boot Priority</string>
     <string name="auto_boot_priority_description">Order in which run-at-boot containers start</string>
-    <string name="auto_boot_priority_hint">Drag to reorder. Containers start top to bottom - put a gateway (e.g. OpenWRT) first so it boots before the containers that route through it.</string>
+    <string name="auto_boot_priority_hint">Drag to reorder. Containers start top to bottom - put a gateway (e.g. OpenWrt) first so it boots before the containers that route through it.</string>
     <string name="auto_boot_priority_empty">No containers have Run at Boot enabled.</string>
     <string name="reorder_handle">Drag to reorder</string>
     <string name="force_cgroupv1">Force Cgroup V1</string>
     <string name="force_cgroupv1_description">Force use of legacy Cgroup V1 hierarchy</string>
-    <string name="manual_deadlock_shield">Manual Deadlock Shield</string>
-    <string name="manual_deadlock_shield_description">Prevents kernel-level VFS deadlocks on legacy kernels (e.g., 4.14.x) by blocking nested namespace creation.
-\n\nWARNING: Enabling this will block Docker, Podman, LXC, and Systemd sandboxing support inside the container.</string>
 
     <!-- Config Categories and Network Mode -->
     <string name="cat_networking">Networking</string>
     <string name="cat_integration">Integration &amp; Hardware</string>
     <string name="cat_security">Security &amp; Boot</string>
     <string name="cat_advanced">Advanced Options</string>
+    <string name="cat_resource_limits">Resource Limits</string>
+    <string name="limit_memory">Limit memory</string>
+    <string name="limit_memory_on">Capped below the device total of %1$s</string>
+    <string name="limit_memory_off">Unlimited, shares all %1$s</string>
+    <string name="limit_swap">Allow swap</string>
+    <string name="limit_swap_on">May use the device\'s swap past its memory limit</string>
+    <string name="limit_swap_off">Stops at its memory limit, the device\'s swap stays free</string>
+    <string name="limit_swap_requirement">CONFIG_MEMCG_SWAP with swap accounting on</string>
+    <string name="limit_cpu">Limit CPU</string>
+    <string name="limit_cpu_on">Capped below the device total of %1$s</string>
+    <string name="limit_cpu_off">Unlimited, shares all %1$s</string>
+    <string name="limit_pids">Limit processes</string>
+    <string name="limit_pids_on">Most processes and threads at once</string>
+    <string name="limit_pids_off">Unlimited</string>
+    <string name="limit_pids_label">PIDs</string>
+    <string name="limit_pids_value">%1$d PIDs</string>
+    <string name="limit_pids_hint">Leave empty for no limit</string>
+    <string name="limit_pids_error">At least %1$d</string>
+    <string name="limit_not_supported">Not supported by this kernel (needs %1$s)</string>
+    <string name="limit_memory_requirement">CONFIG_MEMCG, and no cgroup_disable=memory on the kernel command line</string>
+    <string name="limit_cpu_requirement">CONFIG_CFS_BANDWIDTH, and no cgroup_disable=cpu on the kernel command line</string>
+    <string name="limit_pids_requirement">CONFIG_CGROUP_PIDS, and no cgroup_disable=pids on the kernel command line</string>
+    <string name="hardware_access_not_supported">Not available. This kernel has no devtmpfs (CONFIG_DEVTMPFS).</string>
+    <string name="volatile_mode_not_supported">Not available. This kernel has no OverlayFS (CONFIG_OVERLAY_FS).</string>
+    <string name="force_cgroupv1_not_supported">Not available. This kernel only has cgroup v1, so there is nothing to force.</string>
+    <string name="disable_ipv6_forced">Held on. This kernel has no IPv6 NAT (CONFIG_IP6_NF_NAT), so NAT containers are IPv4 only.</string>
+    <string name="memory_kb">%1$s KB</string>
+    <string name="memory_mb">%1$d MB</string>
+    <string name="memory_mb_decimal">%1$s MB</string>
+    <string name="memory_gb">%1$s GB</string>
+    <plurals name="cpu_cores">
+        <item quantity="one">%1$s core</item>
+        <item quantity="other">%1$s cores</item>
+    </plurals>
     <string name="network_mode">Network Mode</string>
     <string name="network_mode_host">Host</string>
     <string name="network_mode_nat">NAT (Default)</string>
@@ -238,10 +300,27 @@
     <string name="network_mode_none_short">None</string>
     <string name="network_mode_gateway">Gateway (Virtual Router)</string>
     <string name="network_mode_gateway_short">Gateway</string>
+    <string name="network_mode_macvlan">Macvlan (Wired LAN)</string>
+    <string name="network_mode_macvlan_short">Macvlan</string>
+
+    <!-- Macvlan networking mode -->
+    <string name="macvlan_parent">Host Interface</string>
+    <string name="macvlan_parent_choose">Choose Host Interface</string>
+    <string name="macvlan_parent_hint">The wired interface the container\'s eth0 sits on, usually the USB Ethernet adapter. One interface, by its exact name.</string>
+    <string name="error_macvlan_parent_required">Choose the host interface</string>
+    <string name="warning_macvlan_passthru_shared">%1$s is also used by \'%2$s\'. In passthru mode only one of them can run at a time.</string>
+    <string name="macvlan_mode">Macvlan Mode</string>
+    <string name="macvlan_mode_bridge_desc">Containers on this interface reach each other directly.</string>
+    <string name="macvlan_mode_private_desc">Containers on this interface cannot reach each other, only the LAN.</string>
+    <string name="macvlan_mode_vepa_desc">Traffic between containers goes out to the LAN switch and back, so it needs a switch with hairpin support.</string>
+    <string name="macvlan_mode_passthru_desc">The whole interface goes to this one container, and the phone loses network on it.</string>
+    <string name="macvlan_mode_bridge">Bridge (Default)</string>
+    <string name="macvlan_mode_private">Private</string>
+    <string name="macvlan_mode_vepa">VEPA</string>
+    <string name="macvlan_mode_passthru">Passthru</string>
 
     <!-- Gateway networking mode -->
-    <string name="gateway_settings">Gateway Settings</string>
-    <string name="gateway_settings_description">Route this container through another container acting as a router (e.g. OpenWRT). That gateway must be running first.</string>
+    <string name="gateway_settings_description">Route this container through another container acting as a router (e.g. OpenWrt).</string>
     <string name="gateway_container">Gateway Container</string>
     <string name="gateway_net">LAN Name</string>
     <string name="gateway_net_hint">lan</string>
@@ -249,10 +328,8 @@
     <string name="gateway_iface_hint">eth1</string>
     <string name="gateway_bridge">Host Bridge</string>
     <string name="gateway_bridge_hint">ds-lan</string>
-    <string name="gateway_configure">Configure Gateway</string>
-    <string name="gateway_configure_title">Configure Gateway</string>
     <string name="gateway_configure_intro">These control how this container plugs into the gateway\'s virtual LAN. The defaults work for a single LAN behind one gateway - change them only when running multiple LAN segments or more than one gateway.</string>
-    <string name="gateway_iface_explain">The interface name this connection shows up as INSIDE the gateway container (e.g. eth1 in OpenWRT). It must match the interface your gateway is set to serve DHCP on. Each separate segment on the same gateway needs its own unique name. Default: eth1.</string>
+    <string name="gateway_iface_explain">The interface name this connection shows up as INSIDE the gateway container (e.g. eth1 in OpenWrt). It must match the interface your gateway is set to serve DHCP on. Each separate segment on the same gateway needs its own unique name. Default: eth1.</string>
     <string name="gateway_net_explain">A label for this LAN segment. Containers that share the same gateway and LAN name join the same virtual switch and can see each other. Use a different name to spin up an isolated second segment. Default: lan.</string>
     <string name="gateway_bridge_explain">Name of the virtual switch created on the Android host. Leave empty to auto-name it from the LAN name (ds-&lt;lan&gt;). Only set this if you need an exact bridge name. Max 15 characters.</string>
     <string name="error_gateway_required">Select a gateway container</string>
@@ -263,20 +340,11 @@
     <string name="error_iface_too_long">Too long - max 15 characters</string>
     <string name="error_gateway_bridge_taken">Bridge already used by \'%1$s\'. Use a different LAN name.</string>
     <string name="error_gateway_iface_taken">Interface already used by another segment (\'%1$s\'). Use a different one.</string>
-    <string name="nat_settings">NAT Settings</string>
     <string name="upstream_interface_title">Upstream Interface (Optional)</string>
     <string name="upstream_interface_hint">Pin internet access to specific interface(s). Leave empty to auto-detect the active uplink.</string>
     <string name="add_upstream_interface">Add Upstream Interface</string>
-    <string name="available_system_interfaces">Available System Interfaces:</string>
-    <string name="enter_manually">Or enter it manually (wildcards are supported too):</string>
-    <string name="interface_name_hint">Interface Name (e.g. wlan0, v4-rmnet_data*)</string>
     <string name="port_forwarding">Port Forwarding</string>
     <string name="add_port_forward">Add Port Forward</string>
-    <string name="host_port_hint">Host Port (1-65535 or range 100-200)</string>
-    <string name="container_port_hint">Container Port (1-65535 or range)</string>
-    <string name="protocol">Protocol</string>
-    <string name="optional_symmetric_hint">Optional (e.g. 8080 or 1000-2000)</string>
-    <string name="leave_blank_for_symmetric">Leave blank for symmetric mapping</string>
     <string name="error_invalid_range_format">Invalid range format (START-END)</string>
     <string name="error_ports_must_be_numbers">Ports must be numbers</string>
     <string name="error_port_out_of_range">Ports must be 1-65535</string>
@@ -284,7 +352,6 @@
     <string name="error_port_must_be_number">Port must be a number</string>
     <string name="error_port_width_mismatch">Host/Container range width mismatch</string>
     <string name="error_port_overlap">Overlaps with an existing port forward rule</string>
-    <string name="symmetric_label">(Symmetric)</string>
     <string name="port_forward_examples">Examples: 8080 (single), 8000-8010 (range). Leave target empty for symmetric mapping.</string>
     <string name="saved">Saved</string>
     <string name="saving">Saving...</string>
@@ -300,10 +367,7 @@
     <string name="bind_mounts">Bind Mounts</string>
     <string name="add">Add</string>
     <string name="add_bind_mount">Add Bind Mount</string>
-    <string name="enter_container_path">Enter Container Path</string>
     <string name="container_path_placeholder">e.g. /mnt/sdcard</string>
-    <string name="host_path">Host path: %1$s</string>
-    <string name="container_path">Container path: %1$s</string>
     <string name="read_only">Read-only</string>
     <string name="dns_servers_label">DNS Servers</string>
     <string name="dns_servers_placeholder">e.g. 1.1.1.1,8.8.8.8 (Optional)</string>
@@ -311,10 +375,7 @@
     <string name="environment_variables">Environment Variables</string>
     <string name="environment_variables_configured">%1$d variable(s) configured</string>
     <string name="not_configured">Not configured</string>
-    <string name="env_hint_row">Each row is one KEY=VALUE pair</string>
-    <string name="key_label">KEY</string>
-    <string name="value_label">VALUE</string>
-    <string name="add_variable">Add variable</string>
+    <string name="env_placeholder">KEY=VALUE, one per line. Lines starting with # are ignored.</string>
 
     <!-- Custom Init -->
     <string name="custom_init_label">Custom Init Binary</string>
@@ -327,6 +388,11 @@
     <!-- Container Name Screen -->
     <string name="container_setup">Container Setup</string>
     <string name="container_information">Container Information</string>
+    <string name="rootfs_config_loading">Reading recommended settings…</string>
+    <string name="rootfs_config_loaded_title">Settings were filled in for you</string>
+    <string name="rootfs_config_loaded">This archive came with its own container settings and every one of them is already applied, hardware access and privileged mode included. A rootfs from someone else can ask for more access than you meant to give. Read the next page carefully before you install.</string>
+    <string name="rootfs_config_review">Review configuration</string>
+    <string name="rootfs_config_invalid">Could not load recommended settings. Configure this container manually. %1$s</string>
     <string name="container_name_label">Container Name *</string>
     <string name="container_name_placeholder">my-container</string>
     <string name="hostname_placeholder">Leave empty for default</string>
@@ -336,32 +402,21 @@
 
     <!-- Container Config Screen -->
     <string name="configuration_title">Configuration</string>
-    <string name="container_options">Container Options</string>
     <string name="next_storage">Next: Storage</string>
+    <string name="next_summary">Next: Summary</string>
+    <string name="storage_title">Storage</string>
 
     <!-- Installation Screen -->
     <string name="installing_container">Installing Container</string>
     <string name="installation_complete">Installation Complete</string>
     <string name="installation_failed">Installation Failed</string>
     <string name="done">Done</string>
-    <string name="installing_module">Installing Module</string>
     <string name="installing_droidspaces">Installing Droidspaces</string>
-    <string name="module_installed_success">Magisk module installed successfully</string>
+    <string name="installing_backend_message">Setting up the backend. This takes a moment.</string>
     <string name="backend_installed_success">Droidspaces backend installed successfully</string>
-    <string name="unknown_error">Unknown error occurred</string>
+    <string name="backend_installed_unsupported_kernel">Droidspaces backend installed successfully, but this kernel has no Droidspaces support.</string>
     <string name="module_installation_failed">Module installation failed</string>
     <string name="binary_installation_failed">Binary installation failed</string>
-    <string name="removing_old_module">Removing old module...</string>
-    <string name="extracting_module_files">Extracting module files...</string>
-    <string name="installing_module_step">Installing module...</string>
-    <string name="setting_permissions">Setting permissions...</string>
-    <string name="verifying_installation">Verifying installation...</string>
-    <string name="preparing_module_installation">Preparing module installation...</string>
-    <string name="detected_architecture">Detected architecture: %1$s</string>
-    <string name="creating_directories">Creating directories...</string>
-    <string name="installing_binary">Installing binary: %1$s</string>
-    <string name="granting_permissions">Granting permissions...</string>
-    <string name="preparing_installation">Preparing installation...</string>
 
     <!-- File Picker Screen -->
     <string name="filter_absolute_path_hint">Filter or type absolute path…</string>
@@ -370,8 +425,6 @@
     <string name="select_folder">Select Folder</string>
 
     <!-- Protocols -->
-    <string name="tcp">TCP</string>
-    <string name="udp">UDP</string>
     <string name="cpu">CPU:</string>
     <string name="ram">RAM:</string>
 
@@ -387,7 +440,8 @@
     <string name="cpu_usage_label">CPU Usage</string>
     <string name="ram_usage_label">RAM Usage</string>
     <string name="cpu_percent_label">%1$.1f%%</string>
-    <string name="ram_percent_label">%1$d MB (%2$.1f%%)</string>
+    <string name="ram_used_label">%1$s (%2$.1f%%)</string>
+    <string name="ram_used_of_limit_label">%1$s / %2$s (%3$.0f%%)</string>
     <string name="sessions_running_plural">%1$d sessions running · tap to restore</string>
     <string name="session_running_singular">1 session running · tap to restore</string>
 
@@ -395,13 +449,13 @@
     <string name="systemd_services">Systemd Services</string>
     <string name="openwrt_services">OpenWrt Services</string>
     <string name="openwrt">OpenWrt</string>
-    <string name="procd_detected">OpenWrt/procd detected</string>
-    <string name="procd_services_placeholder_desc">Service management for %1$s will be added in the next patch.</string>
     <string name="openrc_services">OpenRC Services</string>
     <string name="openrc">OpenRC</string>
+    <string name="runit_services">Runit Services</string>
+    <string name="runit">runit</string>
     <string name="init_system">Init System</string>
-    <string name="init_system_not_available">Systemd/OpenWrt/OpenRC Not Available</string>
-    <string name="init_system_not_available_desc">This container does not have systemd, OpenWrt/procd, or OpenRC installed</string>
+    <string name="init_system_not_available">Systemd/OpenWrt/OpenRC/runit Not Available</string>
+    <string name="init_system_not_available_desc">This container does not have systemd, OpenWrt/procd, runit, or OpenRC installed</string>
     <string name="fetching_services">Fetching services...</string>
     <string name="fetching_distros">Fetching distros from the rootfs repo...</string>
 
@@ -417,6 +471,7 @@
     <string name="enable_service">Enable</string>
     <string name="disable_service">Disable</string>
     <string name="restart_service">Restart service</string>
+    <string name="toggle_run_at_boot">Toggle run-at-boot</string>
     <string name="reload_service">Reload service</string>
     <string name="mask_service">Mask service</string>
     <string name="inspect_unit">Inspect unit</string>
@@ -435,6 +490,12 @@
     <string name="property_cpu_time">CPU Time (ns)</string>
     <string name="unit_detail_load_error_title">Couldn\'t load unit details</string>
     <string name="unit_detail_load_error_message">The unit may no longer exist, or the container may be unreachable.</string>
+    <string name="fetching_logs">Fetching logs...</string>
+    <string name="journal_load_error_title">Couldn\'t load logs</string>
+    <string name="journal_load_error_message">The unit may have no journal, or the container may be unreachable.</string>
+    <string name="journal_line_count_custom">Custom…</string>
+    <string name="journal_line_count_title">Line count</string>
+    <string name="journal_line_count_label">Lines</string>
     <string name="properties_section">Properties</string>
     <string name="dependencies_section">Dependencies</string>
     <string name="systemctl_status_section">systemctl status</string>
@@ -475,6 +536,9 @@
     <string name="backend_not_available_description">Droidspaces backend is not installed or corrupted. Please install it first.</string>
     <string name="root_access_not_available">Root access not available</string>
     <string name="root_access_not_available_description">This page is disabled as root access is unavailable</string>
+    <string name="kernel_unsupported">Kernel not supported</string>
+    <string name="kernel_unsupported_description">This page is disabled as this kernel is missing features Droidspaces needs</string>
+    <string name="kernel_unsupported_message">Tap to learn how to configure your kernel for Droidspaces.</string>
 
     <!-- Dialog Utils -->
     <string name="operation_failed_title">Operation Failed</string>
@@ -497,7 +561,6 @@
     <string name="gb_size">%1$dGB</string>
 
     <!-- Sparse Image Config Screen -->
-    <string name="sparse_image_configuration">Sparse Image Configuration</string>
     <string name="storage_configuration">Storage Configuration</string>
     <string name="about_sparse_images">About Sparse Images</string>
     <string name="sparse_images_recommended">Sparse images are recommended when using containers on encrypted storage, F2FS /data partitions, or other filesystems that may have compatibility issues with direct directory mounting.</string>
@@ -513,6 +576,21 @@
     <string name="enter_size_between_4_512_gb">Enter size between 4 and 512 GB</string>
     <string name="resize_same_as_current">Already %1$d GB. Enter a different size to resize.</string>
 
+    <!-- Storage location -->
+    <string name="storage_location">Storage location</string>
+    <string name="storage_location_default">Internal (default)</string>
+    <string name="storage_location_default_description">Keeps the rootfs under %1$s</string>
+    <string name="storage_location_custom">Choose a folder</string>
+    <string name="storage_location_custom_description">Put the rootfs on an SD card, USB drive or another folder</string>
+    <string name="storage_location_pick">Select storage folder</string>
+    <string name="storage_location_change_hint">Tap to choose a different folder</string>
+    <string name="storage_location_checking">Checking this location...</string>
+    <string name="storage_location_free">%1$s, %2$d GB free</string>
+    <string name="storage_location_fs_only">%1$s</string>
+    <string name="storage_location_image_forced">Sparse image required here</string>
+    <string name="sparse_image_section">Sparse image</string>
+    <string name="storage_location_needs_space">At least %1$d GB of free space is required here.</string>
+
     <!-- Container Log Viewer -->
     <string name="logs_title">Logs: %1$s</string>
     <string name="clear_logs">Clear logs</string>
@@ -521,7 +599,6 @@
     <!-- Validation Error Messages -->
     <string name="error_container_name_empty">Container name cannot be empty</string>
     <string name="error_container_name_invalid">Container name can only contain letters, numbers, hyphens (-), underscores (_), dots (.), and spaces</string>
-    <string name="error_container_name_too_long">Name too long - max 17 characters (kernel loop device path limit)</string>
     <string name="error_hostname_invalid">Hostname can only contain letters, numbers, and dashes (-)</string>
 
     <!-- Process List -->
@@ -547,8 +624,8 @@
     <!-- Notification Permission -->
     <string name="notification_permission_title">Notification Permission</string>
     <string name="notification_permission_rationale">Droidspaces needs to show a persistent notification to keep your terminal sessions running in the background. Without this, Android (especially on Samsung devices) might kill the terminal service unexpectedly.</string>
-    <string name="grant_permission">Grant Permission</string>
-    <string name="i_understand">I Understand</string>
+    <string name="allow">Allow</string>
+    <string name="not_now">Not now</string>
 
     <!-- Terminal Session Notification -->
     <string name="notification_title">Droidspaces Terminal</string>
@@ -564,6 +641,14 @@
     <string name="export_container">Export container as tarball</string>
     <string name="export_container_failed">Failed to export container %1$s</string>
     <string name="starting_export">Starting export...</string>
+    <string name="export_container_title">Export %1$s</string>
+    <string name="export_action">Export</string>
+    <plurals name="export_env_body">
+        <item quantity="one">This container has %1$d environment variable. Environment variables often hold passwords and API tokens, and anyone who gets the archive can read them.</item>
+        <item quantity="other">This container has %1$d environment variables. They often hold passwords and API tokens, and anyone who gets the archive can read them.</item>
+    </plurals>
+    <string name="export_env_include">Include environment variables</string>
+    <string name="export_env_include_desc">Leave this off for archives you share. Turn it on for your own backups.</string>
     <string name="migrate_dialog_title">Migrate to Sparse Image</string>
     <string name="resize_dialog_title">Resize Sparse Image</string>
     <string name="migrate_dialog_message">Migrating \"%1$s\" to a sparse image will create a dedicated ext4 filesystem. This operation is destructive if interrupted. Please backup your data.</string>
@@ -574,12 +659,10 @@
     <string name="help_card_message">Tap here to learn how to setup your first Linux container!</string>
     <string name="help_card_url">https://github.com/ravindu644/Droidspaces-OSS/blob/main/Documentation/Installation-Android.md</string>
     <string name="privileged_mode">Privileged Mode</string>
-    <string name="privileged_mode_description">Configure granular security relaxation for nested virtualization or advanced hardware access.</string>
     <string name="privileged_nomask_desc">Disable jail masks to allow write access to /proc and /sys. Note: /sys remains read-only unless Hardware Access is also enabled.</string>
     <string name="privileged_nocaps_desc">Do not drop any Linux capabilities (full root power).</string>
     <string name="privileged_noseccomp_desc">Disable Seccomp syscall filtering. This enables advanced kernel features like unprivileged user namespaces, strictly required for nested sandboxing (Bubblewrap, Flatpak) and also allows loading out-of-tree kernel modules.</string>
     <string name="privileged_shared_desc">Enable MS_SHARED mount propagation to the host.</string>
-    <string name="privileged_unfiltered_desc">Bypass device filtering. All host /dev nodes become visible.</string>
     <string name="privileged_full_desc">Enable all privileged flags at once.</string>
     <string name="privileged_warning_title">DANGEROUS TERRITORY</string>
     <string name="privileged_disclaimer">By enabling these options, you are compromising your device security. We are NOT responsible for any data loss, bricked devices, or weird bugs. Do NOT report issues occurred while using these modes.</string>
@@ -591,6 +674,11 @@
     <!-- Rootfs repository -->
     <string name="repo_title">Rootfs Repository</string>
     <string name="repo_fab_label">Repository</string>
+    <string name="add_container">Add container</string>
+    <string name="install_from_file">Install from file</string>
+    <string name="fab_menu_expanded">Expanded</string>
+    <string name="fab_menu_collapsed">Collapsed</string>
+    <string name="close_menu">Close menu</string>
     <string name="repo_refresh">Refresh</string>
     <string name="repo_banner_text">Rootfs tarballs under \"Droidspaces developers\" are open-source and transparent. You can manually download or inspect our changes by tapping this card.</string>
     <string name="repo_banner_url">https://github.com/Droidspaces/Droidspaces-rootfs-builder</string>
@@ -601,17 +689,16 @@
     <string name="repo_retry">Retry</string>
     <string name="repo_notification_description">Droidspaces rootfs download</string>
     <string name="repo_error_no_assets">No rootfs tarballs found in latest release</string>
-    <string name="repo_error_network">Network error</string>
     <string name="repo_dl_error_unknown">Unknown error</string>
-    <string name="repo_dl_error_cannot_resume">Cannot resume download</string>
-    <string name="repo_dl_error_device_not_found">Storage not found</string>
-    <string name="repo_dl_error_file_exists">File already exists</string>
     <string name="repo_dl_error_file_error">File system error</string>
     <string name="repo_dl_error_http_data">HTTP data error</string>
-    <string name="repo_dl_error_no_space">Insufficient storage</string>
-    <string name="repo_dl_error_too_many_redirects">Too many redirects</string>
-    <string name="repo_dl_error_unhandled_http">Unexpected HTTP response</string>
     <string name="repo_dl_error_not_found">File not found (404)</string>
+    <string name="repo_dl_error_storage_permission">Storage permission denied</string>
+    <string name="repo_dl_channel_name">Rootfs downloads</string>
+    <string name="repo_dl_complete">Download complete, tap to install</string>
+    <string name="repo_storage_permission_title">Storage Permission</string>
+    <string name="repo_storage_permission_rationale">Rootfs tarballs are saved to your Downloads folder, and on this Android version that needs storage access. Without it the download cannot start.</string>
+    <string name="repo_notification_permission_rationale">Droidspaces shows download progress, a Cancel button, and a notification you can tap to install once the download finishes. The download still runs without it, you just will not see any of that.</string>
     <string name="repo_dl_error_code">Error code %1$d</string>
     <string name="repo_status_ready">READY</string>
     <string name="repo_status_downloading">DOWNLOADING</string>
@@ -626,6 +713,63 @@
     <string name="repo_custom_name_empty">Name cannot be empty</string>
     <string name="repo_custom_url_empty">URL cannot be empty</string>
     <string name="repo_custom_url_invalid">URL must start with https://</string>
-    <string name="repo_no_custom">No custom repositories subscribed yet.</string>
     <string name="debugging_section">Debugging</string>
+    <string name="experimental_section">Experimental</string>
+    <string name="treat_as_64bit">Use the 64-bit backend</string>
+    <string name="treat_as_64bit_description">Your OS is 32-bit but the kernel is 64-bit. Install the 64-bit backend and list 64-bit rootfs images instead.</string>
+    <string name="app_update_message">Droidspaces %1$s is ready. Tap to open the release on GitHub.</string>
+    <string name="updates_section">Updates</string>
+    <string name="check_app_updates">Check for app updates</string>
+    <string name="check_app_updates_description">Look for a new release on GitHub when the app opens</string>
+    <!-- Container config: grouped settings, pages and sheets -->
+    <string name="config_general">General</string>
+    <string name="network_mode_nat_desc">Private network behind the phone</string>
+    <string name="network_mode_gateway_desc">Through another container acting as a router</string>
+    <string name="network_mode_macvlan_desc">Straight onto a wired LAN</string>
+    <string name="network_mode_host_desc">Shares the phone\'s network</string>
+    <string name="network_mode_none_desc">No network, loopback only</string>
+    <plurals name="upstream_count">
+        <item quantity="one">%1$d upstream</item>
+        <item quantity="other">%1$d upstreams</item>
+    </plurals>
+    <plurals name="port_rule_count">
+        <item quantity="one">%1$d port rule</item>
+        <item quantity="other">%1$d port rules</item>
+    </plurals>
+    <plurals name="bind_mount_count">
+        <item quantity="one">%1$d mount</item>
+        <item quantity="other">%1$d mounts</item>
+    </plurals>
+    <string name="network_summary_gateway">Through %1$s</string>
+    <string name="network_summary_macvlan">On %1$s</string>
+    <string name="add_interfaces_lead">Tap them in the order they should be tried.</string>
+    <string name="add_interfaces_manual_hint">Wildcards work. A typed name goes last, and you can reorder everything after adding.</string>
+    <string name="or_type_a_name">Or type a name</string>
+    <string name="or_type_exact_name">Or type its exact name</string>
+    <string name="no_interfaces_found">No interfaces found right now.</string>
+    <string name="port_forwarding_intro">Ports on the phone that reach into this container.</string>
+    <string name="port_forward_same_port">%1$s, same port inside</string>
+    <string name="host_port">Host port</string>
+    <string name="container_port">Container port</string>
+    <string name="same_as_host">Same as host</string>
+    <string name="optional">Optional</string>
+    <string name="gateway_lan">Gateway LAN</string>
+    <string name="delete_item">Delete %1$s</string>
+    <string name="reorder">Drag to reorder</string>
+    <string name="env_not_key_value">Lines that are not KEY=VALUE are underlined. Fix or delete them to save.</string>
+    <string name="bind_mounts_intro">Folders on the phone that show up inside the container.</string>
+    <string name="bind_dest_taken">Another mount already uses this path</string>
+    <string name="folder_on_phone">Folder on the phone</string>
+    <string name="choose_folder">Choose a folder</string>
+    <string name="path_in_container">Path in the container</string>
+    <string name="path_in_container_hint">A folder inside the container, like /mnt/music. Not / itself, and no , or :</string>
+    <string name="read_only_description">The container can read but not change these files</string>
+    <string name="mount_from">from %1$s</string>
+    <string name="discard_edits_title">Discard edits?</string>
+    <string name="discard_edits_body">What you changed on this page has not been applied yet.</string>
+    <string name="discard_invalid_body">Some settings on this page are not valid. Fix them to keep your changes, or discard them.</string>
+    <string name="discard">Discard</string>
+    <string name="upstream_max">Up to %1$d interfaces. Untick one to add another.</string>
+    <string name="bind_path_separator">Paths cannot contain , or :</string>
+    <string name="keep_editing">Keep editing</string>
 </resources>

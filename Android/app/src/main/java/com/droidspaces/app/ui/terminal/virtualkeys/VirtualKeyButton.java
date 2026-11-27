@@ -38,8 +38,7 @@ public class VirtualKeyButton {
   public static final String KEY_POPUP = "popup";
 
   /**
-   * The key that will be sent to the terminal, either a control character, like defined in {@link
-   * VirtualKeysConstants#PRIMARY_KEY_CODES_FOR_STRINGS} (LEFT, RIGHT, PGUP...) or some text.
+   * The key that will be sent to the terminal, either a control character, like defined in the primary key codes (LEFT, RIGHT, PGUP...) or some text.
    */
   private final String key;
 
@@ -124,7 +123,7 @@ public class VirtualKeyButton {
     } else {
       this.display =
           Arrays.stream(keys)
-              .map(key -> extraKeyDisplayMap.get(key, key))
+              .map(key -> extraKeyDisplayMap.getOrDefault(key, key))
               .collect(Collectors.joining(" "));
     }
 
@@ -142,7 +141,7 @@ public class VirtualKeyButton {
   /** Replace the alias with its actual key name if found in extraKeyAliasMap. */
   public static String replaceAlias(
       @NonNull VirtualKeysConstants.VirtualKeyDisplayMap extraKeyAliasMap, String key) {
-    return extraKeyAliasMap.get(key, key);
+    return extraKeyAliasMap.getOrDefault(key, key);
   }
 
   /** Get {@link #key}. */

@@ -14,7 +14,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 
@@ -33,22 +33,19 @@ fun <T> DsDropdown(
     enabled: Boolean = true
 ) {
     var expanded by remember { mutableStateOf(false) }
-    val focusManager = LocalFocusManager.current
+    // The menu fades out after a pick, and moving the check during that fade shifts two rows
+    // at once. The open menu shows the selection it opened with, the field shows the new one.
+    var menuSelected by remember { mutableStateOf(selected) }
 
-    val fieldShape = RoundedCornerShape(20.dp)
-    val fieldColors = OutlinedTextFieldDefaults.colors(
-        unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f),
-        focusedBorderColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.8f),
-        unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerLow,
-        focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
-    )
+    val fieldShape = RoundedCornerShape(16.dp)
+    val fieldColors = DsTextFieldDefaults.colors()
 
     ExposedDropdownMenuBox(
         expanded = expanded && enabled,
         onExpandedChange = {
             if (!enabled) return@ExposedDropdownMenuBox
+            if (it) menuSelected = selected
             expanded = it
-            if (!it) focusManager.clearFocus()
         },
         modifier = modifier.fillMaxWidth()
     ) {
@@ -65,34 +62,18 @@ fun <T> DsDropdown(
             shape = fieldShape,
             colors = fieldColors,
             modifier = Modifier
-                .menuAnchor()
+                .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable)
+                // The text field takes focus from a tap only after the double-tap timeout, so a
+                // tap that closes the menu would re-focus it and leave it outlined. Tying focus
+                // to the menu drops it on close and refuses that late request.
+                .focusProperties { canFocus = expanded }
                 .fillMaxWidth()
         )
-        val isDark = MaterialTheme.colorScheme.background.luminance() < 0.5f
-        val dropdownColor = if (isDark) MaterialTheme.colorScheme.surfaceContainerHigh else MaterialTheme.colorScheme.surfaceContainer
-        
-        MaterialTheme(
-            colorScheme = MaterialTheme.colorScheme.copy(
-                surface = dropdownColor,
-                surfaceContainer = dropdownColor,
-                surfaceTint = Color.Transparent
-            ),
-            shapes = MaterialTheme.shapes.copy(
-                extraSmall = RoundedCornerShape(20.dp)
-            )
-        ) {
+        DsMenuTheme {
             ExposedDropdownMenu(
                 expanded = expanded,
-                onDismissRequest = { 
-                    expanded = false
-                    focusManager.clearFocus()
-                },
-                modifier = Modifier
-                    .border(
-                        width = 1.dp,
-                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f),
-                        shape = RoundedCornerShape(20.dp)
-                    )
+                onDismissRequest = { expanded = false },
+                modifier = Modifier.dsMenuBorder()
             ) {
                 options.forEach { option ->
                     DropdownMenuItem(
@@ -100,9 +81,8 @@ fun <T> DsDropdown(
                         onClick = {
                             onSelect(option)
                             expanded = false
-                            focusManager.clearFocus()
                         },
-                        leadingIcon = if (option == selected) {
+                        leadingIcon = if (option == menuSelected) {
                             {
                                 Icon(
                                     Icons.Default.Check,

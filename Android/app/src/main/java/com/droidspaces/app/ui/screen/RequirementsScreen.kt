@@ -3,7 +3,6 @@ package com.droidspaces.app.ui.screen
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.widget.Toast
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -11,8 +10,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.tween
-import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.ContentCopy
@@ -27,7 +24,6 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -36,8 +32,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.graphics.Color
 import androidx.compose.foundation.BorderStroke
-import androidx.lifecycle.viewmodel.compose.viewModel
 import com.droidspaces.app.R
+import com.droidspaces.app.ui.component.DsSnackbarHost
 import com.droidspaces.app.ui.component.TerminalDialog
 import com.droidspaces.app.ui.viewmodel.AppStateViewModel
 import com.droidspaces.app.util.Constants
@@ -49,21 +45,26 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import androidx.compose.runtime.rememberCoroutineScope
 import com.droidspaces.app.ui.util.showSuccess
-import com.droidspaces.app.ui.util.LoadingIndicator
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+import androidx.compose.material3.LoadingIndicator
+import com.droidspaces.app.ui.component.CardButton
+import com.droidspaces.app.util.AnimationUtils
+import androidx.compose.foundation.clickable
+import androidx.compose.ui.draw.clip
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RequirementsScreen(
+    appStateViewModel: AppStateViewModel,
     onNavigateBack: () -> Unit
 ) {
     val context = LocalContext.current
-    val appStateViewModel: AppStateViewModel = viewModel()
     val isRootAvailable = appStateViewModel.isRootAvailable
     // Re-check on entry so a missing/corrupted backend is reflected here even if it
     // was nuked after the last check elsewhere.
     LaunchedEffect(Unit) { appStateViewModel.checkBackendStatus(force = true) }
     // The check runs the droidspaces binary, so it's only meaningful when the
-    // backend is actually usable — gate the button on that (see test plan §2).
+    // backend is actually usable, so gate the button on that (see test plan §2).
     val backendReady = appStateViewModel.backendStatus == DroidspacesBackendStatus.Available ||
         appStateViewModel.backendStatus == DroidspacesBackendStatus.UpdateAvailable
     val scope = rememberCoroutineScope()
@@ -81,7 +82,7 @@ fun RequirementsScreen(
                     Text(
                         text = context.getString(R.string.requirements),
                         style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.SemiBold
+                        fontWeight = FontWeight.Bold
                     )
                 },
                 navigationIcon = {
@@ -136,12 +137,21 @@ CONFIG_SECCOMP_FILTER=y
 # Control groups support
 CONFIG_CGROUPS=y
 CONFIG_CGROUP_DEVICE=y
-CONFIG_CGROUP_PIDS=y
-CONFIG_MEMCG=y
 CONFIG_CGROUP_SCHED=y
 CONFIG_FAIR_GROUP_SCHED=y
 CONFIG_CGROUP_FREEZER=y
 CONFIG_CGROUP_NET_PRIO=y
+
+# Resource limits: --memory, --cpus, --pids-limit, in that order, then the
+# accounting that reports CPU usage on kernels before 4.15.
+# Optional: a limit whose option is missing is skipped with a warning
+CONFIG_MEMCG=y
+# Keeps a memory-limited container out of swap. Before 6.1 only; before 5.8
+# also boot with swapaccount=1 unless CONFIG_MEMCG_SWAP_ENABLED=y
+CONFIG_MEMCG_SWAP=y
+CONFIG_CFS_BANDWIDTH=y
+CONFIG_CGROUP_PIDS=y
+CONFIG_CGROUP_CPUACCT=y
 
 # Device filesystem support
 CONFIG_DEVTMPFS=y
@@ -185,6 +195,19 @@ CONFIG_NF_CONNTRACK_IPV4=y
 CONFIG_NF_NAT_IPV4=y
 CONFIG_IP_NF_NAT=y
 
+# IPv6 in NAT mode (NAT66). Optional: without these, NAT containers are IPv4 only
+CONFIG_IPV6=y
+CONFIG_IPV6_MULTIPLE_TABLES=y
+CONFIG_IP6_NF_IPTABLES=y
+CONFIG_IP6_NF_FILTER=y
+CONFIG_IP6_NF_MANGLE=y
+CONFIG_IP6_NF_NAT=y
+CONFIG_IP6_NF_TARGET_MASQUERADE=y
+
+# legacy compat
+CONFIG_NF_CONNTRACK_IPV6=y
+CONFIG_NF_NAT_IPV6=y
+
 # Disable this on older kernels to make internet work
 CONFIG_ANDROID_PARANOID_NETWORK=n
 
@@ -222,8 +245,13 @@ CONFIG_NETFILTER_XT_MATCH_ADDRTYPE=y
 # Fix for docker unsafe procfs error
 CONFIG_USER_NS=y
 
+# IPv6 in NAT mode (NAT66)
+CONFIG_IP6_NF_NAT=y
+CONFIG_IP6_NF_TARGET_MASQUERADE=y
+
 # UFW support
-CONFIG_NETFILTER_XT_TARGET_REJECT=y
+CONFIG_IP_NF_TARGET_REJECT=y
+CONFIG_IP6_NF_TARGET_REJECT=y
 CONFIG_NETFILTER_XT_TARGET_LOG=y
 CONFIG_NETFILTER_XT_MATCH_RECENT=y
 
@@ -236,12 +264,22 @@ CONFIG_NETFILTER_XT_SET=y
 # Enable xattr, posix acl support on tmpfs
 # For NixOS support
 CONFIG_TMPFS_POSIX_ACL=y
-CONFIG_TMPFS_XATTR=y""",
+CONFIG_TMPFS_XATTR=y
+
+# Resource limits: --cpus and --pids-limit. CONFIG_MEMCG is already on in GKI.
+# These two BREAK the kABI and no patch covers them: they resize scheduler and
+# cgroup structures, which changes the CRC of thousands of exported symbols.
+# Stock vendor modules then refuse to load and the device bootloops.
+# Leave them commented out unless you rebuild EVERY kernel module from the
+# same source and flash vendor_boot, vendor_dlkm and system_dlkm together
+# with the new boot.img, all at once.
+# CONFIG_CFS_BANDWIDTH=y
+# CONFIG_CGROUP_PIDS=y""",
                     guideUrl = "https://github.com/ravindu644/Droidspaces-OSS/blob/main/Documentation/Kernel-Configuration.md#configuring-gki-kernels",
                     snackbarHostState = snackbarHostState
                 )
 
-                // Check Requirements Button — disabled without root or a usable backend.
+                // Check Requirements Button, disabled without root or a usable backend.
                 CheckRequirementsButton(
                     enabled = isRootAvailable && backendReady,
                     isRunning = isCheckRunning,
@@ -254,8 +292,6 @@ CONFIG_TMPFS_XATTR=y""",
                         // Create logger
                         val logger = ViewModelLogger { level, message ->
                             checkLogs.add(level to message)
-                        }.apply {
-                            verbose = true
                         }
 
                         try {
@@ -293,7 +329,7 @@ CONFIG_TMPFS_XATTR=y""",
             }
 
             // Snackbar host
-            SnackbarHost(
+            DsSnackbarHost(
                 hostState = snackbarHostState,
                 modifier = Modifier.align(Alignment.BottomCenter)
             )
@@ -327,10 +363,7 @@ private fun ExpandableKernelRequirementsSection(
 
     val rotationAngle by animateFloatAsState(
         targetValue = if (isExpanded) 180f else 0f,
-        animationSpec = tween(
-            durationMillis = 200,
-            easing = FastOutSlowInEasing
-        ),
+        animationSpec = AnimationUtils.mediumSpec(),
         label = "chevron_rotation"
     )
 
@@ -344,10 +377,7 @@ private fun ExpandableKernelRequirementsSection(
             modifier = Modifier
                 .fillMaxWidth()
                 .animateContentSize(
-                    animationSpec = tween(
-                        durationMillis = 200,
-                        easing = FastOutSlowInEasing
-                    )
+                    animationSpec = AnimationUtils.mediumSpec()
                 )
         ) {
             // Clickable header
@@ -415,17 +445,13 @@ private fun CodeBox(
                     .fillMaxWidth()
                     .horizontalScroll(horizontalScrollState)
             ) {
-                androidx.compose.material3.ProvideTextStyle(
-                    MaterialTheme.typography.bodySmall.copy(fontFamily = JetBrainsMono)
-                ) {
-                    Text(
-                        text = code,
-                        style = MaterialTheme.typography.bodySmall.copy(fontFamily = JetBrainsMono),
-                        color = MaterialTheme.colorScheme.onSurface,
-                        softWrap = false, // No word wrap - allows horizontal scrolling
-                        modifier = Modifier.wrapContentWidth() // Allow text to be as wide as needed
-                    )
-                }
+                Text(
+                    text = code,
+                    style = MaterialTheme.typography.bodySmall.copy(fontFamily = JetBrainsMono),
+                    color = MaterialTheme.colorScheme.onSurface,
+                    softWrap = false, // No word wrap - allows horizontal scrolling
+                    modifier = Modifier.wrapContentWidth() // Allow text to be as wide as needed
+                )
             }
 
             // Copy button - matching "Copy login" button style
@@ -459,34 +485,10 @@ private fun CodeBox(
                     }
                 }
 
-                Button(
-                    onClick = {
-                        val clipboard = context.getSystemService(ClipboardManager::class.java)
-                        val clip = ClipData.newPlainText(
-                            context.getString(R.string.kernel_requirements),
-                            code
-                        )
-                        clipboard.setPrimaryClip(clip)
-                        Toast.makeText(context, R.string.kernel_requirements_copied, Toast.LENGTH_SHORT).show()
-                        // Show snackbar feedback
-                        scope.showSuccess(snackbarHostState, context.getString(R.string.kernel_requirements_copied))
-                    },
-                    modifier = Modifier.widthIn(min = 140.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.primary,
-                        contentColor = MaterialTheme.colorScheme.onPrimary
-                    )
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.ContentCopy,
-                        contentDescription = context.getString(R.string.copy),
-                        modifier = Modifier.size(18.dp)
-                    )
-                    Spacer(Modifier.width(6.dp))
-                    Text(
-                        text = context.getString(R.string.copy),
-                        fontWeight = FontWeight.SemiBold
-                    )
+                CardButton(context.getString(R.string.copy), Icons.Default.ContentCopy) {
+                    val clipboard = context.getSystemService(ClipboardManager::class.java)
+                    clipboard.setPrimaryClip(ClipData.newPlainText(context.getString(R.string.kernel_requirements), code))
+                    scope.showSuccess(snackbarHostState, context.getString(R.string.kernel_requirements_copied))
                 }
             }
         }
@@ -497,6 +499,7 @@ private fun CodeBox(
  * Check Requirements Button - runs droidspaces check command
  */
 @Composable
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 private fun CheckRequirementsButton(
     enabled: Boolean,
     isRunning: Boolean,

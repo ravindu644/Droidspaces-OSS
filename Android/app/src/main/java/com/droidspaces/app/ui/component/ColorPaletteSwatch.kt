@@ -7,7 +7,7 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.size
-import androidx.compose.material.ripple.rememberRipple
+import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -44,9 +44,9 @@ fun ColorPaletteSwatch(
     modifier: Modifier = Modifier,
     swatchSize: Float = 52f
 ) {
-    val primary = if (isDarkTheme) palette.primaryDark else palette.primaryLight
-    val secondary = if (isDarkTheme) palette.secondaryDark else palette.secondaryLight
-    val tertiary = if (isDarkTheme) palette.tertiaryDark else palette.tertiaryLight
+    val (primary, secondary, tertiary) = palette.swatch
+        ?: if (isDarkTheme) listOf(palette.primaryDark, palette.secondaryDark, palette.tertiaryDark)
+        else listOf(palette.primaryLight, palette.secondaryLight, palette.tertiaryLight)
 
     // Animate selection ring and checkmark with spring physics
     val selectionProgress by animateFloatAsState(
@@ -66,7 +66,7 @@ fun ColorPaletteSwatch(
             .semantics { contentDescription = palette.displayName }
             .clickable(
                 interactionSource = interactionSource,
-                indication = rememberRipple(bounded = false, radius = (swatchSize / 2 + 4).dp),
+                indication = ripple(bounded = false, radius = (swatchSize / 2 + 4).dp),
                 onClick = onClick
             )
     ) {

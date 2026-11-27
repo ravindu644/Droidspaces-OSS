@@ -1,14 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="get_started">Empeza</string>
-    <string name="root_check_title">Chequeo de Acceso Root</string>
     <string name="checking_root">Ta chequea el acceso root…</string>
-    <string name="root_granted">Ya Dale Acceso Root</string>
     <string name="root_denied">Ya Nega el Acceso Root</string>
     <string name="root_required_message">Necesita acceso root para maneja el maga container.</string>
     <string name="check_root_access">Chequea el Acceso Root</string>
-    <string name="check_root_access_click">Hace click abajo para chequea el acceso root</string>
-    <string name="root_available_message">Puede ya tu usa el Droidspaces</string>
     <string name="skip">Salta</string>
     <string name="continue_button">Continua</string>
     <string name="home_title">Home</string>
@@ -19,7 +15,6 @@
     <string name="close">Cerra</string>
     <string name="refresh">Hace Refresh</string>
     <string name="search">Busca</string>
-    <string name="clear">Bura</string>
     <string name="container_singular">Container</string>
     <string name="running">Ta anda</string>
     <string name="backend_checking">Backend: Ta chequea...</string>
@@ -79,10 +74,8 @@
     <string name="edit_container_configuration">Revisa el Container Configuration</string>
     <string name="uninstall_container_menu">Hace Uninstall el Container</string>
     <string name="status_running">TA ANDA</string>
-    <string name="status_restarting">TA HACE RESTART</string>
     <string name="status_stopped">PARAO</string>
     <string name="pid_label">PID: %1$d</string>
-    <string name="hostname_label">Hostname: %1$s</string>
     <string name="options_label">Maga Opcion: %1$s</string>
     <string name="start">Empeza</string>
     <string name="stop">Para</string>
@@ -105,7 +98,6 @@
     <string name="changes_take_effect_after_restart">El maga cambio hay tene efecto despues hace restart</string>
     <string name="disable_ipv6">Deshabilitar IPv6</string>
     <string name="disable_ipv6_description">Deshabilitar IPv6 en este container. Puede romper apps VPN en el host.</string>
-    <string name="disable_ipv6_nat_forced">IPv6 siempre está deshabilitado en los modos NAT y None.</string>
     <string name="android_storage">Android Storage</string>
     <string name="android_storage_description">Monta el Android storage</string>
     <string name="hardware_access">Hardware Access</string>
@@ -127,28 +119,13 @@
     <string name="container_name_exists">Tiene ya container con este nombre</string>
     <string name="next_configuration">Siguiente: Configuracion</string>
     <string name="configuration_title">Configuracion</string>
-    <string name="container_options">Maga Opcion del Container</string>
     <string name="next_storage">Siguiente: Storage</string>
     <string name="installation_complete">Completo el Instalacion</string>
     <string name="installation_failed">Fallo el Instalacion</string>
-    <string name="installing_module">Ta instala el Module</string>
     <string name="installing_droidspaces">Ta instala el Droidspaces</string>
-    <string name="module_installed_success">Ya instala el Magisk module con exito</string>
     <string name="backend_installed_success">Ya instala con exito el backend</string>
-    <string name="unknown_error">Ocuri un error hende sabe</string>
     <string name="module_installation_failed">Fallo el instalacion del module</string>
     <string name="binary_installation_failed">Fallo el instalacion del binary</string>
-    <string name="removing_old_module">Ta quita el viejo module...</string>
-    <string name="extracting_module_files">Ta saca el maga file del module...</string>
-    <string name="installing_module_step">Ta instala el module...</string>
-    <string name="setting_permissions">Ta pone el maga permiso...</string>
-    <string name="verifying_installation">Ta verifica el instalacion...</string>
-    <string name="preparing_module_installation">Ta prepara el instalacion del module...</string>
-    <string name="detected_architecture">Ya detecta architecture: %1$s</string>
-    <string name="creating_directories">Ta crea maga directory...</string>
-    <string name="installing_binary">Ta instala binary: %1$s</string>
-    <string name="granting_permissions">Ta dale maga permiso...</string>
-    <string name="preparing_installation">Ta prepara el instalacion...</string>
     <string name="no_containers_running">No hay container ta anda</string>
     <string name="start_container_first">Empeza un container anay para mira aqui</string>
     <string name="systemd_services">Maga Servicio del Systemd</string>
@@ -202,7 +179,6 @@
     <string name="copy_login">Copia login</string>
     <string name="comma">,</string>
     <string name="gb_size">%1$dGB</string>
-    <string name="sparse_image_configuration">Configuracion del Sparse Image</string>
     <string name="storage_configuration">Configuracion del Storage</string>
     <string name="about_sparse_images">Acerca de Sparse Images</string>
     <string name="sparse_images_recommended">Maga sparse image recomendao si ta usa maga container na encrypted storage, F2FS /data partitions, o otro maga filesystem que posible tiene problema de compatibilidad na direct directory mounting.</string>

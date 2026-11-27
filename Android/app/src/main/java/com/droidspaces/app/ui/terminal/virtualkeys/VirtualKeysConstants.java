@@ -1,11 +1,8 @@
 package com.droidspaces.app.ui.terminal.virtualkeys;
 
-import android.view.KeyEvent;
-
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 public class VirtualKeysConstants {
 
@@ -55,41 +52,7 @@ public class VirtualKeysConstants {
    */
   public static List<String> PRIMARY_REPETITIVE_KEYS =
       Arrays.asList("UP", "DOWN", "LEFT", "RIGHT", "BKSP", "DEL");
-  /** Defines the {@link KeyEvent} for common keys. */
-  public static Map<String, Integer> PRIMARY_KEY_CODES_FOR_STRINGS =
-      new HashMap<String, Integer>() {
-        {
-          put("SPACE", KeyEvent.KEYCODE_SPACE);
-          put("ESC", KeyEvent.KEYCODE_ESCAPE);
-          put("TAB", KeyEvent.KEYCODE_TAB);
-          put("HOME", KeyEvent.KEYCODE_MOVE_HOME);
-          put("END", KeyEvent.KEYCODE_MOVE_END);
-          put("PGUP", KeyEvent.KEYCODE_PAGE_UP);
-          put("PGDN", KeyEvent.KEYCODE_PAGE_DOWN);
-          put("INS", KeyEvent.KEYCODE_INSERT);
-          put("DEL", KeyEvent.KEYCODE_FORWARD_DEL);
-          put("BKSP", KeyEvent.KEYCODE_DEL);
-          put("UP", KeyEvent.KEYCODE_DPAD_UP);
-          put("LEFT", KeyEvent.KEYCODE_DPAD_LEFT);
-          put("RIGHT", KeyEvent.KEYCODE_DPAD_RIGHT);
-          put("DOWN", KeyEvent.KEYCODE_DPAD_DOWN);
-          put("ENTER", KeyEvent.KEYCODE_ENTER);
-          put("F1", KeyEvent.KEYCODE_F1);
-          put("F2", KeyEvent.KEYCODE_F2);
-          put("F3", KeyEvent.KEYCODE_F3);
-          put("F4", KeyEvent.KEYCODE_F4);
-          put("F5", KeyEvent.KEYCODE_F5);
-          put("F6", KeyEvent.KEYCODE_F6);
-          put("F7", KeyEvent.KEYCODE_F7);
-          put("F8", KeyEvent.KEYCODE_F8);
-          put("F9", KeyEvent.KEYCODE_F9);
-          put("F10", KeyEvent.KEYCODE_F10);
-          put("F11", KeyEvent.KEYCODE_F11);
-          put("F12", KeyEvent.KEYCODE_F12);
-        }
-      };
-
-  public static class VirtualKeyDisplayMap extends CleverMap<String, String> {}
+  public static class VirtualKeyDisplayMap extends HashMap<String, String> {}
 
   /*
    * Multiple maps are available to quickly change
@@ -129,94 +92,11 @@ public class VirtualKeysConstants {
           }
         };
 
-    public static final VirtualKeyDisplayMap LESS_KNOWN_CHARACTERS_DISPLAY =
-        new VirtualKeyDisplayMap() {
-          {
-            // https://en.wikipedia.org/wiki/{Home_key, End_key,
-            // Page_Up_and_Page_Down_keys}
-            // home key can mean "goto the beginning of line" or "goto first page"
-            // depending on
-            // context, hence the diagonal
-            put("HOME", "⇱"); // from IEC 9995 // U+21F1 ⇱ NORTH WEST ARROW TO CORNER
-            put("END", "⇲"); // from IEC 9995 // ⇲ // U+21F2 ⇲ SOUTH EAST ARROW TO CORNER
-            put("PGUP", "⇑"); // no ISO character exists, U+21D1 ⇑ UPWARDS DOUBLE ARROW will
-            // do the trick
-            put("PGDN", "⇓"); // no ISO character exists, U+21D3 ⇓ DOWNWARDS DOUBLE ARROW
-            // will do the trick
-          }
-        };
-
-    public static final VirtualKeyDisplayMap ARROW_TRIANGLE_VARIATION_DISPLAY =
-        new VirtualKeyDisplayMap() {
-          {
-            // alternative to classic arrow keys
-            put("LEFT", "◀"); // U+25C0 ◀ BLACK LEFT-POINTING TRIANGLE
-            put("RIGHT", "▶"); // U+25B6 ▶ BLACK RIGHT-POINTING TRIANGLE
-            put("UP", "▲"); // U+25B2 ▲ BLACK UP-POINTING TRIANGLE
-            put("DOWN", "▼"); // U+25BC ▼ BLACK DOWN-POINTING TRIANGLE
-          }
-        };
-
-    public static final VirtualKeyDisplayMap NOT_KNOWN_ISO_CHARACTERS =
-        new VirtualKeyDisplayMap() {
-          {
-            // Control chars that are more clear as text //
-            // https://en.wikipedia.org/wiki/{Function_key, Alt_key, Control_key,
-            // Esc_key}
-            // put("FN", "FN"); // no ISO character exists
-            put("CTRL", "⎈"); // ISO character "U+2388 ⎈ HELM SYMBOL" is unknown to people
-            // and never printed
-            // on computers, however "U+25C7 ◇ WHITE DIAMOND" is a nice presentation,
-            // and
-            // "^" for terminal app and mac is often used
-            put("ALT", "⎇"); // ISO character "U+2387 ⎇ ALTERNATIVE KEY SYMBOL'" is unknown
-            // to people and
-            // only printed as the Option key "⌥" on Mac computer
-            put("ESC", "⎋"); // ISO character "U+238B ⎋ BROKEN CIRCLE WITH NORTHWEST ARROW"
-            // is unknown to
-            // people and not often printed on computers
-          }
-        };
-
     public static final VirtualKeyDisplayMap NICER_LOOKING_DISPLAY =
         new VirtualKeyDisplayMap() {
           {
             // nicer looking for most cases
             put("-", "―"); // U+2015 ― HORIZONTAL BAR
-          }
-        };
-
-    /** Full Iso */
-    public static final VirtualKeyDisplayMap FULL_ISO_CHAR_DISPLAY =
-        new VirtualKeyDisplayMap() {
-          {
-            putAll(CLASSIC_ARROWS_DISPLAY);
-            putAll(WELL_KNOWN_CHARACTERS_DISPLAY);
-            putAll(LESS_KNOWN_CHARACTERS_DISPLAY); // NEW
-            putAll(NICER_LOOKING_DISPLAY);
-            putAll(NOT_KNOWN_ISO_CHARACTERS); // NEW
-          }
-        };
-
-    /** Only arrows */
-    public static final VirtualKeyDisplayMap ARROWS_ONLY_CHAR_DISPLAY =
-        new VirtualKeyDisplayMap() {
-          {
-            putAll(CLASSIC_ARROWS_DISPLAY);
-            // putAll(wellKnownCharactersDisplay); // REMOVED
-            // putAll(lessKnownCharactersDisplay); // REMOVED
-            putAll(NICER_LOOKING_DISPLAY);
-          }
-        };
-
-    /** Classic symbols and less known symbols */
-    public static final VirtualKeyDisplayMap LOTS_OF_ARROWS_CHAR_DISPLAY =
-        new VirtualKeyDisplayMap() {
-          {
-            putAll(CLASSIC_ARROWS_DISPLAY);
-            putAll(WELL_KNOWN_CHARACTERS_DISPLAY);
-            putAll(LESS_KNOWN_CHARACTERS_DISPLAY); // NEW
-            putAll(NICER_LOOKING_DISPLAY);
           }
         };
 
@@ -232,14 +112,4 @@ public class VirtualKeysConstants {
         };
   }
 
-  /**
-   * HashMap that implements Python dict.get(key, default) function. Default java.util .get(key) is
-   * then the same as .get(key, null);
-   */
-  static class CleverMap<K, V> extends HashMap<K, V> {
-    V get(K key, V defaultValue) {
-      if (containsKey(key)) return get(key);
-      else return defaultValue;
-    }
-  }
 }

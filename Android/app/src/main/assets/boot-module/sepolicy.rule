@@ -10,6 +10,10 @@ type su domain
 type droidspacesd_exec exec_type
 permissive droidspacesd
 
+# The domain is permissive, so its own denials never block anything and only
+# flood the log. Denials with droidspacesd as the target are still logged.
+dontaudit droidspacesd * * *
+
 # droidspacesd_exec
 allow droidspacesd_exec droidspacesd_exec file { entrypoint execute execute_no_trans getattr map open read relabelfrom relabelto }
 allow droidspacesd_exec labeledfs filesystem associate
@@ -51,6 +55,10 @@ allow servicemanager droidspacesd dir search
 allow servicemanager droidspacesd file { getattr open read }
 allow servicemanager droidspacesd process getattr
 
+# hwservicemanager hands HIDL service handles (the gralloc allocator, for
+# libhybris in GPU mode) to container processes
+allow hwservicemanager droidspacesd binder transfer
+
 # su
 allow su droidspacesd process { dyntransition noatsecure rlimitinh siginh transition }
 allow su droidspacesd process2 nosuid_transition
@@ -74,3 +82,9 @@ allow mediaserver droidspacesd fd use
 
 # fix permission denied when read/write mounted storage (#213)
 allow mediaprovider_app droidspacesd fd use
+
+# for anland
+allow untrusted_app droidspacesd fd use
+allow surfaceflinger droidspacesd fd use
+allow hal_graphics_composer_default droidspacesd fd use
+allow untrusted_app su unix_stream_socket { read write }

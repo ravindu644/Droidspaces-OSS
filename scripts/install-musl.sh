@@ -63,13 +63,10 @@ if [ ${#MISSING_DEPS[@]} -ne 0 ]; then
     exit 1
 fi
 
-# 2. Setup Toolchain Directory
-if [ -n "$SUDO_USER" ]; then
-    HOME_DIR="$(eval echo ~$SUDO_USER)"
-else
-    HOME_DIR="$HOME"
-fi
-
+# 2. Setup Toolchain Directory. Under sudo it still belongs in the invoking
+# user's home, which is where the Makefile looks.
+HOME_DIR=$HOME
+[ -n "$SUDO_USER" ] && HOME_DIR=$(eval echo "~$SUDO_USER")
 TOOLCHAIN_PARENT="$HOME_DIR/toolchains"
 TOOLCHAIN_DIR="$TOOLCHAIN_PARENT/${TARGET}-cross"
 
@@ -143,21 +140,4 @@ if [ -d "$SYSROOT_INCLUDE" ] && [ ! -d "$SYSROOT_INCLUDE/linux" ]; then
     fi
 fi
 
-# Verify installation
-if [ -d "$TOOLCHAIN_DIR/bin" ]; then
-    echo "[+] Successfully installed $TARGET toolchain to $TOOLCHAIN_DIR"
-    echo ""
-    echo "To use it, ensure your Makefile points to:"
-    echo "  $TOOLCHAIN_DIR/bin/${TARGET}-gcc"
-else
-    # Check if it was installed to a differently named output dir (e.g. output-x86_64-linux-musl)
-    # This happens if NATIVE=1 is set or if HOST is detected.
-    DEBUG_OUTPUT=$(ls -d /tmp/musl-cross-make/output* 2>/dev/null | head -n 1)
-    if [ -n "$DEBUG_OUTPUT" ] && [ -d "$DEBUG_OUTPUT/bin" ]; then
-        mv "$DEBUG_OUTPUT" "$TOOLCHAIN_DIR"
-        echo "[+] Successfully installed $TARGET toolchain to $TOOLCHAIN_DIR"
-    else
-        echo "[-] Error: Build failed or installation directory not created."
-        exit 1
-    fi
-fi
+echo "[+] Installed the $TARGET toolchain to $TOOLCHAIN_DIR; the Makefile finds it there."

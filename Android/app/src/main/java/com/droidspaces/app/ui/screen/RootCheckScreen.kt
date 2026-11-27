@@ -1,36 +1,36 @@
 package com.droidspaces.app.ui.screen
 
-import com.droidspaces.app.ui.component.PrimaryActionBottomBar
-
-import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.animateFloatAsState
-import kotlinx.coroutines.delay
-import com.droidspaces.app.util.AnimationUtils
-import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.height
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Security
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.droidspaces.app.R
+import com.droidspaces.app.ui.component.SetupActionBar
+import com.droidspaces.app.ui.component.SetupBody
+import com.droidspaces.app.ui.component.SetupFrame
+import com.droidspaces.app.ui.component.SetupHero
+import com.droidspaces.app.ui.component.SetupPage
 import com.droidspaces.app.util.RootChecker
 import com.droidspaces.app.util.RootStatus
-import com.droidspaces.app.ui.util.LoadingIndicator
-import com.droidspaces.app.ui.util.LoadingSize
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 @Composable
@@ -40,21 +40,10 @@ fun RootCheckScreen(
     onNavigateToInstallation: () -> Unit,
     onSkip: () -> Unit = {}
 ) {
-    val context = LocalContext.current
     val scope = rememberCoroutineScope()
     var currentRootStatus by remember { mutableStateOf<RootStatus?>(rootStatus) }
     var isChecking by remember { mutableStateOf(false) }
     var hasCheckedRoot by remember { mutableStateOf(false) }
-    var titleVisible by remember { mutableStateOf(false) }
-    var cardVisible by remember { mutableStateOf(false) }
-
-    LaunchedEffect(Unit) {
-        delay(60); titleVisible = true
-        delay(120); cardVisible = true
-    }
-
-    val titleAlpha by animateFloatAsState(if (titleVisible) 1f else 0f, AnimationUtils.fadeInSpec(), label = "titleAlpha")
-    val cardAlpha by animateFloatAsState(if (cardVisible) 1f else 0f, AnimationUtils.fadeInSpec(), label = "cardAlpha")
 
     fun checkRoot() {
         if (isChecking) return
@@ -62,183 +51,78 @@ fun RootCheckScreen(
         currentRootStatus = RootStatus.Checking
         hasCheckedRoot = true
         scope.launch {
+            val startedAt = System.currentTimeMillis()
             val result = RootChecker.checkRootAccess()
-            currentRootStatus = result
+            // A grant returns within a frame. Hold the loader for a beat so the hand-off
+            // to the installer reads as one loader, not a flash.
+            delay((600 - (System.currentTimeMillis() - startedAt)).coerceAtLeast(0))
             onRootCheck?.invoke(result)
-            isChecking = false
+            // A grant is the only thing this screen waited for, so it carries straight on
+            // with the loader still up and the installer's own loader takes over. Only a
+            // denial is shown here.
+            if (result == RootStatus.Granted) {
+                onNavigateToInstallation()
+            } else {
+                currentRootStatus = result
+                isChecking = false
+            }
         }
     }
 
-    val btnShape = RoundedCornerShape(20.dp)
+    val checking = isChecking || currentRootStatus == RootStatus.Checking
+    val denied = currentRootStatus == RootStatus.Denied
+    val scheme = MaterialTheme.colorScheme
+    val motion = MaterialTheme.motionScheme
 
     Scaffold(
         containerColor = Color.Transparent,
         bottomBar = {
-            PrimaryActionBottomBar(
-                label = context.getString(
-                    if (currentRootStatus == RootStatus.Granted) R.string.continue_button
-                    else if (isChecking) R.string.checking_root
-                    else R.string.check_root_access
-                ),
-                icon = if (currentRootStatus == RootStatus.Granted) Icons.Default.CheckCircle else Icons.Default.Shield,
-                onClick = {
-                    if (currentRootStatus == RootStatus.Granted) onNavigateToInstallation()
-                    else checkRoot()
-                },
-                enabled = !isChecking && currentRootStatus != RootStatus.Checking,
-                disabledContainerColor = MaterialTheme.colorScheme.primary,
-                disabledContentColor = MaterialTheme.colorScheme.onPrimary,
-                horizontalPadding = 20.dp,
-                labelFontSize = 16.sp,
-                secondaryAction = {
-                    androidx.compose.animation.AnimatedVisibility(
-                        visible = currentRootStatus == RootStatus.Denied && hasCheckedRoot,
-                        enter = androidx.compose.animation.expandVertically() + androidx.compose.animation.fadeIn(),
-                        exit = androidx.compose.animation.shrinkVertically() + androidx.compose.animation.fadeOut()
-                    ) {
-                        Surface(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clip(btnShape)
-                                .clickable(onClick = onSkip),
-                            shape = btnShape,
-                            color = Color.Transparent,
-                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)),
-                            tonalElevation = 0.dp
-                        ) {
-                            Box(modifier = Modifier.padding(vertical = 16.dp), contentAlignment = Alignment.Center) {
-                                Text(
-                                    text = context.getString(R.string.skip),
-                                    style = MaterialTheme.typography.labelLarge,
-                                    fontWeight = FontWeight.SemiBold,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
-                        }
-                    }
-                }
+            // The title already says a check is running, so the button fades out for the
+            // duration rather than saying it again. It keeps its space so the hero stays put.
+            val barAlpha by animateFloatAsState(
+                targetValue = if (checking) 0f else 1f,
+                animationSpec = motion.fastEffectsSpec(),
+                label = "check_alpha"
+            )
+            SetupActionBar(
+                label = stringResource(R.string.check_root_access),
+                icon = Icons.Default.Security,
+                onClick = ::checkRoot,
+                modifier = Modifier.alpha(barAlpha),
+                enabled = !checking
             )
         }
     ) { innerPadding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
-                .padding(24.dp)
-                .verticalScroll(rememberScrollState()),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(32.dp, Alignment.CenterVertically)
-        ) {
-            // Title
-            Text(
-                text = context.getString(R.string.root_check_title),
-                style = MaterialTheme.typography.headlineMedium,
-                fontWeight = FontWeight.Bold,
-                textAlign = TextAlign.Center,
-                modifier = Modifier.alpha(titleAlpha)
-            )
-
-            // Status Card
-            val cardAccentColor = when (currentRootStatus) {
-                RootStatus.Granted -> MaterialTheme.colorScheme.primary
-                RootStatus.Denied -> MaterialTheme.colorScheme.error
-                else -> MaterialTheme.colorScheme.onSurfaceVariant
-            }
-
-            Surface(
-                modifier = Modifier.fillMaxWidth().alpha(cardAlpha),
-                shape = RoundedCornerShape(20.dp),
-                color = MaterialTheme.colorScheme.surfaceContainer,
-                border = BorderStroke(1.dp, cardAccentColor.copy(alpha = 0.3f))
-            ) {
-                Column(
-                    modifier = Modifier.fillMaxWidth().padding(24.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(16.dp)
-                ) {
+        SetupPage(innerPadding = innerPadding) {
+            SetupFrame(
+                title = stringResource(
                     when {
-                        isChecking || currentRootStatus == RootStatus.Checking -> {
-                            LoadingIndicator(size = LoadingSize.Large)
-                            Text(
-                                text = context.getString(R.string.checking_root),
-                                style = MaterialTheme.typography.bodyMedium,
-                                textAlign = TextAlign.Center
-                            )
-                        }
-                        currentRootStatus == RootStatus.Granted -> {
-                            Surface(
-                                shape = RoundedCornerShape(12.dp),
-                                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
-                                tonalElevation = 0.dp
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.CheckCircle,
-                                    contentDescription = null,
-                                    modifier = Modifier.padding(12.dp).size(32.dp),
-                                    tint = MaterialTheme.colorScheme.primary
-                                )
-                            }
-                            Text(
-                                text = context.getString(R.string.root_granted),
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.primary,
-                                textAlign = TextAlign.Center
-                            )
-                            Text(
-                                text = context.getString(R.string.root_available_message),
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                textAlign = TextAlign.Center
-                            )
-                        }
-                        currentRootStatus == RootStatus.Denied -> {
-                            Surface(
-                                shape = RoundedCornerShape(12.dp),
-                                color = MaterialTheme.colorScheme.error.copy(alpha = 0.1f),
-                                tonalElevation = 0.dp
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.Error,
-                                    contentDescription = null,
-                                    modifier = Modifier.padding(12.dp).size(32.dp),
-                                    tint = MaterialTheme.colorScheme.error
-                                )
-                            }
-                            Text(
-                                text = context.getString(R.string.root_denied),
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.error,
-                                textAlign = TextAlign.Center
-                            )
-                            Text(
-                                text = context.getString(R.string.root_required_message),
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                textAlign = TextAlign.Center
-                            )
-                        }
-                        else -> {
-                            Surface(
-                                shape = RoundedCornerShape(12.dp),
-                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.1f),
-                                tonalElevation = 0.dp
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.Security,
-                                    contentDescription = null,
-                                    modifier = Modifier.padding(12.dp).size(32.dp),
-                                    tint = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
-                            Text(
-                                text = context.getString(R.string.check_root_access_click),
-                                style = MaterialTheme.typography.bodyMedium,
-                                textAlign = TextAlign.Center
-                            )
-                        }
+                        checking -> R.string.checking_root
+                        denied -> R.string.root_denied
+                        else -> R.string.root_access_title
                     }
+                ),
+                hero = {
+                    SetupHero(
+                        loading = checking,
+                        glyph = if (denied) Icons.Default.Close else Icons.Default.Security,
+                        container = if (denied) scheme.errorContainer else scheme.primaryContainer,
+                        onContainer = if (denied) scheme.onErrorContainer else scheme.onPrimaryContainer
+                    )
+                }
+            ) {
+                SetupBody(stringResource(if (denied) R.string.root_required_message else R.string.root_access_body))
+                // Skip lives under the copy rather than in the bar, so the bar is the same
+                // height as every other setup screen's and the hero sits on the same row.
+                val showSkip = denied && hasCheckedRoot
+                val skipAlpha by animateFloatAsState(
+                    targetValue = if (showSkip) 1f else 0f,
+                    animationSpec = motion.fastEffectsSpec(),
+                    label = "skip_alpha"
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+                TextButton(onClick = onSkip, enabled = showSkip, modifier = Modifier.alpha(skipAlpha)) {
+                    Text(text = stringResource(R.string.skip), fontWeight = FontWeight.SemiBold)
                 }
             }
         }

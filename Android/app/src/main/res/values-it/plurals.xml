@@ -1,14 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <plurals name="container_count">
-        <item quantity="one">%d contenitore</item>
-        <item quantity="many">%d contenitori</item>
-        <item quantity="other">%d contenitori</item>
-    </plurals>
     <plurals name="commit_count">
         <item quantity="one">%d commit</item>
-        <item quantity="many">%d commit</item>
-        <item quantity="other">%d commit</item>
+        <item quantity="many">%d commits</item>
+        <item quantity="other">%d commits</item>
     </plurals>
     <plurals name="notification_sessions_running">
         <item quantity="one">%d sessione in esecuzione</item>

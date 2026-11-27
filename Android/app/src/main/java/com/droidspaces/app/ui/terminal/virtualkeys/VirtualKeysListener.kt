@@ -17,8 +17,8 @@ class VirtualKeysListener(val session: TerminalSession) : VirtualKeysView.IVirtu
 
         // Arrow/cursor keys require cursor-key-mode awareness.
         // Programs like `less`, `vim`, and `systemctl status` enable DECCKM
-        // (\e[?1h — application cursor key mode) and expect \eOA/B/C/D,
-        // but we were hardcoding \e[A/B/C/D (normal mode) — so they never
+        // (\e[?1h, application cursor key mode) and expect \eOA/B/C/D,
+        // but we were hardcoding \e[A/B/C/D (normal mode), so they never
         // scrolled. Routing through TerminalView.onKeyDown() lets the
         // TerminalEmulator check its current DECCKM state and send the right
         // escape sequence automatically, matching Termux's own behaviour.

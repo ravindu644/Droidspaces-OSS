@@ -22,7 +22,6 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.Dp
 import com.droidspaces.app.ui.theme.JetBrainsMono
 import com.droidspaces.app.util.AnsiColorParser
 import kotlinx.coroutines.Job
@@ -35,13 +34,11 @@ private val ShimmerColorShades
         androidx.compose.ui.graphics.Color.Transparent
     )
 
-class ShimmerScope(val brush: Brush)
-
 @Composable
 fun ShimmerAnimation(
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
-    content: @Composable ShimmerScope.() -> Unit
+    content: @Composable () -> Unit
 ) {
     val transition = rememberInfiniteTransition(label = "shimmer")
     val translateAnim by transition.animateFloat(
@@ -63,13 +60,8 @@ fun ShimmerAnimation(
         label = "shimmerAlpha"
     )
 
-    val shades = ShimmerColorShades
     val brush = Brush.linearGradient(
-        colors = listOf(
-            shades[0].copy(alpha = shades[0].alpha * shimmerAlpha + shades[0].alpha * (1f - shimmerAlpha) * 0.5f),
-            shades[1].copy(alpha = shades[1].alpha * shimmerAlpha + shades[0].alpha * (1f - shimmerAlpha) * 0.5f),
-            shades[2].copy(alpha = shades[2].alpha * shimmerAlpha + shades[0].alpha * (1f - shimmerAlpha) * 0.5f),
-        ),
+        colors = ShimmerColorShades.map { it.copy(alpha = it.alpha * shimmerAlpha) },
         start = Offset(10f, 10f),
         end = Offset(translateAnim, translateAnim)
     )
@@ -91,7 +83,7 @@ fun ShimmerAnimation(
         tonalElevation = 0.dp,
         shadowElevation = 0.dp
     ) {
-        content(ShimmerScope(brush))
+        content()
     }
 }
 
@@ -115,7 +107,6 @@ fun TerminalConsole(
     logs: List<Pair<Int, String>>,
     isProcessing: Boolean = true,
     modifier: Modifier = Modifier,
-    maxHeight: Dp? = null
 ) {
     val orientation = LocalConfiguration.current.orientation
     val verticalScrollState = rememberScrollState()
@@ -210,11 +201,7 @@ fun TerminalConsole(
     val warnColor = MaterialTheme.colorScheme.tertiary.copy(alpha = 0.9f)
 
     ShimmerAnimation(
-        modifier = if (maxHeight != null) {
-            modifier.heightIn(max = maxHeight)
-        } else {
-            modifier
-        },
+        modifier = modifier,
         enabled = isProcessing
     ) {
         androidx.compose.material3.ProvideTextStyle(

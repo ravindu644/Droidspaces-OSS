@@ -1,14 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="get_started">Pagsugod</string>
-    <string name="root_check_title">Pagsusi sa Root Access</string>
     <string name="checking_root">Gisusi ang root access…</string>
-    <string name="root_granted">Gitugotan ang Root Access</string>
     <string name="root_denied">Gibalibaran ang Root Access</string>
     <string name="root_required_message">Gikinahanglan ang root access aron madumala ang mga container.</string>
     <string name="check_root_access">Susiha ang Root Access</string>
-    <string name="check_root_access_click">I-klik sa ubos aron susihon ang root access</string>
-    <string name="root_available_message">Mahimo na nimo gamiton ang Droidspaces</string>
     <string name="skip">Laktawi</string>
     <string name="continue_button">Padayon</string>
     <string name="home_title">Home</string>
@@ -19,7 +15,6 @@
     <string name="close">Isira</string>
     <string name="refresh">I-refresh</string>
     <string name="search">Pangitaa</string>
-    <string name="clear">Papasa</string>
     <string name="container_singular">Container</string>
     <string name="running">Nagdagan</string>
     <string name="backend_checking">Backend: Gisusi...</string>
@@ -79,10 +74,8 @@
     <string name="edit_container_configuration">I-edit ang Container Configuration</string>
     <string name="uninstall_container_menu">I-uninstall ang Container</string>
     <string name="status_running">NAGDAGAN</string>
-    <string name="status_restarting">NAG-RESTART</string>
     <string name="status_stopped">MIHUNONG</string>
     <string name="pid_label">PID: %1$d</string>
-    <string name="hostname_label">Hostname: %1$s</string>
     <string name="options_label">Mga Opsyon: %1$s</string>
     <string name="start">Sugdi</string>
     <string name="stop">Hunonga</string>
@@ -105,7 +98,6 @@
     <string name="changes_take_effect_after_restart">Ang mga kausaban mo-epekto pagkahuman sa restart</string>
     <string name="disable_ipv6">I-disable ang IPv6</string>
     <string name="disable_ipv6_description">I-disable ang IPv6 niining container. Mahimong maputol ang mga VPN app sa host kung gi-disable ang IPv6.</string>
-    <string name="disable_ipv6_nat_forced">Kanunay nga naka-disable ang IPv6 sa NAT ug None nga network mode.</string>
     <string name="android_storage">Android Storage</string>
     <string name="android_storage_description">I-mount ang Android storage</string>
     <string name="hardware_access">Hardware Access</string>
@@ -127,28 +119,13 @@
     <string name="container_name_exists">Aduna nay container nga naggamit niini nga ngalan</string>
     <string name="next_configuration">Sunod: Configuration</string>
     <string name="configuration_title">Configuration</string>
-    <string name="container_options">Mga Opsyon sa Container</string>
     <string name="next_storage">Sunod: Storage</string>
     <string name="installation_complete">Kompleto na ang Pag-install</string>
     <string name="installation_failed">Napakyas ang Pag-install</string>
-    <string name="installing_module">Gi-install ang Module</string>
     <string name="installing_droidspaces">Gi-install ang Droidspaces</string>
-    <string name="module_installed_success">Nagmalampuson ang pag-install sa Magisk module</string>
     <string name="backend_installed_success">Malampuson nga na-install ang backend</string>
-    <string name="unknown_error">Nahitabo ang wala mailhi nga error</string>
     <string name="module_installation_failed">Napakyas ang pag-install sa module</string>
     <string name="binary_installation_failed">Napakyas ang pag-install sa binary</string>
-    <string name="removing_old_module">Gitangtang ang daan nga module...</string>
-    <string name="extracting_module_files">Gi-extract ang mga file sa module...</string>
-    <string name="installing_module_step">Gi-install ang module...</string>
-    <string name="setting_permissions">Gi-set ang mga permiso...</string>
-    <string name="verifying_installation">Gi-verify ang installation...</string>
-    <string name="preparing_module_installation">Giandam ang pag-install sa module...</string>
-    <string name="detected_architecture">Nadiskubre nga architecture: %1$s</string>
-    <string name="creating_directories">Naghimo og mga directory...</string>
-    <string name="installing_binary">Gi-install ang binary: %1$s</string>
-    <string name="granting_permissions">Naghatag og mga permiso...</string>
-    <string name="preparing_installation">Giandam ang pag-install...</string>
     <string name="no_containers_running">Walay container nga nagdagan</string>
     <string name="start_container_first">Pagsugod una og container aron makita kini dinhi</string>
     <string name="systemd_services">Mga Serbisyo sa Systemd</string>
@@ -202,7 +179,6 @@
     <string name="copy_login">Kopyaha ang login</string>
     <string name="comma">,</string>
     <string name="gb_size">%1$dGB</string>
-    <string name="sparse_image_configuration">Configuration sa Sparse Image</string>
     <string name="storage_configuration">Configuration sa Storage</string>
     <string name="about_sparse_images">Mahitungod sa mga Sparse Image</string>
     <string name="sparse_images_recommended">Girekomenda ang mga sparse image kung naggamit og mga container sa encrypted storage, F2FS /data partitions, o uban pang filesystem nga mahimong adunay isyu sa compatibility sa direct directory mounting.</string>

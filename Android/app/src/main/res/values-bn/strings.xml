@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="get_started">শুরু করুন</string>
+    <string name="feat_containers_title">আসল Linux containers</string>
+    <string name="feat_containers_desc">LXC, Podman এবং Docker এর মতো একই kernel Namespace প্রযুক্তি। কোনো emulation নয়, কোনো chroot নয়।</string>
+    <string name="feat_overhead_title">শূন্য overhead</string>
+    <string name="feat_overhead_desc">Host Linux kernel এর সাথে সরাসরি কথা বলে। কোনো hypervisor নয়, কোনো virtual machine layer নয়।</string>
+    <string name="feat_unkillable_title">নকশা অনুযায়ী অমর</string>
+    <string name="feat_unkillable_desc">Native init.rc integration এবং 2-স্তর বিশিষ্ট userspace daemon সমর্থন করে। সম্পূর্ণ অমর।</string>
+    <string name="feat_init_title">systemd / OpenWrt procd / OpenRC, PID 1 হিসেবে</string>
+    <string name="feat_init_desc">পুরো init system সমর্থন করে। আসল service management, কোনো simulated environment নয়।</string>
+    <string name="feat_isolation_title">সম্পূর্ণ ভাবে বিচ্ছিন্ন</string>
+    <string name="feat_isolation_desc">প্রতিটি container এর জন্য নিজস্ব PID tree, mount table, hostname, IPC এবং cgroup hierarchy।</string>
+    <string name="feat_hardware_title">সম্পূর্ণ hardware/GPU access</string>
+    <string name="feat_hardware_desc">host hardware (GPU, sensors, USB, block devices) সরাসরি আপনার container গুলোতে উন্মুক্ত করুন।</string>
+    <string name="feat_privileged_title">সম্পূর্ণ privileged containers</string>
+    <string name="feat_privileged_desc">Advanced user-দের জন্য privileged mode এর মাধ্যমে নিরাপত্তা বাধা শিথিল করুন।</string>
+    <string name="feat_autoboot_title">Power up এ নিজে থেকেই boot হবে</string>
+    <string name="feat_autoboot_desc">Screen lock এবং data encrypted থাকলেও, Boot করার সময় নিজে থেকেই container- গুলো চালু হবে।</string>
+    <string name="checking_root">Root access check করা হচ্ছে..।</string>
+    <string name="root_denied">Root access পাওয়া যায় নি</string>
+    <string name="root_required_message">Container- গুলো পরিচালনা করতে root access এর প্রয়োজন।</string>
+    <string name="check_root_access">Check Root Access</string>
+    <string name="skip">বাদ দিন</string>
+    <string name="continue_button">চালিয়ে যান</string>
+    <string name="home_title">Home</string>
+    <string name="containers">Containers</string>
+    <string name="panel">Panel</string>
+    <string name="settings">Settings</string>
+    <string name="back">পিছনে যান</string>
+    <string name="close">বন্ধ করুন</string>
+    <string name="refresh">Refresh</string>
+    <string name="search">অনুসন্ধান করুন</string>
+    <string name="container_singular">মূল Tab Screen</string>
+    <string name="running">চলমান</string>
+    <string name="backend_update_available">Backend: Update পাওয়া গেছে</string>
+    <string name="root_unavailable">Root access এর অস্তিত্ব নেই।</string>
+    <string name="grant_root_message">droidspaces ঘুরে দেখা চালিয়ে যেতে root access দিন !</string>
+    <string name="unknown">অজানা</string>
+    <string name="update_available_message">Backend update পাওয়া গেছে, update করতে এখানে ক্লিক করুন</string>
+    <string name="backend_attention_required">Backend: প্রয়োজনীয় পদক্ষেপ নিতে হবে</string>
+    <string name="tap_to_fix_system">System configuration ঠিক করতে tap করুন</string>
+    <string name="requirements">প্রয়োজনীয়তা</string>
+    <string name="kernel_requirements">Kernel এর প্রয়োজনীয়তা</string>
+    <string name="termux_requirements">Termux এর প্রয়োজনীয়তা</string>
+    <string name="kernel_requirements_nongki">GKI- বিহীন Kernel এর প্রয়োজনীয়তা (&lt;=4.19)</string>
+    <string name="kernel_requirements_gki">GKI Kernel er প্রয়োজনীয়তা (&gt;=5.4)</string>
+    <string name="appearance_section">চেহারা</string>
+    <string name="language">ভাষা</string>
+    <string name="follow_system_theme">System Theme অনুসরণ করুন</string>
+    <string name="follow_system_theme_description">System theme স্বয়ংক্রিয়ভাবে মেলান</string>
+    <string name="dark_theme_description">Dark theme চালু করুন</string>
+    <string name="terminal_dark_theme_description">শুধুমাত্র terminal page- এর জন্য গাঢ় রং ব্যবহার করুন</string>
+    <string name="amoled_mode_description">OLED display- গুলোর জন্য সম্পূর্ণ কালো background</string>
+    <string name="dynamic_color">System এর default রং এর palette প্রয়োগ করুন</string>
+    <string name="dynamic_color_description">Android 12+ এর জন্য Monet theming (Material You) ব্যবহার করুন</string>
+</resources>

@@ -33,6 +33,8 @@ object ContainerDiskUsageManager {
     /** Last value measured for [imgPath] in this process, or null if never measured. */
     fun getCached(imgPath: String): DiskUsage? = synchronized(lastKnown) { lastKnown[imgPath] }
 
+    fun forget(imgPath: String) = synchronized(lastKnown) { lastKnown.remove(imgPath) }
+
     /**
      * @param imgPath path to the rootfs.img (use [ContainerInfo.rootfsPath] for a sparse container).
      * @return used/total in bytes, or null if the image could not be stat'd.

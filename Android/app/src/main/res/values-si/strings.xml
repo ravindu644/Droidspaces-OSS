@@ -1,14 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="get_started">ආරම්භ කරන්න</string>
-    <string name="root_check_title">Root ප්‍රවේශය පරීක්ෂා කිරීම</string>
     <string name="checking_root">Root ප්‍රවේශය පරීක්ෂා කරමින්...</string>
-    <string name="root_granted">Root ප්‍රවේශය ලැබුණි</string>
     <string name="root_denied">Root ප්‍රවේශය ප්‍රතික්ෂේප විය</string>
     <string name="root_required_message">Container කළමනාකරණය සඳහා Root ප්‍රවේශය අවශ්‍ය වේ.</string>
     <string name="check_root_access">Root ප්‍රවේශය පරීක්ෂා කරන්න</string>
-    <string name="check_root_access_click">Root ප්‍රවේශය පරීක්ෂා කිරීමට පහත ක්ලික් කරන්න</string>
-    <string name="root_available_message">ඔබට දැන් Droidspaces භාවිතා කරන්න පුළුවන්</string>
     <string name="skip">මඟ හරින්න</string>
     <string name="continue_button">ඉදිරියට යන්න</string>
     <string name="home_title">මුල් පිටුව</string>
@@ -19,7 +15,6 @@
     <string name="close">වසා දමන්න</string>
     <string name="refresh">අලුත් කරන්න</string>
     <string name="search">සොයන්න</string>
-    <string name="clear">මකන්න</string>
     <string name="container_singular">කන්ටේනර්</string>
     <string name="running">ධාවනය වේ</string>
     <string name="backend_checking">Backend: පරීක්ෂා කරමින්...</string>
@@ -85,10 +80,8 @@
     <string name="edit_container_configuration">කන්ටේනර් සැකසුම් වෙනස් කරන්න</string>
     <string name="uninstall_container_menu">කන්ටේනරය අස්ථාපනය කරන්න</string>
     <string name="status_running">ධාවනය වේ</string>
-    <string name="status_restarting">ප්‍රතිපණගැන්වේ</string>
     <string name="status_stopped">නවත්වා ඇත</string>
     <string name="pid_label">PID: %1$d</string>
-    <string name="hostname_label">සත්කාරක නාමය: %1$s</string>
     <string name="options_label">විකල්ප: %1$s</string>
     <string name="start">ආරම්භ කරන්න</string>
     <string name="stop">නවත්වන්න</string>
@@ -113,7 +106,6 @@
     <string name="changes_take_effect_after_restart">වෙනස්කම් යාවත්කාලීන වීමට නැවත පණගැන්වීම අවශ්‍ය වේ</string>
     <string name="disable_ipv6">IPv6 අක්‍රීය කරන්න</string>
     <string name="disable_ipv6_description">මෙම කන්ටේනරය තුළ IPv6 අක්‍රීය කරන්න. IPv6 අක්‍රීය කිරීම නිසා ඇන්ඩ්‍රොයිඩ්හි ක්‍රියාත්මක වන VPN යෙදුම්වලට බාධා ඇති විය හැක.</string>
-    <string name="disable_ipv6_nat_forced">NAT සහ None ජාල මාදිලිවලදී සැමවිටම IPv6 අක්‍රීය කර ඇත.</string>
     <string name="android_storage">ඇන්ඩ්‍රොයිඩ් ආචයනය</string>
     <string name="android_storage_description">ඇන්ඩ්‍රොයිඩ් ආචයනය මවුන්ට් කරන්න</string>
     <string name="hardware_access">දෘඩාංග ප්‍රවේශය</string>
@@ -126,8 +118,6 @@
     <string name="run_at_boot_description">ඇන්ඩ්‍රොයිඩ් පද්ධතිය පණගැන්වූ පසු ස්වයංක්‍රීයව කන්ටේනර ක්‍රියාත්මක කරන්න</string>
     <string name="force_cgroupv1">Force Cgroup V1</string>
     <string name="force_cgroupv1_description">Cgroup V2 වෙනුවට, පැරණි Cgroup V1 ධුරාවලිය භාවිතා කරන්න</string>
-    <string name="manual_deadlock_shield">ඩෙඩ්ලොක් ආරක්ෂණය</string>
-    <string name="manual_deadlock_shield_description">පැරණි කර්නල්වල (උදා: 4.14.x) Nested namespace සෑදීම අවහිර කිරීම මගින් කර්නල් මට්ටමේ VFS ඩෙඩ්ලොක් ඇතිවීම වළක්වයි.\n\nඅවවාදයයි: මෙය සක්‍රීය කිරීමෙන් කන්ටේනරය තුළ Docker, Podman, LXC සහ Systemd sandboxing සහාය අවහිර කරනු ඇත.</string>
     <string name="cat_networking">ජාලකරනය</string>
     <string name="cat_integration">ඒකාබද්ධ කිරීම සහ දෘඩාංග</string>
     <string name="cat_security">ආරක්ෂාව සහ පද්ධති පණගැන්වීම</string>
@@ -136,20 +126,11 @@
     <string name="network_mode_host">Host</string>
     <string name="network_mode_nat">NAT (පෙරනිමිය)</string>
     <string name="network_mode_none">කිසිවක් නැත (Air-gapped)</string>
-    <string name="nat_settings">NAT සැකසුම්</string>
     <string name="upstream_interface_title">ප්‍රභව අතුරුමුහුණත (විකල්ප)</string>
     <string name="upstream_interface_hint">අන්තර්ජාල ප්‍රවේශය නිශ්චිත අතුරුමුහුණතකට සම්බන්ධ කරන්න. සක්‍රිය ප්‍රභවය ස්වයංක්‍රීයව හඳුනා ගැනීමට හිස්ව තබන්න.</string>
     <string name="add_upstream_interface">ප්‍රභව අතුරුමුහුණතක් එක් කරන්න</string>
-    <string name="available_system_interfaces">පද්ධතියේ පවතින අතුරුමුහුණත්:</string>
-    <string name="enter_manually">නැතිනම් එය ඔබම ඇතුළත් කරන්න (Wildcards සඳහාද සහාය දක්වයි):</string>
-    <string name="interface_name_hint">අතුරුමුහුණතේ නම (උදා: wlan0, v4-rmnet_data*)</string>
     <string name="port_forwarding">Port Forwarding</string>
     <string name="add_port_forward">Port Forward එකක් එක් කරන්න</string>
-    <string name="host_port_hint">මව් පද්ධතියේ පෝට් එක (1-65535 හෝ පරාසය 100-200)</string>
-    <string name="container_port_hint">කන්ටේනර් එකේ පෝට් එක (1-65535 හෝ පරාසය)</string>
-    <string name="protocol">ධූරාවලිය</string>
-    <string name="optional_symmetric_hint">විකල්ප (උදා: 8080 හෝ 1000-2000)</string>
-    <string name="leave_blank_for_symmetric">සමමිතික සිතියම්කරණය සඳහා හිස්ව තබන්න</string>
     <string name="error_invalid_range_format">වැරදි පරාස ආකෘතියකි (ආරම්භය-අවසානය)</string>
     <string name="error_ports_must_be_numbers">පෝට් ඉල්ලක්කම් විය යුතුය</string>
     <string name="error_port_out_of_range">පෝට් අංක 1-65535 අතර විය යුතුය</string>
@@ -157,7 +138,6 @@
     <string name="error_port_must_be_number">පෝට් ඉලක්කම් විය යුතුය</string>
     <string name="error_port_width_mismatch">මව් පද්ධතියේ සහ කන්ටේනරයේ පෝට් පරාසයන් අතර පළල නොගැලපේ</string>
     <string name="error_port_overlap">පවතින වෙනත් Port Forward රීතියක් සමඟ ඡේදනය වේ</string>
-    <string name="symmetric_label">(සමමිතික)</string>
     <string name="port_forward_examples">උදාහරණ: 8080 (තනි), 8000-8010 (පරාසය). සමමිතික සිතියම්කරණය සඳහා ඉලක්කය හිස්ව තබන්න.</string>
     <string name="saved">සුරකින ලදි</string>
     <string name="saving">සුරකිමින් පවතී...</string>
@@ -173,10 +153,7 @@
     <string name="bind_mounts">Bind මවුන්ට්ස්</string>
     <string name="add">එකතු කරන්න</string>
     <string name="add_bind_mount">Bind Mount එකක් එකතු කරන්න</string>
-    <string name="enter_container_path">කන්ටේනරයේ පථය ඇතුළත් කරන්න</string>
     <string name="container_path_placeholder">උදා: /mnt/sdcard</string>
-    <string name="host_path">මව් පථය: %1$s</string>
-    <string name="container_path">කන්ටේනර පථය: %1$s</string>
     <string name="dns_servers_label">DNS සේවාදායකයන්</string>
     <string name="dns_servers_placeholder">උදා: 1.1.1.1,8.8.8.8 (අත්‍යවශ්‍ය නොවේ)</string>
     <string name="dns_servers_hint">අංක, තිත් සහ තිත් දෙක පමණි</string>
@@ -192,28 +169,13 @@
     <string name="container_name_exists">මෙම නමින් යුත් කන්ටේනරයක් දැනටමත් පවතී</string>
     <string name="next_configuration">මීළඟ පියවර: සැකසුම්</string>
     <string name="configuration_title">සැකසුම</string>
-    <string name="container_options">කන්ටේනරයේ විකල්ප</string>
     <string name="next_storage">මීළඟ පියවර: ආචායනය</string>
     <string name="installation_complete">ස්ථාපනය සම්පූර්ණයි</string>
     <string name="installation_failed">ස්ථාපනය අසාර්ථක විය</string>
-    <string name="installing_module">මොඩියුලය ස්ථාපනය වෙමින් පවතී</string>
     <string name="installing_droidspaces">Droidspaces ස්ථාපනය වෙමින් පවතී</string>
-    <string name="module_installed_success">Magisk මොඩියුලය සාර්ථකව ස්ථාපනය කරන ලදී</string>
     <string name="backend_installed_success">Droidspaces backend එක සාර්ථකව ස්ථාපනය කරන ලදී</string>
-    <string name="unknown_error">නොදන්නා දෝෂයක් සිදු විය</string>
     <string name="module_installation_failed">මොඩියුල ස්ථාපනය අසාර්ථක විය</string>
     <string name="binary_installation_failed">Backend එක ස්ථාපනය අසාර්ථක විය</string>
-    <string name="removing_old_module">පැරණි මොඩියුලය ඉවත් කරමින්...</string>
-    <string name="extracting_module_files">මොඩියුල ගොනු උපුටා ගනිමින්...</string>
-    <string name="installing_module_step">මොඩියුලය ස්ථාපනය කරමින්...</string>
-    <string name="setting_permissions">අවසර සකසමින්...</string>
-    <string name="verifying_installation">ස්ථාපනය තහවුරු කරමින්...</string>
-    <string name="preparing_module_installation">මොඩියුල ස්ථාපනය සූදානම් කරමින්...</string>
-    <string name="detected_architecture">Architecture එක: %1$s</string>
-    <string name="creating_directories">ෆෝල්ඩර නිර්මාණය කරමින්...</string>
-    <string name="installing_binary">ස්ථාපනය කරමින්: %1$s</string>
-    <string name="granting_permissions">අවසර ලබා දෙමින්...</string>
-    <string name="preparing_installation">ස්ථාපනය සූදානම් කරමින්...</string>
     <string name="no_containers_running">කිසිඳු කන්ටේනරයක් ධාවනය නොවේ</string>
     <string name="start_container_first">මෙතන බලන්න මුලින්ම කන්ටේනරයක් ආරම්භ කරන්න</string>
     <string name="systemd_services">Systemd සේවා</string>
@@ -267,7 +229,6 @@
     <string name="copy_login">ඇතුල්වීම පිටපත් කරන්න</string>
     <string name="comma">,</string>
     <string name="gb_size">%1$dGB</string>
-    <string name="sparse_image_configuration">Sparse Image සැකසුම</string>
     <string name="storage_configuration">ආචයන සැකසුම</string>
     <string name="about_sparse_images">Sparse Images පිළිබඳව</string>
     <string name="sparse_images_recommended">ඔයාගේ Storage එක encrypted නම් හෝ, ඒකේ ගොනු පද්ධතිය F2FS නම්, කන්ටේනර භාවිතා කිරීමේදී විවිඳ ගැටලු මතුවෙන්න පුළුවන්. එවැනි ගැටළු සියල්ලම මඟ හරවා ගන්න පුළුවන් sparse image එකක් ඇතුලේ ඔයාගේ කන්ටේනරය ස්ථාපනය කිරීමෙන්.</string>
@@ -301,8 +262,6 @@
     <string name="select_user_to_enter">කන්ටේනරයට ඇතුළු වීමට පරිශීලකයා තෝරන්න:</string>
     <string name="notification_permission_title">Notifications සඳහා අවසරය</string>
     <string name="notification_permission_rationale">Droidspaces ටර්මිනලය පසුබිමේ ක්‍රියා කරවීම සඳහා මෙම උපාංගයෙන් notification අවසරය අත්‍යාවශ්‍ය වේ. නැතහොත්, ඇන්ඩ්‍රොයිඩ් මගින් ඔබ විවෘත කළ ටර්මිනල වසා දැමීමට ඉඩ ඇත.</string>
-    <string name="grant_permission">අවසරය ලබා දෙන්න</string>
-    <string name="i_understand">මට තේරෙනවා</string>
     <string name="migrate_to_sparse_image">Sparse image ක්‍රමයට මාරු වෙන්න</string>
     <string name="resize_sparse_image">Sparse image එකේ ප්‍රමාණය වෙනස් කරන්න</string>
     <string name="migrate_dialog_title">Sparse image ක්‍රමයට මාරු වෙන්න</string>
@@ -327,4 +286,13 @@
     <string name="gpu_access_description">සම්පූර්ණ Hardware Passthrough එකක් සිදු නොකර, GPU nodes පමණක් හුදකලා වූ /dev නාමාවලියක නිර්මාණය කිරීම</string>
     <string name="symlink_integration">Droidspaces, system path එකට එකතු කරන්න</string>
     <string name="symlink_integration_description">Android root shell එක හරහා droidspaces විධානය භාවිතා කිරීමට /system/bin තුළ symlink එකක් සාදන්න. අවවාදයයි: ඔබගේ mount පද්ධතිය OverlayFS meta modules මත පදනම් වූවක් නම්, මෙය සක්‍රීය කිරීමෙන් Bootloop ඇති විය හැක. මෙම විකල්පය Magic Mount මත පදනම් වූ mount පද්ධති සඳහා පමණක් භාවිතා කරන්න (Reboot කිරීමක් අවශ්‍ය වේ)</string>
+    <string name="feat_containers_title">සත්‍ය Linux කන්ටේනර්</string>
+    <string name="feat_containers_desc">Same kernel namespace tech as LXC, Podman and Docker. No emulation, no chroot.</string>
+    <string name="feat_overhead_title">Zero overhead</string>
+    <string name="feat_overhead_desc">Talks to the host Linux kernel directly. No hypervisor, no virtual machine layer.</string>
+    <string name="feat_hardware_title">සම්පූර්ණ දෘඩාංග/GPU access</string>
+    <string name="feat_hardware_desc">සත්කාරක දෘඩාංග (GPU, සංවේදක, USB, බ්ලොක් උපාංග) සෘජුවම ඔබේ කන්ටේනර් (containers) වෙත නිරාවරණය කරන්න.</string>
+    <string name="feat_privileged_title">පූර්ණ වරප්‍රසාද සහිත කන්ටේනර</string>
+    <string name="feat_privileged_desc">උසස් පරිශීලකයින් සඳහා වන විශේෂිත මාදිලිය (privileged mode) මගින් ආරක්ෂක සීමා ලිහිල් කරන්න.</string>
+    <string name="feat_autoboot_title">Auto-boot on power up</string>
 </resources>

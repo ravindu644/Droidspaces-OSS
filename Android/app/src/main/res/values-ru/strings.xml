@@ -3,14 +3,10 @@
     <!-- Welcome Screen -->
     <string name="get_started">Начать</string>
     <!-- Root Check Screen -->
-    <string name="root_check_title">Проверка Root-доступа</string>
     <string name="checking_root">Проверка Root-доступа…</string>
-    <string name="root_granted">Root-доступ предоставлен</string>
     <string name="root_denied">Root-доступ отклонён</string>
     <string name="root_required_message">Root-доступ необходим для управления контейнерами.</string>
     <string name="check_root_access">Проверить Root-доступ</string>
-    <string name="check_root_access_click">Нажмите ниже, чтобы проверить Root-доступ</string>
-    <string name="root_available_message">Теперь вы можете использовать Droidspaces</string>
     <string name="skip">Пропустить</string>
     <string name="continue_button">Продолжить</string>
     <!-- Navigation -->
@@ -22,7 +18,6 @@
     <string name="close">Закрыть</string>
     <string name="refresh">Обновить</string>
     <string name="search">Поиск</string>
-    <string name="clear">Очистить</string>
     <!-- Main Tab Screen -->
     <string name="container_singular">Контейнер</string>
     <string name="running">Запущено</string>
@@ -87,10 +82,8 @@
     <string name="uninstall_container_menu">Удалить контейнер</string>
     <!-- Container Card -->
     <string name="status_running">ЗАПУЩЕН</string>
-    <string name="status_restarting">ПЕРЕЗАПУСК</string>
     <string name="status_stopped">ОСТАНОВЛЕН</string>
     <string name="pid_label">PID: %1$d</string>
-    <string name="hostname_label">Имя хоста: %1$s</string>
     <string name="options_label">Опции: %1$s</string>
     <string name="start">Запустить</string>
     <string name="stop">Остановить</string>
@@ -115,7 +108,6 @@
     <string name="changes_take_effect_after_restart">Изменения вступят в силу после перезапуска</string>
     <string name="disable_ipv6">Отключить IPv6</string>
     <string name="disable_ipv6_description">Отключить IPv6 в этом контейнере. Отключение IPv6 может нарушить работу VPN-приложений на хосте.</string>
-    <string name="disable_ipv6_nat_forced">IPv6 всегда отключён в режимах NAT и None.</string>
     <string name="android_storage">Хранилище Android</string>
     <string name="android_storage_description">Подключить хранилище Android</string>
     <string name="hardware_access">Доступ к оборудованию</string>
@@ -139,29 +131,14 @@
     <string name="next_configuration">Далее: Конфигурация</string>
     <!-- Container Config Screen -->
     <string name="configuration_title">Конфигурация</string>
-    <string name="container_options">Опции контейнера</string>
     <string name="next_storage">Далее: Хранилище</string>
     <!-- Installation Screen -->
     <string name="installation_complete">Установка завершена</string>
     <string name="installation_failed">Установка не удалась</string>
-    <string name="installing_module">Установка модуля</string>
     <string name="installing_droidspaces">Установка Droidspaces</string>
-    <string name="module_installed_success">Модуль Magisk успешно установлен</string>
     <string name="backend_installed_success">Бэкенд успешно установлен</string>
-    <string name="unknown_error">Произошла неизвестная ошибка</string>
     <string name="module_installation_failed">Не удалось установить модуль</string>
     <string name="binary_installation_failed">Не удалось установить бинарные файлы</string>
-    <string name="removing_old_module">Удаление старого модуля...</string>
-    <string name="extracting_module_files">Извлечение файлов модуля...</string>
-    <string name="installing_module_step">Установка модуля...</string>
-    <string name="setting_permissions">Установка разрешений...</string>
-    <string name="verifying_installation">Проверка установки...</string>
-    <string name="preparing_module_installation">Подготовка установки модуля...</string>
-    <string name="detected_architecture">Обнаружена архитектура: %1$s</string>
-    <string name="creating_directories">Создание директорий...</string>
-    <string name="installing_binary">Установка бинарного файла: %1$s</string>
-    <string name="granting_permissions">Предоставление разрешений...</string>
-    <string name="preparing_installation">Подготовка установки...</string>
     <!-- Control Panel Screen -->
     <string name="no_containers_running">Нет запущенных контейнеров</string>
     <string name="start_container_first">Сначала запустите контейнер, чтобы увидеть его здесь</string>
@@ -225,7 +202,6 @@
     <string name="comma">,</string>
     <string name="gb_size">%1$d ГБ</string>
     <!-- Sparse Image Config Screen -->
-    <string name="sparse_image_configuration">Конфигурация sparse images</string>
     <string name="storage_configuration">Конфигурация хранилища</string>
     <string name="about_sparse_images">О sparse images</string>
     <string name="sparse_images_recommended">Sparse images рекомендуются при использовании контейнеров на зашифрованном хранилище, разделах F2FS /data или других файловых системах, которые могут иметь проблемы совместимости с прямым монтированием директорий.</string>

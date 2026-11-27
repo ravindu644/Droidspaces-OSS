@@ -28,12 +28,13 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
+import com.droidspaces.app.ui.component.DsDialog
 import com.droidspaces.app.util.ContainerCommandBuilder
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
-import com.droidspaces.app.ui.util.LoadingIndicator
+import com.droidspaces.app.ui.util.FullScreenLoading
 import com.droidspaces.app.ui.util.LoadingSize
 import com.droidspaces.app.ui.theme.JetBrainsMono
 import com.droidspaces.app.R
@@ -42,12 +43,11 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
-import androidx.compose.ui.window.DialogProperties
-import com.droidspaces.app.ui.util.ClearFocusOnClickOutside
 import com.droidspaces.app.ui.util.FocusUtils
 import com.droidspaces.app.ui.util.rememberClearFocus
 import com.topjohnwu.superuser.Shell
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 import java.io.File
 
@@ -94,7 +94,8 @@ fun FilePickerDialog(
     onDismiss: () -> Unit,
     onConfirm: (String) -> Unit,
     title: String = "Select Host Path",
-    showFiles: Boolean = true
+    showFiles: Boolean = true,
+    allowRoot: Boolean = true
 ) {
     var currentPath by remember { mutableStateOf("/") }
     var items by remember { mutableStateOf<List<FileItem>>(emptyList()) }
@@ -121,6 +122,10 @@ fun FilePickerDialog(
         }
     }
 
+    // Typing a path in the search box jumps to that directory. Only set currentPath here
+    // and let the effect above do the listing: fetching here as well raced it, and whichever
+    // of the two finished last decided what you saw. The delay debounces the root shell
+    // probe, since LaunchedEffect cancels the previous run on every keystroke.
     LaunchedEffect(searchQuery) {
         if (searchQuery.startsWith("/") && searchQuery.length > 1) {
             val targetDir = if (searchQuery.endsWith("/")) {
@@ -129,184 +134,160 @@ fun FilePickerDialog(
                 File(searchQuery).parent ?: "/"
             }
             if (targetDir != currentPath && targetDir.isNotEmpty()) {
+                delay(300)
                 val exists = withContext(Dispatchers.IO) {
                     val result = Shell.cmd("[ -d ${ContainerCommandBuilder.quote(targetDir)} ] && echo yes").exec()
                     result.isSuccess && result.out.firstOrNull() == "yes"
                 }
-                if (exists) {
-                    currentPath = targetDir
-                    isLoading = true
-                    items = fetchItems(targetDir, showFiles)
-                    isLoading = false
-                }
+                if (exists) currentPath = targetDir
             }
         }
     }
 
-    Dialog(
-        onDismissRequest = onDismiss,
-        properties = DialogProperties(usePlatformDefaultWidth = false)
-    ) {
-        val clearFocus = rememberClearFocus()
+    val clearFocus = rememberClearFocus()
 
-        Surface(
-            modifier = Modifier
-                .fillMaxWidth(0.92f)
-                .fillMaxHeight(0.75f),
-            shape = RoundedCornerShape(24.dp),
-            color = MaterialTheme.colorScheme.surfaceContainer,
-            border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)),
-            tonalElevation = 0.dp
-        ) {
-            ClearFocusOnClickOutside(
-                modifier = Modifier.fillMaxSize()
-            ) {
-                Column(
+    DsDialog(
+        onDismiss = onDismiss,
+        modifier = Modifier.fillMaxHeight(0.75f),
+        scrollableContent = false,
+        footer = {
+            DialogFooterRow(
+                dismissLabel = context.getString(R.string.cancel),
+                confirmLabel = context.getString(R.string.select_folder),
+                onDismiss = onDismiss,
+                onConfirm = { clearFocus(); onConfirm(currentPath) },
+                confirmEnabled = allowRoot || currentPath != "/"
+            )
+        }
+    ) {
+        Column(modifier = Modifier.fillMaxSize()) {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+
+                val pathScrollState = rememberScrollState()
+                Row(
                     modifier = Modifier
-                        .fillMaxSize()
-                        .padding(24.dp)
+                        .fillMaxWidth()
+                        .padding(top = 4.dp)
+                        .horizontalScroll(pathScrollState),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = title,
-                        style = MaterialTheme.typography.headlineSmall,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-
-                    val pathScrollState = rememberScrollState()
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(top = 4.dp)
-                            .horizontalScroll(pathScrollState),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = currentPath,
-                            style = MaterialTheme.typography.labelSmall.copy(
-                                fontFamily = JetBrainsMono,
-                                fontSize = 12.sp
-                            ),
-                            color = MaterialTheme.colorScheme.secondary,
-                            maxLines = 1,
-                            softWrap = false
-                        )
-                    }
-
-                    Spacer(modifier = Modifier.height(12.dp))
-
-                    OutlinedTextField(
-                        value = searchQuery,
-                        onValueChange = { searchQuery = it },
-                        modifier = Modifier.fillMaxWidth(),
-                        placeholder = {
-                            Text(
-                                context.getString(R.string.filter_absolute_path_hint),
-                                style = MaterialTheme.typography.bodySmall
-                            )
-                        },
-                        leadingIcon = {
-                            Icon(
-                                Icons.Default.Search,
-                                contentDescription = null,
-                                modifier = Modifier.size(20.dp)
-                            )
-                        },
-                        singleLine = true,
-                        keyboardOptions = FocusUtils.searchKeyboardOptions,
-                        keyboardActions = FocusUtils.clearFocusKeyboardActions(),
-                        textStyle = MaterialTheme.typography.bodySmall.copy(
-                            fontFamily = JetBrainsMono
+                        text = currentPath,
+                        style = MaterialTheme.typography.labelSmall.copy(
+                            fontFamily = JetBrainsMono,
+                            fontSize = 12.sp
                         ),
-                        shape = RoundedCornerShape(14.dp),
-                        colors = DsTextFieldDefaults.surfaceColors()
+                        color = MaterialTheme.colorScheme.secondary,
+                        maxLines = 1,
+                        softWrap = false
                     )
+                }
 
-                    Spacer(modifier = Modifier.height(12.dp))
+                Spacer(modifier = Modifier.height(12.dp))
 
-                    val listState = rememberLazyListState()
-                    val scrollbarColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.45f)
+                OutlinedTextField(
+                    value = searchQuery,
+                    onValueChange = { searchQuery = it },
+                    modifier = Modifier.fillMaxWidth(),
+                    placeholder = {
+                        Text(
+                            context.getString(R.string.filter_absolute_path_hint),
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                    },
+                    leadingIcon = {
+                        Icon(
+                            Icons.Default.Search,
+                            contentDescription = null,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    },
+                    singleLine = true,
+                    keyboardOptions = FocusUtils.searchKeyboardOptions,
+                    keyboardActions = FocusUtils.clearFocusKeyboardActions(),
+                    textStyle = MaterialTheme.typography.bodySmall.copy(
+                        fontFamily = JetBrainsMono
+                    ),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = DsTextFieldDefaults.surfaceColors()
+                )
 
-                    Box(
-                        modifier = Modifier
-                            .weight(1f)
-                            .fillMaxWidth()
-                            .lazyListVerticalScrollbar(listState, scrollbarColor)
-                    ) {
-                        if (isLoading) {
-                            Box(
-                                modifier = Modifier.fillMaxSize(),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                LoadingIndicator(size = LoadingSize.Medium)
-                            }
-                        } else {
-                            LazyColumn(
-                                state = listState,
-                                modifier = Modifier.fillMaxSize()
-                            ) {
-                                if (currentPath != "/") {
-                                    item {
-                                        FileItemRow(
-                                            name = "..",
-                                            isDirectory = true,
-                                            icon = {
-                                                Icon(
-                                                    Icons.Default.ArrowUpward,
-                                                    contentDescription = null,
-                                                    modifier = Modifier.size(24.dp),
-                                                    tint = MaterialTheme.colorScheme.tertiary
-                                                )
-                                            }
-                                        ) {
-                                            clearFocus()
-                                            searchQuery = ""
-                                            val parent = File(currentPath).parent ?: "/"
-                                            currentPath = parent
+                Spacer(modifier = Modifier.height(12.dp))
+
+                val listState = rememberLazyListState()
+                val scrollbarColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.45f)
+
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxWidth()
+                        .lazyListVerticalScrollbar(listState, scrollbarColor)
+                ) {
+                    if (isLoading) {
+                        FullScreenLoading(size = LoadingSize.Medium)
+                    } else {
+                        LazyColumn(
+                            state = listState,
+                            modifier = Modifier.fillMaxSize()
+                        ) {
+                            if (currentPath != "/") {
+                                item {
+                                    FileItemRow(
+                                        name = "..",
+                                        isDirectory = true,
+                                        icon = {
+                                            Icon(
+                                                Icons.Default.ArrowUpward,
+                                                contentDescription = null,
+                                                modifier = Modifier.size(24.dp),
+                                                tint = MaterialTheme.colorScheme.tertiary
+                                            )
                                         }
-                                    }
-                                }
-
-                                items(filteredItems) { item ->
-                                    FileItemRow(name = item.name, isDirectory = item.isDirectory) {
+                                    ) {
                                         clearFocus()
                                         searchQuery = ""
-                                        if (item.isDirectory) {
-                                            currentPath = if (currentPath == "/") "/${item.name}" else "$currentPath/${item.name}"
-                                        } else {
-                                            onConfirm(if (currentPath == "/") "/${item.name}" else "$currentPath/${item.name}")
-                                        }
+                                        val parent = File(currentPath).parent ?: "/"
+                                        currentPath = parent
                                     }
                                 }
+                            }
 
-                                if (filteredItems.isEmpty() && !isLoading) {
-                                    item {
-                                        Text(
-                                            text = if (searchQuery.isNotEmpty()) context.getString(R.string.no_matches) else context.getString(R.string.empty_directory),
-                                            modifier = Modifier.padding(16.dp),
-                                            style = MaterialTheme.typography.bodyMedium,
-                                            color = MaterialTheme.colorScheme.outline
-                                        )
+                            items(filteredItems) { item ->
+                                FileItemRow(name = item.name, isDirectory = item.isDirectory) {
+                                    clearFocus()
+                                    searchQuery = ""
+                                    if (item.isDirectory) {
+                                        currentPath = if (currentPath == "/") "/${item.name}" else "$currentPath/${item.name}"
+                                    } else {
+                                        onConfirm(if (currentPath == "/") "/${item.name}" else "$currentPath/${item.name}")
                                     }
+                                }
+                            }
+
+                            if (filteredItems.isEmpty() && !isLoading) {
+                                item {
+                                    Text(
+                                        text = if (searchQuery.isNotEmpty()) context.getString(R.string.no_matches) else context.getString(R.string.empty_directory),
+                                        modifier = Modifier.padding(16.dp),
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = MaterialTheme.colorScheme.outline
+                                    )
                                 }
                             }
                         }
                     }
-
-                    Spacer(modifier = Modifier.height(16.dp))
-
-                    DialogFooterRow(
-                        dismissLabel = context.getString(R.string.cancel),
-                        confirmLabel = context.getString(R.string.select_folder),
-                        onDismiss = onDismiss,
-                        onConfirm = { clearFocus(); onConfirm(currentPath) },
-                        textFontWeight = FontWeight.Bold
-                    )
                 }
-            }
+
+                Spacer(modifier = Modifier.height(16.dp))
         }
     }
-}
+    }
+
 
 data class FileItem(val name: String, val isDirectory: Boolean)
 
@@ -352,25 +333,33 @@ private fun FileItemRow(
 }
 
 private suspend fun fetchItems(path: String, showFiles: Boolean): List<FileItem> = withContext(Dispatchers.IO) {
-    val result = Shell.cmd("ls -F ${ContainerCommandBuilder.quote(path)} 2>/dev/null").exec()
+    // `ls -F` cannot answer "is this a directory". It marks a symlink with @ even when the
+    // symlink points at one, so /sdcard was unreachable, and it strips a real trailing
+    // *@=|> from a filename. Ask the shell instead: [ -d ] follows symlinks, so a link to
+    // a directory is reported as one, and the d/ f/ prefix survives any character in the
+    // name. Still one root round-trip. Names containing a newline cannot be represented
+    // line-by-line and are dropped rather than splitting into bogus entries.
+    val script = """
+        cd ${ContainerCommandBuilder.quote(path)} 2>/dev/null || exit 1
+        for f in * .*; do
+            [ "${'$'}f" = "." ] || [ "${'$'}f" = ".." ] && continue
+            [ -e "${'$'}f" ] || [ -L "${'$'}f" ] || continue
+            if [ -d "${'$'}f" ]; then echo "d/${'$'}f"; else echo "f/${'$'}f"; fi
+        done
+    """.trimIndent()
+
+    val result = Shell.cmd(script).exec()
     if (!result.isSuccess) return@withContext emptyList()
 
     result.out.mapNotNull { line ->
-        if (line.isEmpty()) return@mapNotNull null
-        val rawName = line.trim()
-        val isDirectory = rawName.endsWith("/")
-        val cleanName = if (isDirectory) {
-            rawName.dropLast(1)
-        } else {
-            val last = rawName.last()
-            if (last == '*' || last == '@' || last == '=' || last == '|' || last == '>') {
-                rawName.dropLast(1)
-            } else {
-                rawName
-            }
+        val isDirectory = when {
+            line.startsWith("d/") -> true
+            line.startsWith("f/") -> false
+            else -> return@mapNotNull null
         }
-        if (cleanName.isEmpty()) return@mapNotNull null
+        val name = line.substring(2)
+        if (name.isEmpty()) return@mapNotNull null
         if (!showFiles && !isDirectory) return@mapNotNull null
-        FileItem(cleanName, isDirectory)
-    }.sortedWith(compareBy({ !it.isDirectory }, { it.name }))
+        FileItem(name, isDirectory)
+    }.sortedWith(compareBy({ !it.isDirectory }, { it.name.lowercase() }))
 }

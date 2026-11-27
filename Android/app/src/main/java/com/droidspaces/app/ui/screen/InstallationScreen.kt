@@ -1,33 +1,37 @@
 package com.droidspaces.app.ui.screen
 
-import com.droidspaces.app.ui.component.PrimaryActionBottomBar
-import androidx.compose.ui.graphics.Color
-
 import androidx.activity.compose.BackHandler
-import androidx.compose.animation.core.*
-import androidx.compose.foundation.clickable
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import com.droidspaces.app.util.InstallationStep
-import com.droidspaces.app.util.ModuleInstallationStep
 import com.droidspaces.app.R
-
+import com.droidspaces.app.ui.component.SetupActionBar
+import com.droidspaces.app.ui.component.SetupBody
+import com.droidspaces.app.ui.component.SetupFrame
+import com.droidspaces.app.ui.component.SetupHero
+import com.droidspaces.app.ui.component.SetupPage
+import com.droidspaces.app.ui.theme.onWarningContainer
+import com.droidspaces.app.ui.theme.warningContainer
 import com.droidspaces.app.ui.viewmodel.AppStateViewModel
+import com.droidspaces.app.util.HostCapabilities
+
+private enum class InstallPhase { Installing, Success, Warning, Failed }
 
 @Composable
 fun InstallationScreen(
@@ -36,14 +40,26 @@ fun InstallationScreen(
 ) {
     val context = LocalContext.current
 
-    // Install orchestration + state live in AppStateViewModel (DT-6). Read as locals
-    // so the UI below is unchanged; these are Compose state reads and recompose.
-    val currentStep = appStateViewModel.installCurrentStep
-    val currentModuleStep = appStateViewModel.installCurrentModuleStep
+    // Install orchestration and state live in AppStateViewModel, so they
+    // survive rotation; these are Compose state reads and recompose.
     val isSuccess = appStateViewModel.isInstallSuccess
     val errorMessage = appStateViewModel.installErrorMessage
-    val isInstallingModule = appStateViewModel.isInstallingModule
     val rebootRecommended = appStateViewModel.installRebootRecommended
+    val kernelUnsupported = HostCapabilities.state.collectAsState().value?.requirementsMet == false
+
+    // The ViewModel outlives this screen and performInstallation() resets the
+    // previous outcome only once the effect below runs, which is after the
+    // first frame. Until then, show the loader rather than the stale result.
+    var started by rememberSaveable { mutableStateOf(false) }
+    val phase = when {
+        !started -> InstallPhase.Installing
+        isSuccess && kernelUnsupported -> InstallPhase.Warning
+        isSuccess -> InstallPhase.Success
+        errorMessage != null -> InstallPhase.Failed
+        else -> InstallPhase.Installing
+    }
+    val done = phase != InstallPhase.Installing
+    val motion = MaterialTheme.motionScheme
 
     // Completely block the back gesture in every state. This screen must be
     // left only via the Continue button, whose handler decides the next
@@ -56,162 +72,98 @@ fun InstallationScreen(
 
     // Run the install orchestration (idempotent inside the ViewModel).
     LaunchedEffect(Unit) {
+        started = true
         appStateViewModel.performInstallation()
     }
 
     Scaffold(
         containerColor = Color.Transparent,
         bottomBar = {
-            // Show the Continue button once the work is finished, whether it
-            // succeeded or failed - it is the only accepted way off this screen.
-            if (isSuccess || errorMessage != null) {
-                PrimaryActionBottomBar(
-                    label = context.getString(R.string.continue_button),
-                    icon = if (isSuccess) Icons.Default.Check else Icons.AutoMirrored.Filled.ArrowForward,
-                    onClick = onInstallationComplete
-                )
-            }
+            // Continue is the only accepted way off this screen, so it is disabled and
+            // invisible until the work is finished, whether it succeeded or failed. It
+            // keeps its space the whole time so the content above does not jump when it
+            // appears.
+            val barAlpha by animateFloatAsState(
+                targetValue = if (done) 1f else 0f,
+                animationSpec = motion.fastEffectsSpec(),
+                label = "continue_alpha"
+            )
+            SetupActionBar(
+                label = context.getString(R.string.continue_button),
+                icon = if (isSuccess) Icons.Default.Check else Icons.AutoMirrored.Filled.ArrowForward,
+                onClick = onInstallationComplete,
+                modifier = Modifier.alpha(barAlpha),
+                enabled = done
+            )
         }
     ) { innerPadding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
-                .padding(horizontal = 24.dp)
-                .padding(top = 24.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
-        ) {
-            // Main icon with animation
-            InstallationIcon(
-                isSuccess = isSuccess,
-                hasError = errorMessage != null
-            )
-    
-            Spacer(modifier = Modifier.height(32.dp))
-    
-            // Title
-            Text(
-                text = when {
-                    isSuccess -> context.getString(R.string.installation_complete)
-                    errorMessage != null -> context.getString(R.string.installation_failed)
-                    isInstallingModule -> context.getString(R.string.installing_module)
-                    else -> context.getString(R.string.installing_droidspaces)
-                },
-                style = MaterialTheme.typography.headlineMedium,
-                fontWeight = FontWeight.Bold,
-                textAlign = TextAlign.Center
-            )
-    
-            Spacer(modifier = Modifier.height(16.dp))
-    
-            // Status messages in a card (MMRL style)
-            Surface(
-                modifier = Modifier.fillMaxWidth(),
-                color = MaterialTheme.colorScheme.surfaceContainerHigh,
-                shape = RoundedCornerShape(20.dp),
-                border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
-            ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(20.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    when {
-                        isSuccess -> {
-                            Text(
-                                text = if (isInstallingModule) {
-                                    context.getString(R.string.module_installed_success)
-                                } else {
-                                    context.getString(R.string.backend_installed_success)
-                                },
-                                style = MaterialTheme.typography.bodyLarge,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
-                                textAlign = TextAlign.Center
-                            )
-    
-                        }
-                        errorMessage != null -> {
-                            Text(
-                                text = errorMessage,
-                                style = MaterialTheme.typography.bodyLarge,
-                                color = MaterialTheme.colorScheme.error,
-                                textAlign = TextAlign.Center
-                            )
-                        }
-                        else -> {
-                            // Show current step
-                            if (isInstallingModule) {
-                                when (currentModuleStep) {
-                                    is ModuleInstallationStep.RemovingOldModule -> {
-                                        StepText(context.getString(R.string.removing_old_module))
-                                    }
-                                    is ModuleInstallationStep.ExtractingAssets -> {
-                                        StepText(context.getString(R.string.extracting_module_files))
-                                    }
-                                    is ModuleInstallationStep.CopyingModule -> {
-                                        StepText(context.getString(R.string.installing_module_step))
-                                    }
-                                    is ModuleInstallationStep.SettingPermissions -> {
-                                        StepText(context.getString(R.string.setting_permissions))
-                                    }
-                                    is ModuleInstallationStep.Verifying -> {
-                                        StepText(context.getString(R.string.verifying_installation))
-                                    }
-                                    else -> {
-                                        StepText(context.getString(R.string.preparing_module_installation))
-                                    }
-                                }
-                            } else {
-                                when (val step = currentStep) {
-                                    is InstallationStep.DetectingArchitecture -> {
-                                        StepText(context.getString(R.string.detected_architecture, step.arch))
-                                    }
-                                    is InstallationStep.CreatingDirectories -> {
-                                        StepText(context.getString(R.string.creating_directories))
-                                    }
-                                    is InstallationStep.CopyingBinary -> {
-                                        StepText(context.getString(R.string.installing_binary, step.binary))
-                                    }
-                                    is InstallationStep.SettingPermissions -> {
-                                        StepText(context.getString(R.string.granting_permissions))
-                                    }
-                                    is InstallationStep.Verifying -> {
-                                        StepText(context.getString(R.string.verifying_installation))
-                                    }
-                                    else -> {
-                                        StepText(context.getString(R.string.preparing_installation))
-                                    }
-                                }
-                            }
-                        }
+        val scheme = MaterialTheme.colorScheme
+        // One switch for the whole hero, so a new phase cannot get a glyph on the wrong tint.
+        val (glyph, container, onContainer) = when (phase) {
+            InstallPhase.Warning -> Triple(Icons.Default.Warning, scheme.warningContainer, scheme.onWarningContainer)
+            InstallPhase.Failed -> Triple(Icons.Default.Close, scheme.errorContainer, scheme.onErrorContainer)
+            else -> Triple(Icons.Default.Check, scheme.primaryContainer, scheme.onPrimaryContainer)
+        }
+        SetupPage(innerPadding = innerPadding) {
+            SetupFrame(
+                title = context.getString(
+                    when (phase) {
+                        InstallPhase.Installing -> R.string.installing_droidspaces
+                        InstallPhase.Failed -> R.string.installation_failed
+                        else -> R.string.installation_complete
                     }
-    
-                    if (rebootRecommended) {
-                        HorizontalDivider(
-                            modifier = Modifier.padding(vertical = 12.dp),
-                            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)
-                        )
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.Center
+                ),
+                hero = {
+                    SetupHero(
+                        loading = phase == InstallPhase.Installing,
+                        glyph = glyph,
+                        container = container,
+                        onContainer = onContainer
+                    )
+                }
+            ) {
+                SetupBody(
+                    text = when (phase) {
+                        InstallPhase.Installing -> context.getString(R.string.installing_backend_message)
+                        InstallPhase.Warning -> context.getString(R.string.backend_installed_unsupported_kernel)
+                        InstallPhase.Failed -> errorMessage.orEmpty()
+                        else -> context.getString(R.string.backend_installed_success)
+                    },
+                    color = when (phase) {
+                        InstallPhase.Failed -> scheme.error
+                        InstallPhase.Warning -> scheme.onWarningContainer
+                        else -> scheme.onSurfaceVariant
+                    }
+                )
+
+                AnimatedVisibility(
+                    visible = phase == InstallPhase.Success && rebootRecommended,
+                    enter = fadeIn(motion.fastEffectsSpec()),
+                    exit = fadeOut(motion.fastEffectsSpec())
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Spacer(modifier = Modifier.height(24.dp))
+                        Surface(
+                            shape = RoundedCornerShape(20.dp),
+                            color = MaterialTheme.colorScheme.surfaceContainer,
+                            tonalElevation = 0.dp
                         ) {
-                            Icon(
-                                imageVector = Icons.Default.Info,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.size(20.dp)
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(
-                                text = context.getString(R.string.reboot_recommended),
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.primary,
-                                fontWeight = FontWeight.Medium,
-                                textAlign = TextAlign.Center
-                            )
+                            Row(
+                                modifier = Modifier.padding(16.dp),
+                                verticalAlignment = Alignment.Top,
+                                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Info,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                                Text(
+                                    text = context.getString(R.string.reboot_recommended),
+                                    style = MaterialTheme.typography.bodyMedium
+                                )
+                            }
                         }
                     }
                 }
@@ -219,64 +171,3 @@ fun InstallationScreen(
         }
     }
 }
-
-@Composable
-private fun InstallationIcon(
-    isSuccess: Boolean,
-    hasError: Boolean
-) {
-    val infiniteTransition = rememberInfiniteTransition(label = "download_animation")
-
-    when {
-        isSuccess -> {
-            // Success icon - checkmark
-            Icon(
-                imageVector = Icons.Default.CheckCircle,
-                contentDescription = null,
-                modifier = Modifier.size(80.dp),
-                tint = MaterialTheme.colorScheme.primary
-            )
-        }
-        hasError -> {
-            // Error icon
-            Icon(
-                imageVector = Icons.Default.Error,
-                contentDescription = null,
-                modifier = Modifier.size(80.dp),
-                tint = MaterialTheme.colorScheme.error
-            )
-        }
-        else -> {
-            // Download icon with pulsing animation
-            val alpha by infiniteTransition.animateFloat(
-                initialValue = 0.3f,
-                targetValue = 1f,
-                animationSpec = infiniteRepeatable(
-                    animation = tween(1000, easing = FastOutSlowInEasing),
-                    repeatMode = RepeatMode.Reverse
-                ),
-                label = "pulse_alpha"
-            )
-
-            Icon(
-                imageVector = Icons.Default.Download,
-                contentDescription = null,
-                modifier = Modifier
-                    .size(80.dp)
-                    .alpha(alpha),
-                tint = MaterialTheme.colorScheme.primary
-            )
-        }
-    }
-}
-
-@Composable
-private fun StepText(text: String) {
-    Text(
-        text = text,
-        style = MaterialTheme.typography.bodyLarge,
-        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
-        textAlign = TextAlign.Center
-    )
-}
-

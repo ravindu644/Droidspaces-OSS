@@ -15,7 +15,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
-import androidx.compose.ui.window.DialogProperties
+import com.droidspaces.app.ui.component.DsDialog
 import com.droidspaces.app.R
 
 @Composable
@@ -28,52 +28,35 @@ fun HardwareAccessDialog(
     var confirmText by remember { mutableStateOf("") }
     val isConfirmed = confirmText == context.getString(R.string.i_understand_caps)
 
-    Dialog(
-        onDismissRequest = onDismiss,
-        properties = DialogProperties(usePlatformDefaultWidth = false)
-    ) {
-        Surface(
-            modifier = Modifier
-                .fillMaxWidth(0.95f)
-                .wrapContentHeight(),
-            shape = RoundedCornerShape(24.dp),
-            color = MaterialTheme.colorScheme.surfaceContainer,
-            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)),
-            tonalElevation = 0.dp
-        ) {
-            Column(
-                modifier = Modifier
-                    .padding(24.dp)
-                    .verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
-            ) {
-                Text(
-                    text = context.getString(R.string.hardware_access),
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold
-                )
-
-                DangerousWarningCard(
-                    title = context.getString(R.string.privileged_warning_title),
-                    text = context.getString(R.string.hw_access_disclaimer)
-                )
-
-                ConfirmPhraseField(
-                    value = confirmText,
-                    onValueChange = { confirmText = it },
-                    isError = confirmText.isNotEmpty() && !isConfirmed
-                )
-
-                DialogFooterRow(
-                    dismissLabel = context.getString(R.string.cancel),
-                    confirmLabel = context.getString(R.string.ok),
-                    onDismiss = onDismiss,
-                    onConfirm = onConfirm,
-                    confirmEnabled = isConfirmed,
-                    confirmColor = MaterialTheme.colorScheme.error,
-                    confirmContentColor = MaterialTheme.colorScheme.onError
-                )
-            }
+    DsDialog(
+        onDismiss = onDismiss,
+        footer = {
+            DialogFooterRow(
+                dismissLabel = context.getString(R.string.cancel),
+                confirmLabel = context.getString(R.string.ok),
+                onDismiss = onDismiss,
+                onConfirm = onConfirm,
+                confirmEnabled = isConfirmed,
+                destructive = true
+            )
         }
+    ) {
+        Text(
+            text = context.getString(R.string.hardware_access),
+            style = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.Bold
+        )
+
+        DangerousWarningCard(
+            title = context.getString(R.string.privileged_warning_title),
+            text = context.getString(R.string.hw_access_disclaimer)
+        )
+
+        ConfirmPhraseField(
+            value = confirmText,
+            onValueChange = { confirmText = it },
+            isError = confirmText.isNotEmpty() && !isConfirmed
+        )
+    
     }
 }

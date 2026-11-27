@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -23,9 +24,18 @@ import androidx.compose.ui.unit.sp
  * Previously copy-pasted verbatim in ContainerCard, DroidspacesStatusCard and
  * RootfsRepoSheet. The caller supplies the already-formatted [label] (some sites
  * uppercase it, some don't) and the accent [color].
+ *
+ * [busy] spins the dot in place while an operation runs. It deliberately occupies
+ * the same 6.dp the dot does, so the pill is exactly as wide either way and
+ * nothing to the left of it shifts when the state changes.
  */
 @Composable
-fun StatusPill(label: String, color: Color, modifier: Modifier = Modifier) {
+fun StatusPill(
+    label: String,
+    color: Color,
+    modifier: Modifier = Modifier,
+    busy: Boolean = false,
+) {
     Surface(
         modifier = modifier,
         color = color.copy(alpha = 0.1f),
@@ -37,7 +47,18 @@ fun StatusPill(label: String, color: Color, modifier: Modifier = Modifier) {
             horizontalArrangement = Arrangement.spacedBy(6.dp),
             modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
         ) {
-            Surface(modifier = Modifier.size(6.dp), shape = CircleShape, color = color) {}
+            if (busy) {
+                // Not the shared LoadingIndicator: its smallest size is 16.dp and the
+                // morphing shape is unreadable this small. A plain ring still reads as
+                // motion at dot size.
+                CircularProgressIndicator(
+                    modifier = Modifier.size(6.dp),
+                    color = color,
+                    strokeWidth = 1.5.dp
+                )
+            } else {
+                Surface(modifier = Modifier.size(6.dp), shape = CircleShape, color = color) {}
+            }
             Text(
                 text = label,
                 style = MaterialTheme.typography.labelSmall,

@@ -1,21 +1,28 @@
+English | [简体中文](./Documentation/zh-CN/CONTRIBUTING.md)
+
 # Contributing to Droidspaces
 
 ## Philosophy
 
 > A feature that doesn't exist is better than a broken implementation.
 
-Droidspaces runs on two distinct platforms - Android (on hardware ranging from ancient
-vendor-frozen 3.10 kernels to modern GKI devices, across dozens of SoCs and OEMs) and
-Linux desktop environments. A patch that works on your setup and breaks on someone
-else's is not a contribution - it is a regression. Every change introduced into core must
-uphold this contract without exception.
+Droidspaces runs on two distinct platforms: Android, on hardware ranging from ancient
+vendor-frozen 3.10 kernels to modern GKI devices across dozens of SoCs and OEMs, and Linux
+desktop environments. A patch that works on your setup and breaks on someone else's is not a
+contribution, it is a regression. Every change introduced into core must uphold this
+contract without exception.
 
----
+The second half of that philosophy is about the codebase itself. Ten lines that do the job
+beat a hundred that do the same job. Reuse beats rewriting. The largest cleanup this project
+ever needed came from writing new code beside existing code instead of extending it, and it
+cost 1,550 deleted lines and a class of host-root command injection bugs to undo. The
+[Reuse Inventory](#reuse-inventory) below exists so you never have to guess whether
+something already exists.
 
 ## Platform Scope
 
-Droidspaces core must work correctly on both Android and Linux. These are not interchangeable
-environments and must be treated as separate targets.
+Droidspaces core must work correctly on both Android and Linux. These are not
+interchangeable environments and must be treated as separate targets.
 
 ### Platform Detection
 
@@ -51,44 +58,41 @@ int is_android(void) {
 Do not assume the runtime environment. Do not let Android-specific code execute on Linux or
 vice versa. Unguarded platform assumptions will cause the PR to be rejected.
 
----
-
 ## Kernel Compatibility
 
 **Minimum supported kernel: 3.10**
 
 This is a hard floor, not a suggestion. If your implementation depends on a syscall, a
-`/proc` interface, a namespace feature, or a kernel config that does not exist on 3.10,
-it will not be merged into core.
+`/proc` interface, a namespace feature, or a kernel config that does not exist on 3.10, it
+will not be merged into core.
 
-- Do not use `openat2(2)` - not available before 5.6.
-- Do not rely on cgroup v2 exclusively - cgroup v1 must remain functional.
+- Do not use `openat2(2)`, not available before 5.6.
+- Do not rely on cgroup v2 exclusively. cgroup v1 must remain functional. A controller
+  lives on one hierarchy at a time, and Android keeps memory and cpu on v1, so anything
+  that touches a controller file resolves it with `ds_cgroup_ctrl_dir()`.
 - Do not assume `clone3(2)`, `pidfd_*`, or any API gated behind 5.x.
-- If a fallback path exists, implement it. If it does not, the feature does not belong in core.
+- If a fallback path exists, implement it. If it does not, the feature does not belong in
+  core.
 
 This applies to both Android and Linux targets. A modern desktop kernel does not exempt your
 patch from this requirement.
 
-Test your changes on real hardware running old kernels. Emulators and modern stock kernels are
-not sufficient validation.
-
----
+Test your changes on real hardware running old kernels. Emulators and modern stock kernels
+are not sufficient validation.
 
 ## SoC and OEM Coverage (Android)
 
 Droidspaces runs on Qualcomm, Exynos, MediaTek, and Unisoc silicon, under OEM kernels that
-deviate significantly from mainline. Your patch must be tested across a representative spread
-of this landscape before submission.
+deviate significantly from mainline. Your patch must be tested across a representative
+spread of this landscape before submission.
 
 State explicitly in your PR which devices and kernel versions you have tested on. Untested
 claims of compatibility will be treated as untested.
 
 Patches that address a quirk specific to one SoC family or OEM kernel are acceptable **only
-if Droidspaces can adapt to the quirk at runtime** - via detection, a conditional code path,
-or a graceful fallback - without regressing behavior on unaffected hardware. If the fix
+if Droidspaces can adapt to the quirk at runtime**, via detection, a conditional code path,
+or a graceful fallback, without regressing behavior on unaffected hardware. If the fix
 cannot be generalized in this way, it belongs in a downstream fork, not in core.
-
----
 
 ## Android App Changes
 
@@ -98,38 +102,635 @@ not introduce any dependency, API call, or behavior that breaks on Android 8.
 Test on Android 8 before opening a PR. Testing only on a recent Android release is not
 sufficient.
 
----
+## Building
+
+### C backend
+
+```
+make native            # build for the host architecture
+make aarch64           # cross builds: aarch64, x86_64, armhf, x86, riscv64
+make debug-hardened    # ASan, UBSan, LSan build for chasing memory bugs
+make all-build         # every architecture
+make all-tarball       # all-build plus a release tarball
+make bump NEW=x.y.z    # set DS_VERSION in droidspaces.h
+make format            # clang-format over src/, using the repo .clang-format
+make clean
+```
+
+Bare `make` prints help and builds nothing. `make native` needs a musl toolchain; if it is
+missing, run `scripts/install-musl.sh <arch>` as the error message tells you.
+
+The build is incremental: a header edit rebuilds only the objects that include it, and an
+unchanged arch is a no-op, so `make aarch64` after `make native` costs a full build once and
+nothing afterwards. Objects live under `output/.obj/<arch>`. A compiler or `CFLAGS` change is
+not tracked, so `make clean` after those.
+
+Useful options: `V=1` for full compiler command lines, `NO_STRIP=1` to keep symbols,
+`MUSL_CROSS=dir` to point at a directory of `<triplet>-gcc`.
+
+The build runs with `-Wall -Wextra -Wpedantic -Werror` plus format, shadow, and truncation
+warnings. A warning is a build failure, not a review comment.
+
+Adding a new `.c` file means adding it to `SRCS` in the Makefile. There is no wildcard.
+
+The version string is scraped from `DS_VERSION` in `src/include/droidspaces.h`. `make bump
+NEW=x.y.z` rewrites it; nothing else carries the version.
+
+### Android app
+
+From `Android/`:
+
+```
+./build.sh             # debug APK
+./build.sh release     # signed release APK
+```
+
+Use the script rather than calling gradle directly. The APK build runs `make` for the four
+phone arches and packages `output/droidspaces-<arch>` as a generated asset, so it needs the
+musl toolchains and never reads a binary you copied by hand.
+
+### CI
+
+`.github/workflows/ci.yml` runs `make all-tarball`, `scripts/mkdeb.sh`, and the gradle
+release build on every push and pull request. It does **not** check formatting, so running
+`make format` is your responsibility.
+
+A release is a tag: `make bump NEW=x.y.z`, commit, then push the tag `vx.y.z`. CI refuses a
+tag that does not match `DS_VERSION`, and publishes the APK, tarball, Debian packages and a
+`SHA256SUMS` file with a changelog of every commit since the previous tag.
+
+## Code Style
+
+### No em-dashes
+
+Not in code, not in comments, not in commit messages, not in documentation. Use a comma, a
+full stop, or rewrite the sentence.
+
+### No ASCII banner comments
+
+No rows of `-----`, no `=====`, no boxed section headers. The SPDX licence block at the top
+of each file stays. Existing banners in `src/` predate this rule and are being removed
+separately. Do not add more.
+
+### Comments sound like a person
+
+Say why the code does what it does, or what breaks if it does not. A comment that restates
+the line below it is noise.
+
+```c
+/* Bad */
+/* increment the counter */
+count++;
+
+/* Good */
+/* netd wipes our rules whenever it restarts, so re-assert them every cycle */
+install_policy_rules(cfg);
+```
+
+The backend already does this well in places. `src/include/security/security.h` documents ordering
+constraints (`ds_ksu_neutralize_root_escape` must run before `ds_seccomp_apply_minimal`, and
+says why), and `ds_bind_mount_socket` explains the `O_NOFOLLOW` choice in terms of the race
+it closes. That is the bar.
+
+### Ten lines beat a hundred
+
+Delete before you add. The smallest change in the right place is the goal. The smallest
+change in the wrong place is a second bug.
+
+### C conventions
+
+- C89 block comments (`/* ... */`). There are no `//` comments in `src/`.
+- `static` by default. A function becomes non-static only when its prototype is added to a
+  header: the folder's public header, `src/include/<folder>/<folder>.h`, under the
+  `/* file.c */` label of the file that defines it, or, when only that folder calls it, the
+  `internal.h` next to the folder's sources (`src/<folder>/internal.h`).
+- A new constant or type goes in the header of the folder that owns it (`net/net.h`,
+  `config/config.h` for `struct ds_config` and the types it embeds), even when other folders
+  use it. `src/include/droidspaces.h` is for project-wide ones.
+- New cross-module functions take the `ds_` prefix. Legacy un-prefixed names (`read_file`,
+  `mkdir_p`, `run_command_quiet`, `domount`) stay as they are; do not rename them and do not
+  imitate them for new work.
+- `is_*` for predicates, `check_*` for probes that may print, `setup_*` and `cleanup_*` for
+  paired lifecycle, `print_*` for pure output, `free_*` for teardown.
+- Constants are `DS_` plus SCREAMING_SNAKE. Structs are `struct ds_*`. The `_t` suffix is
+  only for typedefs.
+- Header guards are named `#ifndef DROIDSPACES_H` style with a matching
+  `#endif /* DROIDSPACES_H */`. No `#pragma once`.
+- There is no `xmalloc` family. Use plain `malloc` with an explicit NULL check, and prefer
+  fixed-size buffers wherever the size is bounded. `struct ds_config` is almost entirely
+  fixed-size for this reason.
+- Every heap-owning API documents its free function. Follow that pattern.
+
+### Kotlin conventions
+
+- State lives in a ViewModel, not in a stateful composable and not in a `util` singleton.
+- Lists render with `LazyColumn` and stable keys.
+- Colors come from `MaterialTheme.colorScheme`, type from `MaterialTheme.typography`, animation
+  timings from `AnimationUtils`. Do not hardcode them. Corner radii, spacing and every other
+  visual value come from [DESIGN.md](./DESIGN.md).
+- Any value that reaches a root shell goes through `ContainerCommandBuilder.quote()` or an
+  allow-list validator. No exceptions.
+
+## Commit Conventions
+
+- Run `make format` before committing any `.c` or `.h` change.
+- Sign off every commit: `git commit -s`.
+- Do not add a `Co-Authored-By:` trailer for an AI agent. Human co-authors are fine.
+- Write a subject in the imperative mood, and a body explaining why when the change is not
+  self-evident.
+
+| Prefix | Use for |
+| --- | --- |
+| `app:` | Android app changes, with `app: fix:` and `app: refactor:` for those cases |
+| `fix:` | backend bug fixes |
+| `refactor:` | backend restructuring with no behavior change |
+| `feat:` | new backend features |
+| `docs:` | documentation |
+| `net:` `mount:` `seccomp:` `daemon:` | scoped backend subsystem changes |
+| `fix(security):` | anything security related, either half |
+
+## Reuse Inventory
+
+Grep this list before you write anything new. If something close already exists, extend it
+rather than adding a sibling. Android paths are relative to
+`Android/app/src/main/java/com/droidspaces/app/`, C paths to the repository root.
+
+This list answers "what do I call". [DESIGN.md](./DESIGN.md) answers "what should it look like",
+for the case where nothing here fits and you have to build something new.
+
+### Android: forms and reusable screens
+
+| Symbol | Path | Use it when |
+| --- | --- | --- |
+| `ContainerConfigHost(title, onBack, bottomBar, state, onStateChange, ...)` | `ui/component/ContainerConfigHost.kt` | Any screen that edits container settings. It hosts the root form and its pages in one destination |
+| `ContainerConfigForm(state, onStateChange, onOpenPage, ...)` | `ui/component/ContainerConfigForm.kt` | The root of the config screen. Add new options inside this file or one of its pages, never in a second form |
+| `DraftPageScaffold(title, dirty, canSave, onSave, onClose, confirmLabel) { }` | `ui/component/ContainerConfigHost.kt` | A config page: a draft kept on back while the page's rules pass, a discard prompt when they fail. `confirmLabel` adds an explicit button instead. Built on `ConfigPageScaffold` |
+| `ContainerConfigState` | `util/ContainerConfigState.kt` | The single source of truth for editable config. Add a field here, not to a parallel state class |
+| `ContainerInfo.toConfigState()` / `.withConfig(state)` | `util/ContainerConfigState.kt` | Prefill the form from a container, or write edits back |
+| `InitServiceScreen(containerName, titleRes, isAvailable, fetchRows, filters, ...)` | `ui/screen/InitServiceScreen.kt` | Supporting a new init system. Supply the lambdas, do not write a new screen |
+| `InitServiceRow`, `InitServiceUiStatus`, `InitCommandResult`, `InitServiceMenuAction`, `InitServiceFilterChip` | `ui/screen/InitServiceScreen.kt` | Mapping a manager's service list into the shared screen. Status colors and filter counts derive from these, so they cannot drift |
+| `NetworkModePage(...)` | `ui/component/NetworkModePage.kt` | The network mode list and each mode's settings (NAT, gateway, macvlan). Add a mode's settings here |
+| `UpstreamPickerSheet`, `HostInterfaceSheet`, `AddPortForwardSheet` | `ui/component/NetworkSheets.kt` | Adding to the network page's lists |
+| `EnvironmentVariablesPage`, `PrivilegedModePage`, `BindMountsPage` | `ui/component/` | The config pages that hold a draft |
+| `DsDropdown(label, selected, options, displayName, onSelect, ...)` | `ui/component/DsDropdown.kt` | Any select field. Never hand-roll `ExposedDropdownMenuBox` |
+| `DsMenuTheme { }` + `Modifier.dsMenuBorder()` | `ui/component/DsMenuTheme.kt` | Any `DropdownMenu` that needs the opaque menu surface. `DsDropdown` already applies it |
+| `DsTextFieldDefaults.colors()` / `.surfaceColors()` | `ui/component/DsTextFieldDefaults.kt` | Every `OutlinedTextField`. `colors()` on screens, `surfaceColors()` inside dialogs |
+| `MonoField(value, onValueChange, label, ...)` | `ui/component/MonoField.kt` | Every single-line field for a value the backend reads verbatim: paths, interface names, flags, DNS. Number fields and the env editor are their own |
+| `FocusUtils`, `rememberClearFocus()`, `ClearFocusOnClickOutside` | `ui/util/FocusUtils.kt` | IME actions and dismissing the keyboard. `MainActivity` already clears focus on an unconsumed tap on every screen; `ClearFocusOnClickOutside` is only for a sheet that is its own window |
+
+### Android: dialogs
+
+| Symbol | Path | Use it when |
+| --- | --- | --- |
+| `DsDialog(onDismiss, modifier, borderColor, scrollableContent, footer) { }` | `ui/component/DsDialog.kt` | Every dialog. Actions go in `footer`, never in the content, or they get squeezed off a short screen. Never set a width, padding or scroll |
+| `DialogDismissButton(label, onDismiss)` | `ui/component/DialogFooterRow.kt` | The `footer` of a dialog whose only action is close |
+| `DialogCloseButton(onClick, enabled)` | `ui/component/DialogCloseButton.kt` | The 36.dp close square in a dialog's header row, for info pages that close from the top (terminal log viewer, About) |
+| `DialogFooterRow(dismissLabel, confirmLabel, onDismiss, onConfirm, confirmEnabled, destructive)` | `ui/component/DialogFooterRow.kt` | Every dialog's cancel and confirm row, thirteen call sites. Pass `destructive = true` for a delete or a wipe, never a colour |
+| `FilePickerDialog(onDismiss, onConfirm, title, showFiles)` | `ui/component/FilePickerDialog.kt` | Picking a host path or file |
+| `HardwareAccessDialog(onConfirm, onDismiss)` | `ui/component/HardwareAccessDialog.kt` | Opt-in flow that needs a typed confirmation phrase |
+| `DsBottomSheet(onDismiss, title, footer, titleAction) { }` | `ui/component/DsBottomSheet.kt` | A short "add" form over the page it adds to. Same footer rule as `DsDialog` |
+| `DiscardEditsDialog(onDiscard, onKeepEditing)` | `ui/component/ContainerConfigHost.kt` | Leaving a page with unapplied edits. `rememberDraftBack` shows it for you |
+| `DangerousWarningCard(title, text)` + `ConfirmPhraseField(value, onValueChange, isError)` | `ui/component/DangerousActionConfirm.kt` | Building a destructive confirmation. Compose these two with `DialogFooterRow` |
+| `TerminalDialog(title, logs, onDismiss, onClear, isBlocking)` | `ui/component/TerminalDialog.kt` | Showing live or streaming command output |
+| `ProgressDialog(message)` / `ErrorLogsDialog(logs)` | `ui/util/DialogUtils.kt` | Blocking spinner, or a failed command's log lines |
+| `RootfsRepoSheet(onDismiss, onInstall)` | `ui/component/RootfsRepoSheet.kt` | The rootfs repo browser, search and repo manager included |
+| `BugReportDialog(onDismiss)` | `ui/component/BugReportDialog.kt` | Bug report capture |
+
+Some dialogs are private to their screen (`UninstallConfirmationDialog` and `SparseSizeDialog`
+in `ui/screen/ContainersScreen.kt`, `UserPickerDialog` in `ui/screen/ContainerTerminalScreen.kt`,
+the language and about dialogs in `ui/screen/SettingsScreen.kt`). Do not import or copy them.
+
+### Android: bars, scaffolds, feedback
+
+| Symbol | Path | Use it when |
+| --- | --- | --- |
+| `PrimaryActionBottomBar(label, icon, onClick, ...)` | `ui/component/PrimaryActionBottomBar.kt` | Any wizard or full screen "Next", "Install", "Continue" bar. Seven screens use it. The overload taking a `content` slot is for buttons that swap their contents |
+| `SaveActionBottomBar(isSaved, isSaving, canSave, onSave, ...)` | `ui/component/SaveActionBottomBar.kt` | A save bar with the save, saving and saved states |
+| `PullToRefreshWrapper(onRefresh) { ... }` | `ui/component/PullToRefreshWrapper.kt` | Any pull to refresh list or tab body |
+| `showSuccess/showError(snackbarHostState, message)` | `ui/util/SnackbarUtils.kt` | All snackbars. Never call `showSnackbar` directly |
+| `FloatingActionButtonMenu` + `ToggleFloatingActionButton` | `ui/screen/ContainersScreen.kt` | A screen with more than one floating action. Copy that block, never stack FABs. See DESIGN.md "Floating action button" |
+
+### Android: cards and list items
+
+| Symbol | Path | Use it when |
+| --- | --- | --- |
+| `SettingsGroup { }` + `GroupHeader`, `GroupIntro`, `GroupDivider` | `ui/component/SettingsGroup.kt` | Any settings-style screen: one surface per section, rows flat inside, a header above |
+| `NavRow(title, onClick, icon, value, summary, danger, error)` | `ui/component/SettingsGroup.kt` | A row in a group that opens a page, showing the current value |
+| `RadioRow(title, description, selected, onClick)` | `ui/component/NetworkModePage.kt` | One option of a radio list in a group |
+| `DsRadioRow(label, selected, onClick, fontFamily, delete)` | `ui/component/DsRadioRow.kt` | One option of a single-select list in a dialog: the font and user pickers |
+| `DsSearchBar(query, onQueryChange, placeholder, ...)` | `ui/component/DsSearchBar.kt` | The search field above a filterable list |
+| `EntryRow(text, onDelete, ...)` / `AddEntryButton(label, onClick)` | `ui/component/ListEntryCards.kt` | Editable lists: the entries inside a group, the add button under it |
+| `GroupField { }` / `InlineWarning(text)` | `ui/component/ContainerConfigForm.kt` | A text field inside a group, padded like the rows; an error-tinted note inside one |
+| `screenGutter()`, `isCompactWidth()`, `isShortHeight()` | `ui/component/SettingsGroup.kt` | Margins and layout switches for narrow and short windows. See DESIGN.md "Small screens" |
+| `SettingsCard(title, onClick, icon, subtitleContent, trailing, ...)` | `ui/component/SettingsCard.kt` | A standalone card row outside a group |
+| `ToggleCard` | `ui/component/ToggleCard.kt` | A standalone switch card. Inside a group use `SwitchItem` |
+| `DsSlider(value, onValueChange, valueRange, ...)` | `ui/component/DsSlider.kt` | Any slider. Never restyle a raw `Slider` at the call site |
+| `SwitchItem` | `ui/component/SwitchItem.kt` | The switch row inside a `SettingsGroup`. See the duplicates note below |
+| `ContainerCard(container, actions, ...)` + `ContainerCardActions` | `ui/component/ContainerCard.kt` | The expandable container row. Add new actions to `ContainerCardActions`, not as new parameters |
+| `RunningContainerCard(container, onEnter, onTerminalClick, osInfo)` | `ui/component/RunningContainerCard.kt` | Compact running container card on the control panel |
+| `DroidspacesStatusCard(status, version, ...)` + `DroidspacesStatus` | `ui/component/DroidspacesStatusCard.kt` | Backend or module status hero card |
+| `SystemInfoCard`, `ContainerUsersCard`, `HelpCard` | `ui/component/` | Host resource card, container user management, getting started block |
+| `EmptyState(icon, title, description)`, `ErrorState`, `RootUnavailableState` | `ui/component/EmptyState.kt` | Any empty list, backend unavailable state, or missing root state |
+
+### Android: status and indicators
+
+| Symbol | Path | Use it when |
+| --- | --- | --- |
+| `StatusPill(label, color)` | `ui/component/StatusPill.kt` | Any small status chip or badge |
+| `SectionHeader(text)` | `ui/component/SectionHeader.kt` | Any heading above a group of cards. Spacing goes on the modifier |
+| `CardContentPadding`, `CardHeaderHeight` | `ui/component/CardMetrics.kt` | Any card with a title-and-pill header. Keeps the dividers aligned across tabs, do not retype the values |
+| `LoadingIndicator(size, color, contained)` + `LoadingSize` | `ui/util/LoadingIndicator.kt` | Inline spinners. Pick a `LoadingSize`, never a raw `.size(n.dp)`. `contained` is the primaryContainer bubble for a hero |
+| `FullScreenLoading(message)` | `ui/util/LoadingIndicator.kt` | Whole screen loading state |
+| `LoadingIndicator`, `ContainedLoadingIndicator`, `MaterialShapes` | `androidx.compose.material3` | The Expressive indicators and shapes come from the library; `ui/util/LoadingIndicator.kt` only wraps the sizes |
+| `TerminalConsole(logs, isProcessing, maxHeight)` | `ui/component/TerminalConsole.kt` | Inline scrolling log view |
+| `ShimmerAnimation(enabled) { ... }` | `ui/component/TerminalConsole.kt` | Skeleton loading effect |
+
+### Android: theme
+
+| Symbol | Path | Use it when |
+| --- | --- | --- |
+| `DroidspacesTheme(darkTheme, dynamicColor, amoledMode, themePalette)` | `ui/theme/Theme.kt` | The single theme root, applied in `MainActivity` |
+| `rememberThemeState()` + `ThemeState` | `ui/theme/ThemeStateHolder.kt` | Reading live theme preferences |
+| `ThemePalette` | `ui/theme/Color.kt` | Adding an accent palette. Here and nowhere else |
+| `MaterialTheme.colorScheme.*` | | All colors. `ui/theme/Color.kt` holds `AMOLED_BLACK`, the palettes, the warning pair and `ColorScheme.isDark` |
+| `ColorScheme.isDark`, `warningContainer`, `onWarningContainer` | `ui/theme/Color.kt` | Dark-mode branches and the amber warning pair. Never re-derive from `luminance()` |
+| `MaterialTheme.typography.*`, `JetBrainsMono` | `ui/theme/Type.kt` | All text styles, and the mono font for terminal, log, and code text |
+| `DsIcons.Logo` | `ui/theme/DsIcons.kt` | The app mark as a tintable icon, wherever the UI means a container or its storage. Never `Icons.Default.Storage` |
+| Corner radii, spacing, type roles | [DESIGN.md](./DESIGN.md) | Every visual value. There is no shape token object, the numbers live in DESIGN.md |
+| `AnimationUtils` | `util/AnimationUtils.kt` | Durations, easing, and tween specs. Never a literal `tween(300)` |
+| `AccentColorPicker`, `ColorPaletteSwatch` | `ui/component/` | The palette picker in settings |
+
+There is no spacing token object. Padding is written as literal dp, following the existing
+conventions: 24.dp for dialog and screen horizontal padding, 16.dp for card inner padding,
+8.dp and 12.dp between rows.
+
+### Android: navigation
+
+| Symbol | Path | Use it when |
+| --- | --- | --- |
+| `Screen` sealed class | `ui/navigation/DroidspacesNavigation.kt` | Adding a destination. Never a raw route string |
+| `Screen.X.createRoute(...)` | same | Building a route. Arguments are URI encoded for you |
+| `DroidspacesNavigation(navController, ...)` | same | The single `NavHost`. Register new screens here |
+
+### Android: shell and root execution
+
+| Symbol | Path | Use it when |
+| --- | --- | --- |
+| `ContainerCommandBuilder.quote(value)` | `util/ContainerCommandBuilder.kt` | **Every** dynamic value going into a root command. POSIX single-quote wrap that escapes embedded quotes |
+| `ContainerCommandBuilder.buildStart/Stop/Restart/Usage/GetIpCommand(...)` | same | Driving the backend binary. Do not assemble these by hand |
+| `ContainerCommandBuilder.buildDeleteCommand(path, useSparseImage)` | same | Deleting a container's files on uninstall. Clears the immutable and append-only flags a guest can leave in a directory rootfs, which stop a bare `rm -rf` |
+| `ContainerCommandBuilder.getConfigPath(container)` | same | The canonical container config path |
+| `ContainerOperationExecutor.executeCommand(command, operation, logger, ...)` | `util/ContainerOperationExecutor.kt` | Any long root command whose output must stream into the UI |
+| `ContainerOperationExecutor.checkCommandSuccess(command)` | same | Fire and check, no logging |
+| `ContainerLogger` / `ViewModelLogger(onLog)` | `util/ContainerLogger.kt` | The log sink every installer and executor takes |
+| `ContainerRuntime.scan()` | `util/ContainerRuntime.kt` | Reconciling on-disk containers. The intended gateway to the backend binary |
+| `Constants.getDroidspacesCommand()` | `util/Constants.kt` | Resolving the binary in PATH versus its full path |
+
+The global libsu configuration lives in `DroidspacesApplication.kt`. That is the only place
+it should be set.
+
+### Android: validation and security
+
+| Symbol | Path | Use it when |
+| --- | --- | --- |
+| `ContainerInitManager.isSafeServiceName(name)` | `util/ContainerInitManager.kt` | Any service or unit name that came from inside a container, before it reaches a shell. Fails closed |
+| `ValidationUtils.validateContainerName` / `isSafeContainerName` / `normalizeContainerName` | `util/ValidationUtils.kt` | Container names. Normalize first, then validate. Both fail closed |
+| `ValidationUtils.validateHostname` / `sanitizeHostname` | same | Hostnames |
+| `ValidationUtils.validateConfigValues(config)` | same | Before writing a config. Rejects control characters in single-line values |
+| `ValidationUtils.validateGatewayConfig(...)` + `GatewayErrors` | same | Gateway collision rules across containers |
+| `ValidationUtils.effGatewayNet/Iface/Bridge` | same | Deriving gateway defaults. These mirror the C runtime, do not re-derive them |
+| `ValidationUtils.ifaceNameInput(input, wildcards)` | same | Filtering a typed interface name as the user types. Mirrors `ds_parse_iface_csv()` and IFNAMSIZ |
+| `ValidationResult` | same | The shared success and error result type |
+| `ContainerManager.sanitizeContainerName(name)` | `util/ContainerManager.kt` | Path shaping only. This is **not** a security validator, pair it with `isSafeContainerName` |
+
+`ContainerInstaller.validateRootfsTarball` fails closed if the validation script is missing.
+`FilePickerUtils.isValidTarball` checks the file extension only and is not a security
+boundary.
+
+### Android: data, repositories, preferences
+
+| Symbol | Path | Use it when |
+| --- | --- | --- |
+| `ContainerManager` | `util/ContainerManager.kt` | Container discovery, config parsing, status, updates, uninstall |
+| `ContainerInfo`, `BindMount`, `PortForward`, `ContainerStatus` | same | The container model. `ContainerInfo.toConfigContent()` is the single config serializer, never hand-write config lines |
+| `RootfsConfig.read(context, uri)` | `util/RootfsConfig.kt` | Reading optional root-level `container.config` recommendations, plus the opt-in `container.env`, before installation, from a 64 KiB prefix of the archive. Uses the shared config parser without loading host environment files |
+| `DaemonModeRepository` | `util/DaemonModeRepository.kt` | Reading and writing the daemon mode flag |
+| `RootfsRepository.fetchAllAssets(context)` + `RootfsAsset` | `util/RootfsRepository.kt` | Fetching official and user rootfs repos |
+| `PreferencesManager.getInstance(context)` | `util/PreferencesManager.kt` | All settings persistence. Collect `daemonModeFlow` and `symlinkEnabledFlow` rather than registering your own preference listener |
+| `Constants` | `util/Constants.kt` | Every path, preference key, and default. Never re-declare a literal |
+| `ContributorManager`, `Contributor`, `Language` | `util/` | Contributor list and language model |
+
+### Android: device and platform
+
+| Symbol | Path | Use it when |
+| --- | --- | --- |
+| `DeviceArch.suffix()` / `.displayName()` | `util/DeviceArch.kt` | Any ABI mapping. Matches both the binary suffix and the rootfs repo architecture field |
+| `SystemInfoManager` | `util/SystemInfoManager.kt` | Kernel version, architecture, Android version, SELinux status, root provider version, backend version and mode. All cached |
+| `RootChecker` / `RootStatus` | `util/RootChecker.kt` | Root availability |
+| `StorageChecker` | `util/StorageChecker.kt` | Free space checks |
+| `ResourceLimits` + `LimitSupport` | `util/ResourceLimits.kt` | Device RAM and core totals, which limits the running kernel can enforce (`probe()`), and the display strings for memory, cores and PIDs. Format a limit through it, never by hand |
+| `DroidspacesChecker` / `DroidspacesBackendStatus` | `util/DroidspacesChecker.kt` | Backend install state and update availability |
+| `LocaleHelper` | `util/LocaleHelper.kt` | Language listing and switching |
+| `SELinuxChecker` | `util/SELinuxChecker.kt` | Overlaps `SystemInfoManager.getSELinuxStatus()`. Prefer the latter, it caches |
+
+### Android: init system managers and container introspection
+
+All four init managers share the same shape. The container name is always quoted through
+`ContainerCommandBuilder`, and the service name is always allow-listed through
+`ContainerInitManager.isSafeServiceName`.
+
+| Symbol | Path | Use it when |
+| --- | --- | --- |
+| `ContainerSystemdManager` | `util/ContainerSystemdManager.kt` | systemd units. Also owns unit inspection and drop-in override read, write, delete. The base64 streaming in `setOverrideConf` is the pattern to copy for arbitrary text |
+| `ContainerOpenRCManager` | `util/ContainerOpenRCManager.kt` | OpenRC services |
+| `ContainerProcdManager` | `util/ContainerProcdManager.kt` | procd services. The only manager that also allow-lists the action |
+| `ContainerRunitManager` | `util/ContainerRunitManager.kt` | runit services |
+| `ContainerUsersManager` | `util/ContainerUsersManager.kt` | Container user list, cached |
+| `ContainerOSInfoManager` | `util/ContainerOSInfoManager.kt` | Distro name, version, icon, and live usage. `OSInfo.ramLabel(context)` is the one formatter for the RAM text, limit aware |
+| `ContainerUsageCollector` | `util/ContainerUsageCollector.kt` | CPU, RAM, uptime, IP in one call |
+| `ContainerDiskUsageManager` | `util/ContainerDiskUsageManager.kt` | Sparse image disk usage |
+
+The raw passthrough entry points (`executeSystemctlCommand`, `executeRCCommand`) do no name
+validation. Prefer the wrappers.
+
+### Android: ViewModels
+
+| Symbol | Path | Owns |
+| --- | --- | --- |
+| `AppStateViewModel` | `ui/viewmodel/AppStateViewModel.kt` | Backend status, root status, backend and module installation |
+| `ContainerViewModel` | `ui/viewmodel/ContainerViewModel.kt` | The container list, counts, refresh and scan |
+| `ContainerOperationsViewModel` | `ui/viewmodel/ContainerOperationsViewModel.kt` | Start, stop, restart, uninstall, export, sparse migrate and resize, plus their logs |
+| `ContainerInstallationViewModel` | `ui/viewmodel/ContainerInstallationViewModel.kt` | The install wizard state, shared across back stack entries |
+| `ContainerUsageViewModel` | `ui/viewmodel/ContainerUsageViewModel.kt` | Live usage polling |
+| `SystemStatsViewModel` | `ui/viewmodel/SystemStatsViewModel.kt` | Per-container OS info |
+| `RootfsRepoViewModel` | `ui/viewmodel/RootfsRepoViewModel.kt` | Repo listing and per-asset download state |
+| `InitServiceViewModel` | `ui/viewmodel/InitServiceViewModel.kt` | Init-system service list, filter and search, shared by systemd, OpenRC, procd and runit |
+
+### Android: terminal
+
+| Symbol | Path | Use it when |
+| --- | --- | --- |
+| `TerminalSessionService` + `SessionBinder` | `service/TerminalSessionService.kt` | Creating, fetching, and terminating terminal sessions. Call `detachAllClients()` on screen disposal so the Activity is not retained |
+| `TerminalSessionService.globalSessionList` | same | The process-scoped, Compose-observable session registry |
+| `DroidspacesTerminalSession.create(client, containerName, containerUser)` | `ui/terminal/DroidspacesTerminalSession.kt` | The only place a container shell is spawned. It re-validates the container name and user |
+| `TerminalBackEnd`, `TerminalScreenState`, `NoOpTerminalSessionClient` | `ui/terminal/` | Terminal view plumbing |
+| `AnsiColorParser.parseAnsi/stripAnsi` | `util/AnsiColorParser.kt` | Rendering or cleaning ANSI output |
+
+### Android: rootfs download and install
+
+| Symbol | Path | Use it when |
+| --- | --- | --- |
+| `RootfsDownloadManager` | `util/RootfsDownloadManager.kt` | Enqueueing, polling, and cancelling a rootfs download, plus battery exemption |
+| `ContainerInstaller.installContainer(...)` | `util/ContainerInstaller.kt` | Installing from a tarball. Validates, checks storage, extracts, writes config, cleans up on failure |
+| `SparseImageInstaller.extract(...)` | `util/SparseImageInstaller.kt` | The sparse image truncate, format, mount, extract, unmount lifecycle |
+| `BinaryInstaller` | `util/BinaryInstaller.kt` | Installing the backend binary and signalling the daemon |
+| `ModuleInstaller` | `util/ModuleInstaller.kt` | Installing the Magisk module |
+| `SymlinkInstaller` | `util/SymlinkInstaller.kt` | Enabling and disabling the binary symlink |
+| `FilePickerUtils`, `IconUtils` | `util/` | File name resolution, distro icon lookup. `FilePickerUtils.realPath(context, uri)` turns a picked document into a path root can read or write in place, null for pipe-backed providers |
+
+### C backend: logging
+
+| Symbol | Header line | Use it when |
+| --- | --- | --- |
+| `ds_log(fmt, ...)` | `core/core.h` | Normal progress output |
+| `ds_warn(fmt, ...)` | | Recoverable problem. Goes to stderr, never silenced |
+| `ds_error(fmt, ...)` | | Failure the caller handles |
+| `ds_die(fmt, ...)` | | Fatal. Logs then exits. Never write `fprintf` plus `exit` by hand |
+| `ds_log_silent` | | Set to suppress non-error terminal output around a noisy call. Save and restore it |
+| `C_RED`, `C_GREEN`, `C_YELLOW`, `C_RESET` and friends | | Colour. Never hardcode an escape sequence |
+| `rotate_log(path, max_size)` | | Size-capped log rotation |
+| `write_monitor_debug_log(name, fmt, ...)` | | Logging from the detached monitor, file only |
+| `ds_open_container_log` / `ds_close_container_log` | | Tee `ds_log` output into the per-container log |
+
+The debug channel is a bracket prefix, not a flag. A message starting with `[DEBUG]`,
+`[NET]`, `[CGROUP]`, `[SEC]`, `[IPT]`, `[VIRT]`, `[GPU]`, `[FW]`, `[DHCP]`, `[X11]`,
+`[VirGL]`, `[PulseAudio]` or `[Anland]` goes to the log file but not the terminal. Use that, do not add
+a verbosity flag.
+
+### C backend: strings
+
+| Symbol | Use it when |
+| --- | --- |
+| `safe_strncpy(dst, src, size)` | The replacement for `strcpy` and `strncpy`. NULL safe, always terminates, warns on truncation |
+| `snprintf` with a checked return | The replacement for `sprintf` and `strcat`. There is no wrapper, and `-Wformat-truncation=2 -Werror` means you must handle truncation |
+| `ds_split_flags` / `ds_free_split_flags` | Tokenizing user flag strings. Rejects shell metacharacters |
+| `ds_parse_iface_csv` | Parsing a comma separated interface list |
+| `ds_format_uptime`, `ds_parse_size`, `ds_format_size` | Uptime strings, and byte counts like `1G` or `512M` |
+| `sanitize_container_name`, `validate_container_name`, `reject_container_name`, `parse_and_validate_names` | Container names from user input. `reject_container_name` is the one-call form for argument parsing |
+| `validate_bind_destination` | Rejecting bind targets that would clobber container internals |
+| `ds_shell_metachars` (`src/core/string.c`) | The single source of truth for the rejected metacharacter set. Reference it, do not retype it |
+
+### C backend: files and paths
+
+| Symbol | Use it when |
+| --- | --- |
+| `write_file_atomic(path, content)` | Anything persistent. `mkstemp` plus `fsync` plus `rename`, so a pre-planted symlink at a predictable temp name cannot win |
+| `write_file`, `read_file`, `write_all` | One-shot write, read to buffer, EINTR-safe full write. Never loop on bare `write()` |
+| `grep_file(path, pattern)` | Substring test over a file |
+| `mkdir_p`, `remove_recursive` | The `mkdir -p` and `rm -rf` equivalents |
+| `is_subpath(parent, child)` | Path escape validation. Realpath based, use this instead of `strncmp` |
+| `is_ramfs`, `is_mountpoint` | Filesystem type and mountpoint tests |
+| `build_proc_root_path(pid, suffix, buf, size)` | Building `/proc/<pid>/root/...` with truncation checked |
+| `ds_open_in_root(pid, path, flags)` | Opening a path inside a container's root one step at a time, refusing a symlink at any step and `..`. Every host write through `/proc/<pid>/root` goes through it: `O_NOFOLLOW` alone guards only the last step |
+| `proc_ppid(pid)`, `proc_uid(pid)` | Parent pid and real uid from `/proc/<pid>`. Use `proc_uid`, not `st_uid` of `/proc/<pid>`, which reads 0 for any non-dumpable process |
+| `ds_resolve_path_arg`, `ds_resolve_argv_paths` | Making user-supplied paths absolute before the daemonize boundary changes the working directory |
+| `access(path, F_OK)` | Existence checks. There is no wrapper and none is wanted |
+
+`O_CLOEXEC` is expected on every `open()` in new code. When a path can be attacker
+influenced, copy the `ds_bind_mount_socket` pattern: open with `O_NOFOLLOW|O_CLOEXEC`, then
+`fchown` and `fchmod` the opened inode so there is no second path resolution to race.
+
+### C backend: processes and daemons
+
+| Symbol | Use it when |
+| --- | --- |
+| `run_command_quiet`, `run_command_log` | Running an external binary. These are the only sanctioned way. There is no `system()` in this tree |
+| `ds_spawn_daemon(child_fn, user_data, log_file, tag, label)` | Forking a long-lived helper. Verifies `execv` succeeded through a ready pipe and attaches a log relay |
+| `ds_daemon_child_preamble()` | First call inside such a child, while still root |
+| `ds_oom_protect()` | Best effort OOM score protection |
+| `ds_thread_create(tid, fn, arg)` | Starting a helper thread in a process that waits on a signalfd. The thread starts with every signal blocked, so it cannot take a signal meant for the main thread. Never call `pthread_create` directly in the monitor |
+| `ds_daemon_read_pid` / `write_pid` / `remove_pid` | Pidfile lifecycle. The read form liveness-checks the pid |
+| `ds_global_daemon_stop(...)` | Unified SIGTERM, poll, SIGKILL, reap, unlink teardown |
+| `wait_for_socket_or_death(pid, path, timeout_ms, interval_us)` | Waiting for a socket to appear. Bails early if the server dies. Use instead of a sleep loop. `android/` only, from its `internal.h`: move the prototype to `android.h` if another folder needs it |
+| `ds_send_fd` / `ds_recv_fd` | SCM_RIGHTS descriptor passing |
+| `collect_pids`, `read_and_validate_pid` | Snapshotting `/proc`, and reading a pidfile with a liveness check |
+| `ds_container_lock(name, wait)` / `ds_container_unlock(fd)` | The per-container lifecycle lock, a `flock`. **Anything** that changes a container's on-disk state (pidfile, mount, cgroup) must hold it, the monitor included. Commands pass `wait=0` and report busy; the monitor passes `wait=1`. Decide what to do from the state you find while holding it |
+| `ds_container_lock_orphan(name)` | Same lock, but only granted when no monitor is alive for the name. For pruning leftovers. On -1, leave the container alone |
+| `ds_container_claim_supervision(name)` | Called once by a monitor. It is what `ds_container_lock_orphan` checks |
+| `DS_SIG_STOP`, `ds_init_type_t`, `detect_container_init()` | Graceful stop. Each init family has its own stop and reboot signal, and under procd `SIGTERM` means reboot |
+
+### C backend: platform gates
+
+| Symbol | Use it when |
+| --- | --- |
+| `is_android()` | The mandatory gate for every Android-only or Linux-only path, both directions |
+| `get_kernel_version`, `check_kernel_recommendation` | Version gating against `DS_MIN_KERNEL_MAJOR` and `DS_MIN_KERNEL_MINOR` |
+| `check_ns(flag, name)` | Probing whether a `CLONE_NEW*` namespace is usable. The network namespace is answered from `/proc/self/ns/net` alone: creating one to test it stalls the real `unshare` behind its teardown on kernels before 4.17 |
+| `ds_cgroup_host_is_v2` | cgroup generation gate |
+| `ds_nl_probe_nat_capability(reason, size)` | Kernel bridge, veth, and NAT capability. Fork free. Run before any NAT setup. A full pass is remembered for the boot in `Net/nat_caps`, keyed by boot_id; anything less is probed again |
+| `ds_get_selinux_status()`, `is_systemd_rootfs(path)` | SELinux mode, and rootfs flavour |
+
+### C backend: config
+
+`struct ds_config` is the single owner of runtime state and is passed by pointer through the
+whole tree. It is almost entirely fixed-size, with three heap-owned lists.
+
+| Symbol | Use it when |
+| --- | --- |
+| `ds_config_load` / `ds_config_load_by_name` | Loading a config. Prefer the by-name form over building the path yourself |
+| `ds_config_save` / `ds_config_save_by_name` | Saving |
+| `ds_config_add_bind(cfg, src, dest, ro)` | The only way to add a bind mount. Grows, de-dups, validates |
+| `ds_config_free` | Teardown. It calls the three per-list free functions |
+| `sort_bind_mounts(cfg)` | Before applying binds, so parents mount before children |
+| `parse_privileged(value, cfg)` | Parsing `--privileged` into the `DS_PRIV_*` bitmask |
+| `ds_config_auto_path`, `apply_reset_config` | Deriving the default config path, and resetting |
+| `load_etc_environment`, `ds_env_boot_setup`, `ds_env_save`, `parse_env_file_to_config` | Environment file handling |
+
+A new config key must be added to **both** `ds_config_load()` in `src/config/load.c` and
+`ds_config_serialize_known()` in `src/config/save.c`. Miss the second and the next save drops
+its value.
+
+### C backend: mount, cgroup, workspace, seccomp
+
+| Symbol | Use it when |
+| --- | --- |
+| `domount`, `bind_mount` | Mounting. Use these instead of raw `mount(2)` |
+| `ds_apply_jail_mask(hw_access, privileged_mask)` | Masking `/proc` and `/sys` entries |
+| `setup_dev`, `create_devices`, `setup_devpts` | Device node setup |
+| `setup_custom_binds(cfg, rootfs)` | Applying `cfg->binds` |
+| `setup_volatile_overlay`, `cleanup_volatile_overlay`, `check_volatile_mode` | Volatile mode |
+| `mount_rootfs_img`, `unmount_rootfs_img` | Sparse image loop device lifecycle |
+| `setup_cgroups`, `ds_cgroup_host_bootstrap` | cgroup setup |
+| `ds_cgroup_attach`, `ds_cgroup_cleanup_container` | Moving a process in, and cleanup. Both cover the cgroup v2 dir and every v1 hierarchy the container has a cgroup in |
+| `ds_cgroup_ctrl_dir(ctrl, name, dir, size)` | Finding where a container's files for one controller live: its cgroup v2 dir, or the v1 hierarchy that owns the controller, wherever it is mounted. Returns the version. Never hardcode `/sys/fs/cgroup/...` or `/dev/memcg` for a controller file |
+| `ds_cgroup_apply_limits`, `ds_cgroup_get_limits`, `ds_cgroup_get_usage`, `print_cgroup_status` | Setting limits, reading back the ones in force, and usage. Report limits from `ds_cgroup_get_limits`, not from the config, which only says what was asked for |
+| `ds_cgroup_v1_setup`, `ds_cgroup_v1_join` | Giving a v1 container its own cgroup in every v1 hierarchy before the namespace is unshared, and moving the monitor in or out of them |
+| `get_workspace_dir`, `get_pids_dir`, `get_net_dir`, `get_logs_dir` | The only sanctioned way to build a workspace path. They switch between the Android and Linux roots |
+| `ensure_workspace` | Creating the tree |
+| `is_container_running`, `is_container_init`, `ds_cmd_get_pid` | Container lookup. A lost pidfile is healed from the monitor's answer, never from inside a guest |
+| `ds_feature_needs(offsetof(struct ds_config, field))` | The generic feature scanner. A new global daemon adds a two-line wrapper here, not a new scanner |
+| `ds_seccomp_apply_minimal`, `ds_seccomp_keyring_shim` | The seccomp filters |
+| `ds_ksu_neutralize_root_escape` | KernelSU hardening. Must run **before** `ds_seccomp_apply_minimal`, whose magic-reboot block would otherwise deny the reboot it needs |
+| `ds_seccomp_harden(cfg)` | Hardening a process that enters a container. Runs the three above in that order; drop capabilities after it |
+| `ds_apply_capability_hardening` | Capability dropping |
+
+### C backend: networking
+
+Everything in `src/net/` talks to the kernel directly. There is no `ip` or `iptables`
+shell-out on the fast path. The netfilter helpers take an address family (`AF_INET` or
+`AF_INET6`), try the raw `ip_tables` / `ip6_tables` socket first, and fall back to the
+`iptables` / `ip6tables` binary only for what the kernel rejects.
+
+| Symbol | Use it when |
+| --- | --- |
+| `ds_nl_open` / `ds_nl_close` | Opening the netlink context every link, address, route, and rule call needs |
+| `ds_nl_create_bridge`, `ds_nl_create_veth`, `ds_nl_set_master`, `ds_nl_link_up/down`, `ds_nl_del_link`, `ds_nl_rename`, `ds_nl_set_mac` | Link operations |
+| `ds_nl_add_addr4`, `ds_nl_add_route4`, `ds_nl_add_addr6`, `ds_nl_add_route6` | Addresses and routes. The IPv6 route is link scope only |
+| `ds_nl_create_veth_in(ctx, host, peer, netns_fd, mac)` | Creating a veth pair with the peer born inside a namespace under its final name. The only way an interface enters a container: moving one in and renaming it there is a race the guest's netifd loses |
+| `ds_nl_add_rule4`, `ds_nl_del_rule4`, `ds_nl_rule6` | FIB policy rules. Priorities come from `DS_RULE_PRIO_TO_SUBNET`, `DS_RULE_PRIO_TETHER`, `DS_RULE_PRIO_FROM_SUBNET`, which must sit above the OEM reserved range and below Android's VPN range |
+| `ds_nl_get_iface_table`, `ds_nl_get_table_default_oif`, `ds_nl_get_android_default` | Routing table introspection. All three take the address family |
+| `ds_nl_flush_stale_veths`, `ds_nl_list_ifaces`, `ds_nl_count_ifaces_with_prefix` | Enumeration and garbage collection |
+| `ds_ipt_ensure_masquerade`, `ds_ipt_ensure_forward_accept`, `ds_ipt_ensure_input_accept`, `ds_ipt_ensure_mss_clamp` | Installing netfilter rules |
+| `ds_ipt_host_rules_present(family, iface, src_cidr, expect_dnat)` | The fork-free probe for one family's host rule set. The route monitor gates reinstallation on it |
+| `ds_ipt_remove_iface_rules`, `ds_ipt_remove_ds_rules` | Teardown |
+| `ds_ipt6_available` | Whether the kernel can do NAT66 at all: the ip6 nat table and the MASQUERADE target. Shared by the runtime and `droidspaces check` |
+| `ds_ipt_add_portforwards`, `ds_ipt_remove_portforwards` | Port forwarding |
+| `parse_cidr(cidr, ip_out, mask_out)` | The shared CIDR splitter |
+| `fix_networking_host`, `fix_networking_rootfs`, `setup_veth_host_side`, `setup_veth_child_side_named`, `setup_gateway_veth_side` | Network bring-up |
+| `ds_net_start_route_monitor`, `ds_net_mark_local_forward_active` | The reconciler that re-asserts our rules after netd wipes them |
+| `ds_net_cleanup`, `ds_net_gateway_teardown`, `ds_net_rewire_gateway_clients` | Teardown and gateway client rewiring |
+| `ds_net_validate_static_ip`, `ds_net_check_ip_collision`, `ds_net_resolve_static_ip` | Static NAT IP handling. After `resolve`, the config must be saved to persist the result |
+| `ds_dhcp_server_start`, `ds_dhcp_server_stop` | The single-lease DHCP server. Stop it before veth teardown so the receive unblocks. Given an IPv6 prefix it also sends Router Advertisements |
+| `ds_ra_build`, `ds_ra_is_solicit` | The Router Advertisement frame and the solicitation test the DHCP thread uses. No link-layer option, on purpose |
+| `ds_get_dns_servers`, `ds_net_prepare_host_veth` | DNS, and preparing a new host-side veth (TX checksum off, RPS) |
+
+### C backend: security guards
+
+| Symbol | Contract |
+| --- | --- |
+| `ds_peer_authorized(fd, group_name)` | The only authorization gate in the tree. Allows root or a member of the group, but only when the peer shares our PID namespace. Every failure path denies. The callers are `src/daemon/server.c` and `src/container/command.c`, which checks the clients of a monitor's command socket (its clients prove the server with `server_is_monitor` there) |
+| `ds_cmd_get_config(name, cfg, pid)`, `ds_cmd_get_pid(name)`, `ds_cmd_for_each(visit, arg)` | What a running container booted with and its init pid, from its monitor's command socket `@droidspaces/<name>/command`. The only source for either: the host never reads the guest's own copy |
+| `ds_peer_in_pidns(peer_pid)` | Must fail closed. A pid of zero is not translatable into our namespace, and a failed readlink means we cannot prove membership. Both deny. Failing open here let a caller recycle a dead pid and escape to host root |
+| `ds_bind_mount_socket(src, dst, uid, label)` | The symlink-race-safe write pattern for anything landing in a container-controlled directory |
+| `set_selinux_context`, `get_selinux_context`, `ds_selinux_dyntransition`, `ds_selinux_enter_domain`, `ds_drop_privileges`, `ds_resolve_termux_uid` | SELinux and privilege handling. `ds_selinux_dyntransition`, `ds_drop_privileges` and `ds_resolve_termux_uid` are `android/` only, from its `internal.h` |
+
+Any comment on a security check that reads "cannot determine, so allow" is a bug. Inability
+to prove something at a trust boundary means deny.
+
+The host never acts on what a guest can write. Root inside a container is real root, so
+anything in its root, read through `/proc/<pid>/root`, is input from it. Ask the container's
+monitor (`ds_cmd_*`), read the host config, or look at the host's process tree
+(`is_valid_container_pid`) instead. Reads for display only (`os-release`), or for a choice
+that touches nothing but that container, are the exceptions. A write into a directory the
+container controls goes through `ds_open_in_root`.
+
+## Known duplicates: do not add a third copy
+
+These exist today. They are on the cleanup list. Extend the shared version, do not add
+another.
+
+- `ToggleCard` and `SwitchItem` are two shapes of the same switch row.
+- `ContainersScreen` has an inline copy of the typed-confirmation gate that
+  `ConfirmPhraseField` already provides. It also inlines error-tinted field colors, because
+  `DsTextFieldDefaults` has no error variant. Add the variant rather than a third copy.
+- `SummaryItem` exists as three private overloads in `InstallationSummaryScreen.kt`. Promote
+  it to `ui/component/` before a second screen wants it.
+- `labelFontSize` on `PrimaryActionBottomBar` has one caller, `RootCheckScreen`, pushing its
+  call to action to 16sp. Either the type scale covers it or the parameter should go. Do not
+  add a second caller.
+- Several installer and checker classes still interpolate paths into shell strings with
+  literal quotes or no quotes at all (`BinaryInstaller`, `ContainerInstaller`,
+  `SparseImageInstaller`, `ModuleInstaller`, `SymlinkInstaller`). They are on the list. Do
+  not copy the pattern; use `ContainerCommandBuilder.quote()`.
+- `AppStateViewModel`, `ContainerOperationsViewModel`, and `FilePickerDialog` execute root
+  commands directly. That is the wrong layer. New root calls go through a repository or
+  `ContainerOperationExecutor`.
+- Several `util` singletons hold mutable caches and Compose state that belong in a ViewModel
+  (`ContainerOSInfoManager`, `ContainerUsersManager`, `ContainerDiskUsageManager`,
+  `SystemInfoManager`, `TerminalScreenState`).
+
+## Adding something new
+
+1. Search the inventory above, then grep the tree. Something close usually exists.
+2. Extend the shared thing. Adding a parameter to one component beats adding a sibling
+   component.
+3. If you are about to copy a block and change two fields, parameterize it instead.
+4. Fix bugs at the choke point every caller routes through, not at the one call site the
+   report happens to name.
+5. Never add a second way to build a shell command.
+6. New state goes in a ViewModel, not in a composable and not in a `util` object.
 
 ## PR Requirements
 
 Every feature PR must include:
 
 1. **A clear description of the real-world problem being solved.** "I wanted this" is not a
-   problem statement. Explain what breaks, fails, or is missing for real users on real hardware.
+   problem statement. Explain what breaks, fails, or is missing for real users on real
+   hardware.
 
 2. **Screenshots or terminal output** demonstrating the feature working as intended.
 
 3. **Explicit list of tested environments.** For Android: device name, SoC, kernel version,
-   and OEM/Android version. For Linux: distro, kernel version, and architecture.
+   and OEM or Android version. For Linux: distro, kernel version, and architecture.
 
-4. **No regressions.** Run the existing behavior through your change. If something that worked
-   before no longer works, fix it before opening a PR.
+4. **No regressions.** Run the existing behavior through your change. If something that
+   worked before no longer works, fix it before opening a PR.
 
----
+5. **For UI changes, the DESIGN.md rules you followed.** If you deviated from one, say which and
+   why. A radius or a colour that disagrees with [DESIGN.md](./DESIGN.md) without a reason gets
+   sent back.
 
 ## Code Ownership
 
 If your feature is merged, you are responsible for it going forward.
 
 When a new kernel version, a new SoC quirk, or a platform behavior change breaks your
-contribution, you are expected to address it. If a feature you submitted starts causing issues
-and you are unreachable or unwilling to maintain it, it will be removed.
+contribution, you are expected to address it. If a feature you submitted starts causing
+issues and you are unreachable or unwilling to maintain it, it will be removed.
 
 Users do not know who wrote a feature. When something breaks, they blame the project.
 Understand what your code does before submitting it. If you cannot explain why a specific
 implementation choice was made, that choice should not be in production.
-
----
 
 ## What Gets Merged
 
@@ -138,6 +739,7 @@ implementation choice was made, that choice should not be in production.
 - Bug fixes with a clear reproduction case and a verified resolution.
 - Security improvements. These are always welcome.
 - Performance improvements with measurable, non-regressing impact.
+- Deletions. Removing duplicated code or dead flexibility is a contribution.
 - Documentation corrections.
 
 ## What Gets Rejected
@@ -148,38 +750,34 @@ implementation choice was made, that choice should not be in production.
 - Android-specific or Linux-specific code that is not guarded with `is_android()`.
 - Code the author cannot explain or defend under review.
 - App changes that break Android 8 compatibility.
+- A new component or helper that duplicates one already in the inventory above.
+- Any dynamic value reaching a root shell without quoting or an allow-list.
 - Anything that introduces a regression, regardless of how useful the new behavior is.
-
----
 
 ## Repeat Rejections
 
-If a contributor submits multiple PRs that are rejected for the same reasons - features that
+If a contributor submits multiple PRs that are rejected for the same reasons, features that
 solve no real problem, fail universality requirements, or add unnecessary complexity to the
-codebase - they will be blocked from contributing further.
+codebase, they will be blocked from contributing further.
 
 There is no fixed strike count. The threshold is pattern recognition: if it is clear that a
 contributor is not reading feedback, not testing properly, or is deliberately padding the
 codebase, the decision to block is at maintainer discretion and is final.
 
----
-
 ## Security Vulnerabilities
 
 Security fixes and hardening patches are always welcome and will be reviewed with priority.
 
-If you discover a vulnerability - particularly a **container escape that is reproducible in
-non-hardware-access mode without privileged flags** - do not open a public issue.
+If you discover a vulnerability, particularly a **container escape that is reproducible in
+non-hardware-access mode without privileged flags**, do not open a public issue.
 
 Report it privately:
 
 - **Email:** droidcasts@protonmail.com
 - **Telegram:** [t.me/ravindu](https://t.me/ravindu)
 
-Include a reproduction case, affected configurations, and kernel/SoC details if relevant.
+Include a reproduction case, affected configurations, and kernel or SoC details if relevant.
 Public disclosure should wait until a fix is available.
-
----
 
 ## Process
 
@@ -188,5 +786,8 @@ Public disclosure should wait until a fix is available.
 3. Be responsive during review. Unresponsive PRs will be closed.
 4. Address review feedback directly. Do not open a new PR for the same change.
 
-There is no formal CLA. By submitting a PR you agree that your contribution may be distributed
-under the project's existing license.
+There is no formal CLA. By submitting a PR you agree that your contribution may be
+distributed under the project's existing license.
+
+AI agents working in this repository should read [AGENTS.md](./AGENTS.md), which is the short
+form of the rules above.

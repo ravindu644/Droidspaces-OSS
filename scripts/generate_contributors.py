@@ -4,39 +4,62 @@ Generate contributors.json for the Droidspaces Android app.
 Run before building the APK:
 
     GITHUB_TOKEN=ghp_xxx python3 scripts/generate_contributors.py
-
-Requires: pip install requests
 """
 
 import base64
+import functools
 import json
 import os
 import re
+import time
+import urllib.error
+import urllib.parse
+import urllib.request
 from collections import defaultdict
-
-import requests
 
 REPO   = "ravindu644/Droidspaces-OSS"
 OUTPUT = os.path.join(os.path.dirname(__file__),
                       "../Android/app/src/main/assets/contributors.json")
 TOKEN  = os.environ.get("GITHUB_TOKEN", "")
-HDRS   = {
-    "Accept": "application/vnd.github+json",
-    **({"Authorization": f"Bearer {TOKEN}"} if TOKEN else {}),
-}
+HDRS   = {"Authorization": f"Bearer {TOKEN}"} if TOKEN else {}
 BOTS        = {"weblate", "copilot"}
 COAUTHOR_RE = re.compile(r"co-authored-by:\s*.+?\s*<([^>]+)>", re.IGNORECASE)
 NOREPLY_RE  = re.compile(r"(\d+)\+(.+)@users\.noreply\.github\.com")
 
 
+def get(url, params=None, accept="application/vnd.github+json"):
+    """Open url; raises urllib.error.HTTPError on 4xx/5xx. The token goes to the
+    API host only, never to the avatar CDN or wherever it redirects."""
+    if params:
+        url += ("&" if "?" in url else "?") + urllib.parse.urlencode(params)
+    auth = HDRS if url.startswith("https://api.github.com/") else {}
+    return urllib.request.urlopen(
+        urllib.request.Request(url, headers={**auth, "Accept": accept}))
+
+
+def get_json(url, params=None):
+    for attempt in range(2):
+        try:
+            with get(url, params) as r:
+                return json.load(r)
+        except urllib.error.HTTPError as e:
+            # Search allows 30 requests a minute. Wait out the window once
+            # rather than dropping every contributor resolved after it.
+            reset = e.headers.get("X-RateLimit-Reset")
+            if attempt == 0 and e.headers.get("X-RateLimit-Remaining") == "0" and reset:
+                time.sleep(min(max(int(reset) - time.time(), 0) + 1, 65))
+                continue
+            print(f"  Warning: {url}: {e}")
+            return None
+
+
 def paginate(url):
     params = {"per_page": 100}
     while url:
-        r = requests.get(url, headers=HDRS, params=params)
-        r.raise_for_status()
-        yield from r.json()
-        url    = r.links.get("next", {}).get("url")
-        params = {}
+        with get(url, params) as r:
+            yield from json.load(r)
+            m = re.search(r'<([^>]+)>;\s*rel="next"', r.headers.get("Link", ""))
+        url, params = (m.group(1) if m else None), None
 
 
 def resolve_noreply(email):
@@ -44,32 +67,26 @@ def resolve_noreply(email):
     m = NOREPLY_RE.match(email)
     if not m:
         return None
-    r = requests.get(f"https://api.github.com/users/{m.group(2)}", headers=HDRS)
-    if r.ok:
-        u = r.json()
-        return u["login"], u["avatar_url"]
-    return None
+    u = get_json(f"https://api.github.com/users/{m.group(2)}")
+    return (u["login"], u["avatar_url"]) if u else None
 
 
+@functools.cache
 def resolve_email(email):
     """Search GitHub by email (works only for publicly linked emails)."""
     resolved = resolve_noreply(email)
     if resolved:
         return resolved
-    r = requests.get("https://api.github.com/search/users",
-                     headers=HDRS, params={"q": f"{email} in:email"})
-    if r.ok:
-        items = r.json().get("items", [])
-        if items:
-            return items[0]["login"], items[0]["avatar_url"]
-    return None
+    found = get_json("https://api.github.com/search/users",
+                     {"q": f"{email} in:email"})
+    items = found.get("items", []) if found else []
+    return (items[0]["login"], items[0]["avatar_url"]) if items else None
 
 
 def avatar_b64(url):
     sep = "&" if "?" in url else "?"
-    r = requests.get(f"{url}{sep}s=48", headers={"Accept": "image/png"})
-    r.raise_for_status()
-    return base64.b64encode(r.content).decode()
+    with get(f"{url}{sep}s=48", accept="image/png") as r:
+        return base64.b64encode(r.read()).decode()
 
 
 def main():
@@ -93,13 +110,13 @@ def main():
             add(author["login"], author["avatar_url"])
         # Unlinked --author email fallback
         elif not author and git_author.get("email"):
-            resolved = resolve_email(git_author["email"])
+            resolved = resolve_email(git_author["email"].lower())
             if resolved:
                 add(*resolved)
 
         # Co-authored-by trailers
         for email in COAUTHOR_RE.findall(message):
-            resolved = resolve_email(email)
+            resolved = resolve_email(email.lower())
             if resolved:
                 add(*resolved)
 

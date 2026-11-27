@@ -1,30 +1,53 @@
 name: Droidspaces CI
 
+# One workflow. Every push and pull request builds the backend for every arch,
+# the Debian packages and the APK, and uploads them as an artifact. A v* tag, or
+# a manual run with tag_name, also publishes them as a GitHub release. The musl
+# toolchains come from this repo's compilers-* release and are cached between
+# runs. The APK is signed with the release key when the RELEASE_KEYSTORE,
+# KEYSTORE_PASSWORD, KEY_ALIAS and KEY_PASSWORD secrets are set, and with a
+# throwaway key when they are not (a fork, a pull request).
 on:
   push:
-    branches: [ "main", "master" ]
+    branches: [ "main" ]
+    tags: [ 'v*' ]
   pull_request:
-    branches: [ "main", "master" ]
+    branches: [ "main" ]
   workflow_dispatch:
     inputs:
-      create_release:
-        description: 'Create an Official GitHub Release?'
-        required: true
-        type: boolean
-        default: false
       tag_name:
-        description: 'Tag name (Only used if Release is checked)'
+        description: "Publish a release for this tag (existing or new, must match DS_VERSION)"
         required: false
-        default: 'test'
+        type: string
+
+permissions:
+  # Needed to create the release on a tag; a pull request token is read-only regardless
+  contents: write
 
 jobs:
   build:
     name: Build Backend & Android App
     runs-on: ubuntu-latest
     env:
+      # The tag being released, if any
+      TAG: ${{ inputs.tag_name || (github.ref_type == 'tag' && github.ref_name) || '' }}
+      # The Makefile finds the toolchains in ~/toolchains/<triplet>-cross/bin
+      TOOLCHAINS_URL: https://github.com/ravindu644/Droidspaces-OSS/releases/download/compilers-25843896720
       HAS_TELEGRAM: ${{ secrets.API_ID != '' && secrets.API_HASH != '' }}
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v5
+      with:
+        fetch-depth: 0
+
+    # One version, DS_VERSION in droidspaces.h. A tag must match it, so a
+    # forgotten `make bump` fails here instead of shipping.
+    - name: Settle the version
+      run: |
+        VERSION=$(grep "DS_VERSION" src/include/droidspaces.h | awk '{print $3}' | tr -d '"')
+        if [ -n "$TAG" ]; then
+          [ "${TAG#v}" = "$VERSION" ] || { echo "Tag $TAG does not match DS_VERSION $VERSION (run make bump NEW=${TAG#v})"; exit 1; }
+        fi
+        echo "VERSION=$VERSION" >> $GITHUB_ENV
 
     - name: Set up JDK 17
       uses: actions/setup-java@v4
@@ -33,97 +56,86 @@ jobs:
         distribution: 'temurin'
         cache: gradle
 
-    - name: Install dependencies
-      run: |
-        sudo apt update
-        sudo apt install -y build-essential wget tree zstd
+    # The release URL names a fixed set of toolchains, so it is the whole key
+    - name: Cache Toolchains
+      id: toolchains
+      uses: actions/cache@v4
+      with:
+        path: ~/toolchains
+        key: musl-toolchains-${{ env.TOOLCHAINS_URL }}
 
     - name: Download Toolchains
+      if: steps.toolchains.outputs.cache-hit != 'true'
       run: |
         mkdir -p $HOME/toolchains
         cd $HOME/toolchains
-        BASE_URL="https://github.com/ravindu644/Droidspaces-OSS/releases/download/compilers-25843896720"
-
-        echo "[*] Downloading aarch64 toolchain..."
-        wget -q $BASE_URL/aarch64-linux-musl-cross.tar.zst
-
-        echo "[*] Downloading armhf toolchain..."
-        wget -q $BASE_URL/arm-linux-musleabihf-cross.tar.zst
-
-        echo "[*] Downloading x86 toolchain..."
-        wget -q $BASE_URL/i686-linux-musl-cross.tar.zst
-
-        echo "[*] Downloading x86_64 toolchain..."
-        wget -q $BASE_URL/x86_64-linux-musl-cross.tar.zst
-
-        echo "[*] Downloading riscv64 toolchain..."
-        wget -q $BASE_URL/riscv64-linux-musl-cross.tar.zst
-
-        echo "[*] Extracting toolchains..."
-        for f in *.tar.zst; do
-          echo "Extracting $f..."
-          tar -xf "$f"
+        for t in aarch64-linux-musl arm-linux-musleabihf i686-linux-musl x86_64-linux-musl riscv64-linux-musl; do
+          echo "[*] Downloading $t toolchain..."
+          wget -q $TOOLCHAINS_URL/$t-cross.tar.zst
+          tar -xf $t-cross.tar.zst && rm $t-cross.tar.zst
         done
-
         echo "[+] Toolchains ready."
-        tree -L 3 $HOME/toolchains
 
-    - name: Build All Tarball, Debian Packages & Sync to Android
+    # Gradle's buildBackend makes the four phone arches again later, which is a
+    # no-op once this has built them
+    - name: Build All Tarball & Debian Packages
       run: |
         make all-tarball
         scripts/mkdeb.sh
 
+    # The key lives in a secret as base64; without it the APK is signed with a throwaway key
     - name: Decode Keystore
       env:
         RELEASE_KEYSTORE: ${{ secrets.RELEASE_KEYSTORE }}
-      if: "${{ env.RELEASE_KEYSTORE != '' }}"
-      run: echo "${{ env.RELEASE_KEYSTORE }}" | base64 -d > droidspaces.keystore
+      if: env.RELEASE_KEYSTORE != ''
+      run: echo "$RELEASE_KEYSTORE" | base64 -d > droidspaces.keystore
 
-    - name: Grant execute permission for gradlew
-      run: chmod +x Android/gradlew
+    # A release signed with a throwaway key could never update the real app, so
+    # a release run without the key stops here instead of publishing one
+    - name: Require the key for a release
+      if: env.TAG != ''
+      env:
+        RELEASE_KEYSTORE: ${{ secrets.RELEASE_KEYSTORE }}
+        KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+      run: |
+        [ -n "$RELEASE_KEYSTORE" ] && [ -n "$KEYSTORE_PASSWORD" ] || { echo "Releases are signed with the release key: set RELEASE_KEYSTORE and KEYSTORE_PASSWORD"; exit 1; }
 
     - name: Generate Contributors
       continue-on-error: true
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: |
-        pip install -q requests
         python3 scripts/generate_contributors.py
 
     - name: Build Android App with Gradle
-      env:
-        KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
-        KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
-        KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
       run: |
         cd Android
-        ./gradlew assembleRelease \
+        ./gradlew assembleRelease --no-daemon \
           -PKEYSTORE_PASSWORD="${{ secrets.KEYSTORE_PASSWORD }}" \
           -PKEY_ALIAS="${{ secrets.KEY_ALIAS }}" \
           -PKEY_PASSWORD="${{ secrets.KEY_PASSWORD }}"
 
+    # Every build, release or not, is named <version>-<commit> so the exact
+    # source an artifact came from is legible from its filename
     - name: Stage & Rename Artifacts
       run: |
-        TAG="${{ github.event.inputs.tag_name || 'CI' }}"
-        COMMIT_HASH=$(git log -1 --pretty=%h)
-        APK_NAME="Droidspaces-universal-${TAG}-${COMMIT_HASH}.apk"
+        HASH=$(git log -1 --pretty=%h)
+        APK_NAME="Droidspaces-universal-v${VERSION}-${HASH}.apk"
         TAR_NAME=$(ls droidspaces-v*-*.tar.gz)
         mkdir -p dist
         mv Android/app/build/outputs/apk/release/app-release.apk dist/${APK_NAME}
-        mv ${TAR_NAME} dist/
-        mv droidspaces_*.deb dist/
+        mv ${TAR_NAME} droidspaces_*.deb dist/
+        (cd dist && sha256sum * > SHA256SUMS)
         echo "APK_FILE=dist/${APK_NAME}" >> $GITHUB_ENV
         echo "TAR_FILE=dist/${TAR_NAME}" >> $GITHUB_ENV
 
     - name: Generate Telegram Message
       if: github.event_name != 'pull_request'
       run: |
-        if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-          if [ "${{ github.event.inputs.create_release }}" = "true" ]; then
-            EVENT_TYPE="Official Release"
-          else
-            EVENT_TYPE="Manual Trigger"
-          fi
+        if [ -n "$TAG" ]; then
+          EVENT_TYPE="Official Release"
+        elif [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+          EVENT_TYPE="Manual Trigger"
         else
           EVENT_TYPE="Git Push"
         fi
@@ -153,6 +165,8 @@ jobs:
       with:
         name: droidspaces-artifacts
         path: dist/
+        if-no-files-found: error
+        retention-days: 14
 
     - name: Send Telegram Notification
       if: |
@@ -170,59 +184,46 @@ jobs:
         API_HASH: ${{ secrets.API_HASH }}
         BOT_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
 
-  release:
-    name: Create GitHub Release
-    needs: [build]
-    if: |
-      github.event_name == 'workflow_dispatch' &&
-      github.event.inputs.create_release == 'true' &&
-      github.event.inputs.tag_name != '' &&
-      github.event.inputs.tag_name != 'test'
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-    steps:
-    - uses: actions/checkout@v4
-      with:
-        fetch-depth: 0
-
-    - name: Download Artifacts
-      uses: actions/download-artifact@v4
-      with:
-        path: release-assets
-        merge-multiple: true
-
+    # Every commit since the previous tag, pull requests included, so GitHub's
+    # own notes, which list only pull requests, are not wanted on top. On a tag
+    # push HEAD is the tag, so the previous one is found from its parent; a
+    # manual run for a tag not made yet ends at HEAD
     - name: Generate Changelog
-      id: changelog
+      if: env.TAG != ''
       run: |
-        PREV_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
-        echo "Previous tag: $PREV_TAG"
-
-        if [ -z "$PREV_TAG" ]; then
-          CHANGELOG=$(git log --oneline --pretty=format:"* %s (%h)")
-        else
-          CHANGELOG=$(git log ${PREV_TAG}..HEAD --oneline --pretty=format:"* %s (%h)")
-        fi
-
+        END=HEAD
+        git rev-parse -q --verify "refs/tags/${TAG}" >/dev/null && END="${TAG}"
+        PREV=$(git describe --tags --abbrev=0 "${END}^" 2>/dev/null || true)
+        echo "Previous tag: ${PREV:-none}"
         {
-          echo "notes<<EOF"
-          echo "$CHANGELOG"
-          echo "EOF"
-        } >> "$GITHUB_OUTPUT"
+          echo "## What's Changed"
+          git log --no-merges --pretty=format:"* %s (%h)" ${PREV:+${PREV}..}${END}
+          echo
+          echo
+          echo "---"
+          echo "**Automated Release by Droidspaces CI**"
+        } > dist/CHANGELOG.md
 
-    - name: Create Release
+    - name: Publish GitHub Release
+      if: env.TAG != ''
       uses: softprops/action-gh-release@v2
       with:
-        tag_name: ${{ github.event.inputs.tag_name }}
-        name: Droidspaces ${{ github.event.inputs.tag_name || 'Development Build' }}
+        tag_name: ${{ env.TAG }}
+        name: Droidspaces ${{ env.TAG }}
         target_commitish: ${{ github.sha }}
-        body: |
-          ## What's Changed
-          ${{ steps.changelog.outputs.notes }}
-
-          ---
-          **Automated Release by Droidspaces CI**
         files: |
-          release-assets/*.apk
-          release-assets/*.tar.gz
-          release-assets/*.deb
+          dist/*.apk
+          dist/*.tar.gz
+          dist/*.deb
+          dist/SHA256SUMS
+        body_path: dist/CHANGELOG.md
+        draft: false
+        prerelease: false
+
+    # The site reads the latest release only when it builds. A release made with
+    # GITHUB_TOKEN starts no other workflow, so tell the site from here.
+    - name: Rebuild droidspaces.org
+      if: env.TAG != ''
+      env:
+        GH_TOKEN: ${{ secrets.WEBPAT }}
+      run: gh api repos/droidspaces/droidspaces.github.io/dispatches -f event_type=docs-updated

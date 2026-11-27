@@ -2,13 +2,10 @@
 <resources>
     <string name="app_name" translatable="false">Droidspaces</string>
     <string name="get_started">始める</string>
-    <string name="root_check_title">ルートアクセス権限の確認</string>
     <string name="checking_root">ルートアクセス権限を確認中…</string>
-    <string name="root_granted">ルートアクセス権限が付与されました</string>
     <string name="root_denied">ルートアクセス権限が拒否されました</string>
     <string name="root_required_message">コンテナを管理するにはルート権限が必要です。</string>
     <string name="check_root_access">ルートアクセス権限を確認</string>
-    <string name="root_available_message">ドロイドスペースが利用可能になりました</string>
     <string name="skip">後で</string>
     <string name="continue_button">続ける</string>
     <string name="home_title">ホーム</string>
@@ -19,7 +16,6 @@
     <string name="close">閉じる</string>
     <string name="refresh">更新</string>
     <string name="search">検索</string>
-    <string name="clear">一掃</string>
     <string name="container_singular">コンテナ</string>
     <string name="running">実行中</string>
     <string name="backend_checking">バックエンド: 確認中…</string>
@@ -30,7 +26,6 @@
     <string name="root_unavailable">ルートアクセス権限が利用できません。</string>
     <string name="grant_root_message">ドロイドスペースを探求し続けるにはルートアクセス権限を付与してください！</string>
     <string name="unknown">不明</string>
-    <string name="check_root_access_click">この下をクリックしてルートアクセス権限を確認</string>
     <string name="backend_section">バックエンド</string>
     <string name="reinstall_backend">バックエンドを再インストール</string>
     <string name="reinstall_backend_description">実行可能ファイルと起動モジュールを再インストール</string>
@@ -62,8 +57,6 @@
     <string name="open">開く</string>
     <string name="open_terminal">ターミナルを開く</string>
     <string name="notification_permission_title">通知権限</string>
-    <string name="grant_permission">権限を付与</string>
-    <string name="i_understand">理解しました</string>
     <string name="minimum_size_4gb">最低容量は 4 GB です</string>
     <string name="maximum_size_512gb">最高容量は 512 GB です</string>
     <string name="size_gb">容量 (GB)</string>
@@ -86,10 +79,8 @@
     <string name="edit_container_configuration">コンテナの構成を編集</string>
     <string name="uninstall_container_menu">コンテナをアンインストール</string>
     <string name="status_running">実行中</string>
-    <string name="status_restarting">再起動中</string>
     <string name="status_stopped">停止中</string>
     <string name="pid_label">プロセス番号(PID): %1$d</string>
-    <string name="hostname_label">ホスト名: %1$s</string>
     <string name="options_label">オプション: %1$s</string>
     <string name="start">開始</string>
     <string name="stop">停止</string>
@@ -134,9 +125,6 @@
     <string name="network_mode_host">ホスト</string>
     <string name="port_forwarding">ポート転送</string>
     <string name="add_port_forward">ポート転送を追加</string>
-    <string name="host_port_hint">ホスト側ポート (1-65535 あるいは 100-200 の範囲)</string>
-    <string name="container_port_hint">コンテナ側ポート (1-65535 あるいは範囲)</string>
-    <string name="protocol">プロトコル</string>
     <string name="error_ports_must_be_numbers">ポートは数字でなければなりません</string>
     <string name="saved">保存済</string>
     <string name="saving">保存中…</string>
@@ -150,27 +138,12 @@
     <string name="container_name_label">コンテナ名 *</string>
     <string name="container_name_exists">このコンテナ名は既に使用されています</string>
     <string name="configuration_title">構成</string>
-    <string name="container_options">コンテナのオプション</string>
     <string name="installation_complete">インストール完了</string>
     <string name="installation_failed">インストール失敗</string>
-    <string name="installing_module">モジュールのインストール中</string>
     <string name="installing_droidspaces">ドロイドスペースのインストール中</string>
-    <string name="module_installed_success">Magisk モジュールが正常にインストールされました</string>
     <string name="backend_installed_success">ドロイドスペースのバックエンドが正常にインストールされました</string>
-    <string name="unknown_error">不明なエラーが発生しました</string>
     <string name="module_installation_failed">モジュールのインストールに失敗しました</string>
     <string name="binary_installation_failed">実行可能ファイルのインストールが失敗しました</string>
-    <string name="removing_old_module">古いモジュールを削除しています…</string>
-    <string name="extracting_module_files">モジュールのファイルを展開しています…</string>
-    <string name="installing_module_step">モジュールをインストールしています…</string>
-    <string name="setting_permissions">パーミッションを設定しています…</string>
-    <string name="verifying_installation">インストールを確認しています…</string>
-    <string name="preparing_module_installation">モジュールのインストールを準備しています…</string>
-    <string name="detected_architecture">検出されたアーキテクチャ: %1$s</string>
-    <string name="creating_directories">ディレクトリを作成しています…</string>
-    <string name="installing_binary">実行可能ファイル「%1$s」をインストールしています</string>
-    <string name="granting_permissions">パーミッションを付与しています…</string>
-    <string name="preparing_installation">インストールの準備をしています…</string>
     <string name="no_containers_running">実行中のコンテナはありません</string>
     <string name="start_container_first">コンテナを先に始動すると、ここに表示されます</string>
     <string name="systemd_services">Systemdサービス</string>
@@ -220,8 +193,6 @@
     <string name="disable_ipv6_description">このコンテナでIPv6を無効にします。IPv6を無効にするとホストで実行中のVPNアプリが壊れるかもしれません。</string>
     <string name="cat_networking">ネットワーク設定</string>
     <string name="network_mode_nat">ネットワークアドレス変換 (既定)</string>
-    <string name="nat_settings">ネットワークアドレス変換設定</string>
-    <string name="symmetric_label">(対称)</string>
     <string name="reboot_recommended">SELinuxのルールを適用し、起動時にデーモンを開始する為に再起動が推奨されます。</string>
     <string name="size_required">容量は必須です</string>
     <string name="invalid_number">不正な数値</string>
@@ -244,20 +215,14 @@
     <string name="selinux_permissive">SELinux 記録のみ</string>
     <string name="selinux_permissive_description">SELinuxを記録のみ(permissive)に設定する</string>
     <string name="force_cgroupv1_description">旧来のCgroup V1階層構造の利用を強制する</string>
-    <string name="manual_deadlock_shield">手動デッドロック防止措置</string>
-    <string name="enter_manually">あるいは手動で入力してください(ワイルドカードも利用できます):</string>
-    <string name="interface_name_hint">インタフェース名 (wlan0、 v4-rmnet_data*など)</string>
     <string name="about_description">Androidの為のLXC風コンテナマネージャ</string>
     <string name="file_picker_error">「%1$s」が選択されました。.tar.xz か .tar.gz 形式のファイルを選択してください。</string>
     <string name="file_picker_error_unknown">ファイル形式を検出できませんでした。.tar.xz か .tar.gz 形式のファイルを選択してください。</string>
     <string name="distribution">ディストリビューション</string>
-    <string name="disable_ipv6_nat_forced">ネットワークの方式がNATやNoneであるときには、IPv6は常に無効です。</string>
     <string name="gpu_access_description">GPUのノードを隔離された/dev にミラーリングする (完全なるハードウェア透過はしない)</string>
     <string name="upstream_interface_title">上流インタフェース（任意）</string>
     <string name="upstream_interface_hint">インターネット接続を特定のインタフェースに固定します。空欄にすると、アクティブな上流回線を自動検出します。</string>
     <string name="add_upstream_interface">上流インタフェースの追加</string>
-    <string name="available_system_interfaces">利用可能なシステム・インタフェース:</string>
-    <string name="leave_blank_for_symmetric">対称割当の場合は空欄にしてください</string>
     <string name="error_invalid_range_format">不正な範囲形式です(開始-終了)</string>
     <string name="error_port_out_of_range">ポート番号は1から65535でなければなりません</string>
     <string name="error_port_must_be_number">ポート番号は数値でなければなりません</string>
@@ -271,15 +236,11 @@
     <string name="volatile_mode_description">RAM限定モード (変更は停止後に消失します)</string>
     <string name="bind_mounts">Bindマウント</string>
     <string name="add_bind_mount">Bindマウントを追加</string>
-    <string name="enter_container_path">コンテナ側のパスを入力</string>
-    <string name="host_path">ホスト側のパス: %1$s</string>
-    <string name="container_path">コンテナ側のパス: %1$s</string>
     <string name="dns_servers_placeholder">例: 1.1.1.1,8.8.8.8 (空欄可)</string>
     <string name="dns_servers_hint">数字、ドットとコロンのみ</string>
     <string name="environment_variables">環境変数</string>
     <string name="environment_variables_configured">%1$d 個の変数が設定済</string>
     <string name="network_mode_none">無し(遮断)</string>
-    <string name="optional_symmetric_hint">空欄可 (例: 8080 または 1000-2000)</string>
     <string name="port_forward_examples">例: 8080 (単一), 8000-8010 (範囲). 対称割当の場合には宛先を空欄にしてください。</string>
     <string name="container_name_placeholder" translatable="false">kontena-no-namae</string>
     <string name="hostname_placeholder">既定値で良ければ空欄</string>
@@ -289,7 +250,6 @@
     <string name="search_services">サービスを検索…</string>
     <string name="action_successful">%1$sの%2$sに成功せり</string>
     <string name="no_local_users_found">ローカル・ユーザーは見つかりませんでした</string>
-    <string name="sparse_image_configuration">スパース・イメージの構成</string>
     <string name="about_sparse_images">スパース・イメージとは</string>
     <string name="sparse_images_recommended">暗号化された保存領域を使う場合、/data パーティションがF2FSである場合、あるいは直接マウントすると互換性の問題があるかもしれないファイルシステムの場合は、スパース・イメージが推奨されます。</string>
     <string name="sparse_images_description">スパース・イメージは、ループ・デバイスとしてマウントされる専用のext4ファイルシステム・イメージファイルを作成する事で、より良い隔離と互換性を提供します。</string>
@@ -325,23 +285,16 @@
     <string name="available_users">利用可能なユーザ</string>
     <string name="login_command_copied">「%1$s」というユーザの為のログイン・コマンドがコピーされました</string>
     <string name="copy_login">ログインをコピー</string>
-    <string name="manual_deadlock_shield_description">名前空間が入れ子で生成される事を阻止する事で旧式な(例えば4.14系)カーネルにおいてカーネルレベルの仮想ファイルシステムのデッドロックを予防します。\n\n警告: これを有効化するとコンテナ内でDocker、Podman、LXCや Systemd のサンドボックス化が使えなくなります。</string>
     <string name="notification_permission_rationale">ドロイドスペースはターミナルのセッションをバックグラウンドで維持するため、永続通知の表示が必要です。これが無いと(特にサムスン電子製の機器では)Androidが予期せずターミナル・サービスを強制終了するかもしれません。</string>
-    <string name="welcome_tagline">Linuxコンテナ。ネイティブ。付加処理無し。</string>
     <string name="feat_containers_title">本物のLinuxコンテナ</string>
     <string name="feat_containers_desc">LXC、Podman、Docker同様のカーネル名前空間技術を採用しています。エミュレーションでもchrootでもありません。</string>
     <string name="feat_overhead_title">付加処理無し</string>
     <string name="feat_unkillable_title">勝手に強制終了されない設計</string>
     <string name="feat_init_title">systemd / OpenRC は PID 1 として作動します</string>
     <string name="feat_isolation_title">完璧な隔離環境</string>
-    <string name="install">インストール</string>
     <string name="gpu_option">画像処理装置</string>
     <string name="uptime_label">%1$s: %2$s</string>
     <string name="ip_address_label">%1$s: %2$s</string>
-    <string name="env_hint_row">KEY=VALUE は各行に一対です</string>
-    <string name="key_label">キー</string>
-    <string name="value_label">値</string>
-    <string name="add_variable">変数を追加</string>
     <string name="installing_container">コンテナをインストールしています</string>
     <string name="done">完了</string>
     <string name="feat_hardware_title">ハードウェア/GPUを全て利用</string>
@@ -354,7 +307,6 @@
     <string name="kernel_requirements_nongki">非GKI カーネルの要件 (4.19以下)</string>
     <string name="kernel_requirements_gki">GKI カーネルの要件(5.4以上)</string>
     <string name="cgroup_v1_option">Cgroup バージョン1</string>
-    <string name="deadlock_shield_option">デッドロック予防措置</string>
     <string name="privileged_option">特権あり</string>
     <string name="network_mode_nat_short">NAT</string>
     <string name="network_mode_none_short">無し</string>
@@ -366,8 +318,6 @@
     <string name="custom_init_warning">自分が何をしているのか完全に理解しているのでなければ本項目を変更しないでください。init実行可能ファイルを誤って設定するとコンテナが起動しなくなります。</string>
     <string name="no_matches">該当なし</string>
     <string name="empty_directory">空のディレクトリ</string>
-    <string name="tcp">TCP</string>
-    <string name="udp">UDP</string>
     <string name="cpu">中央演算処理装置 (CPU):</string>
     <string name="ram">RAM:</string>
     <string name="terminal_logs">ターミナルの記録</string>
@@ -381,7 +331,6 @@
     <string name="session_running_singular">1個のセッションを実行中 · タップで復元</string>
     <string name="repo_not_found_in_repo">%1$s はリポジトリ内では見つかりませんでした</string>
     <string name="please_wait_hint">要求を処理しています。しばらくお待ちください…</string>
-    <string name="error_container_name_too_long">名前が長すぎます - 最大で17文字 (カーネルにおけるループデバイスのパスの制約)</string>
     <string name="restore">復元</string>
     <string name="notification_title">Droidspaces ターミナル</string>
     <string name="notification_action_exit">終了</string>
@@ -401,15 +350,9 @@
     <string name="repo_cancel">キャンセル</string>
     <string name="repo_install">インストール</string>
     <string name="repo_retry">再試行</string>
-    <string name="repo_error_network">ネットワーク・エラー</string>
     <string name="repo_dl_error_unknown">未知のエラー</string>
-    <string name="repo_dl_error_cannot_resume">ダウンロードを再開できません</string>
-    <string name="repo_dl_error_device_not_found">保存領域が見つかりません</string>
-    <string name="repo_dl_error_file_exists">ファイルはすでに存在します</string>
     <string name="repo_dl_error_file_error">ファイルシステム・エラー</string>
     <string name="repo_dl_error_http_data">HTTPデータ・エラー</string>
-    <string name="repo_dl_error_no_space">保存領域が不足しています</string>
-    <string name="repo_dl_error_too_many_redirects">リダイレクト回数が多すぎます</string>
     <string name="repo_dl_error_not_found">指定したファイルが存在しません (404)</string>
     <string name="repo_dl_error_code">エラーコード %1$d</string>
     <string name="repo_status_ready">準備完了</string>
@@ -422,5 +365,4 @@
     <string name="repo_custom_remove">削除</string>
     <string name="repo_custom_name_empty">名前は空欄にはできません</string>
     <string name="repo_custom_url_empty">URLは空欄にはできません</string>
-    <string name="repo_no_custom">購読しているカスタム・リポジトリは、まだありません。</string>
 </resources>

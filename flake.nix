@@ -29,7 +29,7 @@
       inherit inputs;
       specialArgs = rec {
         version = let
-          header = builtins.readFile ./src/droidspace.h;
+          header = builtins.readFile ./src/include/droidspaces.h;
           match = builtins.match ".*#define DS_VERSION \"([^\"]+)\".*" (lib.replaceStrings ["\n"] [" "] header);
         in
           if match == null
@@ -45,7 +45,17 @@
           ];
         };
 
-        androidAppSource = ./Android;
+        # The APK build runs make for the phone arches, so it needs the backend tree too
+        androidAppSource = lib.fileset.toSource {
+          root = ./.;
+          fileset = lib.fileset.unions [
+            ./Makefile
+            ./LICENSE
+            ./src
+            ./init
+            ./Android
+          ];
+        };
 
         systems = ["x86_64-linux" "aarch64-linux"];
 

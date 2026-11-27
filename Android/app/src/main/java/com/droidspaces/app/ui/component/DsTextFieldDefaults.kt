@@ -8,7 +8,7 @@ import androidx.compose.runtime.Composable
 
 /**
  * Shared OutlinedTextField color sets. These exact color blocks were previously
- * copy-pasted across a dozen call sites. Two visual variants exist in the app —
+ * copy-pasted across a dozen call sites. Two visual variants exist in the app,
  * both are preserved verbatim so nothing changes on screen:
  *  - [colors]        container tint = surfaceContainerLow / surfaceVariant (forms, screens, dropdowns)
  *  - [surfaceColors] container tint = translucent surface (dialogs)

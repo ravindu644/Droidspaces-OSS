@@ -23,8 +23,6 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.interaction.MutableInteractionSource
 import com.droidspaces.app.util.ValidationUtils
 import com.droidspaces.app.util.ContainerManager
 import com.droidspaces.app.ui.util.FocusUtils
@@ -38,6 +36,7 @@ fun ContainerNameScreen(
     initialName: String = "",
     initialHostname: String = "",
     existingContainerNames: List<String> = emptyList(),
+    recommendationNotice: String? = null,
     onNext: (String, String) -> Unit,
     onClose: () -> Unit
 ) {
@@ -92,7 +91,7 @@ fun ContainerNameScreen(
         containerColor = Color.Transparent,
         topBar = {
             TopAppBar(
-                title = { Text(context.getString(R.string.container_setup)) },
+                title = { Text(context.getString(R.string.container_setup), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onClose) {
                         Icon(Icons.Default.Close, contentDescription = context.getString(R.string.close))
@@ -127,19 +126,13 @@ fun ContainerNameScreen(
                 .padding(innerPadding)
                 .consumeWindowInsets(innerPadding)
                 .imePadding()
-                .clickable(
-                    indication = null,
-                    interactionSource = remember { MutableInteractionSource() }
-                ) {
-                    clearFocus()
-                }
         ) {
             Column(
                 modifier = Modifier
                     .fillMaxSize()
                     .verticalScroll(rememberScrollState())
                     .padding(horizontal = 24.dp)
-                    .padding(top = 24.dp),
+                    .padding(top = 8.dp),
                 verticalArrangement = Arrangement.spacedBy(24.dp)
             ) {
             Text(
@@ -147,6 +140,14 @@ fun ContainerNameScreen(
                 style = MaterialTheme.typography.headlineSmall,
                 fontWeight = FontWeight.Bold
             )
+
+            recommendationNotice?.let {
+                Text(
+                    text = it,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                )
+            }
 
             // Container Name
             OutlinedTextField(
@@ -202,4 +203,3 @@ fun ContainerNameScreen(
         }
     }
 }
-

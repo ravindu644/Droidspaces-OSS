@@ -1,234 +1,80 @@
 <!--
-title: Display, Audio & Desktop
+title: Display, audio and desktop
 section: Guides
-order: 2
-desc: GPU acceleration, PulseAudio sound, and desktop environment auto-boot for Droidspaces containers on Android and Linux.
-keywords: gpu, acceleration, droidspaces, termux, virgl, turnip, adreno, pulseaudio, sound, audio, desktop, xfce, container, graphics
+order: 4
+desc: GPU acceleration, PulseAudio sound and a desktop environment that starts on its own, for Droidspaces containers on Android and Linux.
+keywords: gpu, acceleration, droidspaces, termux, x11, virgl, turnip, adreno, pulseaudio, sound, audio, desktop, xfce, container, graphics
 -->
 
-# Droidspaces Display, Audio & Desktop Guide
+# Display, audio and desktop
 
-This guide covers display setup, GPU acceleration, sound (PulseAudio), and desktop environment auto-boot for Droidspaces containers. On Android, as of **v6.3.0**, the X server, VirGL server, and PulseAudio daemon all launch automatically when a container starts - no manual Termux commands required.
+On Android, Droidspaces starts the Termux:X11 display server, the VirGL server and the PulseAudio server for you when the matching toggles are on, and sets `DISPLAY`, `GALLIUM_DRIVER` and `PULSE_SERVER` inside the container. Turn on the toggles, start the container, and graphical programs open in the Termux:X11 app with sound from the phone's speaker. This page covers the one-time setup, the three ways to render, sound, a desktop that starts at boot, and the Linux side. For a Wayland desktop such as KDE Plasma there is a second path, covered on the [Anland](Anland.md) page.
 
 > [!IMPORTANT]
->
-> **Droidspaces does not ship PulseAudio, Termux:X11, or virglrenderer-android.** These are upstream Termux packages installed by the setup script. Droidspaces only manages their lifecycle (launching, socket bridging, environment injection). If you encounter issues with audio quality, device compatibility, crashes, or rendering problems with any of these packages, report them to the [Termux packages](https://github.com/termux/termux-packages) project, not to Droidspaces.
+> Droidspaces does not ship Termux:X11, VirGL or PulseAudio. They are Termux packages. Droidspaces starts and stops them and bridges their sockets into the container.
 
-### Quick Navigation
+## One-time setup on Android
 
-- [**Universal Requirements (Android)**](#requirements)
-- [**Android Display & GPU**](#android)
-    - [01. Termux-X11 + llvmpipe (Software Rendering)](#termux-x11)
-    - [02. Termux-X11 + VirGL (Non-Qualcomm GPUs)](#virgl)
-    - [03. Turnip (Native Qualcomm/Adreno)](#turnip)
-- [**Android Sound (PulseAudio)**](#pulseaudio)
-- [**Desktop Environment Auto-Boot**](#de-autoboot)
-- [**Linux Desktop (AMD/Intel)**](#linux)
-
----
-
-<a id="requirements"></a>
-
-## Universal Requirements (Android)
-
-Before setting up any display, GPU, or audio feature, ensure all of the following are met:
-
-1. **Droidspaces v6.3.0 or higher** - after updating, a **full reboot is mandatory** to apply the updated SELinux rules.
-
-2. **Both [Termux](https://github.com/termux/termux-app) and [Termux:X11](https://github.com/termux/termux-x11) apps must be installed** on your device.
-
-3. **Run the Droidspaces setup script inside Termux** (mandatory - installs Termux:X11, VirGL, PulseAudio, and patches the audio config):
+1. Install the [Termux](https://github.com/termux/termux-app) and [Termux:X11](https://github.com/termux/termux-x11) apps. Get both from the same source, F-Droid or GitHub, so they are signed by the same key.
+2. In Termux, run the setup script. It installs Termux:X11, VirGL and PulseAudio into Termux and patches PulseAudio's configuration for Android's audio stack:
 
    ```bash
    curl -fsSL https://github.com/ravindu644/Droidspaces-OSS/raw/refs/heads/dev/scripts/setup-termux.sh | bash
    ```
 
-> [!IMPORTANT]
->
-> This script only needs to be run once. It installs all required display and audio dependencies into Termux.
-
----
-
-<a id="android"></a>
-
-## Android Display & GPU
-
-As of v6.3.0, Droidspaces automatically launches the Termux:X11 X server (and VirGL server, if configured) when a container starts. It also injects the required environment variables into the container via `/run/droidspaces.env`, which is symlinked from `/etc/profile.d/droidspaces_env.sh` for automatic sourcing.
+That is all. You do not start anything in Termux yourself afterwards.
 
 > [!TIP]
->
-> **Using `zsh`, `fish`, or another non-login shell?**
->
-> These shells may not source `/etc/profile.d` automatically. Run this manually inside your container after booting: `source /run/droidspaces.env`
->
-> This sets `DISPLAY=:5` and (if VirGL is enabled) `GALLIUM_DRIVER=virpipe`.
+> The official XFCE images in the repository start XFCE on their own. Install one, turn on **Configure Termux:X11**, start the container and open the Termux:X11 app. The desktop is there. The [auto-boot section](#a-desktop-that-starts-at-boot) explains how it is wired, in case you want the same for another desktop.
 
----
+The display variables are set for login shells through `/etc/profile.d`. In `zsh`, `fish` or another shell that skips it, run `source /run/droidspaces.env` once after the container boots.
 
-> [!TIP]
-> **Want an out-of-the-box desktop experience?**
->
-> Our official XFCE rootfs tarballs have **built-in XFCE auto-boot support**. When you start the container with Termux:X11 (or VirGL) enabled, XFCE launches automatically and appears in the Termux:X11 app - no terminal commands needed.
->
-> Download from the [Rootfs Repository](Usage-Android-App.md#rootfs-repository) (search "XFCE") or directly from [Droidspaces Rootfs Builder Releases](https://github.com/Droidspaces/Droidspaces-rootfs-builder/releases/latest).
+## Three ways to render on Android
 
----
+| | Works on | Speed | Toggles |
+|---|---|---|---|
+| **llvmpipe** | every device | software rendering, fine for a desktop and 2D apps | Configure Termux:X11 |
+| **VirGL** | Mali, PowerVR and other non-Qualcomm GPUs | hardware accelerated through a bridge in Termux | Configure Termux:X11 and Configure VirGL 3D Acceleration |
+| **Turnip** | Qualcomm Adreno | near native, the GPU is driven from inside the container | GPU Access and Configure Termux:X11, VirGL off |
 
-<a id="termux-x11"></a>
+### llvmpipe
 
-### 01. Termux-X11 + llvmpipe
+Turn on **Configure Termux:X11** in the container's configuration and start the container. When the Termux:X11 app shows its X-shaped cursor, the server is ready. Inside the container, `glxgears` or `startxfce4` opens in Termux:X11. Nothing else to set up, and no hardware access needed.
 
-Software rendering via `llvmpipe`. The most compatible method - works on any device regardless of GPU vendor.
+### VirGL
 
-#### Setup
+Turn on **Configure Termux:X11** and **Configure VirGL 3D Acceleration**, then start the container. OpenGL calls in the container are sent to the VirGL server in Termux, which runs them on the phone's GPU. `glxinfo | grep renderer` inside the container names VirGL when it is working.
 
-1. Open the Droidspaces app and navigate to **Edit container configuration**.
-2. Enable the **Configure Termux:X11** toggle and save.
-3. Start the container. Droidspaces will automatically launch the Termux:X11 X server - the Termux:X11 app will display the **"X" cursor**, confirming the server is ready.
-4. Open a terminal inside the container and run any GUI application:
+If VirGL fails to start, put `--angle-vulkan` in the **VirGL Extra Flags** field to switch it to the Vulkan backend.
 
-   ```bash
-   glxgears
+### Turnip
+
+Turnip is Mesa's open source Vulkan driver for Adreno, and with Zink on top it gives OpenGL as well. The container talks to the GPU directly, so it needs the GPU nodes and a Mesa build with Turnip.
+
+1. Install Mesa with Turnip inside the container, following [Mesa for Android Container](https://github.com/lfdevs/mesa-for-android-container).
+2. In the container's configuration, turn on **GPU Access** and **Configure Termux:X11**, and make sure **Configure VirGL 3D Acceleration** is off.
+3. Add two environment variables under **Advanced Options**:
+
+   ```
+   MESA_LOADER_DRIVER_OVERRIDE=kgsl
+   TU_DEBUG=noconform
    ```
 
-   ```bash
-   startxfce4
-   ```
+4. Start the container. Graphical programs now render on the GPU.
 
-   The window will appear in the Termux:X11 app.
+A user other than root needs to be in the `droidspaces-gpu` group to open the GPU nodes: `usermod -aG droidspaces-gpu <user>` inside the container.
 
-> [!NOTE]
->
-> **Hardware Access/GPU Access** is not required for software rendering.
+## Sound on Android
 
----
+Turn on **Configure PulseAudio** and start the container. Droidspaces starts a PulseAudio server in Termux, where Android's audio system allows it to play, routes it to the speaker, mounts its socket into the container at `/tmp/.pulse-socket` and sets `PULSE_SERVER`. Anything that uses PulseAudio or PipeWire's PulseAudio compatibility plays through the phone. `paplay file.wav` is a quick test, and `pactl info` shows the connection.
 
-<a id="virgl"></a>
+Whether sound works at all depends on the phone: the Android version, the vendor's audio HAL and the Termux PulseAudio build. On Samsung One UI 6.1 and newer, Droidspaces preloads a library the audio module needs; nothing to do on your side.
 
-### 02. Termux-X11 + VirGL
+## A desktop that starts at boot
 
-Hardware-accelerated rendering for **non-Qualcomm devices (Mali, PowerVR)** via a `virglrenderer` bridge. Translates OpenGL calls from the container into commands the host Android GPU can execute.
+Droidspaces makes sure the X server's socket, `/tmp/.X11-unix/X5`, exists before the container's init reaches `graphical.target`, so a systemd unit can start a desktop without racing it. The official XFCE images ship such a unit; the same pattern works for any desktop.
 
-Droidspaces automatically starts both the X server and the VirGL server, and injects `DISPLAY=:5` and `GALLIUM_DRIVER=virpipe` into the container environment.
-
-#### Setup
-
-1. Open **Edit container configuration**.
-2. Enable both **Configure Termux:X11** and **Configure VirGL 3D Acceleration** toggles and save.
-3. Start the container. Both servers launch automatically. The Termux:X11 app will show the **"X" cursor** once ready.
-4. Run any GUI application inside the container:
-
-   ```bash
-   glxgears
-   ```
-
-   Look for **"VirGL"** in the renderer string to confirm acceleration is active.
-
-   ```bash
-   startxfce4
-   ```
-
-> [!TIP]
->
-> **If the VirGL renderer fails to initialize**, you can pass the Vulkan backend flag via the **VirGL Extra Flags** field in the container configuration:
->
-> `--angle-vulkan`
-
----
-
-<a id="turnip"></a>
-
-### 03. Turnip (Native Qualcomm/Adreno)
-
-Near-native hardware acceleration for **Qualcomm Adreno GPUs** using the open-source Turnip Mesa driver. This bypasses VirGL entirely for direct GPU access.
-
-#### Requirements
-
-- A custom Mesa driver installed from the [Mesa for Android Container repository](https://github.com/lfdevs/mesa-for-android-container).
-
-#### Setup
-
-1. Install the custom Mesa driver following the instructions at [Mesa for Android Container](https://github.com/lfdevs/mesa-for-android-container).
-
-2. Open **Edit container configuration** and apply the following:
-   - Enable **GPU Access** and **Configure Termux:X11**.
-   - **Disable** the **Configure VirGL 3D Acceleration** toggle (VirGL must be off for Turnip).
-   - Add these two environment variables:
-
-     ```
-     MESA_LOADER_DRIVER_OVERRIDE=kgsl
-     TU_DEBUG=noconform
-     ```
-
-3. Start the container. Droidspaces launches the X server automatically.
-
-4. Run a GUI application inside the container - Turnip GPU acceleration will be active.
-
-> [!NOTE]
->
-> **Permission Management (Non-Root Users):** If you are using a non-root user, you must grant them access to the GPU device nodes: `sudo usermod -aG droidspaces-gpu <your_username>`
-
----
-
-<a id="pulseaudio"></a>
-
-## Android Sound (PulseAudio)
-
-Droidspaces bridges Android's audio stack into your container using PulseAudio. When enabled, a PulseAudio daemon runs on the host as the Termux user (so Android's audio HAL grants it access to the device speaker), and its UNIX socket is bind-mounted into the container at `/tmp/.pulse-socket`. The environment variable `PULSE_SERVER=unix:/tmp/.pulse-socket` is injected automatically, so any application inside the container that speaks PulseAudio will produce sound with no manual configuration.
-
-> [!WARNING]
->
-> PulseAudio audio passthrough may not work on all devices. Compatibility depends on the Android version, OEM audio HAL implementation, and the Termux PulseAudio build. If audio does not work on your device, this is a known limitation of the upstream packages on that platform.
-
-#### Requirements
-
-- PulseAudio must be installed in Termux - the [setup script](#requirements) handles this automatically.
-
-#### Setup
-
-1. Open the Droidspaces app and navigate to **Edit container configuration**.
-2. Enable the **Configure PulseAudio** toggle and save.
-3. Start the container. Droidspaces will:
-   - Launch the PulseAudio daemon as the Termux user.
-   - Wait for the socket at `/tmp/.pulse-socket` to appear before proceeding.
-   - Run `pactl set-default-sink AAudio_sink` to route audio to the device speaker.
-   - Bind-mount the socket into the container and inject `PULSE_SERVER`.
-
-   You can also enable PulseAudio via the CLI flag `--pulse-audio`.
-
-4. Install and run any audio application inside the container. Because `PULSE_SERVER` is already set in the container environment, most apps work without any additional configuration:
-
-   ```bash
-   # Test audio output
-   paplay /path/to/sound.wav
-   ```
-
-   ```bash
-   # Verify the PulseAudio connection
-   pactl info
-   ```
-
-> [!NOTE]
->
-> PulseAudio sound is **Android-only**. On Linux desktop hosts, audio passthrough works via the host's own PulseAudio/PipeWire setup - no special configuration is needed in Droidspaces.
-
-> [!NOTE]
->
-> **Samsung One UI 6.1+ devices:** Droidspaces automatically injects `libskcodec.so` via `LD_PRELOAD` before starting PulseAudio. This fixes a hidden dependency in the OpenSL ES audio module specific to Samsung firmware. No action is required from you.
-
----
-
-<a id="de-autoboot"></a>
-
-## Desktop Environment Auto-Boot
-
-As of v6.3.0, when Termux:X11 is enabled in a container's configuration, Droidspaces guarantees the X server socket (`/tmp/.X11-unix/X5`) is live before the container's init system reaches `graphical.target`. This makes proper systemd-based DE auto-start possible with no race conditions.
-
-### How the Official XFCE Tarballs Wire It
-
-Our official XFCE rootfs tarballs ship with a fully pre-configured auto-boot setup. Here's exactly how it works:
-
-**1. The `xfce-autostart.service` systemd unit** is installed at `/etc/systemd/system/xfce-autostart.service` and enabled under `graphical.target`:
+The unit, `/etc/systemd/system/xfce-autostart.service`:
 
 ```ini
 [Unit]
@@ -238,7 +84,7 @@ After=graphical.target
 [Service]
 Type=simple
 User=root
-ExecCondition=/bin/sh -c "grep -q 'enable_termux_x11=1' /run/droidspaces/container.config"
+ExecCondition=/bin/sh -c "grep -q 'enable_x11=1' /run/droidspaces/container.config"
 ExecCondition=/bin/sh -c "test -S /tmp/.X11-unix/X5"
 ExecStart=/usr/local/bin/xfce-start
 Restart=on-failure
@@ -247,9 +93,9 @@ Restart=on-failure
 WantedBy=graphical.target
 ```
 
-Two `ExecCondition` guards ensure XFCE only starts when it makes sense: the container must have Termux:X11 enabled in its config, and the X server socket must actually exist. If either condition fails, systemd skips the service silently - no errors, no crash loops.
+The two conditions keep the unit quiet when Termux:X11 is off or the socket is missing: systemd skips it instead of failing.
 
-**2. The `/usr/local/bin/xfce-start` launcher script** handles environment sourcing and user switching:
+The launcher, `/usr/local/bin/xfce-start`, loads the environment Droidspaces wrote and starts the desktop, as root or as the user named in `XFCE_USER`:
 
 ```sh
 #!/bin/sh
@@ -280,121 +126,20 @@ else
 fi
 ```
 
-The script first tries to source `/run/droidspaces.env` (written by Droidspaces at boot; contains `DISPLAY=:5`, `GALLIUM_DRIVER=virpipe` if VirGL is enabled, and `PULSE_SERVER` if PulseAudio is enabled). If the env file is missing for any reason, it falls back to reading the container config directly and building the environment manually. This makes the script robust against any init system startup ordering.
+To run the desktop as a normal user, create one in the container with `useradd -m <user>` and set `XFCE_USER=<user>` under **Environment Variables** in the container's configuration. `su -l -w` passes only the display and audio variables into that user's session.
 
-### The `XFCE_USER` Variable
+For another desktop, copy both files under new names, replace `startxfce4` in the launcher with the desktop's start command, such as `startplasma-x11`, and enable the unit with `systemctl enable`. The variable name `XFCE_USER` is only a convention; call it what you like.
 
-By default, `xfce-start` runs XFCE as `root`. If you want XFCE to run as a non-root user, set the `XFCE_USER` environment variable in your container's **Environment Variables** configuration in the Droidspaces app:
+## Linux
 
-```
-XFCE_USER=youruser
-```
+On a Linux host, GPU acceleration needs no bridge: the container uses the host's GPU through Mesa like any other program.
 
-When `XFCE_USER` is set, the script uses `su -l -w "$WHITELIST"` to switch to that user while explicitly passing through only the required environment variables (`DISPLAY`, `GALLIUM_DRIVER`, `PULSE_SERVER`, etc.). This keeps the session clean - no root env leaking into the user session.
+1. Turn on **Hardware Access**, or **GPU Access** for the render nodes alone, with `--hw-access` or `--gpu` on the CLI.
+2. Allow the container to reach your X server: `xhost +local:` on the host.
+3. Start the container with `--x11`, which mounts the host's X socket, and set `DISPLAY=:0`, or whatever the host uses, in the container's environment file.
 
-> [!TIP]
->
-> Make sure `youruser` exists inside the container and has a valid home directory before setting `XFCE_USER`. You can create one with `useradd -m youruser` inside the container.
+Graphical programs started in the container then open on your desktop with hardware acceleration. Sound goes through the host's own PulseAudio or PipeWire socket if you bind-mount it; Droidspaces does not manage audio on Linux.
 
 ---
 
-### Power Users: Wire Any Desktop Environment
-
-You can replicate this exact pattern for any DE (Plasma, GNOME, MATE, i3, etc.) in any container.
-
-**Step 1:** Create the launcher script at `/usr/local/bin/de-start`:
-
-```sh
-#!/bin/sh
-
-ENV_FILE=/run/droidspaces.env
-CONFIG=/run/droidspaces/container.config
-
-if [ -f "$ENV_FILE" ]; then
-    . "$ENV_FILE"
-    WHITELIST=$(sed -n 's/^export \([A-Za-z_][A-Za-z0-9_]*\)=.*/\1/p' "$ENV_FILE" | tr '\n' ',' | sed 's/,$//')
-else
-    export DISPLAY=:5
-    WHITELIST=DISPLAY
-    if grep -q 'enable_pulseaudio=1' "$CONFIG" 2>/dev/null; then
-        export PULSE_SERVER=unix:/tmp/.pulse-socket
-        WHITELIST="$WHITELIST,PULSE_SERVER"
-    fi
-    if grep -q 'enable_virgl=1' "$CONFIG" 2>/dev/null; then
-        export GALLIUM_DRIVER=virpipe
-        WHITELIST="$WHITELIST,GALLIUM_DRIVER"
-    fi
-fi
-
-DE_CMD="startplasma-x11"   # replace with your DE's start command
-
-if [ -n "$XFCE_USER" ]; then
-    exec su -l -w "$WHITELIST" "$XFCE_USER" -c "exec $DE_CMD"
-else
-    exec $DE_CMD
-fi
-```
-
-```bash
-chmod +x /usr/local/bin/de-start
-```
-
-**Step 2:** Create the systemd service at `/etc/systemd/system/de-autostart.service`:
-
-```ini
-[Unit]
-Description=Desktop Environment Autostart
-After=graphical.target
-
-[Service]
-Type=simple
-ExecCondition=/bin/sh -c "grep -q 'enable_termux_x11=1' /run/droidspaces/container.config"
-ExecCondition=/bin/sh -c "test -S /tmp/.X11-unix/X5"
-ExecStart=/usr/local/bin/de-start
-Restart=on-failure
-
-[Install]
-WantedBy=graphical.target
-```
-
-**Step 3:** Enable it:
-
-```bash
-systemctl enable de-autostart.service
-```
-
-On next container boot with Termux:X11 enabled, your DE will appear in the Termux:X11 app automatically.
-
-> [!NOTE]
->
-> The `XFCE_USER` variable name is a convention from our official tarballs. You can rename it to anything in your own script - what matters is the `su -l -w "$WHITELIST"` pattern for clean user switching with env passthrough.
-
----
-
-<a id="linux"></a>
-
-## Linux Desktop (AMD/Intel)
-
-On Linux-based hosts, GPU acceleration works natively with zero additional configuration within Droidspaces.
-
-#### Requirements
-- An active X11 or Wayland session on your host.
-- Functional GPU drivers (Mesa/Intel/AMD).
-
-#### Implementation Steps
-
-1. **Enable Hardware Access**: Ensure the **Hardware Access** toggle is enabled in your container configuration (or use the `--hw-access` CLI flag).
-
-2. **Xhost Permission**: On your host machine, allow the container to connect to your X server:
-
-   ```bash
-   xhost +local:
-   ```
-
-3. **Set Display Variable**: Add the host's `DISPLAY` number to the container's environment (usually `:0`):
-
-   ```bash
-   echo "DISPLAY=:0" >> /etc/environment
-   ```
-
-4. **Run Applications**: GUI applications launched from the container will render natively with full hardware acceleration.
+Previous: [Linux CLI](Linux-CLI.md) | Next: [Anland](Anland.md)

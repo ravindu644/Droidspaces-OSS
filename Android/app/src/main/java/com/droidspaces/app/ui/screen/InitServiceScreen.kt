@@ -1,12 +1,9 @@
 package com.droidspaces.app.ui.screen
 
-import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.border
-import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
@@ -20,7 +17,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Block
 import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.LockOpen
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.PlayArrow
@@ -44,23 +40,28 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.droidspaces.app.ui.component.CardContentPadding
+import com.droidspaces.app.ui.component.CardHeaderHeight
+import com.droidspaces.app.ui.theme.JetBrainsMono
 import com.droidspaces.app.R
+import com.droidspaces.app.ui.component.DsSnackbarHost
+import com.droidspaces.app.ui.component.dsMenuBorder
+import com.droidspaces.app.ui.component.DsMenuTheme
+import com.droidspaces.app.ui.component.StatusPill
 import com.droidspaces.app.ui.util.*
 import com.droidspaces.app.util.AnimationUtils
+import com.droidspaces.app.ui.viewmodel.InitScreenState
+import com.droidspaces.app.ui.viewmodel.InitServiceViewModel
+import com.droidspaces.app.util.CommandResult
+import com.droidspaces.app.util.ServiceStatus
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
+import com.droidspaces.app.ui.component.DsSearchBar
+import androidx.compose.material3.LocalContentColor
 
-// ── UI-level model ───────────────────────────────────────────────────────────
-// Manager-agnostic view of an init-system service, so a single screen can drive
-// systemd, OpenRC and procd. Each screen maps its manager's ServiceInfo -> this.
-
-/** Superset of the per-init-system statuses (color + label are derived from it). */
-enum class InitServiceUiStatus {
-    ENABLED_RUNNING, ENABLED_STOPPED, DISABLED_STOPPED, ABNORMAL, STATIC, MASKED, UNKNOWN
-}
-
-/** Manager-agnostic command result. */
-data class InitCommandResult(val isSuccess: Boolean, val output: List<String>, val error: List<String>)
+// One screen drives all four init systems: each maps its manager's ServiceInfo to a row
+// whose actions are already bound to that manager.
 
 /**
  * An overflow-menu action. [Command] fires a suspend action (restart / mask /
@@ -72,7 +73,7 @@ sealed class InitServiceMenuAction(val labelRes: Int, val icon: ImageVector) {
     class Command(
         labelRes: Int,
         icon: ImageVector,
-        val run: suspend () -> InitCommandResult,
+        val run: suspend () -> CommandResult,
     ) : InitServiceMenuAction(labelRes, icon)
 
     class Navigate(
@@ -90,11 +91,11 @@ data class InitServiceRow(
     val isEnabled: Boolean,
     val isMasked: Boolean,
     val isStatic: Boolean,
-    val status: InitServiceUiStatus,
-    val startStop: suspend () -> InitCommandResult,
-    val enableDisable: suspend () -> InitCommandResult,
+    val status: ServiceStatus,
+    val startStop: suspend () -> CommandResult,
+    val enableDisable: suspend () -> CommandResult,
     /** Non-null only when the service is masked (systemd). */
-    val unmask: (suspend () -> InitCommandResult)?,
+    val unmask: (suspend () -> CommandResult)?,
     val menu: List<InitServiceMenuAction>,
 )
 
@@ -109,17 +110,6 @@ data class InitServiceFilterChip(
     val emptyRes: Int,
     val predicate: (InitServiceRow) -> Boolean,
 )
-
-private val JetBrainsMono = FontFamily(
-    Font(R.font.jetbrains_mono_regular, FontWeight.Normal),
-    Font(R.font.jetbrains_mono_bold, FontWeight.Bold)
-)
-
-private sealed class InitScreenState {
-    data object Loading : InitScreenState()
-    data object NotAvailable : InitScreenState()
-    data class Ready(val rows: List<InitServiceRow>) : InitScreenState()
-}
 
 private sealed class InitActionState {
     data object Idle : InitActionState()
@@ -141,47 +131,31 @@ fun InitServiceScreen(
     fetchRows: suspend (String) -> List<InitServiceRow>,
     filters: List<InitServiceFilterChip>,
     defaultFilterId: String,
+    viewModel: InitServiceViewModel = viewModel(),
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
 
-    var screenState by remember { mutableStateOf<InitScreenState>(InitScreenState.Loading) }
+    val screenState = viewModel.screenState
+    val selectedFilterId = viewModel.selectedFilterId
+    val searchQuery = viewModel.searchQuery
     var actionState by remember { mutableStateOf<InitActionState>(InitActionState.Idle) }
-    var selectedFilterId by remember { mutableStateOf(defaultFilterId) }
     var logsDialogContent by remember { mutableStateOf<List<String>?>(null) }
-    var searchQuery by remember { mutableStateOf("") }
 
-    var fetchJob by remember { mutableStateOf<Job?>(null) }
     var actionJob by remember { mutableStateOf<Job?>(null) }
 
-    fun fetchServices() {
-        fetchJob?.cancel()
-        screenState = InitScreenState.Loading
-        fetchJob = scope.launch {
-            try {
-                if (!isAvailable(containerName)) {
-                    screenState = InitScreenState.NotAvailable
-                    return@launch
-                }
-                screenState = InitScreenState.Ready(fetchRows(containerName))
-            } catch (e: Exception) {
-                if (e is kotlinx.coroutines.CancellationException) throw e
-                screenState = InitScreenState.NotAvailable
-            }
-        }
-    }
+    fun fetchServices() = viewModel.fetchServices(containerName, isAvailable, fetchRows)
 
-    fun executeAction(serviceName: String, actionName: String, action: suspend () -> InitCommandResult) {
+    fun executeAction(serviceName: String, actionName: String, action: suspend () -> CommandResult) {
         actionJob?.cancel()
-        fetchJob?.cancel()
+        viewModel.cancelFetch()
         actionState = InitActionState.InProgress(serviceName, actionName)
         actionJob = scope.launch {
             try {
                 val result = action()
                 actionState = InitActionState.Idle
                 if (result.isSuccess) {
-                    screenState = InitScreenState.Loading
                     scope.showSuccess(snackbarHostState, context.getString(R.string.action_successful, actionName, serviceName))
                     fetchServices()
                 } else {
@@ -197,7 +171,7 @@ fun InitServiceScreen(
         }
     }
 
-    LaunchedEffect(containerName) { fetchServices() }
+    LaunchedEffect(Unit) { viewModel.loadOnce(defaultFilterId, isAvailable, fetchRows, containerName) }
 
     val allRows = (screenState as? InitScreenState.Ready)?.rows ?: emptyList()
     val selectedFilter = filters.firstOrNull { it.id == selectedFilterId } ?: filters.first()
@@ -207,78 +181,73 @@ fun InitServiceScreen(
 
     val clearFocus = rememberClearFocus()
 
-    Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
-        Scaffold(
-            topBar = {
-                CenterAlignedTopAppBar(
-                    title = { Text(context.getString(titleRes), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold) },
-                    navigationIcon = { IconButton(onClick = onNavigateBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, context.getString(R.string.back)) } },
-                    actions = { IconButton(onClick = { fetchServices() }, enabled = screenState !is InitScreenState.Loading && actionState is InitActionState.Idle) { Icon(Icons.Default.Refresh, context.getString(R.string.refresh)) } },
-                    colors = TopAppBarDefaults.centerAlignedTopAppBarColors(containerColor = Color.Transparent, scrolledContainerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.95f))
-                )
-            },
-            snackbarHost = { SnackbarHost(snackbarHostState) },
-            containerColor = Color.Transparent
-        ) { padding ->
-            ClearFocusOnClickOutside(modifier = Modifier.padding(padding).fillMaxSize()) {
-                Box(modifier = Modifier.fillMaxSize()) {
-                    when (screenState) {
-                        is InitScreenState.Loading -> FullScreenLoading(message = context.getString(R.string.fetching_services))
-                        is InitScreenState.NotAvailable -> InitServiceNotAvailable()
-                        is InitScreenState.Ready -> {
-                            val pagerState = rememberPagerState(
-                                initialPage = filters.indexOfFirst { it.id == selectedFilterId }.coerceAtLeast(0),
-                                pageCount = { filters.size }
-                            )
-                            // Swiping between filter pages keeps the chip row selection in sync.
-                            LaunchedEffect(pagerState.currentPage) {
-                                selectedFilterId = filters[pagerState.currentPage].id
-                            }
-                            Column(modifier = Modifier.fillMaxSize()) {
-                                InitServiceSearchBar(query = searchQuery, onQueryChange = { searchQuery = it })
-                                InitServiceFilterChipsRow(
-                                    filters = filters,
-                                    counts = counts,
-                                    selectedFilterId = selectedFilterId,
-                                    onFilterSelected = { id ->
-                                        clearFocus()
-                                        val idx = filters.indexOfFirst { it.id == id }
-                                        if (idx >= 0) scope.launch {
-                                            // Animate only for adjacent hops; jump directly for distant
-                                            // ones so we don't flip through every page in between.
-                                            if (kotlin.math.abs(idx - pagerState.currentPage) <= 1) {
-                                                pagerState.animateScrollToPage(idx)
-                                            } else {
-                                                pagerState.scrollToPage(idx)
-                                            }
-                                        }
-                                    }
-                                )
-                                if (searchQuery.isNotBlank()) {
-                                    // Search overrides the filter pages: one results list across all services.
-                                    val results = allRows.filter { it.name.contains(searchQuery, ignoreCase = true) }
-                                    if (results.isEmpty()) {
-                                        InitServiceEmptyState(emptyRes = selectedFilter.emptyRes, modifier = Modifier.weight(1f))
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text(context.getString(titleRes), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold) },
+                navigationIcon = { IconButton(onClick = onNavigateBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, context.getString(R.string.back)) } },
+                actions = { IconButton(onClick = { fetchServices() }, enabled = screenState !is InitScreenState.Loading && actionState is InitActionState.Idle) { Icon(Icons.Default.Refresh, context.getString(R.string.refresh)) } },
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent, scrolledContainerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.95f))
+            )
+        },
+        snackbarHost = { DsSnackbarHost(snackbarHostState) }
+    ) { padding ->
+        Box(modifier = Modifier.padding(padding).fillMaxSize()) {
+            when (screenState) {
+                is InitScreenState.Loading -> FullScreenLoading(message = context.getString(R.string.fetching_services))
+                is InitScreenState.NotAvailable -> InitServiceNotAvailable()
+                is InitScreenState.Ready -> {
+                    val pagerState = rememberPagerState(
+                        initialPage = filters.indexOfFirst { it.id == selectedFilterId }.coerceAtLeast(0),
+                        pageCount = { filters.size }
+                    )
+                    // Swiping between filter pages keeps the chip row selection in sync.
+                    LaunchedEffect(pagerState.currentPage) {
+                        viewModel.selectedFilterId = filters[pagerState.currentPage].id
+                    }
+                    Column(modifier = Modifier.fillMaxSize()) {
+                        DsSearchBar(searchQuery, { viewModel.searchQuery = it }, context.getString(R.string.search_services), Modifier.padding(horizontal = 16.dp, vertical = 8.dp), color = MaterialTheme.colorScheme.surfaceContainer)
+                        InitServiceFilterChipsRow(
+                            filters = filters,
+                            counts = counts,
+                            selectedFilterId = selectedFilterId,
+                            onFilterSelected = { id ->
+                                clearFocus()
+                                val idx = filters.indexOfFirst { it.id == id }
+                                if (idx >= 0) scope.launch {
+                                    // Animate only for adjacent hops; jump directly for distant
+                                    // ones so we don't flip through every page in between.
+                                    if (kotlin.math.abs(idx - pagerState.currentPage) <= 1) {
+                                        pagerState.animateScrollToPage(idx)
                                     } else {
-                                        LazyColumn(modifier = Modifier.weight(1f), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                                            items(results, key = { it.name }) { row ->
-                                                InitServiceCard(row = row, onAction = { actionName, act -> executeAction(row.name, actionName, act) })
-                                            }
-                                        }
+                                        pagerState.scrollToPage(idx)
                                     }
+                                }
+                            }
+                        )
+                        if (searchQuery.isNotBlank()) {
+                            // Search overrides the filter pages: one results list across all services.
+                            val results = allRows.filter { it.name.contains(searchQuery, ignoreCase = true) }
+                            if (results.isEmpty()) {
+                                InitServiceEmptyState(emptyRes = selectedFilter.emptyRes, modifier = Modifier.weight(1f))
+                            } else {
+                                LazyColumn(modifier = Modifier.weight(1f), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                                    items(results, key = { it.name }) { row ->
+                                        InitServiceCard(row = row, onAction = { actionName, act -> executeAction(row.name, actionName, act) })
+                                    }
+                                }
+                            }
+                        } else {
+                            HorizontalPager(state = pagerState, modifier = Modifier.weight(1f)) { page ->
+                                val pageFilter = filters[page]
+                                val rows = allRows.filter(pageFilter.predicate)
+                                    .sortedWith(compareByDescending<InitServiceRow> { it.isRunning }.thenBy { it.name })
+                                if (rows.isEmpty()) {
+                                    InitServiceEmptyState(emptyRes = pageFilter.emptyRes, modifier = Modifier.fillMaxSize())
                                 } else {
-                                    HorizontalPager(state = pagerState, modifier = Modifier.weight(1f)) { page ->
-                                        val pageFilter = filters[page]
-                                        val rows = allRows.filter(pageFilter.predicate)
-                                            .sortedWith(compareByDescending<InitServiceRow> { it.isRunning }.thenBy { it.name })
-                                        if (rows.isEmpty()) {
-                                            InitServiceEmptyState(emptyRes = pageFilter.emptyRes, modifier = Modifier.fillMaxSize())
-                                        } else {
-                                            LazyColumn(modifier = Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                                                items(rows, key = { it.name }) { row ->
-                                                    InitServiceCard(row = row, onAction = { actionName, act -> executeAction(row.name, actionName, act) })
-                                                }
-                                            }
+                                    LazyColumn(modifier = Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                                        items(rows, key = { it.name }) { row ->
+                                            InitServiceCard(row = row, onAction = { actionName, act -> executeAction(row.name, actionName, act) })
                                         }
                                     }
                                 }
@@ -292,45 +261,6 @@ fun InitServiceScreen(
 
     (actionState as? InitActionState.InProgress)?.let { state -> ProgressDialog(message = context.getString(R.string.actioning_service, state.actionName, state.serviceName)) }
     logsDialogContent?.let { logs -> ErrorLogsDialog(logs = logs, onDismiss = { logsDialogContent = null }) }
-}
-
-@Composable
-private fun InitServiceSearchBar(query: String, onQueryChange: (String) -> Unit) {
-    val context = LocalContext.current
-    val interactionSource = remember { MutableInteractionSource() }
-    val isFocused by interactionSource.collectIsFocusedAsState()
-    val borderColor by animateColorAsState(
-        targetValue = if (isFocused) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f),
-        animationSpec = AnimationUtils.fastSpec()
-    )
-
-    Surface(
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
-        color = MaterialTheme.colorScheme.surfaceContainer,
-        shape = RoundedCornerShape(16.dp),
-        border = BorderStroke(1.dp, borderColor)
-    ) {
-        TextField(
-            value = query,
-            onValueChange = onQueryChange,
-            modifier = Modifier.fillMaxWidth(),
-            interactionSource = interactionSource,
-            placeholder = { Text(context.getString(R.string.search_services), color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)) },
-            leadingIcon = { Icon(Icons.Default.Search, null, tint = if (isFocused) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)) },
-            trailingIcon = { if (query.isNotEmpty()) { IconButton(onClick = { onQueryChange("") }) { Icon(Icons.Default.Clear, null) } } },
-            colors = TextFieldDefaults.colors(
-                focusedContainerColor = Color.Transparent,
-                unfocusedContainerColor = Color.Transparent,
-                focusedIndicatorColor = Color.Transparent,
-                unfocusedIndicatorColor = Color.Transparent,
-                cursorColor = MaterialTheme.colorScheme.primary
-            ),
-            singleLine = true,
-            textStyle = MaterialTheme.typography.bodyLarge,
-            keyboardOptions = FocusUtils.searchKeyboardOptions,
-            keyboardActions = FocusUtils.clearFocusKeyboardActions()
-        )
-    }
 }
 
 @Composable
@@ -378,31 +308,60 @@ private fun InitServiceFilterChipsRow(
     }
 }
 
+/**
+ * The status hues. These are a deliberate traffic light rather than theme roles:
+ * six of these states can sit in the legend row at once, and primary/tertiary
+ * move with dynamic colour and the palette picker, so roles would collide.
+ */
 @Composable
-private fun statusColorFor(status: InitServiceUiStatus): Color = when (status) {
-    InitServiceUiStatus.ENABLED_RUNNING -> Color(0xFF4CAF50)
-    InitServiceUiStatus.ENABLED_STOPPED -> Color(0xFFFFCA28)
-    InitServiceUiStatus.DISABLED_STOPPED -> Color(0xFFEF5350)
-    InitServiceUiStatus.ABNORMAL -> Color(0xFFFF7043)
-    InitServiceUiStatus.STATIC -> Color(0xFF607D8B)
-    InitServiceUiStatus.MASKED -> MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
-    InitServiceUiStatus.UNKNOWN -> Color(0xFF90A4AE)
+fun statusColorFor(status: ServiceStatus): Color = when (status) {
+    ServiceStatus.ENABLED_RUNNING -> Color(0xFF4CAF50)
+    ServiceStatus.ENABLED_STOPPED -> Color(0xFFFFCA28)
+    ServiceStatus.DISABLED_STOPPED -> Color(0xFFEF5350)
+    ServiceStatus.ABNORMAL -> Color(0xFFFF7043)
+    ServiceStatus.STATIC -> Color(0xFF607D8B)
+    ServiceStatus.MASKED -> MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
+    ServiceStatus.UNKNOWN -> Color(0xFF90A4AE)
 }
 
-private fun statusLabelRes(status: InitServiceUiStatus): Int = when (status) {
-    InitServiceUiStatus.ENABLED_RUNNING -> R.string.running
-    InitServiceUiStatus.ENABLED_STOPPED -> R.string.enabled_legend
-    InitServiceUiStatus.DISABLED_STOPPED -> R.string.disabled_legend
-    InitServiceUiStatus.ABNORMAL -> R.string.abnormal_legend
-    InitServiceUiStatus.STATIC -> R.string.static_legend
-    InitServiceUiStatus.MASKED -> R.string.masked_legend
-    InitServiceUiStatus.UNKNOWN -> R.string.unknown_legend
+private fun statusLabelRes(status: ServiceStatus): Int = when (status) {
+    ServiceStatus.ENABLED_RUNNING -> R.string.running
+    ServiceStatus.ENABLED_STOPPED -> R.string.enabled_legend
+    ServiceStatus.DISABLED_STOPPED -> R.string.disabled_legend
+    ServiceStatus.ABNORMAL -> R.string.abnormal_legend
+    ServiceStatus.STATIC -> R.string.static_legend
+    ServiceStatus.MASKED -> R.string.masked_legend
+    ServiceStatus.UNKNOWN -> R.string.unknown_legend
+}
+
+/**
+ * A 48dp action pill on a [container] fill. An [accent] tints the icon, label
+ * and border; without one the pill is the neutral grey of a secondary action.
+ */
+@Composable
+private fun PillButton(icon: ImageVector, label: String, accent: Color?, container: Color, modifier: Modifier = Modifier, onClick: () -> Unit) {
+    Surface(
+        onClick = onClick,
+        modifier = modifier.height(48.dp),
+        shape = RoundedCornerShape(16.dp),
+        color = container,
+        border = BorderStroke(1.dp, (accent ?: MaterialTheme.colorScheme.outlineVariant).copy(alpha = 0.2f))
+    ) {
+        Row(
+            modifier = Modifier.fillMaxSize(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally)
+        ) {
+            Icon(icon, null, Modifier.size(18.dp), tint = accent ?: LocalContentColor.current)
+            Text(label, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold, color = accent ?: Color.Unspecified)
+        }
+    }
 }
 
 @Composable
 private fun InitServiceCard(
     row: InitServiceRow,
-    onAction: (String, suspend () -> InitCommandResult) -> Unit
+    onAction: (String, suspend () -> CommandResult) -> Unit
 ) {
     val context = LocalContext.current
     var showMenu by remember { mutableStateOf(false) }
@@ -416,41 +375,24 @@ private fun InitServiceCard(
     ) {
         Column {
             Row(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 14.dp).height(32.dp),
+                modifier = Modifier.fillMaxWidth().padding(CardContentPadding).height(CardHeaderHeight),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
                     text = row.name,
                     style = MaterialTheme.typography.titleMedium.copy(
-                        fontFamily = JetBrainsMono,
-                        fontSize = if (row.name.length > 25) 13.sp else 16.sp
+                        fontFamily = JetBrainsMono
                     ),
                     fontWeight = FontWeight.Bold,
                     modifier = Modifier.weight(1f),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
-                Surface(
-                    color = statusColor.copy(alpha = 0.1f),
-                    shape = RoundedCornerShape(8.dp),
-                    border = BorderStroke(1.dp, statusColor.copy(alpha = 0.2f))
-                ) {
-                    Row(
-                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)
-                    ) {
-                        Surface(modifier = Modifier.size(6.dp), shape = CircleShape, color = statusColor) {}
-                        Text(
-                            text = context.getString(statusLabelRes(row.status)).uppercase(),
-                            style = MaterialTheme.typography.labelSmall,
-                            fontWeight = FontWeight.Black,
-                            letterSpacing = 0.5.sp,
-                            color = statusColor
-                        )
-                    }
-                }
+                StatusPill(
+                    label = context.getString(statusLabelRes(row.status)).uppercase(),
+                    color = statusColor
+                )
             }
 
             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
@@ -467,79 +409,38 @@ private fun InitServiceCard(
                 Surface(
                     modifier = Modifier.fillMaxWidth(),
                     color = MaterialTheme.colorScheme.surfaceContainerHigh,
-                    shape = RoundedCornerShape(20.dp),
+                    // The wrapper sits tighter than the 16.dp buttons inside it on purpose.
+                    // Matching the two radii flattens the nested look, do not "fix" it.
+                    shape = RoundedCornerShape(12.dp),
                     border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f))
                 ) {
                     Row(modifier = Modifier.fillMaxWidth().padding(4.dp), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                         val unmask = row.unmask
                         if (row.isMasked && unmask != null) {
-                            Surface(
-                                onClick = { onAction(context.getString(R.string.unmask), unmask) },
-                                modifier = Modifier.weight(1f).height(48.dp),
-                                shape = RoundedCornerShape(16.dp),
-                                color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f),
-                                border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.2f))
-                            ) {
-                                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                        Icon(Icons.Default.LockOpen, null, Modifier.size(18.dp), tint = MaterialTheme.colorScheme.primary)
-                                        Text(context.getString(R.string.unmask), style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
-                                    }
-                                }
-                            }
+                            val label = context.getString(R.string.unmask)
+                            PillButton(Icons.Default.LockOpen, label, MaterialTheme.colorScheme.primary, MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f), Modifier.weight(1f)) { onAction(label, unmask) }
                         } else {
-                            val btnColor = if (row.isRunning) MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.4f) else MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f)
-                            val accentColor = if (row.isRunning) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary
-                            Surface(
-                                onClick = { onAction(if (row.isRunning) context.getString(R.string.stop) else context.getString(R.string.start), row.startStop) },
-                                modifier = Modifier.weight(1f).height(48.dp),
-                                shape = RoundedCornerShape(16.dp),
-                                color = btnColor,
-                                border = BorderStroke(1.dp, accentColor.copy(alpha = 0.2f))
-                            ) {
-                                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                        Icon(if (row.isRunning) Icons.Default.Stop else Icons.Default.PlayArrow, null, Modifier.size(18.dp), tint = accentColor)
-                                        Text(if (row.isRunning) context.getString(R.string.stop) else context.getString(R.string.start), style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold, color = accentColor)
-                                    }
-                                }
-                            }
+                            val label = context.getString(if (row.isRunning) R.string.stop else R.string.start)
+                            PillButton(
+                                if (row.isRunning) Icons.Default.Stop else Icons.Default.PlayArrow, label,
+                                if (row.isRunning) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary,
+                                (if (row.isRunning) MaterialTheme.colorScheme.errorContainer else MaterialTheme.colorScheme.primaryContainer).copy(alpha = 0.4f),
+                                Modifier.weight(1f)
+                            ) { onAction(label, row.startStop) }
                             if (!row.isStatic) {
-                                Surface(
-                                    onClick = { onAction(if (row.isEnabled) context.getString(R.string.disable_service) else context.getString(R.string.enable_service), row.enableDisable) },
-                                    modifier = Modifier.weight(1f).height(48.dp),
-                                    shape = RoundedCornerShape(16.dp),
-                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.05f),
-                                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f))
-                                ) {
-                                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                            Icon(if (row.isEnabled) Icons.Default.Block else Icons.Default.CheckCircle, null, Modifier.size(18.dp))
-                                            Text(if (row.isEnabled) context.getString(R.string.disable_service) else context.getString(R.string.enable_service), style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
-                                        }
-                                    }
-                                }
+                                val toggle = context.getString(if (row.isEnabled) R.string.disable_service else R.string.enable_service)
+                                PillButton(if (row.isEnabled) Icons.Default.Block else Icons.Default.CheckCircle, toggle, null, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.05f), Modifier.weight(1f)) { onAction(toggle, row.enableDisable) }
                             }
                             if (row.menu.isNotEmpty()) {
                                 Box {
                                     Surface(onClick = { showMenu = true }, modifier = Modifier.size(48.dp), shape = RoundedCornerShape(16.dp), color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.05f), border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f))) {
                                         Box(contentAlignment = Alignment.Center) { Icon(Icons.Default.MoreVert, null, tint = MaterialTheme.colorScheme.onSurfaceVariant) }
                                     }
-                                    // Dark-mode dropdown theming: force an opaque surface + rounded corners.
-                                    val isDark = MaterialTheme.colorScheme.background.luminance() < 0.5f
-                                    val dropdownColor = if (isDark) MaterialTheme.colorScheme.surfaceContainerHigh else MaterialTheme.colorScheme.surfaceContainer
-                                    MaterialTheme(
-                                        colorScheme = MaterialTheme.colorScheme.copy(
-                                            surface = dropdownColor,
-                                            surfaceContainer = dropdownColor,
-                                            surfaceTint = Color.Transparent
-                                        ),
-                                        shapes = MaterialTheme.shapes.copy(extraSmall = RoundedCornerShape(20.dp))
-                                    ) {
+                                    DsMenuTheme {
                                         DropdownMenu(
                                             expanded = showMenu,
                                             onDismissRequest = { showMenu = false },
-                                            modifier = Modifier.border(width = 1.dp, color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f), shape = RoundedCornerShape(20.dp))
+                                            modifier = Modifier.dsMenuBorder()
                                         ) {
                                             row.menu.forEach { item ->
                                                 DropdownMenuItem(

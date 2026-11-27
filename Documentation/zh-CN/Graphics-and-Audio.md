@@ -1,235 +1,80 @@
 <!--
 title: 显示、音频与桌面
-section: 指南
-order: 2
-desc: 在 Android 和 Linux 上为 Droidspaces 容器配置 GPU 加速、PulseAudio 音效与桌面环境自动启动。
-keywords: gpu, acceleration, droidspaces, termux, virgl, turnip, adreno, pulseaudio, sound, audio, desktop, xfce, container, graphics
+section: Guides
+order: 4
+desc: 在 Android 和 Linux 上为 Droidspaces 容器配置 GPU 加速、PulseAudio 音效与自动启动的桌面环境。
+keywords: gpu, acceleration, droidspaces, termux, x11, virgl, turnip, adreno, pulseaudio, sound, audio, desktop, xfce, container, graphics
 -->
 
-# Droidspaces 显示、音频与桌面指南
+# 显示、音频与桌面
 
-本指南介绍如何在 Droidspaces 容器中配置显示、GPU 加速、音效（PulseAudio）以及桌面环境自动启动。在 Android 上，自 **v6.3.0** 起，X 服务器、VirGL 服务器和 PulseAudio 守护进程均会在容器启动时自动拉起 - 无需在 Termux 中手动执行任何命令。
+在 Android 上，只要打开对应的开关，Droidspaces 就会替你启动 Termux:X11 显示服务、VirGL 服务和 PulseAudio 服务，并在容器内设置 `DISPLAY`、`GALLIUM_DRIVER` 和 `PULSE_SERVER`。打开开关、启动容器，图形程序就会在 Termux:X11 应用中打开，声音从手机扬声器输出。本页涵盖一次性设置、三种渲染方式、声音、开机自启的桌面，以及 Linux 端。像 KDE Plasma 这样的 Wayland 桌面还有第二条路径，见 [Anland](./Anland.md) 页面。
 
 > [!IMPORTANT]
->
-> **Droidspaces 不提供 PulseAudio、Termux:X11 或 virglrenderer-android 软件包。** 这些均为上游 Termux 软件包，由安装脚本安装。Droidspaces 仅负责管理其生命周期（启动、套接字桥接、环境变量注入）。如遇音频质量、设备兼容性、崩溃或任何这些软件包的渲染问题，请向 [Termux packages](https://github.com/termux/termux-packages) 项目反馈，而非 Droidspaces。
+> Droidspaces 不附带 Termux:X11、VirGL 或 PulseAudio。它们是 Termux 的软件包。Droidspaces 负责启动和停止它们，并把它们的 socket 桥接进容器。
 
-### 快速导航
+## 在 Android 上的一次性设置
 
-- [**通用要求（Android）**](#requirements)
-- [**Android 显示与 GPU**](#android)
-    - [01. Termux-X11 + llvmpipe（软件渲染）](#termux-x11)
-    - [02. Termux-X11 + VirGL（非高通 GPU）](#virgl)
-    - [03. Turnip（原生高通/Adreno）](#turnip)
-- [**Android 音效（PulseAudio）**](#pulseaudio)
-- [**桌面环境自动启动**](#de-autoboot)
-- [**Linux 桌面（AMD/Intel）**](#linux)
-
----
-
-<a id="requirements"></a>
-
-## 通用要求（Android）
-
-在设置任何显示、GPU 或音频功能之前，请确保满足以下所有条件：
-
-1. **Droidspaces v6.3.0 或更高版本** — 更新后，**必须完整重启设备**以应用更新的 SELinux 规则。
-
-2. **必须在设备上安装 [Termux](https://github.com/termux/termux-app) 和 [Termux:X11](https://github.com/termux/termux-x11) 两个应用**。
-
-3. **在 Termux 内运行 Droidspaces 安装脚本**（必须执行 — 安装 Termux:X11、VirGL、PulseAudio 并修补音频配置）：
+1. 安装 [Termux](https://github.com/termux/termux-app) 和 [Termux:X11](https://github.com/termux/termux-x11) 两个应用。请从同一来源（F-Droid 或 GitHub）获取，以确保它们由同一密钥签名。
+2. 在 Termux 中运行设置脚本。它会把 Termux:X11、VirGL 和 PulseAudio 安装进 Termux，并针对 Android 的音频栈修改 PulseAudio 的配置：
 
    ```bash
    curl -fsSL https://github.com/ravindu644/Droidspaces-OSS/raw/refs/heads/dev/scripts/setup-termux.sh | bash
    ```
 
-> [!IMPORTANT]
->
-> 此脚本只需运行一次，它会将所有必要的显示和音频依赖项安装到 Termux 中。
-
----
-
-<a id="android"></a>
-
-## Android 显示与 GPU
-
-自 v6.3.0 起，Droidspaces 在容器启动时会自动启动 Termux:X11 X 服务器（以及已配置的 VirGL 服务器），并通过 `/run/droidspaces.env`（从 `/etc/profile.d/droidspaces_env.sh` 符号链接）将所需环境变量注入容器。
+这样就完成了。之后你不需要在 Termux 里手动启动任何东西。
 
 > [!TIP]
->
-> **使用 `zsh`、`fish` 或其他非登录 Shell？**
->
-> 这些 Shell 可能不会自动读取 `/etc/profile.d`。请在容器启动后手动执行：`source /run/droidspaces.env`
->
-> 这将设置 `DISPLAY=:5`，以及（启用 VirGL 时）`GALLIUM_DRIVER=virpipe`。
+> 仓库中的官方 XFCE 镜像会自动启动 XFCE。安装一个，打开 **配置 Termux:X11**，启动容器并打开 Termux:X11 应用，桌面就在那里。[开机自启的桌面](#开机自启的桌面)一节说明了它的接线方式，方便你为其他桌面做同样的事。
 
----
+显示相关的变量通过 `/etc/profile.d` 为登录 shell 设置。在 `zsh`、`fish` 或其他会跳过它的 shell 中，请在容器启动后执行一次 `source /run/droidspaces.env`。
 
-> [!TIP]
-> **想要开箱即用的桌面体验？**
->
-> 我们的官方 XFCE rootfs 压缩包内置了 **XFCE 自动启动支持**。启用 Termux:X11（或 VirGL）并启动容器后，XFCE 将自动启动并显示在 Termux:X11 应用中 — 无需任何终端命令。
->
-> 从 [Rootfs 仓库](./Usage-Android-App.md#rootfs-仓库)（搜索"XFCE"）下载，或直接从 [Droidspaces Rootfs Builder Releases](https://github.com/Droidspaces/Droidspaces-rootfs-builder/releases/latest) 下载。
+## Android 上的三种渲染方式
 
----
+| | 适用设备 | 速度 | 开关 |
+|---|---|---|---|
+| **llvmpipe** | 所有设备 | 软件渲染，桌面和 2D 应用够用 | 配置 Termux:X11 |
+| **VirGL** | Mali、PowerVR 及其他非高通 GPU | 通过 Termux 中的桥接实现硬件加速 | 配置 Termux:X11 和 配置 VirGL 3D 加速功能 |
+| **Turnip** | 高通 Adreno | 接近原生，GPU 由容器内部驱动 | GPU 访问 和 配置 Termux:X11，关闭 VirGL |
 
-<a id="termux-x11"></a>
+### llvmpipe
 
-### 01. Termux-X11 + llvmpipe
+在容器配置中打开 **配置 Termux:X11**，然后启动容器。当 Termux:X11 应用显示出 X 形光标时，服务就绪。在容器内，`glxgears` 或 `startxfce4` 会在 Termux:X11 中打开。无需其他设置，也不需要硬件访问。
 
-通过 `llvmpipe` 进行软件渲染。兼容性最强的方式 — 适用于任何设备，无论 GPU 厂商。
+### VirGL
 
-#### 设置步骤
+打开 **配置 Termux:X11** 和 **配置 VirGL 3D 加速功能**，然后启动容器。容器内的 OpenGL 调用会发送到 Termux 中的 VirGL 服务，由它运行在手机的 GPU 上。容器内执行 `glxinfo | grep renderer`，正常工作时会显示 VirGL。
 
-1. 打开 Droidspaces 应用，进入**编辑容器配置**。
-2. 启用 **配置 Termux:X11** 开关并保存。
-3. 启动容器。Droidspaces 将自动启动 Termux:X11 X 服务器 — Termux:X11 应用将显示 **"X" 光标**，确认服务器已就绪。
-4. 在容器内打开终端，运行任意 GUI 程序：
+如果 VirGL 启动失败，请在 **VirGL 额外参数** 中填入 `--angle-vulkan`，把它切换到 Vulkan 后端。
 
-   ```bash
-   glxgears
+### Turnip
+
+Turnip 是 Mesa 面向 Adreno 的开源 Vulkan 驱动，配合 Zink 还能提供 OpenGL。容器直接与 GPU 通信，因此需要 GPU 节点以及带 Turnip 的 Mesa 构建。
+
+1. 在容器内安装带 Turnip 的 Mesa，步骤参见 [Mesa for Android Container](https://github.com/lfdevs/mesa-for-android-container)。
+2. 在容器配置中打开 **GPU 访问** 和 **配置 Termux:X11**，并确保 **配置 VirGL 3D 加速功能** 已关闭。
+3. 在 **高级选项** 下添加两个环境变量：
+
+   ```
+   MESA_LOADER_DRIVER_OVERRIDE=kgsl
+   TU_DEBUG=noconform
    ```
 
-   ```bash
-   startxfce4
-   ```
+4. 启动容器。图形程序现在会在 GPU 上渲染。
 
-   窗口将显示在 Termux:X11 应用中。
+非 root 用户需要加入 `droidspaces-gpu` 组才能打开 GPU 节点：在容器内执行 `usermod -aG droidspaces-gpu <user>`。
 
-> [!NOTE]
->
-> 软件渲染**不需要**启用 **Hardware Access**。
+## Android 上的声音
 
----
+打开 **配置 PulseAudio** 并启动容器。Droidspaces 会在 Termux 中启动 PulseAudio 服务（Android 的音频系统允许它在那里播放），把声音路由到扬声器，将它的 socket 挂载到容器内的 `/tmp/.pulse-socket`，并设置 `PULSE_SERVER`。任何使用 PulseAudio 或 PipeWire 的 PulseAudio 兼容层的程序，声音都会从手机输出。`paplay file.wav` 可以快速测试，`pactl info` 会显示连接状态。
 
-<a id="virgl"></a>
+声音能否工作完全取决于手机：Android 版本、厂商的音频 HAL 以及 Termux 的 PulseAudio 构建。在三星 One UI 6.1 及更新版本上，Droidspaces 会预加载音频模块所需的库；你这边无需操作。
 
-### 02. Termux-X11 + VirGL
+## 开机自启的桌面
 
-通过 `virglrenderer` 桥接为**非高通设备（Mali、PowerVR）**提供硬件加速渲染。将容器中的 OpenGL 调用转换为宿主 Android GPU 可执行的命令。
+Droidspaces 会确保 X 服务的 socket `/tmp/.X11-unix/X5` 在容器的 init 到达 `graphical.target` 之前存在，因此 systemd 单元可以在不产生竞争的情况下启动桌面。官方 XFCE 镜像自带这样一个单元；同样的模式适用于任何桌面。
 
-Droidspaces 会自动启动 X 服务器和 VirGL 服务器，并将 `DISPLAY=:5` 和 `GALLIUM_DRIVER=virpipe` 注入容器环境。
-
-#### 设置步骤
-
-1. 进入**编辑容器配置**。
-2. 同时启用 **配置 Termux:X11** 和 **配置 VirGL 3D 加速** 开关并保存。
-3. 启动容器。两个服务器将自动启动。Termux:X11 应用就绪后会显示 **"X" 光标**。
-4. 在容器内运行任意 GUI 程序：
-
-   ```bash
-   glxgears
-   ```
-
-   在渲染器字符串中查找 **"VirGL"** 以确认加速已生效。
-
-   ```bash
-   startxfce4
-   ```
-
-> [!TIP]
->
-> **如果 VirGL 渲染器初始化失败**，可在容器配置的 **VirGL 额外参数**字段中传入 Vulkan 后端标志：
->
-> `--angle-vulkan`
-
----
-
-<a id="turnip"></a>
-
-### 03. Turnip（原生高通/Adreno）
-
-使用开源 Turnip Mesa 驱动为**高通 Adreno GPU** 提供接近原生的硬件加速。完全绕过 VirGL，直接访问 GPU。
-
-#### 要求
-
-- 按照 [Mesa for Android Container 仓库](https://github.com/lfdevs/mesa-for-android-container)的说明安装自定义 Mesa 驱动。
-
-#### 设置步骤
-
-1. 按照 [Mesa for Android Container](https://github.com/lfdevs/mesa-for-android-container) 的说明安装自定义 Mesa 驱动。
-
-2. 进入**编辑容器配置**并进行以下设置：
-   - 启用 **GPU Access** 和 **配置 Termux:X11**。
-   - **禁用** **配置 VirGL 3D 加速** 开关（使用 Turnip 时必须关闭 VirGL）。
-   - 添加以下两个环境变量：
-
-     ```
-     MESA_LOADER_DRIVER_OVERRIDE=kgsl
-     TU_DEBUG=noconform
-     ```
-
-3. 启动容器。Droidspaces 自动启动 X 服务器。
-
-4. 在容器内运行 GUI 程序 — Turnip GPU 加速将自动生效。
-
-> [!NOTE]
->
-> **权限管理（非 root 用户）：** 如果你使用的是非 root 用户，则必须授予其访问 GPU 设备节点的权限：
-`sudo usermod -aG droidspaces-gpu <your_username>`
-
----
-
-<a id="pulseaudio"></a>
-
-## Android 音效（PulseAudio）
-
-Droidspaces 通过 PulseAudio 将 Android 的音频栈桥接到容器中。启用后，PulseAudio 守护进程以 Termux 用户身份在宿主机上运行（从而使 Android 音频 HAL 授予其访问设备扬声器的权限），其 UNIX 套接字以绑定挂载方式挂载到容器的 `/tmp/.pulse-socket`。环境变量 `PULSE_SERVER=unix:/tmp/.pulse-socket` 将自动注入容器，因此容器内支持 PulseAudio 的应用无需任何额外配置即可发出声音。
-
-> [!WARNING]
->
-> PulseAudio 音频直通并非在所有设备上均可用。兼容性取决于 Android 版本、OEM 音频 HAL 实现以及 Termux PulseAudio 构建版本。若你的设备无法正常使用音频，这属于上游软件包在该平台上的已知限制。
-
-#### 要求
-
-- Termux 中必须已安装 PulseAudio - [安装脚本](#requirements)会自动完成此操作。
-
-#### 设置步骤
-
-1. 打开 Droidspaces 应用，进入**编辑容器配置**。
-2. 启用 **配置 PulseAudio** 开关并保存。
-3. 启动容器。Droidspaces 将：
-   - 以 Termux 用户身份启动 PulseAudio 守护进程。
-   - 等待套接字 `/tmp/.pulse-socket` 出现后再继续。
-   - 执行 `pactl set-default-sink AAudio_sink`，将音频路由至设备扬声器。
-   - 将套接字绑定挂载到容器并注入 `PULSE_SERVER`。
-
-   也可以通过 CLI 参数 `--pulse-audio` 启用 PulseAudio。
-
-4. 在容器内安装并运行任意音频应用。由于 `PULSE_SERVER` 已在容器环境中设置，大多数应用无需额外配置即可正常使用：
-
-   ```bash
-   # 测试音频输出
-   paplay /path/to/sound.wav
-   ```
-
-   ```bash
-   # 验证 PulseAudio 连接
-   pactl info
-   ```
-
-> [!NOTE]
->
-> PulseAudio 音效**仅适用于 Android**。在 Linux 桌面端，音频直通通过宿主机自身的 PulseAudio/PipeWire 实现，Droidspaces 无需特殊配置。
-
-> [!NOTE]
->
-> **三星 One UI 6.1+ 设备：** Droidspaces 在启动 PulseAudio 前会自动通过 `LD_PRELOAD` 注入 `libskcodec.so`，以修复三星固件中 OpenSL ES 音频模块的隐藏依赖问题。无需用户进行任何操作。
-
----
-
-<a id="de-autoboot"></a>
-
-## 桌面环境自动启动
-
-自 v6.3.0 起，当容器配置中启用了 Termux:X11 时，Droidspaces 保证 X 服务器套接字（`/tmp/.X11-unix/X5`）在容器 init 系统到达 `graphical.target` 之前已就绪，使基于 systemd 的桌面环境自动启动得以无竞争条件地运行。
-
-### 官方 XFCE 压缩包的实现方式
-
-我们的官方 XFCE rootfs 压缩包内置了完整的自动启动配置，以下是其具体实现：
-
-**1. `xfce-autostart.service` systemd 单元**安装于 `/etc/systemd/system/xfce-autostart.service`，并在 `graphical.target` 下启用：
+该单元位于 `/etc/systemd/system/xfce-autostart.service`：
 
 ```ini
 [Unit]
@@ -239,7 +84,7 @@ After=graphical.target
 [Service]
 Type=simple
 User=root
-ExecCondition=/bin/sh -c "grep -q 'enable_termux_x11=1' /run/droidspaces/container.config"
+ExecCondition=/bin/sh -c "grep -q 'enable_x11=1' /run/droidspaces/container.config"
 ExecCondition=/bin/sh -c "test -S /tmp/.X11-unix/X5"
 ExecStart=/usr/local/bin/xfce-start
 Restart=on-failure
@@ -248,9 +93,9 @@ Restart=on-failure
 WantedBy=graphical.target
 ```
 
-两个 `ExecCondition` 守卫确保 XFCE 仅在条件满足时启动：容器配置中必须启用 Termux:X11，且 X 服务器套接字必须实际存在。若任一条件不满足，systemd 将静默跳过该服务，不产生错误或崩溃循环。
+当 Termux:X11 关闭或 socket 不存在时，这两个条件会让单元保持静默：systemd 会跳过它，而不是报错。
 
-**2. `/usr/local/bin/xfce-start` 启动脚本**负责环境变量读取和用户切换：
+启动脚本 `/usr/local/bin/xfce-start` 会加载 Droidspaces 写入的环境，并以 root 或 `XFCE_USER` 指定的用户身份启动桌面：
 
 ```sh
 #!/bin/sh
@@ -281,121 +126,20 @@ else
 fi
 ```
 
-脚本首先尝试读取 `/run/droidspaces.env`（由 Droidspaces 在启动时写入；包含 `DISPLAY=:5`，若启用 VirGL 则含 `GALLIUM_DRIVER=virpipe`，若启用 PulseAudio 则含 `PULSE_SERVER`）。若环境文件因任何原因缺失，则回退到直接读取容器配置并手动构建环境，确保脚本对 init 系统启动顺序具有鲁棒性。
+要以普通用户运行桌面，请在容器内用 `useradd -m <user>` 创建一个用户，并在容器配置的 **环境变量** 中设置 `XFCE_USER=<user>`。`su -l -w` 只会把显示和音频相关的变量传入该用户的会话。
 
-### `XFCE_USER` 变量
+如果要换成其他桌面，请把这两个文件复制成新名字，把启动脚本里的 `startxfce4` 替换成该桌面的启动命令（例如 `startplasma-x11`），然后用 `systemctl enable` 启用该单元。`XFCE_USER` 这个变量名只是一个约定，你可以随意命名。
 
-默认情况下，`xfce-start` 以 `root` 身份运行 XFCE。若需以非 root 用户运行，请在 Droidspaces 应用的容器**环境变量**配置中设置 `XFCE_USER`：
+## Linux
 
-```
-XFCE_USER=youruser
-```
+在 Linux 宿主机上，GPU 加速不需要桥接：容器会像其他程序一样通过 Mesa 使用宿主机的 GPU。
 
-设置后，脚本使用 `su -l -w "$WHITELIST"` 切换到该用户，同时仅透传必要的环境变量（`DISPLAY`、`GALLIUM_DRIVER`、`PULSE_SERVER` 等），保持会话干净，避免 root 环境泄漏到用户会话中。
+1. 打开 **硬件访问**，或只映射渲染节点时打开 **GPU 访问**，对应 CLI 上的 `--hw-access` 或 `--gpu`。
+2. 允许容器访问你的 X 服务：在宿主机上执行 `xhost +local:`。
+3. 用 `--x11` 启动容器（它会挂载宿主机的 X socket），并在容器的环境文件中设置 `DISPLAY=:0`，或宿主机实际使用的值。
 
-> [!TIP]
->
-> 设置 `XFCE_USER` 前，请确保容器内已存在该用户且有有效的主目录。可通过 `useradd -m youruser` 在容器内创建。
+这样，在容器中启动的图形程序就会带着硬件加速显示在你的桌面上。如果你把宿主机的 PulseAudio 或 PipeWire socket 绑定挂载进去，声音也会通过它输出；Droidspaces 在 Linux 上不管理音频。
 
 ---
 
-### 高级用户：为任意桌面环境配置自动启动
-
-你可以将此模式复制到任意桌面环境（Plasma、GNOME、MATE、i3 等）的任意容器中。
-
-**第一步：** 创建启动脚本 `/usr/local/bin/de-start`：
-
-```sh
-#!/bin/sh
-
-ENV_FILE=/run/droidspaces.env
-CONFIG=/run/droidspaces/container.config
-
-if [ -f "$ENV_FILE" ]; then
-    . "$ENV_FILE"
-    WHITELIST=$(sed -n 's/^export \([A-Za-z_][A-Za-z0-9_]*\)=.*/\1/p' "$ENV_FILE" | tr '\n' ',' | sed 's/,$//')
-else
-    export DISPLAY=:5
-    WHITELIST=DISPLAY
-    if grep -q 'enable_pulseaudio=1' "$CONFIG" 2>/dev/null; then
-        export PULSE_SERVER=unix:/tmp/.pulse-socket
-        WHITELIST="$WHITELIST,PULSE_SERVER"
-    fi
-    if grep -q 'enable_virgl=1' "$CONFIG" 2>/dev/null; then
-        export GALLIUM_DRIVER=virpipe
-        WHITELIST="$WHITELIST,GALLIUM_DRIVER"
-    fi
-fi
-
-DE_CMD="startplasma-x11"   # 替换为你的桌面环境启动命令
-
-if [ -n "$XFCE_USER" ]; then
-    exec su -l -w "$WHITELIST" "$XFCE_USER" -c "exec $DE_CMD"
-else
-    exec $DE_CMD
-fi
-```
-
-```bash
-chmod +x /usr/local/bin/de-start
-```
-
-**第二步：** 创建 systemd 服务 `/etc/systemd/system/de-autostart.service`：
-
-```ini
-[Unit]
-Description=Desktop Environment Autostart
-After=graphical.target
-
-[Service]
-Type=simple
-ExecCondition=/bin/sh -c "grep -q 'enable_termux_x11=1' /run/droidspaces/container.config"
-ExecCondition=/bin/sh -c "test -S /tmp/.X11-unix/X5"
-ExecStart=/usr/local/bin/de-start
-Restart=on-failure
-
-[Install]
-WantedBy=graphical.target
-```
-
-**第三步：** 启用服务：
-
-```bash
-systemctl enable de-autostart.service
-```
-
-下次启用 Termux:X11 启动容器时，你的桌面环境将自动出现在 Termux:X11 应用中。
-
-> [!NOTE]
->
-> `XFCE_USER` 变量名是我们官方压缩包的约定，你可以在自己的脚本中自由重命名。关键在于 `su -l -w "$WHITELIST"` 模式，它实现了干净的用户切换与环境变量透传。
-
----
-
-<a id="linux"></a>
-
-## Linux 桌面端（AMD/Intel）
-
-在基于 Linux 的主机上，GPU 加速在 Droidspaces 中原生运行，无需额外配置。
-
-#### 要求
-- 主机上有一个活跃的 X11 或 Wayland 会话。
-- 正常工作的 GPU 驱动（Mesa/Intel/AMD）。
-
-#### 实施步骤
-
-1. **启用硬件访问**：确保在容器配置中启用了 **Hardware Access** 开关（或使用 `--hw-access` CLI 参数）。
-
-2. **Xhost 权限**：在你的主机上，允许容器连接到你的 X 服务器：
-
-   ```bash
-   xhost +local:
-   ```
-
-3. **设置显示变量**：将主机的 `DISPLAY` 编号添加到容器的环境中（通常是 `:0`）：
-
-   ```bash
-   echo "DISPLAY=:0" >> /etc/environment
-   ```
-
-4. **运行应用程序**：从容器中启动的 GUI 应用程序将以完整的硬件加速进行原生渲染。
+上一页：[Linux CLI](./Linux-CLI.md) | 下一页：[Anland](./Anland.md)

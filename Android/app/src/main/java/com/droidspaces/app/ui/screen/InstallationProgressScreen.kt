@@ -4,9 +4,6 @@ import android.net.Uri
 import android.util.Log
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
-import androidx.compose.animation.animateContentSize
-import androidx.compose.animation.core.Spring
-import androidx.compose.animation.core.spring
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -23,10 +20,11 @@ import com.droidspaces.app.R
 import com.droidspaces.app.ui.component.TerminalConsole
 import com.droidspaces.app.util.ContainerInfo
 import com.droidspaces.app.util.ContainerInstaller
-import com.droidspaces.app.util.ContainerLogger
-import com.droidspaces.app.util.FilePickerUtils
 import com.droidspaces.app.util.ViewModelLogger
+import com.droidspaces.app.util.FilePickerUtils
 import kotlinx.coroutines.launch
+import com.droidspaces.app.ui.component.DialogFooterRow
+import com.droidspaces.app.util.AnsiColorParser
 
 enum class InstallationState {
     INSTALLING,
@@ -51,8 +49,6 @@ fun InstallationProgressScreen(
         ViewModelLogger { level, message ->
             // Direct add to SnapshotStateList - already on Main thread
             logs.add(level to message)
-        }.apply {
-            verbose = true
         }
     }
 
@@ -102,7 +98,9 @@ fun InstallationProgressScreen(
                             InstallationState.INSTALLING -> context.getString(R.string.installing_container)
                             InstallationState.SUCCESS -> context.getString(R.string.installation_complete)
                             InstallationState.ERROR -> context.getString(R.string.installation_failed)
-                        }
+                        },
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold
                     )
                 },
                 navigationIcon = {
@@ -117,86 +115,46 @@ fun InstallationProgressScreen(
             )
         }
     ) { innerPadding ->
-        BoxWithConstraints(
+        Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
-                .padding(horizontal = 24.dp, vertical = 24.dp)
+                .padding(24.dp)
         ) {
-            val consoleMaxHeight = if (installationState == InstallationState.INSTALLING) {
-                maxHeight
-            } else {
-                maxHeight - ButtonDefaults.MinHeight - 12.dp
-            }
+            // The console grows with its lines up to whatever the buttons below leave it.
+            TerminalConsole(
+                logs = logs,
+                isProcessing = installationState == InstallationState.INSTALLING,
+                modifier = Modifier.fillMaxWidth().weight(1f, fill = false)
+            )
 
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .animateContentSize(spring(stiffness = Spring.StiffnessLow))
-            ) {
-                // Terminal Console
-                TerminalConsole(
-                    logs = logs,
-                    isProcessing = installationState == InstallationState.INSTALLING,
-                    modifier = Modifier.fillMaxWidth(),
-                    maxHeight = consoleMaxHeight
-                )
-
-                // Action Buttons
-                when (installationState) {
-                    InstallationState.SUCCESS -> {
-                        Spacer(modifier = Modifier.height(12.dp))
-                        Button(
-                            onClick = onSuccess,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(56.dp),
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = MaterialTheme.colorScheme.primary
-                            )
-                        ) {
-                            Icon(Icons.Default.CheckCircle, contentDescription = null)
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(context.getString(R.string.done), style = MaterialTheme.typography.labelLarge)
-                        }
-                    }
-                    InstallationState.ERROR -> {
-                        Spacer(modifier = Modifier.height(12.dp))
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(12.dp)
-                        ) {
-                            OutlinedButton(
-                                onClick = onError,
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .height(56.dp)
-                            ) {
-                                Text(context.getString(R.string.close), style = MaterialTheme.typography.labelLarge)
-                            }
-                            Button(
-                                onClick = {
-                                    // Copy logs to clipboard
-                                    val logText = logs.joinToString("\n") { it.second }
-                                    val clipboard = context.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
-                                    val clip = android.content.ClipData.newPlainText(context.getString(R.string.installation_logs), logText)
-                                    clipboard.setPrimaryClip(clip)
-                                    Toast.makeText(context, R.string.logs_copied, Toast.LENGTH_SHORT).show()
-                                },
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .height(56.dp)
-                            ) {
-                                Icon(Icons.Default.ContentCopy, contentDescription = null)
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Text(context.getString(R.string.copy_logs), style = MaterialTheme.typography.labelLarge)
-                            }
-                        }
-                    }
-                    InstallationState.INSTALLING -> {
-                        // No buttons during installation
+            when (installationState) {
+                InstallationState.SUCCESS -> {
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Button(
+                        onClick = onSuccess,
+                        modifier = Modifier.fillMaxWidth().height(56.dp),
+                        shape = RoundedCornerShape(16.dp),
+                    ) {
+                        Icon(Icons.Default.CheckCircle, contentDescription = null)
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(context.getString(R.string.done), style = MaterialTheme.typography.labelLarge)
                     }
                 }
+                InstallationState.ERROR -> {
+                    Spacer(modifier = Modifier.height(12.dp))
+                    DialogFooterRow(
+                        dismissLabel = context.getString(R.string.close),
+                        confirmLabel = context.getString(R.string.copy_logs),
+                        onDismiss = onError,
+                        onConfirm = {
+                            val clipboard = context.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
+                            clipboard.setPrimaryClip(android.content.ClipData.newPlainText(context.getString(R.string.installation_logs), logs.joinToString("\n") { AnsiColorParser.stripAnsi(it.second) }))
+                            Toast.makeText(context, R.string.logs_copied, Toast.LENGTH_SHORT).show()
+                        }
+                    )
+                }
+                InstallationState.INSTALLING -> {}
             }
         }
     }

@@ -2,104 +2,78 @@
   version,
   inputs,
   self,
+  lib,
   mkDroidspacesAndroidApp,
   androidAppSource,
   ...
 }: {
   _module.args = {
     mkDroidspacesAndroidApp = pkgs: androidSdk: baseOverrides: let
-      muslBuilds = self.legacyPackages.${pkgs.stdenv.hostPlatform.system}.muslBuilds;
-
-      baseApp =
-        (pkgs.stdenvNoCC.mkDerivation (finalAttrs: {
-          pname = "droidspaces-app-base";
-          inherit version;
-          src = androidAppSource;
-
-          nativeBuildInputs = [
-            pkgs.jdk17
-            pkgs.gradle_8
-            androidSdk
-          ];
-
-          ANDROID_SDK_ROOT = "${androidSdk}/libexec/android-sdk";
-          ANDROID_HOME = "${androidSdk}/libexec/android-sdk";
-          JAVA_HOME = pkgs.jdk17.home;
-
-          mitmCache = pkgs.gradle.fetchDeps {
-            pkg = finalAttrs.finalPackage;
-            data = builtins.fromJSON (builtins.readFile "${inputs.artifacts}/android-gradle-lockfile.json");
-          };
-
-          __darwinAllowLocalNetworking = true;
-
-          gradleFlags = [
-            "-Dfile.encoding=utf-8"
-            "-Pandroid.aapt2FromMavenOverride=${androidSdk}/libexec/android-sdk/build-tools/34.0.0/aapt2"
-            "-Dkotlin.compiler.execution.strategy=in-process"
-          ];
-
-          gradleBuildTask = "assembleRelease";
-          gradleUpdateTask = "assembleRelease";
-
-          preBuild = ''
-            cat <<EOF >> app/build.gradle.kts
-
-            android {
-                lint {
-                    checkReleaseBuilds = false
-                    abortOnError = false
-                }
-            }
-            EOF
-          '';
-
-          installPhase = ''
-            find app/build/outputs/apk -name "*.apk" -exec install -Dm644 {} $out/droidspaces.apk \;
-          '';
-        })).overrideAttrs
-        baseOverrides;
-
-      app = pkgs.stdenvNoCC.mkDerivation (finalAttrs: {
+      # Gradle's buildBackend task runs `make <arch>` for the phone arches and
+      # looks for <triplet>-gcc under MUSL_CROSS, so hand it nixpkgs' musl
+      # cross compilers under the names the Makefile expects.
+      muslCross = pkgs.linkFarm "droidspaces-musl-cross" (lib.mapAttrsToList (triplet: cross: {
+          name = "${triplet}-gcc";
+          path = "${cross.stdenv.cc}/bin/${cross.stdenv.cc.targetPrefix}gcc";
+        }) {
+          "aarch64-linux-musl" = pkgs.pkgsCross.aarch64-multiplatform-musl;
+          "arm-linux-musleabihf" = pkgs.pkgsCross.muslpi;
+          "x86_64-linux-musl" = pkgs.pkgsCross.musl64;
+          "i686-linux-musl" = pkgs.pkgsCross.musl32;
+        });
+    in
+      (pkgs.stdenvNoCC.mkDerivation (finalAttrs: {
         pname = "droidspaces-app";
-        version = baseApp.version;
-
-        passthru.baseApp = baseApp;
+        inherit version;
+        src = androidAppSource;
+        sourceRoot = "${androidAppSource.name}/Android";
 
         nativeBuildInputs = [
-          pkgs.zip
           pkgs.jdk17
+          pkgs.gradle_8
+          pkgs.gnumake
+          androidSdk
         ];
 
-        dontUnpack = true;
+        ANDROID_SDK_ROOT = "${androidSdk}/libexec/android-sdk";
+        ANDROID_HOME = "${androidSdk}/libexec/android-sdk";
+        JAVA_HOME = pkgs.jdk17.home;
+        MUSL_CROSS = muslCross;
 
-        buildPhase = ''
-          mkdir -p assets/binaries
-          cp ${muslBuilds.aarch64}/bin/droidspaces assets/binaries/droidspaces-aarch64
-          cp ${muslBuilds.armhf}/bin/droidspaces assets/binaries/droidspaces-armhf
-          cp ${muslBuilds.x86_64}/bin/droidspaces assets/binaries/droidspaces-x86_64
-          cp ${muslBuilds.x86}/bin/droidspaces assets/binaries/droidspaces-x86
+        mitmCache = pkgs.gradle.fetchDeps {
+          pkg = finalAttrs.finalPackage;
+          data = builtins.fromJSON (builtins.readFile "${inputs.artifacts}/android-gradle-lockfile.json");
+        };
 
-          find ${baseApp} -name "*.apk" -exec cp {} droidspaces-base.apk \;
-          chmod +w droidspaces-base.apk
+        __darwinAllowLocalNetworking = true;
 
-          zip -ur droidspaces-base.apk assets/
+        gradleFlags = [
+          "-Dfile.encoding=utf-8"
+          "-Pandroid.aapt2FromMavenOverride=${androidSdk}/libexec/android-sdk/build-tools/35.0.0/aapt2"
+          "-Dkotlin.compiler.execution.strategy=in-process"
+        ];
 
-          ${androidSdk}/libexec/android-sdk/build-tools/*/zipalign -p -f 4 droidspaces-base.apk droidspaces.apk
+        gradleBuildTask = "assembleRelease";
+        gradleUpdateTask = "assembleRelease";
 
-          keytool -genkeypair -v -keystore temp.keystore -alias droidspaces -keyalg RSA \
-            -keysize 2048 -validity 10000 -storepass android -keypass android -dname "CN=Nix Build, O=Droidspaces"
+        preBuild = ''
+          cat <<EOF >> app/build.gradle.kts
 
-          ${androidSdk}/libexec/android-sdk/build-tools/34.0.0/apksigner sign --ks \
-            temp.keystore --ks-pass pass:android --key-pass pass:android droidspaces.apk
+          android {
+              lint {
+                  checkReleaseBuilds = false
+                  abortOnError = false
+              }
+          }
+          EOF
         '';
 
+        # The APK carries the backend it built, signed by the build's own debug key
         installPhase = ''
-          install -Dm644 droidspaces.apk $out/droidspaces.apk
+          find app/build/outputs/apk -name "*.apk" -exec install -Dm644 {} $out/droidspaces.apk \;
         '';
-      });
-    in
-      app;
+      })).overrideAttrs
+      baseOverrides;
   };
 
   perSystem = {
@@ -111,8 +85,9 @@
     _module.args = {
       androidSdk =
         (pkgs.androidenv.composeAndroidPackages {
-          buildToolsVersions = ["34.0.0"];
-          platformVersions = ["34"];
+          # compileSdk and AGP 8.11 in Android/app/build.gradle.kts
+          buildToolsVersions = ["35.0.0"];
+          platformVersions = ["36"];
           abiVersions = ["arm64-v8a" "armeabi-v7a" "x86_64"];
           includeEmulator = false;
           includeSources = false;
@@ -135,6 +110,7 @@
       nativeBuildInputs = [
         pkgs.jdk17
         pkgs.gradle_8
+        pkgs.gnumake
         androidSdk
       ];
 

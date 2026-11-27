@@ -16,7 +16,8 @@
 
         enableParallelBuilding = true;
 
-        makeFlags = ["droidspaces"];
+        # A musl CC is used as is by the native target, host and cross alike
+        makeFlags = ["native"];
 
         installPhase = ''
           install -Dm755 output/droidspaces $out/bin/droidspaces

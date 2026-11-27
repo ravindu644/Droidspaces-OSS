@@ -1,142 +1,72 @@
 package com.droidspaces.app.ui.component
 
-import androidx.compose.animation.core.Spring
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.spring
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.pulltorefresh.PullToRefreshContainer
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.material3.pulltorefresh.PullToRefreshDefaults
 import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.drawWithContent
-import androidx.compose.ui.graphics.drawscope.rotate
-import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.unit.dp
-import com.droidspaces.app.ui.util.LoadingIndicator
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+import androidx.compose.material3.LoadingIndicator
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 /**
- * Optimized Pull-to-Refresh Wrapper with smooth animations.
- *
- * Key optimizations:
- * - Minimum spin time ensures refresh indicator is visible (better UX)
- * - Hardware-accelerated indicator with graphicsLayer
- * - Material You theming integration
- * - No redundant state management (removed unused triggerRefresh)
- * - Smooth spring animation on release — indicator slides to resting
- *   position instead of teleporting (fixes the jump-on-release bug)
- *
- * Performance characteristics:
- * - 0 allocations in hot path
- * - Hardware-accelerated rendering
- * - Stable nested scroll connection
+ * Pull to refresh around a scrollable, with the app's own [LoadingIndicator] in the bubble.
+ * [onRefresh] runs in a coroutine; the indicator stays up for at least 600 ms so a refresh
+ * that returns instantly still reads as feedback instead of a flicker.
  */
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun PullToRefreshWrapper(
     onRefresh: suspend () -> Unit,
     modifier: Modifier = Modifier,
     content: @Composable () -> Unit
 ) {
-    val pullToRefreshState = rememberPullToRefreshState()
+    var isRefreshing by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
+    val state = rememberPullToRefreshState()
 
-    // Handle pull-to-refresh with minimum visible spin time
-    LaunchedEffect(pullToRefreshState.isRefreshing) {
-        if (pullToRefreshState.isRefreshing) {
-            val startTime = System.currentTimeMillis()
-
-            // Execute the refresh callback
-            onRefresh()
-
-            // Ensure minimum spin time for better UX (indicator actually visible)
-            val elapsed = System.currentTimeMillis() - startTime
-            val minSpinTime = 600L // Reduced from 800ms for snappier feel
-            if (elapsed < minSpinTime) {
-                delay(minSpinTime - elapsed)
+    PullToRefreshBox(
+        isRefreshing = isRefreshing,
+        onRefresh = {
+            if (!isRefreshing) scope.launch {
+                isRefreshing = true
+                val start = System.currentTimeMillis()
+                onRefresh()
+                delay((600 - (System.currentTimeMillis() - start)).coerceAtLeast(0))
+                isRefreshing = false
             }
-
-            pullToRefreshState.endRefresh()
-        }
-    }
-
-    // Smooth spring animation for the indicator's vertical position.
-    //
-    // M3's PullToRefreshContainer internally uses an Animatable for verticalOffset,
-    // but in some BOM versions the Animatable snaps (instead of animating) when
-    // isRefreshing flips to true — causing the visible "jump". We work around this
-    // by reading state.verticalOffset and re-applying it through animateFloatAsState
-    // with a spring so the transition from any pull distance to the resting position
-    // is always a smooth slide.
-    val animatedOffset by animateFloatAsState(
-        targetValue = pullToRefreshState.verticalOffset,
-        animationSpec = spring(
-            dampingRatio = Spring.DampingRatioMediumBouncy,
-            stiffness = Spring.StiffnessMedium
-        ),
-        label = "pullToRefreshOffset"
-    )
-
-    Box(
-        modifier = modifier
-            .fillMaxSize()
-            .nestedScroll(pullToRefreshState.nestedScrollConnection)
-    ) {
-        content()
-
-        // Hardware-accelerated refresh indicator with smooth release animation.
-        // We override the vertical position with our spring-animated offset so that
-        // releasing the pull always produces a smooth slide rather than a teleport.
-        PullToRefreshContainer(
-            state = pullToRefreshState,
-            modifier = Modifier
-                .align(Alignment.TopCenter)
-                .graphicsLayer {
-                    // Replace the container's own offset with our smooth animated value.
-                    // The container positions itself at y=0 (top), so we shift it down
-                    // by the animated offset to match where the finger dragged to, then
-                    // let the spring bring it back to the resting position smoothly.
-                    translationY = animatedOffset - pullToRefreshState.verticalOffset
-                    shadowElevation = 0f
-                },
-            containerColor = MaterialTheme.colorScheme.primaryContainer,
-            contentColor = MaterialTheme.colorScheme.primary,
-            indicator = { state ->
-                val progress = state.progress
-                val isRefreshing = state.isRefreshing
-
-                Box(
-                    modifier = Modifier.size(40.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    if (isRefreshing) {
-                        LoadingIndicator(
-                            modifier = Modifier.size(24.dp),
-                            color = MaterialTheme.colorScheme.primary
-                        )
-                    } else {
-                        LoadingIndicator(
-                            progress = { progress },
-                            modifier = Modifier
-                                .size(24.dp)
-                                .drawWithContent {
-                                    if (progress > 1f) {
-                                        // Rotate the entire shape-morphing path as the pull continues past 1.0
-                                        rotate(-(progress - 1) * 180) {
-                                            this@drawWithContent.drawContent()
-                                        }
-                                    } else {
-                                        drawContent()
-                                    }
-                                },
-                            color = MaterialTheme.colorScheme.primary
-                        )
-                    }
+        },
+        state = state,
+        modifier = modifier.fillMaxSize(),
+        indicator = {
+            PullToRefreshDefaults.IndicatorBox(
+                state = state,
+                isRefreshing = isRefreshing,
+                modifier = Modifier.align(Alignment.TopCenter),
+                containerColor = MaterialTheme.colorScheme.primaryContainer,
+                elevation = 0.dp
+            ) {
+                if (isRefreshing) {
+                    LoadingIndicator(
+                        modifier = Modifier.size(24.dp),
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                } else {
+                    LoadingIndicator(
+                        progress = { state.distanceFraction },
+                        modifier = Modifier.size(24.dp),
+                        color = MaterialTheme.colorScheme.primary
+                    )
                 }
             }
-        )
+        }
+    ) {
+        content()
     }
 }

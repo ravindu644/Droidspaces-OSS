@@ -1,14 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="get_started">Mangrugi</string>
-    <string name="root_check_title">Panang-tsek ti Root Access</string>
     <string name="checking_root">Suksukimaten ti root access…</string>
-    <string name="root_granted">Naipalubos ti Root Access</string>
     <string name="root_denied">Saan a Naipalubos ti Root Access</string>
     <string name="root_required_message">Masapul ti root access tapno maimatonan dagiti container.</string>
     <string name="check_root_access">I-tsek ti Root Access</string>
-    <string name="check_root_access_click">I-klik iti baba tapno ma-tsek ti root access</string>
-    <string name="root_available_message">Mabalinmo nga usaren ti Droidspaces</string>
     <string name="skip">Laktawan</string>
     <string name="continue_button">Ituloy</string>
     <string name="home_title">Home</string>
@@ -19,7 +15,6 @@
     <string name="close">Iserra</string>
     <string name="refresh">I-refresh</string>
     <string name="search">Sapulen</string>
-    <string name="clear">Daldalen</string>
     <string name="container_singular">Container</string>
     <string name="running">Agtartaray</string>
     <string name="backend_checking">Backend: Suksukimaten...</string>
@@ -79,10 +74,8 @@
     <string name="edit_container_configuration">I-edit ti Container Configuration</string>
     <string name="uninstall_container_menu">I-uninstall ti Container</string>
     <string name="status_running">AGTARTARAY</string>
-    <string name="status_restarting">AG-RESTART</string>
     <string name="status_stopped">NAGSARDENG</string>
     <string name="pid_label">PID: %1$d</string>
-    <string name="hostname_label">Hostname: %1$s</string>
     <string name="options_label">Dagiti Opsyon: %1$s</string>
     <string name="start">Irugi</string>
     <string name="stop">Pasardengen</string>
@@ -105,7 +98,6 @@
     <string name="changes_take_effect_after_restart">Maipatungpal dagiti nabaliwan kalpasan ti restart</string>
     <string name="disable_ipv6">Pararen ti IPv6</string>
     <string name="disable_ipv6_description">Pararen ti IPv6 iti daytoy a container. No mapararemen ti IPv6, mabalin a maputil dagiti VPN app iti host.</string>
-    <string name="disable_ipv6_nat_forced">Naparar ti IPv6 iti NAT ken None a network mode.</string>
     <string name="android_storage">Android Storage</string>
     <string name="android_storage_description">I-mount ti Android storage</string>
     <string name="hardware_access">Hardware Access</string>
@@ -127,28 +119,13 @@
     <string name="container_name_exists">Adda container nga agtagikua iti daytoy a nagan</string>
     <string name="next_configuration">Sumaruno: Configuration</string>
     <string name="configuration_title">Configuration</string>
-    <string name="container_options">Dagiti Opsyon ti Container</string>
     <string name="next_storage">Sumaruno: Storage</string>
     <string name="installation_complete">Nalpasen ti Panag-install</string>
     <string name="installation_failed">Napaay ti Panag-install</string>
-    <string name="installing_module">In-install ti Module</string>
     <string name="installing_droidspaces">In-install ti Droidspaces</string>
-    <string name="module_installed_success">Balligi a na-install ti Magisk module</string>
     <string name="backend_installed_success">Napintas ti pannakainstalar ti backend</string>
-    <string name="unknown_error">Adda napasamak a di ammo nga error</string>
     <string name="module_installation_failed">Napaay ti panag-install ti module</string>
     <string name="binary_installation_failed">Napaay ti panag-install ti binary</string>
-    <string name="removing_old_module">Ik-ikkkaten ti daan a module...</string>
-    <string name="extracting_module_files">Ek-ekstraken dagiti file ti module...</string>
-    <string name="installing_module_step">In-install ti module...</string>
-    <string name="setting_permissions">Is-set dagiti permiso...</string>
-    <string name="verifying_installation">Biberipikaren ti installasyon...</string>
-    <string name="preparing_module_installation">Is-isagana ti panag-install ti module...</string>
-    <string name="detected_architecture">Naditektaran nga architecture: %1$s</string>
-    <string name="creating_directories">Agparpartuat kadagiti directory...</string>
-    <string name="installing_binary">In-install ti binary: %1$s</string>
-    <string name="granting_permissions">Mangmangted kadagiti permiso...</string>
-    <string name="preparing_installation">Is-isagana ti panag-install...</string>
     <string name="no_containers_running">Awan ti agtartaray a container</string>
     <string name="start_container_first">Mangirugi nga umuna ti container tapno makitam ditoy</string>
     <string name="systemd_services">Dagiti Serbisyo ti Systemd</string>
@@ -202,7 +179,6 @@
     <string name="copy_login">Kopiaen ti login</string>
     <string name="comma">,</string>
     <string name="gb_size">%1$dGB</string>
-    <string name="sparse_image_configuration">Configuration ti Sparse Image</string>
     <string name="storage_configuration">Configuration ti Storage</string>
     <string name="about_sparse_images">Maipanggep kadagiti Sparse Image</string>
     <string name="sparse_images_recommended">Mairekomenda dagiti sparse image no agus-usar kadagiti container iti encrypted storage, F2FS /data partitions, wenno dadduma pay a filesystem a baka addaan isyu iti compatibility iti direct directory mounting.</string>

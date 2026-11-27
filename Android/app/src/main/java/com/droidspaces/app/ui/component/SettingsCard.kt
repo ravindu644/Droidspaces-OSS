@@ -16,7 +16,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -24,8 +23,8 @@ import androidx.compose.ui.unit.dp
 /**
  * Shared settings-card shell: a rounded `surfaceContainerHigh` [Surface] with a
  * leading icon, a title, an optional [subtitleContent] block and an optional
- * [trailing] slot. [ToggleCard] and [SettingsRowCard] are thin wrappers over
- * this (DT-9) — the two previously duplicated this whole layout.
+ * [trailing] slot.
+ * [ToggleCard] is a thin wrapper over this.
  */
 @Composable
 fun SettingsCard(
@@ -34,11 +33,10 @@ fun SettingsCard(
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
     icon: ImageVector? = null,
-    painter: Painter? = null,
     subtitleContent: (@Composable ColumnScope.() -> Unit)? = null,
     trailing: (@Composable () -> Unit)? = null,
 ) {
-    val alpha = if (enabled) 1f else 0.5f
+    val alpha = if (enabled) 1f else 0.38f
     Surface(
         modifier = modifier.fillMaxWidth(),
         onClick = onClick,
@@ -62,13 +60,6 @@ fun SettingsCard(
                 if (icon != null) {
                     Icon(
                         imageVector = icon,
-                        contentDescription = null,
-                        modifier = Modifier.size(20.dp),
-                        tint = MaterialTheme.colorScheme.primary.copy(alpha = alpha)
-                    )
-                } else if (painter != null) {
-                    Icon(
-                        painter = painter,
                         contentDescription = null,
                         modifier = Modifier.size(20.dp),
                         tint = MaterialTheme.colorScheme.primary.copy(alpha = alpha)

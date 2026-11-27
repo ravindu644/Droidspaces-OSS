@@ -1,15 +1,18 @@
 package com.droidspaces.app.util
 
+import com.droidspaces.app.R
 import android.content.Context
 import android.util.Log
 import androidx.compose.runtime.mutableIntStateOf
 import com.topjohnwu.superuser.Shell
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import org.json.JSONObject
 
 /**
- * Manages OS information reading from container's /etc/os-release.
- * Uses both in-memory and persistent caching for fast access across app restarts.
+ * Live container status (OS name, hostname, IP, uptime, CPU, RAM) from one
+ * `show --json` call, with in-memory and persistent caching so cards render
+ * instantly on the next app start.
  */
 object ContainerOSInfoManager {
     private const val TAG = "ContainerOSInfoManager"
@@ -17,7 +20,7 @@ object ContainerOSInfoManager {
     // In-memory cache for OS info (container name -> OSInfo)
     private val cache = mutableMapOf<String, OSInfo>()
 
-    // Increments every time the icon cache is updated — Composables observe this to re-read icons
+    // Increments every time the icon cache is updated, Composables observe this to re-read icons
     val iconCacheVersion = mutableIntStateOf(0)
 
     // Context for accessing preferences (set when needed)
@@ -25,7 +28,7 @@ object ContainerOSInfoManager {
     private var context: Context? = null
 
     /**
-     * OS information from /etc/os-release and /etc/hostname.
+     * One container's status as reported by `show --json`.
      */
     data class OSInfo(
         val prettyName: String?,
@@ -37,9 +40,23 @@ object ContainerOSInfoManager {
         val ipAddress: String?,
         val uptime: String? = null,
         val cpuUsage: Double? = null,
-        val ramUsageMb: Long? = null,
-        val ramPercent: Double? = null
-    )
+        val ramUsedKb: Long? = null,
+        val ramPercent: Double? = null,
+        /** The memory limit in force. Null when unlimited, and then [ramPercent] is of the host's RAM. */
+        val ramLimitKb: Long? = null,
+        val anlandSocket: String? = null,
+        /** Booted with Termux:X11, from the boot snapshot like [anlandSocket]. */
+        val x11: Boolean = false
+    ) {
+        /** "13.50 MB / 1.50 GB (1%)" under a limit, "13.50 MB (0.2%)" of the host without one.
+         * Each side picks its own unit, the way fastfetch prints memory. */
+        fun ramLabel(context: Context): String? {
+            val used = ResourceLimits.formatMemoryUsage(context, ramUsedKb ?: return null)
+            val percent = ramPercent ?: 0.0
+            return if (ramLimitKb != null) context.getString(R.string.ram_used_of_limit_label, used, ResourceLimits.formatMemoryUsage(context, ramLimitKb), percent)
+            else context.getString(R.string.ram_used_label, used, percent)
+        }
+    }
 
     /**
      * Lightweight fetch: reads only /etc/os-release to get PRETTY_NAME, then caches it.
@@ -57,7 +74,7 @@ object ContainerOSInfoManager {
             val osInfo = parseOSRelease(result.out)
             val existing = cache[containerName]
             if (existing != null) {
-                // Merge into existing full entry — preserve hostname + all live data
+                // Merge into existing full entry, preserve hostname + all live data
                 val updated = existing.copy(
                     prettyName = osInfo.prettyName ?: existing.prettyName,
                     name = osInfo.name ?: existing.name
@@ -67,7 +84,7 @@ object ContainerOSInfoManager {
             } else {
                 // No existing entry: write to persistent prefs only (for icon rendering on next
                 // app start), but skip in-memory cache so getCachedOSInfo returns null and the
-                // ViewModel's getOSInfo(useCache=false) loop populates a full entry with hostname.
+                // ViewModel's fetchAll() loop populates a full entry with hostname.
                 PreferencesManager.getInstance(appContext).saveContainerOSInfo(containerName, osInfo)
             }
             iconCacheVersion.intValue++
@@ -78,134 +95,58 @@ object ContainerOSInfoManager {
     }
 
     /**
-     * Returns cached value if available for instant access.
-     * Uses both in-memory and persistent cache.
+     * One `show --json` round trip: live status of every running container, keyed by
+     * name. A container missing from the result is not running.
      */
-    suspend fun getOSInfo(containerName: String, useCache: Boolean = true, appContext: Context? = null): OSInfo = withContext(Dispatchers.IO) {
-        // Update context if provided
-        if (appContext != null) {
-            context = appContext.applicationContext
-        }
-
-        // Return in-memory cached value if available and caching is enabled
-        if (useCache) {
-            cache[containerName]?.let { return@withContext it }
-
-            // Try persistent cache if in-memory cache is empty
-            val ctx = context
-            if (ctx != null) {
-                val prefsManager = PreferencesManager.getInstance(ctx)
-                val cachedInfo = prefsManager.loadContainerOSInfo(containerName)
-                if (cachedInfo != null) {
-                    // Restore to in-memory cache
-                    cache[containerName] = cachedInfo
-                    return@withContext cachedInfo
-                }
-            }
-        }
-
+    suspend fun fetchAll(appContext: Context): Map<String, OSInfo> = withContext(Dispatchers.IO) {
+        context = appContext.applicationContext
         try {
-            // Get OS release info
-            val osReleaseResult = Shell.cmd(
-                "${Constants.DROIDSPACES_BINARY_PATH} --name=${ContainerCommandBuilder.quote(containerName)} run 'cat /etc/os-release 2>/dev/null || echo'"
-            ).exec()
-
-            val osInfo = if (!osReleaseResult.isSuccess || osReleaseResult.out.isEmpty()) {
-                OSInfo(null, null, null, null, null, null, null)
-            } else {
-                parseOSRelease(osReleaseResult.out)
+            val result = Shell.cmd(ContainerCommandBuilder.buildShowCommand()).exec()
+            if (!result.isSuccess) return@withContext emptyMap()
+            val root = JSONObject(result.out.joinToString(""))
+            val ramTotalKb = root.optLong("ram_total_kb")
+            val running = root.getJSONArray("running")
+            val out = (0 until running.length())
+                .map { running.getJSONObject(it) }
+                .associate { it.getString("name") to toOSInfo(it, ramTotalKb) }
+            val prefs = PreferencesManager.getInstance(appContext)
+            out.forEach { (name, info) ->
+                cache[name] = info
+                // Only persist if we got valid OS info; don't overwrite with a failed fetch
+                if (info.prettyName != null) prefs.saveContainerOSInfo(name, info)
             }
-
-            // Get hostname
-            val hostnameResult = Shell.cmd(
-                "${Constants.DROIDSPACES_BINARY_PATH} --name=${ContainerCommandBuilder.quote(containerName)} run 'cat /etc/hostname 2>/dev/null || hostname 2>/dev/null || echo'"
-            ).exec()
-
-            val hostname = if (hostnameResult.isSuccess && hostnameResult.out.isNotEmpty()) {
-                hostnameResult.out.firstOrNull()?.trim()?.takeIf { it.isNotEmpty() }
-            } else {
-                null
-            }
-
-            // Get IP addresses (IPv4 only, excluding localhost)
-            // Filter out 127.x.x.x addresses and get all other IPv4 addresses
-            val ipResult = Shell.cmd(ContainerCommandBuilder.buildGetIpCommand(containerName)).exec()
-
-            val ipAddress = if (ipResult.isSuccess && ipResult.out.isNotEmpty()) {
-                // Get all lines, filter valid IPv4 addresses (excluding localhost), join with comma
-                val allIps = ipResult.out
-                    .flatMap { it.trim().split("\\s+".toRegex()) }
-                    .filter {
-                        it.isNotEmpty() &&
-                        it.matches(Regex("^\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}$")) &&
-                        !it.startsWith("127.")
-                    }
-                    .distinct()
-
-                if (allIps.isNotEmpty()) {
-                    allIps.joinToString(", ")
-                } else {
-                    null
-                }
-            } else {
-                null
-            }
-
-            // Get live metrics via unified usage command
-            val usageCommand = ContainerCommandBuilder.buildUsageCommand(containerName)
-            val usageResult = Shell.cmd(usageCommand).exec()
-
-            var uptimeValue: String? = null
-            var cpuUsage: Double? = null
-            var ramUsageMb: Long? = null
-            var ramPercent: Double? = null
-
-            if (usageResult.isSuccess && usageResult.out.isNotEmpty()) {
-                var ramUsedKb = 0L
-                var ramTotalKb = 0L
-
-                usageResult.out.forEach { line ->
-                    val parts = line.trim().split("=", limit = 2)
-                    if (parts.size == 2) {
-                        val key = parts[0].trim()
-                        val value = parts[1].trim()
-                        when (key) {
-                            "UPTIME" -> uptimeValue = value.takeIf { it.isNotEmpty() && it != "NONE" }
-                            "CPU_PERMILL" -> {
-                                val permill = value.toDoubleOrNull() ?: 0.0
-                                cpuUsage = (permill / 10.0).coerceIn(0.0, 100.0)
-                            }
-                            "RAM_USED_KB" -> ramUsedKb = value.toLongOrNull() ?: 0L
-                            "RAM_TOTAL_KB" -> ramTotalKb = value.toLongOrNull() ?: 0L
-                        }
-                    }
-                }
-
-                if (ramTotalKb > 0) {
-                    ramUsageMb = ramUsedKb / 1024
-                    ramPercent = (ramUsedKb.toDouble() / ramTotalKb * 100.0).coerceIn(0.0, 100.0)
-                }
-            }
-
-            val finalInfo = osInfo.copy(
-                hostname = hostname,
-                ipAddress = ipAddress,
-                uptime = uptimeValue,
-                cpuUsage = cpuUsage,
-                ramUsageMb = ramUsageMb,
-                ramPercent = ramPercent
-            )
-            // Only persist if we got valid OS info; don't overwrite with a failed fetch
-            cache[containerName] = finalInfo
-            val ctx = context
-            if (ctx != null && (finalInfo.prettyName != null || finalInfo.name != null)) {
-                PreferencesManager.getInstance(ctx).saveContainerOSInfo(containerName, finalInfo)
-            }
-            finalInfo
+            out
         } catch (e: Exception) {
-            Log.e(TAG, "Error reading OS info for $containerName", e)
-            OSInfo(null, null, null, null, null, null, null)
+            Log.e(TAG, "Error fetching container status", e)
+            emptyMap()
         }
+    }
+
+    private fun toOSInfo(obj: JSONObject, ramTotalKb: Long): OSInfo {
+        val ramUsedKb = obj.optLong("ram_used_kb")
+        // Limits in force, 0 when unlimited or when the backend predates them.
+        // Usage is then shown against the container's own allowance instead of
+        // the whole host.
+        val ramLimitKb = obj.optLong("ram_limit_kb")
+        val cpuLimitPermill = obj.optLong("cpu_limit_permill")
+        val ramBaseKb = if (ramLimitKb > 0) ramLimitKb else ramTotalKb
+        val cpuPermill = obj.optLong("cpu_permill")
+        return OSInfo(
+            prettyName = obj.optString("os").ifEmpty { null },
+            name = null,
+            version = null,
+            versionId = null,
+            id = null,
+            hostname = obj.optString("hostname").ifEmpty { null },
+            ipAddress = obj.optString("ip").ifEmpty { null },
+            anlandSocket = obj.optString("anland_sock").ifEmpty { null },
+            x11 = obj.optInt("x11") == 1,
+            uptime = obj.optString("uptime").ifEmpty { null },
+            cpuUsage = (if (cpuLimitPermill > 0) cpuPermill * 100.0 / cpuLimitPermill else cpuPermill / 10.0).coerceIn(0.0, 100.0),
+            ramUsedKb = if (ramTotalKb > 0) ramUsedKb else null,
+            ramPercent = if (ramTotalKb > 0) (ramUsedKb.toDouble() / ramBaseKb * 100.0).coerceIn(0.0, 100.0) else null,
+            ramLimitKb = ramLimitKb.takeIf { it > 0 }
+        )
     }
 
     /**
@@ -231,73 +172,18 @@ object ContainerOSInfoManager {
         return null
     }
 
-    /**
-     * Clear cache for a specific container or all containers.
-     * Clears both in-memory and persistent cache.
-     */
-    fun clearCache(containerName: String? = null, appContext: Context? = null) {
-        val ctx = appContext ?: context
-        if (containerName != null) {
-            cache.remove(containerName)
-            if (ctx != null) {
-                PreferencesManager.getInstance(ctx).clearContainerOSInfo(containerName)
-            }
-        } else {
-            cache.clear()
-            // Note: Clearing all persistent cache would require tracking all container names
-            // For now, just clear in-memory cache. Individual containers can be cleared by name.
-        }
+    /** Forgets one container, in memory and in the persistent cache. */
+    fun clearCache(containerName: String, appContext: Context? = null) {
+        cache.remove(containerName)
+        (appContext ?: context)?.let { PreferencesManager.getInstance(it).clearContainerOSInfo(containerName) }
     }
 
-    /**
-     * Parse /etc/os-release output.
-     */
+    /** KEY=value lines, quotes stripped; the five fields the card shows. */
     private fun parseOSRelease(output: List<String>): OSInfo {
-        var prettyName: String? = null
-        var name: String? = null
-        var version: String? = null
-        var versionId: String? = null
-        var id: String? = null
-
-        for (line in output) {
-            val trimmed = line.trim()
-            when {
-                trimmed.startsWith("PRETTY_NAME=") -> {
-                    prettyName = extractValue(trimmed.substringAfter("="))
-                }
-                trimmed.startsWith("NAME=") -> {
-                    name = extractValue(trimmed.substringAfter("="))
-                }
-                trimmed.startsWith("VERSION=") -> {
-                    version = extractValue(trimmed.substringAfter("="))
-                }
-                trimmed.startsWith("VERSION_ID=") -> {
-                    versionId = extractValue(trimmed.substringAfter("="))
-                }
-                trimmed.startsWith("ID=") -> {
-                    id = extractValue(trimmed.substringAfter("="))
-                }
-            }
+        val kv = output.filter { "=" in it }.associate {
+            it.substringBefore("=").trim() to
+                it.substringAfter("=").trim().removeSurrounding("\"").removeSurrounding("'").ifEmpty { null }
         }
-
-        return OSInfo(prettyName, name, version, versionId, id, null, null, null)
-    }
-
-    /**
-     * Extract and clean value from os-release line (removes quotes, whitespace).
-     */
-    private fun extractValue(value: String): String? {
-        if (value.isEmpty()) return null
-
-        var cleaned = value.trim()
-        // Remove surrounding quotes
-        if (cleaned.startsWith("\"") && cleaned.endsWith("\"")) {
-            cleaned = cleaned.substring(1, cleaned.length - 1)
-        }
-        if (cleaned.startsWith("'") && cleaned.endsWith("'")) {
-            cleaned = cleaned.substring(1, cleaned.length - 1)
-        }
-
-        return cleaned.takeIf { it.isNotEmpty() }
+        return OSInfo(kv["PRETTY_NAME"], kv["NAME"], kv["VERSION"], kv["VERSION_ID"], kv["ID"], null, null, null)
     }
 }

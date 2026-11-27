@@ -7,6 +7,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -24,7 +25,7 @@ import com.droidspaces.app.util.ContainerOSInfoManager
 import com.droidspaces.app.util.IconUtils
 
 /**
- * Container card for Panel tab — shows container name, OS info, resource usage, and quick actions.
+ * Container card for the Panel tab. Shows container name, OS info, resource usage, and quick actions.
  * Receives fully-populated OSInfo from SystemStatsViewModel (single polling source).
  */
 @OptIn(ExperimentalLayoutApi::class)
@@ -33,6 +34,10 @@ fun RunningContainerCard(
     container: ContainerInfo,
     onEnter: () -> Unit = {},
     onTerminalClick: () -> Unit = {},
+    // The display app this container booted with, Anland or Termux:X11. No label, no pill.
+    displayLabel: String? = null,
+    displayIcon: Painter? = null,
+    onLaunchDisplay: () -> Unit = {},
     osInfo: ContainerOSInfoManager.OSInfo? = null,
     modifier: Modifier = Modifier
 ) {
@@ -51,12 +56,12 @@ fun RunningContainerCard(
             modifier = Modifier
                 .fillMaxWidth()
                 .animateContentSize(animationSpec = AnimationUtils.mediumSpec())
-                .padding(horizontal = 16.dp, vertical = 14.dp),
+                .padding(CardContentPadding),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             // Top row: icon, name, terminal pill
             Row(
-                modifier = Modifier.fillMaxWidth().height(32.dp),
+                modifier = Modifier.fillMaxWidth().height(CardHeaderHeight),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -73,6 +78,38 @@ fun RunningContainerCard(
                     fontWeight = FontWeight.SemiBold,
                     modifier = Modifier.weight(1f)
                 )
+
+                // Display app pill beside the terminal one, only once the heartbeat
+                // says the container booted with one, so a tap always has somewhere to go.
+                if (displayLabel != null && displayIcon != null) {
+                    Surface(
+                        onClick = onLaunchDisplay,
+                        shape = RoundedCornerShape(12.dp),
+                        color = MaterialTheme.colorScheme.secondaryContainer,
+                        contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+                        modifier = Modifier.height(30.dp).clip(RoundedCornerShape(12.dp)),
+                        tonalElevation = 0.dp
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 10.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Center
+                        ) {
+                            Icon(
+                                painter = displayIcon,
+                                contentDescription = null,
+                                modifier = Modifier.size(14.dp)
+                            )
+                            Spacer(Modifier.width(6.dp))
+                            Text(
+                                text = displayLabel,
+                                style = MaterialTheme.typography.labelMedium,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    }
+                    Spacer(Modifier.width(8.dp))
+                }
 
                 val sessionCount by remember(container.name) {
                     derivedStateOf {
@@ -131,10 +168,12 @@ fun RunningContainerCard(
             )
 
 
-            // Resource usage row — only shown when we have real data
-            val ramUsedKb = ((osInfo?.ramUsageMb ?: 0L) * 1024L)
+            // Resource usage row, only shown when we have real data. Null is the
+            // only "no data" signal: a container idling under 1 MB reads in KB and
+            // still deserves its chip.
+            val ramUsedKb = osInfo?.ramUsedKb
             val cpuPercent = osInfo?.cpuUsage ?: -1.0
-            if (ramUsedKb > 0 || cpuPercent >= 0.0) {
+            if (ramUsedKb != null || cpuPercent >= 0.0) {
                 Surface(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(10.dp),
@@ -158,7 +197,7 @@ fun RunningContainerCard(
                                 Icon(
                                     imageVector = Icons.Default.Speed,
                                     contentDescription = null,
-                                    modifier = Modifier.size(13.dp),
+                                    modifier = Modifier.size(16.dp),
                                     tint = MaterialTheme.colorScheme.primary
                                 )
                                 Text(
@@ -169,7 +208,7 @@ fun RunningContainerCard(
                                 )
                             }
                         }
-                        if (ramUsedKb > 0) {
+                        if (ramUsedKb != null) {
                             Row(
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.spacedBy(4.dp)
@@ -177,12 +216,11 @@ fun RunningContainerCard(
                                 Icon(
                                     imageVector = Icons.Default.Memory,
                                     contentDescription = null,
-                                    modifier = Modifier.size(13.dp),
+                                    modifier = Modifier.size(16.dp),
                                     tint = MaterialTheme.colorScheme.secondary
                                 )
-                                val ramMb = osInfo?.ramUsageMb ?: 0L
                                 Text(
-                                    text = "${context.getString(R.string.ram)} ${context.getString(R.string.ram_percent_label, ramMb.toInt(), osInfo?.ramPercent ?: 0.0)}",
+                                    text = "${context.getString(R.string.ram)} ${osInfo.ramLabel(context)}",
                                     style = MaterialTheme.typography.labelSmall,
                                     fontWeight = FontWeight.Medium,
                                     color = MaterialTheme.colorScheme.secondary

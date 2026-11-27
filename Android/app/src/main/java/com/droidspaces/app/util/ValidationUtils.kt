@@ -8,8 +8,6 @@ import com.droidspaces.app.R
  * All validation logic in one place for consistency and maintainability.
  */
 object ValidationUtils {
-    const val MAX_CONTAINER_NAME_LENGTH = 17  // 63 - len("/data/local/Droidspaces/Containers/") - len("/rootfs.img")
-
     /**
      * Normalizes a container name before it is stored or used to build paths.
      * Trims leading/trailing whitespace and collapses internal whitespace runs to a
@@ -31,11 +29,6 @@ object ValidationUtils {
                     ?: "Container name cannot be empty"
                 ValidationResult.Error(message)
             }
-            name.length > MAX_CONTAINER_NAME_LENGTH -> {
-                val message = context?.getString(R.string.error_container_name_too_long)
-                    ?: "Name too long — max $MAX_CONTAINER_NAME_LENGTH characters"
-                ValidationResult.Error(message)
-            }
             !name.matches(Regex("^[a-zA-Z0-9_\\s.-]+$")) -> {
                 val message = context?.getString(R.string.error_container_name_invalid)
                     ?: "Container name can only contain letters, numbers, hyphens (-), underscores (_), dots (.), and spaces"
@@ -46,10 +39,9 @@ object ValidationUtils {
     }
 
     /**
-     * The character-safety half of [validateContainerName], WITHOUT the length
-     * limit. Used to drop a container whose on-disk config name carries shell
-     * metacharacters before it can reach a root command — while still loading
-     * over-length-but-safe legacy names. See VULN V10.
+     * The character-safety half of [validateContainerName], without the empty check.
+     * Used to drop a container whose on-disk config name carries shell metacharacters
+     * before it can reach a root command.
      */
     fun isSafeContainerName(name: String): Boolean =
         name.isNotEmpty() && name.matches(Regex("^[a-zA-Z0-9_\\s.-]+$"))
@@ -80,20 +72,47 @@ object ValidationUtils {
             .trim('-')
     }
 
-    /** Count non-comment `key=value` lines in an env-file body. */
-    fun countEnvVars(content: String?): Int {
-        if (content.isNullOrBlank()) return 0
-        return content.lines()
-            .map { it.trim() }
-            .count { it.isNotEmpty() && !it.startsWith("#") && it.contains("=") }
+    /**
+     * Key of a `KEY=VALUE` env-file line, null if the backend would skip it.
+     * Mirrors parse_env_file_to_config() in src/config/parse.c: blank and `#`
+     * lines are ignored, an `export ` prefix is tolerated, and the key must be
+     * `[A-Za-z_][A-Za-z0-9_]*`.
+     */
+    fun envLineKey(line: String): String? {
+        val l = line.trim().removePrefix("export ")
+        if (l.isEmpty() || l.startsWith("#")) return null
+        return ENV_LINE.matchEntire(l)?.groupValues?.get(1)
     }
+    private val ENV_LINE = Regex("([A-Za-z_][A-Za-z0-9_]*)=.*")
+
+    /**
+     * Whether the backend will mount over [dest] inside the container. Mirrors
+     * validate_bind_destination() in src/config/parse.c: absolute, at least one real
+     * path segment (so not "/" or "//", which would cover the rootfs itself),
+     * no "." or ".." segments, no control characters, shorter than PATH_MAX.
+     * Also no ',' or ':', which the bind_mounts=src:dest[:ro],... line uses
+     * as separators, so either would save a different mount than the one typed.
+     */
+    fun isValidBindDestination(dest: String): Boolean {
+        if (!dest.startsWith("/") || dest.length >= 4096 || dest.any { it.isISOControl() }) return false
+        if (!isBindSafe(dest)) return false
+        val segments = dest.split('/').filter { it.isNotEmpty() }
+        return segments.isNotEmpty() && segments.none { it == "." || it == ".." }
+    }
+
+    /** Whether [path] can sit in the bind_mounts line without being split apart. */
+    fun isBindSafe(path: String): Boolean = path.none { it == ',' || it == ':' }
+
+    /** Count the env-file lines the backend will actually apply. */
+    fun countEnvVars(content: String?): Int =
+        content?.lines()?.count { envLineKey(it) != null } ?: 0
 
     /**
      * Reject line breaks / control characters in the single-line container-config
      * values. Each is written as a `key=value` line into the root-owned
      * container.config parsed by the privileged backend, so a newline would inject
-     * an extra trusted key. `envFileContent` is intentionally excluded — it is
-     * legitimately multi-line and written to a separate `.env` file. See VULN V11.
+     * an extra trusted key. `envFileContent` is intentionally excluded, it is
+     * legitimately multi-line and written to a separate `.env` file.
      */
     fun validateConfigValues(config: ContainerInfo): ValidationResult {
         fun hasControl(v: String) = v.any { it.isISOControl() }
@@ -115,6 +134,16 @@ object ValidationUtils {
     const val IFNAME_MAX = 15
     private val IFNAME_REGEX = Regex("^[a-zA-Z0-9_-]+$")
 
+    /**
+     * What a typed interface name may contain, cut at IFNAMSIZ-1 the way the
+     * backend's ds_parse_iface_csv() and the kernel require: a longer name is
+     * dropped at start with no error, and a ',' or ':' would split the config
+     * line. [wildcards] admits the fnmatch() metacharacters that
+     * resolve_pinned_uplink() in src/net/route/uplink.c matches an upstream list by.
+     */
+    fun ifaceNameInput(input: String, wildcards: Boolean = false): String =
+        input.filter { it.isLetterOrDigit() || it in "_-." || (wildcards && it in "*?") }.take(IFNAME_MAX)
+
     /** Effective LAN segment name (empty -> "lan"), mirrors the C runtime default. */
     fun effGatewayNet(net: String): String = net.ifBlank { "lan" }
 
@@ -122,7 +151,7 @@ object ValidationUtils {
     fun effGatewayIface(iface: String): String = iface.ifBlank { "eth1" }
 
     /**
-     * Effective host bridge name. Mirrors gateway_bridge_name() in src/net/network.c:
+     * Effective host bridge name. Mirrors gateway_bridge_name() in src/net/naming.c:
      * explicit bridge wins, else "ds-" + (net filtered to [A-Za-z0-9_-], first 9 chars,
      * or "lan" if empty).
      */
@@ -137,7 +166,7 @@ object ValidationUtils {
     private fun ifaceLikeError(value: String, context: Context?): String? = when {
         value.isBlank() -> null
         value.length > IFNAME_MAX ->
-            context?.getString(R.string.error_iface_too_long) ?: "Too long — max $IFNAME_MAX characters"
+            context?.getString(R.string.error_iface_too_long) ?: "Too long, max $IFNAME_MAX characters"
         !value.matches(IFNAME_REGEX) ->
             context?.getString(R.string.error_gateway_name_chars) ?: "Use only letters, digits, _ or -"
         else -> null
@@ -205,6 +234,115 @@ object ValidationUtils {
 
         return GatewayErrors(containerErr, netErr, ifaceErr, bridgeErr)
     }
+
+    /**
+     * Validates a macvlan-mode configuration. The parent is required. Sharing it
+     * with another macvlan container is only a warning when either side is in
+     * passthru mode: the two cannot run at the same time, but taking turns is
+     * fine, and the backend refuses the second one with the reason if they try.
+     */
+    fun validateMacvlanConfig(
+        selfName: String,
+        netMode: String,
+        parent: String,
+        mode: String,
+        installed: List<ContainerInfo>,
+        context: Context? = null
+    ): MacvlanErrors {
+        if (netMode != "macvlan") return MacvlanErrors()
+        if (parent.isBlank()) {
+            return MacvlanErrors(
+                parent = context?.getString(R.string.error_macvlan_parent_required) ?: "Choose the host interface"
+            )
+        }
+        val clash = installed.firstOrNull {
+            it.name != selfName && it.netMode == "macvlan" && it.macvlanParent == parent &&
+                (it.macvlanMode == "passthru" || mode == "passthru")
+        }
+        return MacvlanErrors(
+            warning = clash?.let {
+                context?.getString(R.string.warning_macvlan_passthru_shared, parent, it.name)
+                    ?: "$parent is also used by '${it.name}'. In passthru mode only one of them can run at a time."
+            }
+        )
+    }
+
+    /**
+     * Validates a new port forward against the rules already in the list. Ports
+     * are a single number or an `a-b` range, the container side defaults to the
+     * host side, the two sides of a range must be the same width, and a rule may
+     * not overlap an existing one of the same protocol on either side.
+     */
+    fun validatePortForward(
+        hostPort: String,
+        containerPort: String,
+        proto: String,
+        existing: List<PortForward>,
+        context: Context
+    ): PortForwardErrors {
+        val hostErr = portSpecError(hostPort, context)
+        val contErr = portSpecError(containerPort, context)
+        if (hostErr != null || contErr != null || hostPort.isBlank()) return PortForwardErrors(hostErr, contErr)
+
+        if (containerPort.isNotBlank() && rangeWidth(hostPort) != rangeWidth(containerPort)) {
+            return PortForwardErrors(pair = context.getString(R.string.error_port_width_mismatch))
+        }
+        val newHost = parseRange(hostPort.trim())
+        val newCont = parseRange(containerPort.ifBlank { hostPort }.trim())
+        val overlap = existing.any { ex ->
+            ex.proto == proto && (overlaps(newHost, parseRange(ex.hostPort)) ||
+                overlaps(newCont, parseRange(ex.containerPort ?: ex.hostPort)))
+        }
+        return if (overlap) PortForwardErrors(pair = context.getString(R.string.error_port_overlap)) else PortForwardErrors()
+    }
+
+    private fun portSpecError(spec: String, context: Context): String? {
+        if (spec.isBlank()) return null
+        if (spec.contains("-")) {
+            val parts = spec.split("-")
+            if (parts.size != 2) return context.getString(R.string.error_invalid_range_format)
+            val start = parts[0].toIntOrNull()
+            val end = parts[1].toIntOrNull()
+            if (start == null || end == null) return context.getString(R.string.error_ports_must_be_numbers)
+            if (start !in 1..65535 || end !in 1..65535) return context.getString(R.string.error_port_out_of_range)
+            if (start >= end) return context.getString(R.string.error_start_must_be_less_than_end)
+            return null
+        }
+        val p = spec.toIntOrNull() ?: return context.getString(R.string.error_port_must_be_number)
+        return if (p !in 1..65535) context.getString(R.string.error_port_out_of_range) else null
+    }
+
+    private fun rangeWidth(spec: String): Int = parseRange(spec).let { it.second - it.first }
+
+    private fun parseRange(spec: String): Pair<Int, Int> {
+        val parts = spec.split("-")
+        val start = parts[0].toIntOrNull() ?: 0
+        return start to (parts.getOrNull(1)?.toIntOrNull() ?: start)
+    }
+
+    private fun overlaps(a: Pair<Int, Int>, b: Pair<Int, Int>) = a.first <= b.second && b.first <= a.second
+}
+
+/**
+ * Port-forward validation. [host] and [container] belong to their fields,
+ * [pair] to the rule as a whole (width mismatch, overlap).
+ */
+data class PortForwardErrors(
+    val host: String? = null,
+    val container: String? = null,
+    val pair: String? = null
+) {
+    val isValid: Boolean
+        get() = host == null && container == null && pair == null
+}
+
+/** Macvlan-mode validation. [parent] blocks saving; [warning] does not. */
+data class MacvlanErrors(
+    val parent: String? = null,
+    val warning: String? = null
+) {
+    val isValid: Boolean
+        get() = parent == null
 }
 
 /**

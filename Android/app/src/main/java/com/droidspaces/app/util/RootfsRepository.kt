@@ -46,9 +46,6 @@ sealed class RepoResult {
     data class Error(val message: String) : RepoResult()
 }
 
-/** Maps the device's primary ABI to the arch string used in rootfs.json. */
-fun deviceArch(): String = DeviceArch.suffix()
-
 object RootfsRepository {
 
     private const val OFFICIAL_REPO_URL =
@@ -79,7 +76,7 @@ object RootfsRepository {
             }
         }
 
-        val arch = deviceArch()
+        val arch = DeviceArch.suffix(context)
         val filtered = allAssets.filter { it.architecture == arch }
 
         return@withContext when {
@@ -101,7 +98,7 @@ object RootfsRepository {
         }
     }
 
-    private fun httpGet(url: String): String? {
+    internal fun httpGet(url: String): String? {
         // Refuse cleartext: the rootfs supply chain must not be MITM-able (V13).
         if (!url.startsWith("https://", ignoreCase = true)) return null
         val conn = (URL(url).openConnection() as HttpURLConnection).apply {
@@ -110,7 +107,10 @@ object RootfsRepository {
             setRequestProperty("Accept", "application/vnd.github+json")
             setRequestProperty("X-GitHub-Api-Version", "2022-11-28")
         }
-        if (conn.responseCode != 200) return null
+        if (conn.responseCode != 200) {
+            conn.disconnect()
+            return null
+        }
         val body = conn.inputStream.bufferedReader().readText()
         conn.disconnect()
         return body

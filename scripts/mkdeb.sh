@@ -1,5 +1,5 @@
 #!/bin/bash
-# mkdeb.sh - Debian package builder for Droidspaces
+# mkdeb.sh - Debian packages for the five binaries make all-tarball leaves in output/
 # Copyright (C) 2026 ravindu644 <droidcasts@protonmail.com>
 # SPDX-License-Identifier: GPL-3.0-or-later
 
@@ -9,20 +9,6 @@ BINARY_NAME="droidspaces"
 OUT_DIR="output"
 PKG_RELEASE="1"
 
-usage() {
-    echo "Usage: $0 [arch ...]"
-    echo ""
-    echo "Architectures:"
-    echo "  x86_64    (Debian: amd64)"
-    echo "  aarch64   (Debian: arm64)"
-    echo "  armhf     (Debian: armhf)"
-    echo "  x86       (Debian: i386)"
-    echo "  riscv64   (Debian: riscv64)"
-    echo ""
-    echo "If no architecture is supplied, all built binaries in $OUT_DIR are packaged."
-    exit 1
-}
-
 deb_arch_for() {
     case "$1" in
         x86_64)  echo "amd64" ;;
@@ -31,20 +17,6 @@ deb_arch_for() {
         x86)     echo "i386" ;;
         riscv64) echo "riscv64" ;;
         *)       return 1 ;;
-    esac
-}
-
-detect_arch() {
-    local desc
-    desc=$(file "$1")
-
-    case "$desc" in
-        *x86-64*)                   echo "x86_64" ;;
-        *ARM\ aarch64*)             echo "aarch64" ;;
-        *RISC-V*)                   echo "riscv64" ;;
-        *Intel\ 80386*|*80386*|*i386*) echo "x86" ;;
-        *ARM*)                      echo "armhf" ;;
-        *)                          return 1 ;;
     esac
 }
 
@@ -109,45 +81,14 @@ if ! command -v dpkg-deb >/dev/null 2>&1; then
     exit 1
 fi
 
-VERSION=$(grep "DS_VERSION" "src/include/droidspace.h" | awk '{print $3}' | tr -d '"')
+VERSION=$(grep "DS_VERSION" "src/include/droidspaces.h" | awk '{print $3}' | tr -d '"')
 if [ -z "$VERSION" ]; then
     echo "[-] Error: Could not determine Droidspaces version."
     exit 1
 fi
 
-ARCHES=()
-if [ "$#" -gt 0 ]; then
-    for arch in "$@"; do
-        case "$arch" in
-            -h|--help) usage ;;
-            *) ARCHES+=("$arch") ;;
-        esac
-    done
-else
-    for arch in x86_64 aarch64 armhf x86 riscv64; do
-        if [ -f "$OUT_DIR/$BINARY_NAME-$arch" ]; then
-            ARCHES+=("$arch")
-        fi
-    done
-
-    if [ "${#ARCHES[@]}" -eq 0 ] && [ -f "$OUT_DIR/$BINARY_NAME" ]; then
-        ARCHES+=("$(detect_arch "$OUT_DIR/$BINARY_NAME")")
-    fi
-fi
-
-if [ "${#ARCHES[@]}" -eq 0 ]; then
-    echo "[-] Error: No built Droidspaces binaries found in $OUT_DIR."
-    echo "[!] Build first with: make native or make all-build"
-    exit 1
-fi
-
-for arch in "${ARCHES[@]}"; do
-    if [ -f "$OUT_DIR/$BINARY_NAME-$arch" ]; then
-        package_one "$arch" "$OUT_DIR/$BINARY_NAME-$arch"
-    elif [ "${#ARCHES[@]}" -eq 1 ] && [ -f "$OUT_DIR/$BINARY_NAME" ]; then
-        package_one "$arch" "$OUT_DIR/$BINARY_NAME"
-    else
-        echo "[-] Error: Binary not found: $OUT_DIR/$BINARY_NAME-$arch"
-        exit 1
-    fi
+# CI runs this once after `make all-tarball`, so all five binaries are there;
+# package_one refuses a missing one.
+for arch in x86_64 aarch64 armhf x86 riscv64; do
+    package_one "$arch" "$OUT_DIR/$BINARY_NAME-$arch"
 done

@@ -26,16 +26,6 @@ suspend fun SnackbarHostState.showError(message: String) {
 }
 
 /**
- * Show info snackbar with short duration.
- */
-suspend fun SnackbarHostState.showInfo(message: String) {
-    showSnackbar(
-        message = message,
-        duration = SnackbarDuration.Short
-    )
-}
-
-/**
  * Show success snackbar from a coroutine scope.
  */
 fun CoroutineScope.showSuccess(snackbarHostState: SnackbarHostState, message: String) {
@@ -50,14 +40,5 @@ fun CoroutineScope.showSuccess(snackbarHostState: SnackbarHostState, message: St
 fun CoroutineScope.showError(snackbarHostState: SnackbarHostState, message: String) {
     launch {
         snackbarHostState.showError(message)
-    }
-}
-
-/**
- * Show info snackbar from a coroutine scope.
- */
-fun CoroutineScope.showInfo(snackbarHostState: SnackbarHostState, message: String) {
-    launch {
-        snackbarHostState.showInfo(message)
     }
 }

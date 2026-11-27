@@ -15,6 +15,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import com.droidspaces.app.ui.component.DsSnackbarHost
+import com.droidspaces.app.ui.theme.JetBrainsMono
 import com.droidspaces.app.R
 import com.droidspaces.app.ui.util.FullScreenLoading
 import com.droidspaces.app.ui.util.ProgressDialog
@@ -22,8 +24,6 @@ import com.droidspaces.app.ui.util.showError
 import com.droidspaces.app.ui.util.showSuccess
 import com.droidspaces.app.util.ContainerSystemdManager
 import kotlinx.coroutines.launch
-
-private val OverrideEditorMono = FontFamily(Font(R.font.jetbrains_mono_regular, FontWeight.Normal))
 
 private const val OVERRIDE_TEMPLATE = "[Service]\n"
 
@@ -87,52 +87,50 @@ fun OverrideEditorScreen(
         }
     }
 
-    Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
-        Scaffold(
-            topBar = {
-                CenterAlignedTopAppBar(
-                    title = {
-                        Text(
-                            context.getString(R.string.edit_override_title, unitName),
-                            style = MaterialTheme.typography.titleSmall,
-                            fontWeight = FontWeight.Bold,
-                            maxLines = 1
-                        )
-                    },
-                    navigationIcon = {
-                        IconButton(onClick = onNavigateBack) {
-                            Icon(Icons.AutoMirrored.Filled.ArrowBack, context.getString(R.string.back))
-                        }
-                    },
-                    actions = {
-                        if (hasExistingOverride) {
-                            IconButton(onClick = { delete() }, enabled = !isSaving) {
-                                Icon(Icons.Default.Delete, context.getString(R.string.delete_override))
-                            }
-                        }
-                        IconButton(onClick = { save() }, enabled = !isSaving) {
-                            Icon(Icons.Default.Save, context.getString(R.string.save_override))
-                        }
-                    },
-                    colors = TopAppBarDefaults.centerAlignedTopAppBarColors(containerColor = Color.Transparent)
-                )
-            },
-            snackbarHost = { SnackbarHost(snackbarHostState) },
-            containerColor = Color.Transparent
-        ) { padding ->
-            Box(modifier = Modifier.padding(padding).fillMaxSize().padding(16.dp)) {
-                if (isLoading) {
-                    FullScreenLoading()
-                } else {
-                    OutlinedTextField(
-                        value = text,
-                        onValueChange = { text = it },
-                        modifier = Modifier.fillMaxSize(),
-                        textStyle = MaterialTheme.typography.bodyMedium.copy(fontFamily = OverrideEditorMono),
-                        shape = RoundedCornerShape(16.dp),
-                        placeholder = { Text(context.getString(R.string.override_placeholder)) }
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = {
+                    // Title carries a unit name, so it stays small enough to survive one line.
+                    Text(
+                        context.getString(R.string.edit_override_title, unitName),
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 1
                     )
-                }
+                },
+                navigationIcon = {
+                    IconButton(onClick = onNavigateBack) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, context.getString(R.string.back))
+                    }
+                },
+                actions = {
+                    if (hasExistingOverride) {
+                        IconButton(onClick = { delete() }, enabled = !isSaving) {
+                            Icon(Icons.Default.Delete, context.getString(R.string.delete_override))
+                        }
+                    }
+                    IconButton(onClick = { save() }, enabled = !isSaving) {
+                        Icon(Icons.Default.Save, context.getString(R.string.save_override))
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
+            )
+        },
+        snackbarHost = { DsSnackbarHost(snackbarHostState) }
+    ) { padding ->
+        Box(modifier = Modifier.padding(padding).fillMaxSize().padding(16.dp)) {
+            if (isLoading) {
+                FullScreenLoading()
+            } else {
+                OutlinedTextField(
+                    value = text,
+                    onValueChange = { text = it },
+                    modifier = Modifier.fillMaxSize(),
+                    textStyle = MaterialTheme.typography.bodyMedium.copy(fontFamily = JetBrainsMono),
+                    shape = RoundedCornerShape(16.dp),
+                    placeholder = { Text(context.getString(R.string.override_placeholder)) }
+                )
             }
         }
     }

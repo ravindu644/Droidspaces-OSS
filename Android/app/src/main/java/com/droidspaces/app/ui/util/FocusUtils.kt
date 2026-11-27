@@ -24,28 +24,11 @@ object FocusUtils {
     fun clearFocusKeyboardActions(): KeyboardActions {
         val focusManager = LocalFocusManager.current
         val keyboardController = LocalSoftwareKeyboardController.current
-        return KeyboardActions(
-            onDone = {
-                focusManager.clearFocus()
-                keyboardController?.hide()
-            },
-            onNext = {
-                focusManager.clearFocus()
-                keyboardController?.hide()
-            },
-            onGo = {
-                focusManager.clearFocus()
-                keyboardController?.hide()
-            },
-            onSearch = {
-                focusManager.clearFocus()
-                keyboardController?.hide()
-            },
-            onSend = {
-                focusManager.clearFocus()
-                keyboardController?.hide()
-            }
-        )
+        val clear = {
+            focusManager.clearFocus()
+            keyboardController?.hide()
+        }
+        return KeyboardActions(onDone = { clear() }, onNext = { clear() }, onGo = { clear() }, onSearch = { clear() }, onSend = { clear() })
     }
 
     /**

@@ -1,9 +1,3 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <plurals name="container_count">
-        <item quantity="one">%d контейнер</item>
-        <item quantity="few">%d контейнера</item>
-        <item quantity="many">%d контейнеров</item>
-        <item quantity="other">%d контейнеров</item>
-    </plurals>
-</resources>
+    </resources>

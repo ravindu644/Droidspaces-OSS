@@ -1,124 +1,96 @@
 <!--
-title: Linux Installation
+title: Linux installation
 section: Basics
 order: 2
-desc: Install Droidspaces on Linux desktop or server. Download the tarball, extract the binary, create a rootfs image, and boot your first container.
-keywords: install, droidspaces, linux, container, runtime, rootfs, tarball, ext, image, namespaces
+desc: Install Droidspaces on a Linux desktop or server: install the binary, get a rootfs, put it in an ext4 image, and boot the first container.
+keywords: install, droidspaces, linux, container, runtime, rootfs, tarball, deb, ext4, image, namespaces
 -->
 
-# Linux Installation Guide
+# Linux installation
 
-This guide covers how to install Droidspaces on a Linux desktop or server.
+Droidspaces is one static binary on Linux. Any current distribution has everything it needs, and the only requirement is root.
 
-## Prerequisites
+## Step 1: Install the binary
 
-Most modern Linux distributions already include everything Droidspaces needs. No special kernel configuration or additional packages are required.
+Every release ships `.deb` packages for amd64, arm64, armhf, i386 and riscv64, and a tarball with the binary for each architecture.
 
-**Requirements:**
-- Root privileges (`sudo`)
-
-## Step 1: Download the Release
-
-Go to the [latest release page](https://github.com/ravindu644/Droidspaces-OSS/releases/latest) and download the **Droidspaces Backend Tarball**.
-
-Alternatively, download it from the command line:
+On Debian, Ubuntu and their derivatives:
 
 ```bash
-# Replace VERSION with the actual version (e.g., v4.3.0)
-wget https://github.com/ravindu644/Droidspaces-OSS/releases/download/VERSION/droidspaces-vVERSION-DATE.tar.gz
+sudo dpkg -i droidspaces_*_amd64.deb
 ```
 
-## Step 2: Extract and Install
-
-### Identify Your Architecture
+On anything else, extract the tarball and copy the binary for your CPU somewhere on your `PATH`. `uname -m` tells you which one: `x86_64`, `aarch64`, `armv7l` (use `armhf`), `i686` (use `x86`) or `riscv64`.
 
 ```bash
-uname -m
+tar -xzf droidspaces-v*.tar.gz
+sudo install -m 755 droidspaces-v*/x86_64/droidspaces /usr/local/bin/droidspaces
 ```
 
-This will output one of: `x86_64`, `aarch64`, `armv7l` (armhf), or `i686` (x86).
-
-### Install the Binary
-
-```bash
-# Extract the tarball
-tar xzf droidspaces-v*.tar.gz
-
-# Navigate into the extracted directory
-cd droidspaces-v*/
-
-# Copy the binary for your architecture to a directory in your PATH
-sudo cp x86_64/droidspaces /usr/local/bin/droidspaces
-
-# Make it executable
-sudo chmod +x /usr/local/bin/droidspaces
-```
-
-## Step 3: Verify Installation
-
-Run the system requirements checker:
+## Step 2: Check the system
 
 ```bash
 sudo droidspaces check
 ```
 
-All checks should pass with green checkmarks. On a modern Linux desktop, everything should be supported out of the box.
+Every line should pass. The optional ones at the bottom cover features such as bridges, macvlan, IPv6 NAT and resource limits, and a missing one only disables that feature.
 
-## Step 4: Get a Rootfs
+## Step 3: Get a rootfs
 
-You need a Linux root filesystem to create your first container. We recommend using the official **Linux Containers image repository**, which provides clean, pre-built rootfs tarballs for dozens of distributions.
-
-**Download URL**: [images.linuxcontainers.org/images/](https://images.linuxcontainers.org/images/)
-
-Navigate to your desired distribution (e.g., `ubuntu/noble/amd64/default/`) and download the `rootfs.tar.xz` file.
+A container needs a root filesystem of the distribution you want to run. The [Linux Containers image server](https://images.linuxcontainers.org/images/) has clean builds of most distributions. Browse to one, for example `ubuntu/noble/amd64/default/`, and download `rootfs.tar.xz`.
 
 > [!IMPORTANT]
-> You **must** use `sudo` when extracting the rootfs tarball in both methods below. This ensures that file ownership (`UID 0`) and special setuid permissions are preserved. Failure to do so will result in a broken container where commands like `sudo` won't function (because the binaries won't be owned by root inside the environment), and system services may fail to start.
+>
+> Extract with `sudo`. Without it the files inside the container are not owned by root, setuid bits are lost, and `sudo` and several services inside the container stop working.
+
+You can keep the rootfs in a directory or in an ext4 image file. The image is one file you can copy to another machine or phone, and it keeps the container's filesystem separate from the host's. Use whichever you prefer.
+
+**A directory:**
+
+```bash
+mkdir ubuntu
+sudo tar -xf rootfs.tar.xz -C ubuntu
+```
+
+**An ext4 image** (the file is sparse, so a 16 GB image takes only the space the container uses):
+
+```bash
+truncate -s 16G ubuntu.img
+mkfs.ext4 -L ubuntu ubuntu.img
+mkdir mnt
+sudo mount ubuntu.img mnt
+sudo tar -xf rootfs.tar.xz -C mnt
+sudo umount mnt
+rmdir mnt
+```
+
+## Step 4: Start, enter, stop
+
+```bash
+sudo droidspaces --name=ubuntu --rootfs=/path/to/ubuntu start
+# or, for an image:
+sudo droidspaces --name=ubuntu --rootfs-img=/path/to/ubuntu.img start
+
+sudo droidspaces --name=ubuntu enter
+sudo droidspaces --name=ubuntu stop
+```
+
+The flags you pass to the first `start` are saved in the container's config file, so later starts only need `--name`. `droidspaces show` lists what is running.
+
+## Optional: run the daemon
+
+The CLI works without a daemon on Linux. Running one lets members of a `droidspaces` group use the CLI without `sudo`, and restarts cleanly with the system. The repository has a systemd unit:
+
+```bash
+sudo groupadd droidspaces
+sudo usermod -aG droidspaces "$USER"
+sudo cp init/systemd-service/droidspaces.service /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable --now droidspaces
+```
+
+The unit expects the binary at `/usr/bin/droidspaces`, which is where the `.deb` puts it. Edit `ExecStart` if yours is elsewhere. Log out and in again for the group to apply.
 
 ---
 
-### Option A: Use a Directory Rootfs
-Simply extract the tarball to a directory:
-
-```bash
-mkdir my-container
-sudo tar -xvf rootfs.tar.xz -C my-container
-```
-
-### Option B: Create an ext4 Image (Recommended)
-Encapsulating your rootfs in a single `.img` file provides better portability and avoids host filesystem conflicts.
-
-1. **Create a sparse image file** (e.g., 16GB):
-   ```bash
-   truncate -s 16G rootfs.img
-   ```
-
-2. **Format it as ext4**:
-   ```bash
-   mkfs.ext4 -L Droidspaces rootfs.img
-   ```
-
-3. **Mount the image**:
-   ```bash
-   mkdir -p rootfs_mount
-   sudo mount rootfs.img rootfs_mount
-   ```
-
-4. **Extract the rootfs tarball to the mountpoint**:
-   ```bash
-   sudo tar -xvf /path/to/rootfs.tar.xz -C rootfs_mount
-   ```
-
-5. **Unmount and clean up**:
-   ```bash
-   sudo umount rootfs_mount
-   rmdir rootfs_mount
-   ```
-
-Now you can boot it instantly using:
-`sudo droidspaces --name=my-container --rootfs-img=rootfs.img start`
-
-## Next Steps
-
-- [Linux CLI Guide](Linux-CLI.md) for complete command and flag reference
-- [Feature Deep Dives](Features.md) for detailed explanations of each feature
+Previous: [Android installation](Installation-Android.md) | Next: [Android app guide](Usage-Android-App.md)

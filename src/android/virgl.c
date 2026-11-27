@@ -1,5 +1,5 @@
 /*
- * Droidspaces v6 - VirGL Server and Socket Manager
+ * Droidspaces v7 - VirGL Server and Socket Manager
  *
  * Manages the virgl_test_server_android daemon lifecycle on Android
  * (spawning, logging, and stopping) and host-to-container socket bridging.
@@ -9,7 +9,7 @@
  */
 
 #define _GNU_SOURCE
-#include "droidspace.h"
+#include "droidspaces.h"
 #include <fcntl.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -20,7 +20,9 @@
 #include <time.h>
 #include <unistd.h>
 
-/* ---- daemon child ----------------------------------------------------- */
+#include "internal.h"
+
+/* daemon child */
 
 struct virgl_args {
   char **extra;
@@ -59,7 +61,7 @@ static void virgl_child_wrapper(int ready_fd, void *user_data) {
   _exit(1);
 }
 
-/* ---- spawn ------------------------------------------------------------ */
+/* spawn */
 
 static pid_t spawn_virgl(const char *extra_flags) {
   /* Parse extra flags in the parent so rejection is visible on the terminal */
@@ -86,7 +88,7 @@ static pid_t spawn_virgl(const char *extra_flags) {
   return child;
 }
 
-/* ---- public API ------------------------------------------------------- */
+/* public API */
 
 int ds_virgl_daemon_start(struct ds_config *cfg) {
   if (!cfg || !cfg->virgl || !is_android())
@@ -104,7 +106,9 @@ int ds_virgl_daemon_start(struct ds_config *cfg) {
   }
 
   /* Reuse existing global server if still alive */
-  pid_t existing = ds_daemon_read_pid("virgl.vpid");
+  pid_t existing = ds_global_daemon_reuse(check_virgl_needs, "virgl.vpid",
+                                          cfg->virgl_extra_flags,
+                                          TX11_VIRGL_SOCKET, "[VirGL]");
   if (existing > 0) {
     ds_log("VirGL: server already running (PID %d)", (int)existing);
     cfg->virgl_pid = existing;
@@ -118,7 +122,7 @@ int ds_virgl_daemon_start(struct ds_config *cfg) {
   pid_t child = spawn_virgl(cfg->virgl_extra_flags);
   if (child > 0) {
     cfg->virgl_pid = child;
-    ds_daemon_write_pid("virgl.vpid", child);
+    ds_daemon_write_pid("virgl.vpid", child, cfg->virgl_extra_flags);
     return 0;
   }
   return -1;
@@ -131,7 +135,7 @@ void ds_virgl_daemon_stop(struct ds_config *cfg) {
                         "virgl.vpid", TX11_VIRGL_SOCKET, "[VirGL]");
 }
 
-/* ---- socket bridge ---------------------------------------------------- */
+/* socket bridge */
 
 int ds_setup_virgl_socket(struct ds_config *cfg) {
   if (!is_android() || !cfg->virgl)

@@ -1,139 +1,146 @@
 <!--
-title: Android 应用使用指南
+title: Android 应用指南
 section: Guides
-order: 4
-desc: Droidspaces Android 应用的完整指南。管理容器、配置网络、统计信息、终端和内核设置。
-keywords: Droidspaces Android app, container manager Android, NAT mode, systemd networkd, terminal usage, kernel settings
+order: 1
+desc: Droidspaces Android 应用的每个界面：主页、容器和面板标签页，容器菜单，rootfs 仓库，终端，服务管理和设置。
+keywords: droidspaces, android, app, guide, containers, panel, terminal, systemd, services, repository, settings, daemon, mode
 -->
 
-# Android 应用使用指南
+# Android 应用指南
 
-Droidspaces 的 Android 应用为管理 Linux 容器提供了精美的图形界面。它抽象化了 namespace 和挂载的复杂性，同时让你对环境拥有高层次的控制。
+应用底部有三个标签页：**主页**、**容器** 和 **面板**，右上角有一个齿轮图标用于打开 **设置**。本页按这个顺序介绍它们。如果你还没有安装容器，请先看[安装指南](./Installation-Android.md)。
 
-## 底部导航
+## 主页
 
-- **主页**：一个仪表盘，展示已安装和正在运行的容器数量、root 可用性状态以及后端版本。
-- **容器**：所有已安装容器的专用管理界面（安装、启动、停止、编辑和卸载）。
-- **面板**：一个集中式仪表盘，用于管理**正在运行的容器**并监控实时**系统统计信息**（CPU、内存、温度等）。
+<p align="center">
+  <img src="../resources/gallery/01-home.png" width="30%">
+</p>
+
+一张状态卡片会显示后端是否已安装且为最新、版本号，以及守护进程是否在运行。下方是已安装和运行中的容器数量，以及设备的内核版本、SELinux 状态、Android 版本和架构。底部的卡片会打开安装指南。
+
+应用更新后会出现"后端：可升级"。点它即可安装新的后端；运行中的容器不受影响。
+
+## 容器
+
+<p align="center">
+  <img src="../resources/gallery/02-containers.png" width="30%">
+  <img src="../resources/gallery/03-container-menu.png" width="30%">
+  <img src="../resources/gallery/15-start-logs.png" width="30%">
+</p>
+
+每个已安装的容器都有一张卡片，显示名称、状态、主机名、网络模式、镜像大小和资源限制，以及已开启的选项。**启动** 会启动容器。会打开一个日志窗口，实时显示后端的输出；操作结束后可以关闭它。**停止** 和 **重启** 同理。容器运行后，卡片会显示其 PID，按钮会变成 **停止** 和 **重启**。
+
+长按卡片可打开菜单：
+
+- **编辑容器配置**：与安装时相同的表单。上面的每项设置都在[容器设置](./Features.md)中有说明。改动在下次启动时生效。
+- **迁移至稀疏镜像**：把目录形式的容器转换为 ext4 镜像文件。
+- **调整稀疏镜像容量**：修改镜像容器的上限。
+- **将容器导出为 tar 归档包**：把 rootfs 及其设置打包成可在另一台手机上安装的 `.tar.gz`。除非你选择包含环境变量，否则它们会被排除，因为其中常常含有敏感信息。
+- **卸载容器**：如果容器正在运行则先停止，然后删除其 rootfs 和设置。你需要输入容器名确认。残留内容见[卸载](./Uninstallation.md)。
+
+**+** 按钮用于添加容器，来源可以是 **仓库** 或 **从文件安装**。
+
+### 仓库
+
+<p align="center">
+  <img src="../resources/gallery/04-add-container.png" width="30%">
+  <img src="../resources/gallery/05-repository.png" width="30%">
+</p>
+
+这里列出了为 Droidspaces 构建的发行版，并按你设备的架构过滤。可以按名称搜索。**下载** 会把 tarball 下载到你的下载文件夹，并在卡片上显示进度；完成后会有通知，按钮会变成 **安装**。下载失败会出现 **重试** 按钮；之前下载过的 tarball 会在下次打开该面板时被识别。
+
+面板顶部的 **管理仓库** 让你订阅其他发布 `rootfs.json` 的源。值得添加的是 Linux Containers 镜像，它提供官方仓库没有构建的发行版和版本：
+
+```
+https://raw.githubusercontent.com/Droidspaces/linuxcontainers-mirror/refs/heads/main/rootfs.json
+```
+
+### 从文件安装
+
+从手机存储中选择一个 `.tar.xz` 或 `.tar.gz` 的 rootfs 归档。从 Droidspaces 导出的容器会带上其设置，并自动填入向导，之前会有一个警告页供你检查。其他任何 rootfs tarball 也可以，只要它带有 init 系统。
+
+### 设置向导
+
+<p align="center">
+  <img src="../resources/gallery/16-wizard-name.png" width="30%">
+  <img src="../resources/gallery/17-wizard-config.png" width="30%">
+  <img src="../resources/gallery/18-wizard-network.png" width="30%">
+</p>
+<p align="center">
+  <img src="../resources/gallery/19-wizard-limits.png" width="30%">
+  <img src="../resources/gallery/20-wizard-storage.png" width="30%">
+  <img src="../resources/gallery/21-wizard-summary.png" width="30%">
+</p>
+
+先填名称和主机名，然后是配置表单，接着是存储，最后是概要。[安装指南](./Installation-Android.md#设置向导)逐步介绍了整个过程，[容器设置](./Features.md)解释了每个开关。
+
+## 面板
+
+<p align="center">
+  <img src="../resources/gallery/09-panel.png" width="30%">
+  <img src="../resources/gallery/10-container-details.png" width="30%">
+</p>
+
+这里只显示运行中的容器，每个都带有运行时间、IP 地址、CPU 和内存。设置了内存或 CPU 限制时，用量会按限制显示。**终端** 可以直接从卡片打开 shell；开启了 [Anland 显示](./Anland.md)的容器，在桌面就绪后旁边会出现一个 **启动** 按钮。点卡片上的其他位置会打开容器详情。
+
+### 容器详情
+
+- **容器信息**：发行版、主机名、运行时间、IP 地址、CPU 和内存。
+- **终端**：点 **打开** 获取 shell。已有会话在运行时，卡片会提示，点它即可回到这些会话。
+- **可用用户**：rootfs 中的用户账号。选择一个并点 **复制登录命令**，即可把该用户的 `droidspaces enter` 命令复制到剪贴板，供 Termux 或其他 root shell 使用。
+- **磁盘占用**：已用空间和总空间。
+- **Init 系统**：点 **管理** 控制服务。具体内容取决于 init 系统。
+
+### 管理服务
+
+<p align="center">
+  <img src="../resources/gallery/11-systemd-services.png" width="30%">
+</p>
+
+**Systemd：** 列表显示每个单元及其状态，并可按全部、已启用、已禁用、已屏蔽、静态或异常状态的单元筛选。每个单元都可以启动、停止、重启、启用、禁用或屏蔽，**查看日志** 会显示其 journal。**检查单元** 会打开单元属性、依赖关系和 `systemctl status` 输出，**编辑覆盖配置** 可以为它写入 drop-in，这样无需在容器里使用文本编辑器就能修改服务设置。
+
+**OpenRC**、**OpenWrt (procd)** 和 **runit** 会得到相同的列表，支持启动、停止、重启、启用和禁用，OpenWrt 上还支持重载，runit 上还有一个开机运行开关，用于添加或删除该服务的 `down` 文件。
+
+## 终端
+
+<p align="center">
+  <img src="../resources/gallery/12-terminal.png" width="30%">
+  <img src="../resources/gallery/22-terminal-settings.png" width="30%">
+</p>
+
+内置终端会以你选择的用户身份在容器中打开 shell。标签页以 `user@hostname` 命名；**+** 标签页会打开另一个会话，每次都会询问用户。会话运行在前台服务中，因此离开界面、切换应用和息屏都不会中断；通知里有退出按钮和唤醒锁开关。
+
+双指缩放可以改变文字大小。点终端会打开键盘。**设置** 下的 **终端** 页面可以设置字体（支持导入自定义等宽字体）、初始字号、仅对终端页面生效的深色模式、关闭标签页前的确认，以及 **轻触即可打开键盘**。在编辑器里工作时可以关掉后者，这样轻触只会移动光标；终端中会出现一个键盘按钮，用于打开和关闭键盘。
+
+## 设置
+
+<p align="center">
+  <img src="../resources/gallery/13-settings.png" width="30%">
+  <img src="../resources/gallery/14-requirements-check.png" width="30%">
+</p>
+
+**后端**
+
+- **重新安装后端**：重新写入二进制和启动模块。如果主页报告后端已损坏，就用它。
+- **守护进程模式**：默认开启。后端作为系统守护进程在开机时启动，位于 root shell 之外，从而绕过 Magisk 和 APatch 加在 root shell 上的 seccomp 过滤器。保持开启；修改后需要重启。
+- **将 Droidspaces 集成到系统路径中**：通过启动模块把 `droidspaces` 放到每个 root shell 的 `PATH` 中，这样你可以直接输入 `droidspaces`，而不必输入 `/data/local/Droidspaces/bin/droidspaces`。请阅读开关上的警告：在基于 OverlayFS 的模块系统上会导致无限重启。
+- **自启动优先级**：设置了开机自启动的容器的启动顺序。拖动即可调整。网关容器要排在使用它做路由的容器之上。
+- **要求**：列出 Droidspaces 所需的内核选项，并提供一个供内核构建者使用的复制按钮；**检查要求** 会针对当前运行的内核执行全部探测。
+
+**外观**：语言、浅色和深色主题、AMOLED 黑色、Android 12 及以上的系统调色板、强调色，以及上面的终端设置。
+
+**更新**：检查应用的新版本。
+
+**调试**：**生成错误报告** 会把日志和设备信息收集到一个文件中，方便附在 issue 里。
+
+**实验性**：仅当 ROM 是 32 位而内核是 64 位时，才会显示 **使用 64 位后端**，它会把后端切换到 64 位版本。
+
+**关于**：版本、开发者、源码链接、Telegram 频道和贡献者。
+
+## 数据在哪里
+
+后端创建的所有内容都在 `/data/local/Droidspaces` 下：二进制在 `bin/`，每个容器的 rootfs 或镜像及其 `container.config` 在 `Containers/<name>/`，日志在 `Logs/`。应用只读写这里；卸载应用不会影响它，守护进程会继续运行。
 
 ---
 
-## 容器标签页
-
-该标签页允许你使用"+"图标安装容器，并列出所有已安装的环境。每个容器都有一张控制卡片：
-
-- **安装按钮（+）**：安装一个新容器。
-- **启动按钮**：启动容器并引导 init 系统。
-- **停止按钮**：向容器的 init 发送优雅的关机信号。
-- **循环按钮**：快速重启容器。
-- **终端图标（日志）**：提供对容器上一次启动、停止和重启序列的持久会话日志的访问。
-
-> [!TIP]
->
-> 你可以通过**长按**容器卡片来**编辑容器配置**或**卸载**已安装的容器。还可以迁移到基于 `rootfs.img` 的容器或调整现有 `rootfs.img` 的大小！
-
----
-
-## Rootfs 仓库
-
-容器选项卡中 "+" 按钮上方的**云图标**可打开 Rootfs 仓库——一个内置的发行版浏览器，让你无需离开应用即可下载和安装 Linux rootfs 镜像。
-
-### 使用方法
-
-1. 点击容器选项卡中的**云图标**。
-2. 面板打开后，会从 [Droidspaces 官方仓库](https://github.com/Droidspaces/Droidspaces-rootfs-builder) 加载可用发行版，仅显示与你设备架构匹配的镜像。
-3. 使用搜索栏按名称、描述或作者**搜索**列表。
-4. 在发行版卡片上点击**下载**。进度条会实时显示下载进度，文件保存到你的下载文件夹。
-5. 下载完成后，按钮切换为**安装**。点击它即可直接进入容器设置向导。
-
-> [!NOTE]
-> 如果下载失败，卡片上会显示**重试**按钮。重新启动应用时，之前已下载的文件会被自动识别——安装按钮将直接可用。
-
-### 添加自定义仓库
-
-仓库支持使用相同 JSON 格式的第三方 rootfs 来源。
-
-1. 点击面板头部的**设置图标**（刷新图标左侧）。
-2. 输入**名称**和指向有效 `rootfs.json` 的 **URL**。
-3. 点击**添加**，然后点击**保存**。面板将刷新并合并所有来源的结果。
-
-> [!TIP]
-> 如需获得更丰富的发行版选择，可将官方 LXC 镜像源添加为自定义仓库：
-> - **名称**：随意填写（例如 `LXC Mirror`）
-> - **URL**：`https://raw.githubusercontent.com/Droidspaces/linuxcontainers-mirror/refs/heads/main/rootfs.json`
-
----
-
-## 网络配置
-
-在编辑或创建容器时，你可以从三种网络模式中进行选择：
-
-- **Host（默认）**：直接共享宿主机网络。
-- **NAT（隔离）**：拥有独立的网络 namespace，支持确定性 IP 和端口转发。
-- **None**：无网络访问。
-
-### 配置上游接口（NAT 模式）
-如果你选择了 **NAT（隔离）**模式，你**必须**指定一个或多个上游接口，容器才能访问互联网。应用提供了便捷的自动检测工作流程：
-
-1. **检测 Wi-Fi**：连接到你的 Wi-Fi 网络，然后按"上游接口"菜单中的刷新按钮。选择出现的接口（通常是 `wlan0`）。
-2. **检测移动数据**：关闭 Wi-Fi 并连接到移动数据。再次按刷新按钮，然后选择移动数据接口（例如 `rmnet0`、`ccmni1`）。
-3. **保存**：Route Monitor 将使用这两个接口，确保在切换网络时你的容器不会断开连接。
-
-> [!TIP]
-> 你可以在上游接口列表中手动输入通配符（例如 `rmnet*`），以确保即使运营商在不同的接口名称之间轮换（如 `rmnet_data0` 和 `rmnet_data1`）也能保持连接。
-
-> [!NOTE]
-> NAT 模式仅支持 IPv4。如果你的运营商只提供 IPv6，请参阅 [IPv4 NAT 解决方法](./Troubleshooting.md#ipv4-quirks)。
-
-### 端口转发
-在 NAT 模式下，使用**端口转发**部分将宿主机端口映射到容器端口（例如 `22:22`）。你也可以指定**端口范围**（例如 `1000-2000:1000-2000`）来满足需要多个连续端口的服务。
-
----
-
-## 面板标签页（活跃环境）
-
-**面板**标签页专注于正在运行的容器。点击一张运行中的容器卡片即可打开**详情屏幕**。
-
-### 容器详情屏幕
-该屏幕提供了对运行环境的深入洞察：
-- **容器信息**：显示 Pretty Name、版本、每个容器的运行时间、主机名和 **IP 地址（IPv4）**。
-- **可用用户**：列出 rootfs 中检测到的用户。
-- **复制登录命令**：从下拉菜单中选择一个用户并点击此项，可复制类似 `su -c 'droidspaces enter [user]'` 的命令。
-- **终端**：原生在 Droidspaces 应用中打开一个交互式终端模拟器，进入容器内部！
-- **Systemd**：如果容器使用 systemd，会显示一个"管理"按钮。点击它会打开所有 systemd 服务的列表，允许你直接从应用中启动、停止或重启单个服务（例如 SSH、Nginx 或 VNC 服务器）。
-
----
-
-## 访问容器 Shell
-
-Droidspaces 提供了两种主要方式来与运行中的 Linux 容器交互。无论是想在应用内快速查看，还是想在你最喜欢的终端中获得功能齐全的会话，我们都能满足你的需求。
-
-### 方法 1：内置终端（v5.7.0+）
-
-这是无需离开 Droidspaces 应用即可快速运行命令的最便捷方式。
-
-1.  确保容器处于**运行中**状态。
-2.  导航到**面板**标签页，点击容器以打开其**详情**。
-3.  找到**终端**卡片并点击**打开**。
-4.  选择你要登录的**用户**（例如 `root` 或你的默认用户）。
-5.  一个交互式终端将直接在应用内启动。
-
-### 方法 2：外部终端（复制登录）
-
-对于喜欢使用 **Termux**、**ADB** 或其他终端模拟器的高级用户，Droidspaces 允许你将外部会话"附加"到容器。
-
-1.  确保容器处于**运行中**状态。
-2.  在**面板**标签页中打开容器**详情**。
-3.  从下拉菜单中选择你想要的用户。
-4.  点击**复制登录命令**。这会将类似 `su -c 'droidspaces --name=[name enter [user]'` 的命令复制到你的剪贴板。
-5.  打开你偏好的终端（例如 Termux）并**粘贴**该命令。
-6.  **运行**该命令（确保你的终端已从 root 管理器获取 root 权限）。
-
----
-
-## 设置与要求
-
-通过右上角的齿轮图标访问：
-- **要求**：对你的内核运行 27 项诊断检查。
-- **内核配置**：提供一份专门针对你设备的可复制 `droidspaces.config` 片段。
-- **主题引擎**：支持 AMOLED 黑、Material You、更改强调色以及浅色/深色模式。
+上一页：[Linux 安装](./Installation-Linux.md) | 下一页：[容器设置](./Features.md)

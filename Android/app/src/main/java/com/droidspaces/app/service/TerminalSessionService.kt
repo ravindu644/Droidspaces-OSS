@@ -7,7 +7,9 @@ import android.net.Uri
 import android.content.pm.ServiceInfo
 import android.os.Binder
 import android.os.Build
+import android.os.Handler
 import android.os.IBinder
+import android.os.Looper
 import android.os.PowerManager
 import android.provider.Settings
 import androidx.compose.runtime.mutableStateMapOf
@@ -15,16 +17,16 @@ import androidx.core.app.NotificationCompat
 import com.droidspaces.app.MainActivity
 import com.droidspaces.app.R
 import com.droidspaces.app.ui.terminal.DroidspacesTerminalSession
+import com.droidspaces.app.util.PreferencesManager
 import com.droidspaces.app.ui.terminal.NoOpTerminalSessionClient
 import com.termux.terminal.TerminalSession
 import com.termux.terminal.TerminalSessionClient
 
-data class SessionInfo(val containerName: String, val user: String, val fontSizePx: Int = 30)
+data class SessionInfo(val containerName: String, val user: String, val fontSizePx: Int)
 
 class TerminalSessionService : Service() {
 
     private val sessions = hashMapOf<String, TerminalSession>()
-    val sessionList = mutableStateMapOf<String, SessionInfo>()
 
     private var wakeLock: PowerManager.WakeLock? = null
 
@@ -43,9 +45,11 @@ class TerminalSessionService : Service() {
                 containerUser = user,
             ).also {
                 sessions[sessionId] = it
-                val info = SessionInfo(containerName, user)
-                sessionList[sessionId] = info
-                globalSessionList[sessionId] = info
+                globalSessionList[sessionId] = SessionInfo(
+                    containerName,
+                    user,
+                    PreferencesManager.getInstance(this@TerminalSessionService).terminalFontSizePx
+                )
                 if (sessions.size == 1) {
                     promoteToForeground()
                 } else {
@@ -60,66 +64,15 @@ class TerminalSessionService : Service() {
          * Swap every session's client to the app-scoped no-op so a disposed terminal
          * screen (its TerminalBackEnd -> Activity/TerminalView) is not retained by this
          * long-lived service. Sessions keep running; the UI re-attaches its own client
-         * on re-entry. See FINDINGS_APP_VULN V16.
+         * on re-entry.
          */
         fun detachAllClients() {
             sessions.values.forEach { it.updateTerminalSessionClient(NoOpTerminalSessionClient) }
         }
 
-        fun terminateSession(id: String) {
-            runCatching {
-                // Send Ctrl+D (EOF) first so bash exits cleanly and su unwinds.
-                // SIGKILL fires 300 ms later as a safety net for anything that
-                // didn't respond in time.
-                sessions[id]?.write("\u0004")
+        fun terminateSession(id: String) = terminate(listOf(id))
 
-                // Update UI state IMMEDIATELY to prevent "Restore" button glitches.
-                sessionList.remove(id)
-                globalSessionList.remove(id)
-                updateNotification()
-
-                android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
-                    runCatching {
-                        sessions[id]?.apply { if (emulator != null) finishIfRunning() }
-                        sessions.remove(id)
-                        if (sessions.isEmpty()) {
-                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-                                stopForeground(STOP_FOREGROUND_REMOVE)
-                            } else {
-                                @Suppress("DEPRECATION")
-                                stopForeground(true)
-                            }
-                            notificationManager.cancel(NOTIFICATION_ID)
-                            stopSelf()
-                        } else {
-                            updateNotification()
-                        }
-                    }.onFailure { it.printStackTrace() }
-                }, 300)
-            }.onFailure { it.printStackTrace() }
-        }
-
-        fun terminateAllSessions() {
-            // EOF to all shells first - cleans up every su -> bash chain gracefully.
-            sessions.values.forEach { it.write("\u0004") }
-
-            // Clear UI state IMMEDIATELY.
-            sessionList.clear()
-            globalSessionList.clear()
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-                stopForeground(STOP_FOREGROUND_REMOVE)
-            } else {
-                @Suppress("DEPRECATION")
-                stopForeground(true)
-            }
-            notificationManager.cancel(NOTIFICATION_ID)
-
-            android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
-                sessions.values.forEach { it.finishIfRunning() }
-                sessions.clear()
-                stopSelf()
-            }, 300)
-        }
+        fun terminateAllSessions() = terminate(sessions.keys.toList())
 
         fun setWakeLock(acquire: Boolean) {
             if (acquire) {
@@ -131,30 +84,26 @@ class TerminalSessionService : Service() {
                     ).also { it.acquire() }
                     // Request battery optimization exemption so Android doesn't
                     // kill the service while the wakelock is held.
-                    // API 23+ (Android 6+); safe no-op below that.
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                        val pm2 = getSystemService(POWER_SERVICE) as PowerManager
-                        if (!pm2.isIgnoringBatteryOptimizations(packageName)) {
+                    if (!pm.isIgnoringBatteryOptimizations(packageName)) {
+                        try {
+                            // Direct per-app exemption dialog (requires the manifest permission).
+                            startActivity(
+                                Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS).apply {
+                                    data = Uri.parse("package:$packageName")
+                                    flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                                }
+                            )
+                        } catch (e: Exception) {
+                            // Fallback: open the general battery optimization settings screen.
+                            // Covers OEMs that block the direct intent (some Xiaomi/MIUI builds).
                             try {
-                                // Direct per-app exemption dialog (requires the manifest permission).
                                 startActivity(
-                                    Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS).apply {
-                                        data = Uri.parse("package:$packageName")
+                                    Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS).apply {
                                         flags = Intent.FLAG_ACTIVITY_NEW_TASK
                                     }
                                 )
-                            } catch (e: Exception) {
-                                // Fallback: open the general battery optimization settings screen.
-                                // Covers OEMs that block the direct intent (some Xiaomi/MIUI builds).
-                                try {
-                                    startActivity(
-                                        Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS).apply {
-                                            flags = Intent.FLAG_ACTIVITY_NEW_TASK
-                                        }
-                                    )
-                                } catch (e2: Exception) {
-                                    e2.printStackTrace()
-                                }
+                            } catch (e2: Exception) {
+                                e2.printStackTrace()
                             }
                         }
                     }
@@ -176,7 +125,7 @@ class TerminalSessionService : Service() {
 
     override fun onCreate() {
         super.onCreate()
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) createNotificationChannel()
+        createNotificationChannel()
     }
 
     private fun promoteToForeground() {
@@ -204,28 +153,25 @@ class TerminalSessionService : Service() {
         return START_STICKY
     }
 
-    // Kill all sessions belonging to a specific container (used before stop/restart).
-    private fun terminateSessionsForContainer(containerName: String) {
-        val targets = sessions.filter { (id, _) -> sessionList[id]?.containerName == containerName }
-        targets.forEach { (_, s) -> s.write("\u0004") }
-        targets.keys.forEach { id ->
-            sessionList.remove(id)
-            globalSessionList.remove(id)
-        }
+    /** Every tab of a container that stops or restarts. */
+    private fun terminateSessionsForContainer(containerName: String) =
+        terminate(globalSessionList.filterValues { it.containerName == containerName }.keys.toList())
+
+    /**
+     * EOF to each shell first so bash exits and su unwinds on its own; SIGKILL follows
+     * 300 ms later for whatever did not. The registry updates at once, so a Restore
+     * button never shows for a tab on its way out, but the sessions stay in the map
+     * until the kill leg: the service must not stop itself before that, or onDestroy
+     * could no longer reach them.
+     */
+    private fun terminate(ids: Collection<String>) {
+        val targets = ids.mapNotNull { id -> sessions[id]?.also { globalSessionList.remove(id) } }
+        targets.forEach { runCatching { it.write("\u0004") } }
         updateNotification()
-        android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
-            targets.forEach { (id, s) ->
-                runCatching { if (s.emulator != null) s.finishIfRunning() }
-                sessions.remove(id)
-            }
-            if (sessions.isEmpty()) {
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) stopForeground(STOP_FOREGROUND_REMOVE)
-                else @Suppress("DEPRECATION") stopForeground(true)
-                notificationManager.cancel(NOTIFICATION_ID)
-                stopSelf()
-            } else {
-                updateNotification()
-            }
+        Handler(Looper.getMainLooper()).postDelayed({
+            targets.forEach { runCatching { if (it.emulator != null) it.finishIfRunning() } }
+            ids.forEach { sessions.remove(it) }
+            updateNotification()
         }, 300)
     }
 
@@ -273,12 +219,7 @@ class TerminalSessionService : Service() {
 
     private fun updateNotification() {
         if (sessions.isEmpty()) {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-                stopForeground(STOP_FOREGROUND_REMOVE)
-            } else {
-                @Suppress("DEPRECATION")
-                stopForeground(true)
-            }
+            stopForeground(STOP_FOREGROUND_REMOVE)
             notificationManager.cancel(NOTIFICATION_ID)
             stopSelf()
             return
@@ -292,14 +233,12 @@ class TerminalSessionService : Service() {
     }
 
     private fun createNotificationChannel() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val channel = NotificationChannel(
-                CHANNEL_ID,
-                getString(R.string.notification_channel_name),
-                NotificationManager.IMPORTANCE_LOW
-            ).apply { description = getString(R.string.notification_channel_desc) }
-            notificationManager.createNotificationChannel(channel)
-        }
+        val channel = NotificationChannel(
+            CHANNEL_ID,
+            getString(R.string.notification_channel_name),
+            NotificationManager.IMPORTANCE_LOW
+        ).apply { description = getString(R.string.notification_channel_desc) }
+        notificationManager.createNotificationChannel(channel)
     }
 
     companion object {
@@ -316,6 +255,14 @@ class TerminalSessionService : Service() {
 
         fun start(context: Context) {
             context.startService(Intent(context, TerminalSessionService::class.java))
+        }
+
+        /** Closes every terminal tab of a container that stopped or is stopping. */
+        fun stopContainerSessions(context: Context, containerName: String) {
+            context.startService(Intent(context, TerminalSessionService::class.java).apply {
+                action = ACTION_STOP_CONTAINER_SESSIONS
+                putExtra(EXTRA_CONTAINER_NAME, containerName)
+            })
         }
     }
 }

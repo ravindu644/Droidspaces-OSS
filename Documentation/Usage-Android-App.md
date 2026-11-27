@@ -1,144 +1,146 @@
 <!--
-title: Android App Usage
+title: Android app guide
 section: Guides
-order: 4
-desc: Complete guide to the Droidspaces Android app. Manage containers, configure networking, stats, terminal, and kernel settings.
-keywords: Droidspaces Android app, container manager Android, NAT mode, systemd networkd, terminal usage, kernel settings
+order: 1
+desc: Every screen in the Droidspaces Android app: the Home, Containers and Panel tabs, the container menu, the rootfs repository, the terminal, service management and Settings.
+keywords: droidspaces, android, app, guide, containers, panel, terminal, systemd, services, repository, settings, daemon, mode
 -->
 
-# Android App Usage Guide
+# Android app guide
 
-The Droidspaces Android app provides a premium GUI for managing Linux containers. It abstracts away the complexity of namespaces and mounts while giving you high-level control over your environments.
+The app has three tabs along the bottom, **Home**, **Containers** and **Panel**, and a gear icon in the top right for **Settings**. This page goes through them in that order. If you have not installed a container yet, start with the [installation guide](Installation-Android.md).
 
-## Bottom Navigation
+## Home
 
-- **Home**: A dashboard displaying the number of installed and running containers, root availability status, and the backend version.
-- **Containers**: A dedicated manager for all installed containers (Install, Start, Stop, Edit, and Uninstall).
-- **Panel**: A central dashboard for managing **Running Containers** and monitoring real-time **System Statistics** (CPU, RAM, Temperature, etc.).
+<p align="center">
+  <img src="resources/gallery/01-home.png" width="30%">
+</p>
+
+A status card says whether the backend is installed and up to date, which version it is, and whether the daemon is running. Below it are the number of installed and running containers and the device's kernel version, SELinux state, Android version and architecture. The card at the bottom opens the installation guide.
+
+"Backend: Update available" appears after an app update. Tap it to install the new backend; running containers are not affected.
+
+## Containers
+
+<p align="center">
+  <img src="resources/gallery/02-containers.png" width="30%">
+  <img src="resources/gallery/03-container-menu.png" width="30%">
+  <img src="resources/gallery/15-start-logs.png" width="30%">
+</p>
+
+Every installed container has a card with its name, state, hostname, network mode, image size and resource limits, plus the options that are turned on. **Start** boots the container. A log window opens and shows the backend's output live, and you can close it once the operation finishes; **Stop** and **Restart** do the same. Once the container is running the card shows its PID and the buttons change to **Stop** and **Restart**.
+
+Press and hold a card for its menu:
+
+- **Edit Container Configuration**: the same form as at install time. Every setting on it is explained in [container settings](Features.md). Changes apply at the next start.
+- **Migrate to a sparse image**: converts a directory container to an ext4 image file.
+- **Resize the sparse image**: changes the ceiling of an image container.
+- **Export container as tarball**: packs the rootfs and its settings into a `.tar.gz` you can install on another phone. Environment variables are left out unless you choose to include them, since they often hold secrets.
+- **Uninstall Container**: stops the container if it is running and deletes its rootfs and settings. You type the name to confirm. See [uninstallation](Uninstallation.md) for what stays behind.
+
+The **+** button adds a container, from the **Repository** or **Install from file**.
+
+### Repository
+
+<p align="center">
+  <img src="resources/gallery/04-add-container.png" width="30%">
+  <img src="resources/gallery/05-repository.png" width="30%">
+</p>
+
+A list of distributions built for Droidspaces, filtered to your device's architecture. Search by name. **Download** fetches the tarball into your Downloads folder and shows progress on the card; a notification tells you when it is done, and the button turns into **Install**. A download that fails gets a **Retry** button, and a tarball downloaded earlier is recognised the next time you open the sheet.
+
+**Manage Repositories** in the sheet's header lets you subscribe to other feeds that publish a `rootfs.json`. The Linux Containers mirror is the one worth adding, for distributions and versions the official repository does not build:
+
+```
+https://raw.githubusercontent.com/Droidspaces/linuxcontainers-mirror/refs/heads/main/rootfs.json
+```
+
+### Install from file
+
+Picks a `.tar.xz` or `.tar.gz` rootfs archive from the phone's storage. A container exported from Droidspaces carries its settings and they are filled into the wizard, with a warning page first so you can review them. Any other rootfs tarball works too, as long as it has an init system.
+
+### The setup wizard
+
+<p align="center">
+  <img src="resources/gallery/16-wizard-name.png" width="30%">
+  <img src="resources/gallery/17-wizard-config.png" width="30%">
+  <img src="resources/gallery/18-wizard-network.png" width="30%">
+</p>
+<p align="center">
+  <img src="resources/gallery/19-wizard-limits.png" width="30%">
+  <img src="resources/gallery/20-wizard-storage.png" width="30%">
+  <img src="resources/gallery/21-wizard-summary.png" width="30%">
+</p>
+
+Name and hostname, then the configuration form, then storage, then a summary. The [installation guide](Installation-Android.md#the-setup-wizard) walks through it, and [container settings](Features.md) explains every toggle.
+
+## Panel
+
+<p align="center">
+  <img src="resources/gallery/09-panel.png" width="30%">
+  <img src="resources/gallery/10-container-details.png" width="30%">
+</p>
+
+Only running containers appear here, each with its uptime, IP address, CPU and RAM. With a memory or CPU limit set, usage is shown against the limit. **Terminal** opens a shell straight from the card, and a container with [Anland Display](Anland.md) on gets a **Launch Anland** button next to it once its desktop is up. Tapping anywhere else on the card opens the container's details.
+
+### Container details
+
+- **Container Info**: distribution, hostname, uptime, IP address, CPU and RAM.
+- **Terminal**: tap **Open** for a shell. When sessions are already running, the card says so and tapping it brings them back.
+- **Available Users**: the user accounts in the rootfs. Pick one and tap **Copy login** to get a `droidspaces enter` command for that user on the clipboard, for use in Termux or any other root shell.
+- **Disk Usage**: space used and total.
+- **Init System**: tap **Manage** to control services. What you get depends on the init system.
+
+### Managing services
+
+<p align="center">
+  <img src="resources/gallery/11-systemd-services.png" width="30%">
+</p>
+
+**Systemd.** The list shows every unit with its state and is filterable: all, enabled, disabled, masked, static, or units in an abnormal state. Each one can be started, stopped, restarted, enabled, disabled or masked, and **View logs** shows its journal. **Inspect unit** opens the unit's properties, dependencies and `systemctl status` output, and **Edit override** writes a drop-in for it, so you can change a service's settings from the phone without a text editor in the container.
+
+**OpenRC**, **OpenWrt (procd)** and **runit** get the same list with start, stop, restart, enable and disable, reload on OpenWrt, and a run-at-boot toggle on runit, which adds or removes the service's `down` file.
+
+## Terminal
+
+<p align="center">
+  <img src="resources/gallery/12-terminal.png" width="30%">
+  <img src="resources/gallery/22-terminal-settings.png" width="30%">
+</p>
+
+The built-in terminal opens a shell in the container as the user you pick. Tabs are labelled `user@hostname`; the **+** tab opens another session, and asks for the user each time. Sessions run in a foreground service, so they survive leaving the screen, switching apps and the screen turning off, and the notification has an exit button and a wake lock toggle.
+
+Pinch to zoom changes the text size. Tapping the terminal opens the keyboard. The **Terminal** page under **Settings** has the font, with a custom monospace font import, the starting text size, a dark mode for the terminal page only, a confirmation before a tab closes, and **Open Keyboard On Tap**. Turn that one off when you work in an editor, so a tap only moves the cursor; a keyboard button then appears in the terminal to open and close the keyboard.
+
+## Settings
+
+<p align="center">
+  <img src="resources/gallery/13-settings.png" width="30%">
+  <img src="resources/gallery/14-requirements-check.png" width="30%">
+</p>
+
+**Backend**
+
+- **Reinstall Backend**: writes the binaries and the boot module again. Use it if the Home tab reports the backend as corrupted.
+- **Daemon Mode**: on by default. The backend runs as a system daemon started at boot, outside the root shell, which gets past the seccomp filter Magisk and APatch put on root shells. Leave it on; changing it needs a reboot.
+- **Integrate Droidspaces to the system path**: puts `droidspaces` on the `PATH` of every root shell through the boot module, so you can type `droidspaces` instead of `/data/local/Droidspaces/bin/droidspaces`. Read the warning on the toggle: on OverlayFS-based module systems it causes a boot loop.
+- **Auto Boot Priority**: the order in which containers with Run at Boot start. Drag to reorder. A gateway container goes above the containers that route through it.
+- **Requirements**: lists the kernel options Droidspaces needs, with a copy button for kernel builders, and **Check Requirements** runs every probe against the running kernel.
+
+**Appearance**: language, light and dark theme, AMOLED black, the system colour palette on Android 12 and newer, accent colour, and the terminal settings above.
+
+**Updates**: check for a new app release.
+
+**Debugging**: **Generate a bug report** collects logs and device information into one file to attach to an issue.
+
+**Experimental**: **Use the 64-bit backend** appears only when the ROM is 32-bit on a 64-bit kernel, and switches the backend to the 64-bit build.
+
+**About**: version, developers, links to the source, the Telegram channel and the contributors.
+
+## Where the data is
+
+Everything the backend creates is under `/data/local/Droidspaces`: the binaries in `bin/`, each container's rootfs or image and its `container.config` in `Containers/<name>/`, and logs in `Logs/`. The app only reads and writes there; uninstalling the app does not touch it, and the daemon keeps running.
 
 ---
 
-## Containers Tab
-
-This tab allows you to install containers using the "+" icon, and lists all your installed environments. Each container has a control card:
-
-- **Install Button (+)**: Install a new container.
-- **Play Button**: Start the container and boot the init system.
-- **Stop Button**: Sends a graceful shutdown signal to the container's init.
-- **Cycle Button**: Fast-restart the container.
-- **Terminal Icon (Logs)**: Provides access to persistent session logs for the container's previous start, stop, and restart sequences.
-
-> [!TIP]
->
-> You can **edit container configuration** or **uninstall** existing installed containers by **pressing and holding** the container’s card. Also gives you the ability to migrate to a `rootfs.img`-based container or resize your existing `rootfs.img`..!
-
----
-
-## Rootfs Repository
-
-The **cloud icon** above the "+" button opens the Rootfs Repository - a built-in distro browser that lets you download and install Linux rootfs images without leaving the app.
-
-### How it works
-
-1. Tap the **cloud icon** in the Containers tab.
-2. The sheet opens and loads available distros from the [Droidspaces official repository](https://github.com/Droidspaces/Droidspaces-rootfs-builder). Only images matching your device’s architecture are shown.
-3. **Search** the list by name, description, or author using the search bar.
-4. Tap **Download** on a distro card. A progress bar tracks the download; the file is saved to your Downloads folder.
-5. Once done, the button switches to **Install**. Tap it to go straight into the container setup wizard.
-
-> [!NOTE]
->
-> If a download fails, the card shows a **Retry** button. Previously downloaded files are detected automatically on relaunch - the Install button will already be available.
-
-### Adding Custom Repositories
-
-The repository supports third-party rootfs sources in the same JSON format.
-
-1. Tap the **settings icon** (left of the refresh icon) in the sheet header.
-2. Enter a **name** and a **URL** pointing to a valid `rootfs.json`.
-3. Tap **Add**, then **Save**. The sheet refreshes and merges results from all sources.
-
-> [!TIP]
->
-> To get a much wider selection of distros, add the official LXC images mirror as a custom repository:
-> - **Name**: anything you like (e.g. `LXC Mirror`)
-> - **URL**: `https://raw.githubusercontent.com/Droidspaces/linuxcontainers-mirror/refs/heads/main/rootfs.json`
-
----
-
-## Networking Configuration
-
-When editing or creating a container, you can choose from four networking modes:
-
-- **Host (Default)**: Shares host network directly.
-- **NAT (Isolated)**: Private network namespace with deterministic IP and port forwarding support.
-- **None**: No network access.
-- **Gateway**: The container's LAN is delegated to another running container (typically OpenWRT), which owns DHCP, DNS, firewall and routing. Select the gateway container and (optionally) the LAN segment, interface and bridge in the **Gateway** settings. See [Networking From Zero](Networking-From-Zero.md) for the full guide.
-
-### Internet Uplink (NAT Mode)
-If you select **NAT (Isolated)** mode, the internet uplink is detected fully automatically - there is nothing to configure. Droidspaces reads the kernel's own routing state to find the interface Android is currently using for internet (Wi-Fi, mobile data, ethernet) and a background Route Monitor keeps the container connected in real time as you switch networks.
-
-#### Upstream Interface (Optional)
-If you want the container to **ignore the active network** and pin its internet to specific interface(s), add them under **Upstream Interface**. This disables auto-detection and forces the WAN through your list only:
-
-- The list is **priority-ordered** and supports **wildcards** - e.g. `wlan0, rmnet*` prefers Wi-Fi and falls back to mobile data (use `rmnet*` because the mobile-data interface number is not stable).
-- **Example - VPN killswitch**: run a VPN app on the phone and pin `tun0` so the container can only reach the internet through the tunnel.
-- **Example - cellular while on Wi-Fi**: enable *Mobile data always active* in Developer Options, connect Wi-Fi, turn on mobile data, and pin `rmnet*` so the container uses cellular while the phone stays on Wi-Fi.
-
-Leave it empty to auto-detect the active uplink (the default, recommended for most users).
-
-> [!NOTE]
-> NAT mode is IPv4 only. If your carrier only provides IPv6, see the [IPv4 NAT Workaround](Troubleshooting.md#ipv4-quirks).
-
-### Port Forwarding
-In NAT mode, use the **Port Forwarding** section to map host ports to container ports (e.g., `22:22`). You can also specify **port ranges** (e.g., `1000-2000:1000-2000`) for services that require multiple contiguous ports.
-
----
-
-## Panel Tab (Active Environments)
-
-The **Panel** tab focuses strictly on your running containers. Tapping a running container card opens the **Details Screen**.
-
-### Container Details Screen
-This screen provides deep introspection into the running environment:
-- **Distribution Info**: Shows the Pretty Name, Version, Per-container-uptime, Hostname, and **IP Address (IPv4)**.
-- **Available Users**: Lists detected users in the rootfs.
-- **Copy Login**: Choose a user from the dropdown and tap this to copy a command like `su -c 'droidspaces enter [user]'`.
-- **Terminal**: Open an interactive Terminal Emulator inside from the container, natively on the Droidspaces app !
-- **Systemd Menu**: If the container uses systemd, a "Manage" button appears. Tapping it opens a list of all systemd services, allowing you to Start, Stop, or Restart individual services (e.g., SSH, Nginx, or a VNC server) directly from the app.
-
----
-
-## Accessing the Container Shell
-
-Droidspaces provides two primary ways to interact with your running Linux containers. Whether you want a quick check from within the app or a full-featured session in your favorite terminal, we've got you covered.
-
-### Method 1: Built-in Terminal (v5.7.0+)
-
-This is the most convenient way to quickly run commands without leaving the Droidspaces app.
-
-1.  Ensure the container is **RUNNING**.
-2.  Navigate to the **Panel** tab and tap the container to open its **Details**.
-3.  Find the **Terminal** card and tap **Open**.
-4.  Select the **User** you wish to log in as (e.g., `root` or your default user).
-5.  An interactive terminal will launch directly within the app.
-
-### Method 2: External Terminal (Copy Login)
-
-For power users who prefer **Termux**, **ADB**, or other terminal emulators, Droidspaces allows you to "attach" external sessions to the container.
-
-1.  Ensure the container is **RUNNING**.
-2.  Open the container **Details** in the **Panel** tab.
-3.  Select your desired user from the dropdown menu.
-4.  Tap **Copy Login**. This copies a command like `su -c 'droidspaces --name=[name enter [user]'` to your clipboard.
-5.  Open your preferred terminal (e.g., Termux) and **Paste** the command.
-6.  **Run** the command (ensure your terminal has root permissions granted from your root manager).
-
----
-
-## Settings & Requirements
-
-Accessed via the gear icon in the top right:
-- **Requirements**: Runs a 27-point diagnostic check on your kernel.
-- **Kernel Config**: Provides a copyable `droidspaces.config` snippet specifically for your device.
-- **Theme Engine**: Support for AMOLED Black, Material You, Changing accent colors, and Light/Dark modes.
+Previous: [Linux installation](Installation-Linux.md) | Next: [Container settings](Features.md)

@@ -17,7 +17,6 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.DragHandle
 import androidx.compose.material.icons.filled.PowerSettingsNew
 import androidx.compose.material.icons.filled.Save
-import androidx.compose.material.ripple.rememberRipple
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -29,6 +28,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.droidspaces.app.R
+import com.droidspaces.app.ui.component.SaveActionBottomBar
 import com.droidspaces.app.ui.util.LoadingIndicator
 import com.droidspaces.app.ui.viewmodel.ContainerViewModel
 import com.droidspaces.app.util.ContainerInfo
@@ -104,7 +104,7 @@ fun AutoBootPriorityScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(context.getString(R.string.auto_boot_priority)) },
+                title = { Text(context.getString(R.string.auto_boot_priority), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(
@@ -117,97 +117,15 @@ fun AutoBootPriorityScreen(
         },
         bottomBar = {
             if (items.isNotEmpty()) {
-                val btnShape = RoundedCornerShape(20.dp)
-                val isReadyToSave = !isSaving && !isSaved && hasChanges
-                val targetBtnColor = when {
-                    isSaved -> MaterialTheme.colorScheme.primaryContainer
-                    isSaving || isReadyToSave -> MaterialTheme.colorScheme.primary
-                    else -> MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f)
-                }
-                val animatedBtnColor by animateColorAsState(
-                    targetValue = targetBtnColor,
-                    animationSpec = tween(durationMillis = 250),
-                    label = "btn_color"
+                SaveActionBottomBar(
+                    isSaved = isSaved,
+                    isSaving = isSaving,
+                    canSave = !isSaving && !isSaved && hasChanges,
+                    onSave = { saveChanges() },
+                    saveLabel = context.getString(R.string.save_changes),
+                    savingLabel = context.getString(R.string.saving),
+                    savedLabel = context.getString(R.string.saved)
                 )
-                Surface(
-                    modifier = Modifier.fillMaxWidth(),
-                    color = MaterialTheme.colorScheme.surfaceContainer,
-                    tonalElevation = 0.dp
-                ) {
-                    Column(modifier = Modifier.fillMaxWidth()) {
-                        HorizontalDivider(
-                            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.25f),
-                            thickness = 1.dp
-                        )
-                        Surface(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(24.dp)
-                                .navigationBarsPadding()
-                                .clip(btnShape)
-                                .clickable(
-                                    enabled = isReadyToSave,
-                                    onClick = { saveChanges() },
-                                    indication = rememberRipple(bounded = true),
-                                    interactionSource = remember { MutableInteractionSource() }
-                                ),
-                            shape = btnShape,
-                            color = animatedBtnColor,
-                            tonalElevation = 0.dp
-                        ) {
-                            Box(modifier = Modifier.padding(vertical = 16.dp).fillMaxWidth(), contentAlignment = Alignment.Center) {
-                                when {
-                                    isSaved -> {
-                                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                            Icon(
-                                                imageVector = Icons.Default.Check,
-                                                contentDescription = null,
-                                                modifier = Modifier.size(20.dp),
-                                                tint = MaterialTheme.colorScheme.onPrimaryContainer
-                                            )
-                                            Text(
-                                                text = context.getString(R.string.saved),
-                                                style = MaterialTheme.typography.labelLarge,
-                                                fontWeight = FontWeight.SemiBold,
-                                                color = MaterialTheme.colorScheme.onPrimaryContainer
-                                            )
-                                        }
-                                    }
-                                    isSaving -> {
-                                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                            LoadingIndicator(
-                                                modifier = Modifier.size(20.dp),
-                                                color = MaterialTheme.colorScheme.onPrimary
-                                            )
-                                            Text(
-                                                text = context.getString(R.string.saving),
-                                                style = MaterialTheme.typography.labelLarge,
-                                                fontWeight = FontWeight.SemiBold,
-                                                color = MaterialTheme.colorScheme.onPrimary
-                                            )
-                                        }
-                                    }
-                                    else -> {
-                                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                            Icon(
-                                                imageVector = Icons.Default.Save,
-                                                contentDescription = null,
-                                                modifier = Modifier.size(20.dp),
-                                                tint = if (isReadyToSave) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
-                                            )
-                                            Text(
-                                                text = context.getString(R.string.save_changes),
-                                                style = MaterialTheme.typography.labelLarge,
-                                                fontWeight = FontWeight.SemiBold,
-                                                color = if (isReadyToSave) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
-                                            )
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
             }
         }
     ) { innerPadding ->
@@ -256,7 +174,7 @@ fun AutoBootPriorityScreen(
                     state = lazyListState,
                     modifier = Modifier.fillMaxSize(),
                     contentPadding = PaddingValues(bottom = 16.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
                     items(items, key = { it.name }) { container ->
                     ReorderableItem(reorderableState, key = container.name) { isDragging ->

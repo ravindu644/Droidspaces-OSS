@@ -12,6 +12,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import android.os.Build
 import com.droidspaces.app.util.SystemInfoManager
+import com.droidspaces.app.util.PreferencesManager
 import androidx.compose.ui.platform.LocalContext
 import com.droidspaces.app.R
 
@@ -20,9 +21,14 @@ fun SystemInfoCard(
     refreshTrigger: Int = 0  // Increment this to trigger a refresh
 ) {
     val context = LocalContext.current
-    // Start with cached value if available (instant display)
+    // Start with the last known value so a fresh launch never shows a loading
+    // row; the background read corrects it silently if it changed.
     var selinuxStatus by remember {
-        mutableStateOf(SystemInfoManager.cachedSelinuxStatus ?: context.getString(R.string.loading))
+        mutableStateOf(
+            SystemInfoManager.cachedSelinuxStatus
+                ?: PreferencesManager.getInstance(context).cachedSelinuxStatus
+                ?: context.getString(R.string.loading)
+        )
     }
 
     // Use cached system info - instant access, no computation
@@ -30,16 +36,9 @@ fun SystemInfoCard(
     val architecture = SystemInfoManager.architecture
     val androidVersion = SystemInfoManager.androidVersion
 
-    // Load SELinux status in background (non-blocking)
-    // Re-runs when refreshTrigger changes (on pull-to-refresh)
+    // Live read on first compose and on every pull-to-refresh.
     LaunchedEffect(refreshTrigger) {
-        selinuxStatus = if (refreshTrigger > 0) {
-            // Force refresh - bypass cache
-            SystemInfoManager.refreshSELinuxStatus()
-        } else {
-            // Initial load - use cache if available
-            SystemInfoManager.getSELinuxStatus()
-        }
+        selinuxStatus = SystemInfoManager.refreshSELinuxStatus()
     }
 
     Surface(

@@ -3,14 +3,15 @@ package com.droidspaces.app.util
 import android.content.Context
 import android.net.Uri
 import com.topjohnwu.superuser.Shell
-import com.topjohnwu.superuser.io.SuFile
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.FileOutputStream
-import java.io.InputStream
 
 object ContainerInstaller {
+    /* Every path below reaches a root shell, and the rootfs one is now user-chosen. */
+    private fun quote(value: String) = ContainerCommandBuilder.quote(value)
+
     private const val CONTAINERS_BASE_PATH = Constants.CONTAINERS_BASE_PATH
     private const val BUSYBOX_PATH = Constants.BUSYBOX_BINARY_PATH
 
@@ -23,74 +24,105 @@ object ContainerInstaller {
         context: Context,
         tarballUri: Uri,
         config: ContainerInfo,
-        logger: ContainerLogger
+        logger: ViewModelLogger
     ): Result<Unit> = withContext(Dispatchers.IO) {
         // Use sanitized name for directory (spaces -> dashes)
         val sanitizedName = ContainerManager.sanitizeContainerName(config.name)
         val containerPath = ContainerManager.getContainerDirectory(config.name)
-        val rootfsPath = if (config.useSparseImage) {
-            ContainerManager.getSparseImagePath(config.name)
-        } else {
-            ContainerManager.getRootfsPath(config.name)
-        }
+        // Honour the path the caller resolved. Re-deriving it from the name here is what
+        // used to pin every container to CONTAINERS_BASE_PATH regardless of the
+        // destination chosen in the wizard.
+        val rootfsPath = config.rootfsPath
+        val rootfsParent = rootfsPath.substringBeforeLast('/')
+        val isExternal = rootfsParent != containerPath
         val configFilePath = "$containerPath/${Constants.CONTAINER_CONFIG_FILE}"
         var createdPaths = mutableListOf<String>()
+        var tempTarball: File? = null
 
         try {
-            // Reject control chars in single-line config values (VULN V11).
+            // Reject control chars in single-line config values.
             ValidationUtils.validateConfigValues(config).errorMessage?.let {
                 logger.e(it)
                 return@withContext Result.failure(Exception(it))
             }
 
-            // Step 1: Check storage space
-            logger.i("Checking available storage space...")
-            val freeGB = StorageChecker.getFreeSpaceGB()
-            if (freeGB != null) {
-                logger.i("/data partition has ${freeGB}GB free space")
-                val requiredGB = if (config.useSparseImage) {
-                    (config.sparseImageSizeGB ?: 8) + Constants.MIN_STORAGE_GB
-                } else {
-                    Constants.MIN_STORAGE_GB
+            // Step 1: Re-check the destination. The wizard already refused an unusable
+            // one, but that decision can be stale by now and this is the only gate a
+            // non-wizard caller passes through, so it fails closed.
+            val target = StorageChecker.probe(rootfsParent)
+            when {
+                target.support == StorageSupport.UNUSABLE -> {
+                    val why = target.reason ?: "'${target.fsType}' cannot hold a container."
+                    logger.e(why)
+                    return@withContext Result.failure(Exception(why))
                 }
-                if (freeGB < requiredGB) {
-                    logger.w("Warning: Less than ${requiredGB}GB available. Installation may fail.")
+                target.support == StorageSupport.IMAGE_ONLY && !config.useSparseImage -> {
+                    val why = target.reason
+                        ?: "'${target.fsType}' cannot hold a rootfs directory. Use a sparse image."
+                    logger.e(why)
+                    return@withContext Result.failure(Exception(why))
+                }
+            }
+            logger.i("Destination $rootfsParent is ${target.fsType}")
+
+            // Step 2: Check storage space on the volume actually being written to
+            logger.i("Checking available storage space...")
+            val freeGB = target.freeGB
+            if (freeGB != null) {
+                logger.i("$rootfsParent has ${freeGB}GB free space")
+                if (freeGB < Constants.MIN_STORAGE_GB) {
+                    val why = "Not enough space at $rootfsParent: at least " +
+                        "${Constants.MIN_STORAGE_GB}GB free is required."
+                    logger.e(why)
+                    return@withContext Result.failure(Exception(why))
                 }
             } else {
+                // Unknown is not the same as insufficient. Blocking here would make the
+                // app unusable on a device where stat and df both fail, so warn instead
+                // and let the extraction report the real error if space runs out.
                 logger.w("Warning: Unable to determine free space. Proceeding anyway...")
             }
 
-            // Step 2: Create container directory
+            // Step 3: Create container directory. This holds the config, .env and pidfile
+            // and stays internal even when the rootfs lives on another volume.
             logger.i("Creating container directory: $containerPath")
-            val mkdirResult = Shell.cmd("mkdir -p \"$containerPath\" 2>&1").exec()
+            val mkdirResult = Shell.cmd("mkdir -p ${quote(containerPath)} 2>&1").exec()
             if (!mkdirResult.isSuccess) {
-                val errorOutput = (mkdirResult.out + mkdirResult.err).joinToString("\n").trim()
-                val errorMsg = if (errorOutput.isNotEmpty()) errorOutput else "Unknown error (exit code: ${mkdirResult.code})"
-                throw Exception("Failed to create container directory: $errorMsg")
+                throw Exception("Failed to create container directory: ${mkdirResult.errorText()}")
             }
             createdPaths.add(containerPath)
 
-            // Step 3: Copy tarball to temp location
-            logger.i("Copying tarball to temporary location...")
-            val tarballExtension = getTarballExtension(context, tarballUri)
-            val tempTarball = File("${context.cacheDir}/container_${sanitizedName}.tar$tarballExtension")
-            context.contentResolver.openInputStream(tarballUri)?.use { inputStream ->
-                FileOutputStream(tempTarball).use { outputStream ->
-                    inputStream.copyTo(outputStream)
+            if (isExternal) {
+                logger.i("Creating storage directory: $rootfsParent")
+                val mkdirExt = Shell.cmd("mkdir -p ${quote(rootfsParent)} 2>&1").exec()
+                if (!mkdirExt.isSuccess) {
+                    throw Exception("Failed to create storage directory: ${mkdirExt.errorText()}")
                 }
-            } ?: throw Exception("Failed to open tarball input stream")
+                createdPaths.add(rootfsParent)
+            }
 
-            logger.i("Tarball copied: ${tempTarball.absolutePath}")
+            // Step 4: Read the tarball where it lies. Only a provider that hands out a
+            // pipe (cloud storage) still costs a full copy through cacheDir.
+            val archive = FilePickerUtils.realPath(context, tarballUri) ?: run {
+                logger.i("Copying tarball to temporary location...")
+                val copy = File("${context.cacheDir}/container_${sanitizedName}.tar${getTarballExtension(context, tarballUri)}")
+                tempTarball = copy
+                context.contentResolver.openInputStream(tarballUri)?.use { input ->
+                    FileOutputStream(copy).use { input.copyTo(it) }
+                } ?: throw Exception("Failed to open tarball input stream")
+                copy.absolutePath
+            }
+            logger.i("Tarball: $archive")
 
-            // Step 3.5: Verify the tarball is actually a Linux rootfs before we
+            // Step 4.5: Verify the tarball is actually a Linux rootfs before we
             // extract anything, so users can't install arbitrary archives.
-            validateRootfsTarball(context, tempTarball, logger)
+            validateRootfsTarball(context, archive, logger)
 
-            // Step 4: Extract tarball (either to directory or sparse image)
+            // Step 5: Extract tarball (either to directory or sparse image)
             if (config.useSparseImage) {
                 SparseImageInstaller.extract(
                     context = context,
-                    tarball = tempTarball,
+                    tarball = archive,
                     imgPath = rootfsPath,
                     mountPoint = "${containerPath}/rootfs",
                     sizeGB = config.sparseImageSizeGB ?: 8,
@@ -98,22 +130,13 @@ object ContainerInstaller {
                 )
             } else {
                 // Create rootfs subdirectory
-                val mkdirRootfsResult = Shell.cmd("mkdir -p \"$rootfsPath\" 2>&1").exec()
+                val mkdirRootfsResult = Shell.cmd("mkdir -p ${quote(rootfsPath)} 2>&1").exec()
                 if (!mkdirRootfsResult.isSuccess) {
-                    val errorOutput = (mkdirRootfsResult.out + mkdirRootfsResult.err).joinToString("\n").trim()
-                    val errorMsg = if (errorOutput.isNotEmpty()) errorOutput else "Unknown error (exit code: ${mkdirRootfsResult.code})"
-                    throw Exception("Failed to create rootfs directory: $errorMsg")
+                    throw Exception("Failed to create rootfs directory: ${mkdirRootfsResult.errorText()}")
                 }
 
                 logger.i("Extracting tarball to $rootfsPath...")
-                val isXz = tempTarball.name.lowercase().endsWith(".xz")
-                val extractCmd = if (isXz) {
-                    "cd \"$rootfsPath\" && $BUSYBOX_PATH xzcat \"${tempTarball.absolutePath}\" | $BUSYBOX_PATH tar -xpf - 2>&1"
-                } else {
-                    "cd \"$rootfsPath\" && $BUSYBOX_PATH tar -xzpf \"${tempTarball.absolutePath}\" 2>&1"
-                }
-
-                val extractResult = Shell.cmd(extractCmd).exec()
+                val extractResult = Shell.cmd(extractCommand(archive, rootfsPath)).exec()
                 if (!extractResult.isSuccess) {
                     val errorMsg = extractResult.err.joinToString("\n")
                     logger.e("Extraction failed: $errorMsg")
@@ -126,7 +149,7 @@ object ContainerInstaller {
                 applyPostExtractionFixes(context, rootfsPath, logger)
             }
 
-            // Step 5: Write container config
+            // Step 6: Write container config
             logger.i("Writing container configuration...")
             val configContent = config.toConfigContent()
 
@@ -135,23 +158,13 @@ object ContainerInstaller {
             val tempConfigFile = File("${context.cacheDir}/container_${sanitizedName}.config")
             tempConfigFile.writeText(configContent)
 
-            // Copy temp config to final location using shell (root required)
-            // Quote paths to handle any special characters
-            val copyResult = Shell.cmd("cp \"${tempConfigFile.absolutePath}\" \"$configFilePath\" 2>&1").exec()
+            val copyResult = ContainerManager.installFileDurably(tempConfigFile.absolutePath, configFilePath)
             if (!copyResult.isSuccess) {
-                // Check both stdout and stderr for error messages
-                val errorOutput = (copyResult.out + copyResult.err).joinToString("\n").trim()
-                val errorMsg = if (errorOutput.isNotEmpty()) errorOutput else "Unknown error (exit code: ${copyResult.code})"
+                val errorMsg = copyResult.errorText()
                 logger.e("Failed to copy config: $errorMsg")
                 logger.e("Source: ${tempConfigFile.absolutePath}")
                 logger.e("Destination: $configFilePath")
                 throw Exception("Failed to write container config: $errorMsg")
-            }
-
-            // Set proper permissions
-            val chmodResult = Shell.cmd("chmod 644 \"$configFilePath\" 2>&1").exec()
-            if (!chmodResult.isSuccess) {
-                logger.w("Warning: Failed to set config file permissions")
             }
 
             // Clean up temp config file
@@ -160,7 +173,7 @@ object ContainerInstaller {
             logger.i("Container configuration saved")
             createdPaths.add(configFilePath)
 
-            // Step 5.1: Write .env file if content exists
+            // Step 6.1: Write .env file if content exists
             if (!config.envFileContent.isNullOrBlank()) {
                 logger.i("Writing environment variables (.env)...")
                 val envFilePath = "$containerPath/.env"
@@ -169,12 +182,11 @@ object ContainerInstaller {
                 try {
                     tempEnvFile.writeText(config.envFileContent + "\n")
 
-                    val envCopyResult = Shell.cmd("cp \"${tempEnvFile.absolutePath}\" \"$envFilePath\" 2>&1").exec()
+                    val envCopyResult = ContainerManager.installFileDurably(tempEnvFile.absolutePath, envFilePath)
                     if (!envCopyResult.isSuccess) {
-                        val errorMsg = envCopyResult.err.joinToString("\n")
+                        val errorMsg = (envCopyResult.out + envCopyResult.err).joinToString("\n")
                         logger.w("Warning: Failed to copy .env file: $errorMsg")
                     } else {
-                        Shell.cmd("chmod 644 \"$envFilePath\"").exec()
                         logger.i("Environment variables saved")
                         createdPaths.add(envFilePath)
                     }
@@ -185,19 +197,11 @@ object ContainerInstaller {
                 }
             }
 
-            // Step 6: Verify installation
+            // Step 7: Verify installation
             logger.i("Verifying installation...")
-            if (config.useSparseImage) {
-                val imgExists = Shell.cmd("test -f \"$rootfsPath\" && echo 'exists' || echo 'not_found'").exec()
-                if (!imgExists.isSuccess || !imgExists.out.any { it.contains("exists") }) {
-                    throw Exception("Container sparse image not found after extraction")
-                }
-            } else {
-            val rootfsExists = Shell.cmd("test -d \"$rootfsPath\" && echo 'exists' || echo 'not_found'").exec()
-            if (!rootfsExists.isSuccess || !rootfsExists.out.any { it.contains("exists") }) {
-                throw Exception("Container rootfs directory not found after extraction")
-                }
-            }
+            val test = if (config.useSparseImage) "-f" else "-d"
+            if (!Shell.cmd("test $test ${quote(rootfsPath)}").exec().isSuccess)
+                throw Exception("Container ${if (config.useSparseImage) "sparse image" else "rootfs directory"} not found after extraction")
 
             logger.i("Container installed successfully!")
             Result.success(Unit)
@@ -211,176 +215,102 @@ object ContainerInstaller {
 
             Result.failure(e)
         } finally {
-            // Clean up temp tarball
+            // Clean up temp tarball, never the user's own file
             try {
-                File("${context.cacheDir}/container_${sanitizedName}.tar.xz").delete()
-                File("${context.cacheDir}/container_${sanitizedName}.tar.gz").delete()
+                tempTarball?.delete()
             } catch (e: Exception) {
                 // Ignore cleanup errors
             }
         }
     }
 
+    /** ".xz" for a .tar.xz, ".gz" for anything else the picker handed over. */
+    private suspend fun getTarballExtension(context: Context, uri: Uri): String =
+        if (FilePickerUtils.getFileName(context, uri)?.endsWith(".xz", ignoreCase = true) == true) ".xz" else ".gz"
+
     /**
-     * Get the tarball extension (.xz or .gz) from the URI.
-     * Uses FilePickerUtils.getFileName() to reliably get the filename even for recent files.
+     * Shell command that unpacks [tarball] into [destination]. An exported archive
+     * carries its host config, and maybe its .env, as the first members. Those are for
+     * the wizard, and extracting them would leave the old host's settings and secrets
+     * lying in the guest's root.
      */
-    private suspend fun getTarballExtension(context: Context, uri: Uri): String = withContext(Dispatchers.IO) {
-        // First, try to get the filename using FilePickerUtils (handles content URIs)
-        val fileName = FilePickerUtils.getFileName(context, uri)
-
-        if (fileName != null) {
-            val fileNameLower = fileName.lowercase()
-            return@withContext when {
-                fileNameLower.endsWith(".tar.xz") -> ".xz"
-                fileNameLower.endsWith(".tar.gz") -> ".gz"
-                else -> {
-                    // Fallback: default to .gz if we can't determine
-                    ".gz"
-                }
-            }
+    internal fun extractCommand(tarball: String, destination: String): String {
+        val skip = listOf(Constants.CONTAINER_CONFIG_FILE, RootfsConfig.ENV_MEMBER)
+            .joinToString(" ") { "--exclude=$it --exclude=./$it" }
+        val unpack = if (tarball.lowercase().endsWith(".xz")) {
+            "$BUSYBOX_PATH xzcat ${quote(tarball)} | $BUSYBOX_PATH tar -xpf - $skip"
+        } else {
+            "$BUSYBOX_PATH tar -xzpf ${quote(tarball)} $skip"
         }
-
-        // Fallback: Check URI string directly (for file:// URIs)
-        val uriString = uri.toString().lowercase()
-        when {
-            uriString.endsWith(".tar.xz") -> ".xz"
-            uriString.endsWith(".tar.gz") -> ".gz"
-            else -> ".gz" // Default to .gz if we can't determine
-        }
+        return "cd ${quote(destination)} && $unpack 2>&1"
     }
 
-
+    /** [name] from the assets copied into cacheDir and made executable; the caller deletes it. */
+    internal fun deployAsset(context: Context, name: String): File {
+        val file = File(context.cacheDir, name)
+        context.assets.open(name).use { input -> file.outputStream().use { input.copyTo(it) } }
+        // Fail closed: a script that could not be made executable is never run through a
+        // fallback, the caller's error path is the place to say so.
+        if (!Shell.cmd("chmod 755 ${quote(file.absolutePath)}").exec().isSuccess) {
+            file.delete()
+            error("Could not make $name executable")
+        }
+        return file
+    }
 
     /**
-     * Inspect the tarball (without extracting) to confirm it contains a Linux
-     * rootfs, so users can't install arbitrary archives (photo backups, source
-     * zips, etc.). Throws on a confirmed-invalid archive; a validator that fails
-     * to load is treated as non-fatal (warn and continue).
+     * Inspect the tarball (without extracting) to confirm it contains a Linux rootfs,
+     * so users cannot install arbitrary archives (photo backups, source zips). Throws
+     * on a confirmed-invalid archive, and on a validator that could not be deployed:
+     * the rootfs is later run as root, so an unverified one is never installed.
      */
-    private suspend fun validateRootfsTarball(
-        context: Context,
-        tarball: File,
-        logger: ContainerLogger
-    ) {
+    private suspend fun validateRootfsTarball(context: Context, tarball: String, logger: ViewModelLogger) {
         logger.i("Inspecting tarball to verify it is a Linux rootfs...")
-
-        // Copy validator script from assets
-        val scriptFile = File("${context.cacheDir}/validate_rootfs.sh")
-        try {
-            context.assets.open("validate_rootfs.sh").use { inputStream ->
-                FileOutputStream(scriptFile).use { outputStream ->
-                    inputStream.copyTo(outputStream)
-                }
-            }
+        val script = try {
+            deployAsset(context, "validate_rootfs.sh")
         } catch (e: Exception) {
-            // Fail CLOSED: if the validator itself can't be loaded, do not install an
-            // unverified rootfs — it is later run as root. See FINDINGS_APP_VULN V12.
             logger.e("Failed to load rootfs validator: ${e.message}")
             throw Exception("Could not verify rootfs: validator unavailable (${e.message})")
         }
-
         try {
-            // Make script executable
-            val chmodResult = Shell.cmd("chmod 755 \"${scriptFile.absolutePath}\" 2>&1").exec()
-            if (!chmodResult.isSuccess) {
-                // Fail CLOSED — see FINDINGS_APP_VULN V12.
-                logger.e("Failed to make rootfs validator executable")
-                throw Exception("Could not verify rootfs: validator not executable")
-            }
-
-            val result = Shell.cmd(
-                "BUSYBOX_PATH=$BUSYBOX_PATH \"${scriptFile.absolutePath}\" \"${tarball.absolutePath}\" 2>&1"
-            ).exec()
-
+            val result = Shell.cmd("BUSYBOX_PATH=$BUSYBOX_PATH ${quote(script.absolutePath)} ${quote(tarball)} 2>&1").exec()
             if (!result.isSuccess) {
-                val reason = result.out
-                    .map { it.trim() }
-                    .firstOrNull { it.isNotEmpty() }
+                val reason = result.out.map { it.trim() }.firstOrNull { it.isNotEmpty() }
                     ?: "selected file does not look like a Linux rootfs"
                 logger.e(reason)
                 throw Exception(reason)
             }
         } finally {
-            try {
-                scriptFile.delete()
-            } catch (e: Exception) {
-                logger.w("Warning: Failed to clean up validator script: ${e.message}")
-            }
+            script.delete()
         }
     }
 
-    /**
-     * Apply post-extraction fixes to the rootfs (both sparse and directory modes).
-     */
-    private suspend fun applyPostExtractionFixes(
-        context: Context,
-        rootfsPath: String,
-        logger: ContainerLogger
-    ) {
+    /** post_extract_fixes.sh over a freshly extracted rootfs; a failure is logged, never fatal. */
+    internal suspend fun applyPostExtractionFixes(context: Context, rootfsPath: String, logger: ViewModelLogger) {
         logger.i("Applying post-extraction fixes...")
-
-        // Copy post-extraction fix script from assets
-        val postFixScriptFile = File("${context.cacheDir}/post_extract_fixes.sh")
-        try {
-            context.assets.open("post_extract_fixes.sh").use { inputStream ->
-                FileOutputStream(postFixScriptFile).use { outputStream ->
-                    inputStream.copyTo(outputStream)
-                }
-            }
+        val script = try {
+            deployAsset(context, "post_extract_fixes.sh")
         } catch (e: Exception) {
-            logger.w("Warning: Failed to load post_extract_fixes.sh from assets: ${e.message}")
+            logger.w("Warning: Failed to load post_extract_fixes.sh: ${e.message}")
             return
         }
-
-        // Make script executable
-        val chmodResult = Shell.cmd("chmod 755 \"${postFixScriptFile.absolutePath}\" 2>&1").exec()
-        if (!chmodResult.isSuccess) {
-            logger.w("Warning: Failed to make post-fix script executable")
-            postFixScriptFile.delete()
-            return
-        }
-
         try {
-            // Execute the script
-            val result = Shell.cmd("BUSYBOX_PATH=$BUSYBOX_PATH \"${postFixScriptFile.absolutePath}\" \"$rootfsPath\" 2>&1").exec()
-
-            // Log all output from the script
-            result.out.forEach { line ->
-                val trimmed = line.trim()
-                if (trimmed.isNotEmpty()) {
-                    when {
-                        trimmed.startsWith("[POST-FIX-WARN]") -> logger.w(trimmed)
-                        trimmed.startsWith("[POST-FIX]") -> logger.i(trimmed)
-                        else -> logger.d(trimmed)
-                    }
+            val result = Shell.cmd("BUSYBOX_PATH=$BUSYBOX_PATH ${quote(script.absolutePath)} ${quote(rootfsPath)} 2>&1").exec()
+            result.out.map { it.trim() }.filter { it.isNotEmpty() }.forEach { line ->
+                when {
+                    line.startsWith("[POST-FIX-WARN]") -> logger.w(line)
+                    line.startsWith("[POST-FIX]") -> logger.i(line)
+                    else -> logger.d(line)
                 }
             }
-
-            // Log errors
-            result.err.forEach { line ->
-                val trimmed = line.trim()
-                if (trimmed.isNotEmpty()) {
-                    logger.w(trimmed)
-                }
-            }
-
-            if (!result.isSuccess) {
-                logger.w("Warning: Post-extraction fixes failed, but continuing installation")
-            } else {
-                logger.i("Post-extraction fixes completed successfully")
-            }
+            if (result.isSuccess) logger.i("Post-extraction fixes completed successfully")
+            else logger.w("Warning: Post-extraction fixes failed, but continuing installation")
         } finally {
-            // Clean up script file
-            try {
-                postFixScriptFile.delete()
-            } catch (e: Exception) {
-                logger.w("Warning: Failed to clean up post-fix script file: ${e.message}")
-            }
+            script.delete()
         }
     }
 
-    private suspend fun cleanup(paths: List<String>, logger: ContainerLogger) {
+    private suspend fun cleanup(paths: List<String>, logger: ViewModelLogger) {
         paths.reversed().forEach { path ->
             try {
                 val result = Shell.cmd("rm -rf ${ContainerCommandBuilder.quote(path)} 2>&1").exec()

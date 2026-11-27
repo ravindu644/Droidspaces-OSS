@@ -1,14 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="get_started">Comenzar</string>
-    <string name="root_check_title">Verificar Acceso Root</string>
     <string name="checking_root">Verificando acceso root…</string>
-    <string name="root_granted">Acceso Root Permitido</string>
     <string name="root_denied">Acceso Root Denegado</string>
     <string name="root_required_message">Se requiere acceso root para administrar contenedores.</string>
     <string name="check_root_access">Verificar Acceso Root</string>
-    <string name="check_root_access_click">Toca abajo para verificar el acceso root</string>
-    <string name="root_available_message">Ya puedes usar Droidspaces</string>
     <string name="skip">Saltar</string>
     <string name="continue_button">Continuar</string>
     <string name="home_title">Inicio</string>
@@ -19,7 +15,6 @@
     <string name="close">Cerrar</string>
     <string name="refresh">Recargar</string>
     <string name="search">Buscar</string>
-    <string name="clear">Limpiar</string>
     <string name="container_singular">Contenedor</string>
     <string name="running">Activo</string>
     <string name="backend_checking">Backend: Verificando...</string>
@@ -79,10 +74,8 @@
     <string name="edit_container_configuration">Editar configuración del contenedor</string>
     <string name="uninstall_container_menu">Desinstalar contenedor</string>
     <string name="status_running">EN EJECUCIÓN</string>
-    <string name="status_restarting">REINICIANDO</string>
     <string name="status_stopped">DETENIDO</string>
     <string name="pid_label">PID: %1$d</string>
-    <string name="hostname_label">Hostname: %1$s</string>
     <string name="options_label">Opciones: %1$s</string>
     <string name="start">Iniciar</string>
     <string name="stop">Detener</string>
@@ -105,7 +98,6 @@
     <string name="changes_take_effect_after_restart">Los cambios surtirán efecto tras reiniciar</string>
     <string name="disable_ipv6">Deshabilitar IPv6</string>
     <string name="disable_ipv6_description">Deshabilitar IPv6 en este contenedor. Deshabilitar IPv6 puede romper las apps VPN en el host.</string>
-    <string name="disable_ipv6_nat_forced">IPv6 siempre está deshabilitado en los modos NAT y None.</string>
     <string name="android_storage">Almacenamiento Android</string>
     <string name="android_storage_description">Montar almacenamiento de Android</string>
     <string name="hardware_access">Acceso al Hardware</string>
@@ -127,28 +119,13 @@
     <string name="container_name_exists">Ya existe un contenedor con este nombre</string>
     <string name="next_configuration">Siguiente: Configuración</string>
     <string name="configuration_title">Configuración</string>
-    <string name="container_options">Opciones del contenedor</string>
     <string name="next_storage">Siguiente: Almacenamiento</string>
     <string name="installation_complete">Instalación completada</string>
     <string name="installation_failed">Instalación fallida</string>
-    <string name="installing_module">Instalando módulo</string>
     <string name="installing_droidspaces">Instalando Droidspaces</string>
-    <string name="module_installed_success">Módulo Magisk instalado con éxito</string>
     <string name="backend_installed_success">El backend se ha instalado correctamente</string>
-    <string name="unknown_error">Ocurrió un error desconocido</string>
     <string name="module_installation_failed">Fallo en la instalación del módulo</string>
     <string name="binary_installation_failed">Fallo en la instalación de binarios</string>
-    <string name="removing_old_module">Eliminando módulo antiguo…</string>
-    <string name="extracting_module_files">Extrayendo archivos del módulo…</string>
-    <string name="installing_module_step">Instalando módulo…</string>
-    <string name="setting_permissions">Estableciendo permisos…</string>
-    <string name="verifying_installation">Verificando instalación…</string>
-    <string name="preparing_module_installation">Preparando instalación del módulo…</string>
-    <string name="detected_architecture">Arquitectura detectada: %1$s</string>
-    <string name="creating_directories">Creando directorios…</string>
-    <string name="installing_binary">Instalando binario: %1$s</string>
-    <string name="granting_permissions">Otorgando permisos…</string>
-    <string name="preparing_installation">Preparando instalación…</string>
     <string name="no_containers_running">No hay contenedores en ejecución</string>
     <string name="start_container_first">Inicia un contenedor primero para verlo aquí</string>
     <string name="systemd_services">Servicios Systemd</string>
@@ -202,7 +179,6 @@
     <string name="copy_login">Copiar login</string>
     <string name="comma">,</string>
     <string name="gb_size">%1$d GB</string>
-    <string name="sparse_image_configuration">Configuración de Imagen Sparse</string>
     <string name="storage_configuration">Configuración de almacenamiento</string>
     <string name="about_sparse_images">Sobre las imágenes Sparse</string>
     <string name="sparse_images_recommended">Se recomiendan imágenes Sparse en almacenamiento cifrado, particiones F2FS u otros sistemas de archivos con problemas de compatibilidad.</string>
@@ -228,7 +204,6 @@
     <string name="requirements_check_completed_successfully">Requisitos comprobados con éxito</string>
     <string name="requirements_check_completed_with_errors">Comprobación de requisitos con errores</string>
     <string name="kernel_requirements_copied">Requisitos del kernel copiados al portapapeles</string>
-    <string name="welcome_tagline">Contenedores de Linux. Nativo. Sin sobrecarga.</string>
     <string name="feat_containers_title">Contenedores de Linux reales</string>
     <string name="feat_containers_desc">La misma tecnología de nombre del núcleo que LXC, Podman y Docker. Sin emulación, sin chroot.</string>
     <string name="feat_overhead_title">Sobrecarga cero</string>
@@ -260,7 +235,6 @@
     <string name="generate_bug_report">Generar un informe de fallo</string>
     <string name="generate_bug_report_description">Recoge informe del sistema y bitácoras para depuración</string>
     <string name="bug_report_title">Informe de fallo</string>
-    <string name="install">Instalar</string>
     <string name="type_container_name_to_confirm">Teclee el nombre del contenedor exactamente para confirmar:</string>
     <string name="gpu_option">GPU</string>
     <string name="x11_option">X11</string>
@@ -269,7 +243,6 @@
     <string name="selinux_permissive_option">SELinux Permisivo</string>
     <string name="volatile_option">Volátil</string>
     <string name="cgroup_v1_option">Cgroup V1</string>
-    <string name="deadlock_shield_option">Escudo de punto muerto</string>
     <string name="privileged_option">Privilegiado</string>
     <string name="userns_option">Espacios de nombres de usuario</string>
     <string name="installation_setup_summary">Resumen de instalación</string>

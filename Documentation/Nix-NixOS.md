@@ -1,30 +1,32 @@
 <!--
 title: Nix/NixOS
 section: Reference
-order: 4
-desc: Run NixOS inside Droidspaces containers. Build tarballs, configure compatibility, and try the experimental Finix system.
+order: 3
+desc: Run NixOS in a Droidspaces container: build a tarball, import the compatibility module, and try the experimental Finix system.
 keywords: nixos, droidspaces, nix, container, android, finix, containerized
 -->
 
-# Getting started with NixOS on Droidspaces
+# NixOS
 
-To build a minimal tarball archive to be used with Droidspaces, run:
+## Build a tarball
+
+The repository's flake builds a minimal NixOS rootfs for Droidspaces:
+
 ```sh
 nix build github:ravindu644/Droidspaces-OSS#nixosDroidspacesTarballs.aarch64-linux.minimal
 ```
 
-If your device has a kernel version 5.4 or below, use `minimal-with-systemd-v259` instead. (Systemd v260 and above have dropped support for kernel 5.4 and below.)
+On a kernel of 5.4 or older, build the variant pinned to systemd 259 instead. systemd 260 dropped support for those kernels.
 
 ```sh
 nix build github:ravindu644/Droidspaces-OSS#nixosDroidspacesTarballs.aarch64-linux.minimal-with-systemd-v259
 ```
 
-If the container boots, you can proceed to configuring NixOS for Droidspaces.
+Install the result with **Install from file** in the app, or point `--rootfs` at the extracted directory on Linux. Once it boots, configure it.
 
+## Configure NixOS for Droidspaces
 
-# Configuring NixOS for Droidspaces
-
-To run NixOS on Droidspaces smoothly, import the `working-droidspaces-rootfs-minimal` module into your NixOS system.
+Import the `working-droidspaces-rootfs-minimal` module into your system:
 
 ```nix
 # flake.nix
@@ -36,32 +38,30 @@ droidspaces.url = "github:ravindu644/Droidspaces-OSS";
 }
 ```
 
-**NOTE:** As previously mentioned, kernel 5.4 and below will not be able to run NixOS systems from newer nixpkgs, so use a pinned nixpkgs version:
+On a kernel of 5.4 or older, pin nixpkgs to a release whose systemd still supports it:
+
 ```nix
 nixpkgs-with-systemd-v259.url = "github:NixOS/nixpkgs/b86751bc4085f48661017fa226dee99fab6c651b";
 ```
 
-Adding this module will also let you build your system as a tarball archive:
+The module can also build your own configuration as a Droidspaces tarball:
+
 ```sh
 nix build .#<hostname>.config.system.build.tarball
 ```
 
+## Without systemd
 
-# Systemd issues on older kernels
+Set the container's custom init to `/bin/sh`. You can enter the container and use it as a shell environment, and no services run.
 
-Newer systemd versions may have trouble running on older kernels. You may need to find and use an older nixpkgs release that still supports your kernel.
+## Finix (experimental)
 
+Finix is an experimental NixOS-like system that uses finit as its init instead of systemd:
 
-# NixOS without systemd
-
-If you don't want to run systemd, you can change the init path in Droidspaces to `/bin/sh`. This will allow you to enter the container normally, but systemd services will not be running.
-
-
-# Finix (no more systemd) (experimental)
-
-Finix is an experimental NixOS-like system running finit instead of systemd.
-
-To build a Finix tarball:
 ```sh
 nix build github:ravindu644/Droidspaces-OSS#finixDroidspacesTarballs.aarch64-linux.experimental
 ```
+
+---
+
+Previous: [Community-supported devices](community-supported-devices.md) | Next: [Uninstallation](Uninstallation.md)

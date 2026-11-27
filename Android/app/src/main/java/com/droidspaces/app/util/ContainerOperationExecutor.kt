@@ -23,7 +23,9 @@ object ContainerOperationExecutor {
     // Pre-compiled error pattern for efficient matching
     private val errorPattern = Regex("""(?i)(error|failed|fail)""")
 
-    // Shared main thread Handler for guaranteed-ordered final log delivery
+    // A plain sync Handler on purpose: libsu posts onAddElement through one, and
+    // Dispatchers.Main is an async Handler on API 28+, which may jump a frame's
+    // sync barrier and land the summary above lines still queued behind it.
     private val mainHandler = Handler(Looper.getMainLooper())
 
     /**
@@ -49,7 +51,7 @@ object ContainerOperationExecutor {
     suspend fun executeCommand(
         command: String,
         operation: String, // "start", "stop", "restart", "check"
-        logger: ContainerLogger,
+        logger: ViewModelLogger,
         skipHeader: Boolean = false,
         operationCompletedMessage: String? = null
     ) = withContext(Dispatchers.IO) {
@@ -85,14 +87,9 @@ object ContainerOperationExecutor {
             // exec() blocks on IO until the process exits.
             val result = Shell.cmd("$command 2>&1").to(callbackList).exec()
 
-            // After exec() returns, libsu may still have onAddElement callbacks pending
-            // in the main thread's Handler queue (posted by libsu's internal reader thread
-            // just before the process exited). Using withContext(Main.immediate) here would
-            // race with those pending callbacks.
-            //
-            // Instead, we post via Handler.post() which enqueues our block AFTER everything
-            // already in the main thread's message queue - including any pending onAddElement
-            // callbacks. This guarantees our final lines always appear at the very bottom.
+            // libsu may still have onAddElement callbacks queued on the main looper when
+            // exec() returns. A post through the same kind of Handler lands behind every
+            // one of them, so the summary stays last.
             suspendCancellableCoroutine<Unit> { continuation ->
                 mainHandler.post {
                     if (!lastLineWasEmpty.get()) {
@@ -115,18 +112,6 @@ object ContainerOperationExecutor {
         } catch (e: Exception) {
             logger.e("Exception executing command: ${e.message}")
             logger.e(e.stackTraceToString())
-            false
-        }
-    }
-
-    /**
-     * Check if a command execution was successful.
-     */
-    suspend fun checkCommandSuccess(command: String): Boolean = withContext(Dispatchers.IO) {
-        try {
-            val result = Shell.cmd("$command 2>&1").exec()
-            result.isSuccess
-        } catch (e: Exception) {
             false
         }
     }

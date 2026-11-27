@@ -9,6 +9,7 @@ import android.view.KeyEvent
 import android.view.MotionEvent
 import android.view.inputmethod.InputMethodManager
 import com.droidspaces.app.ui.terminal.virtualkeys.SpecialButton
+import com.droidspaces.app.util.PreferencesManager
 import com.termux.terminal.TerminalEmulator
 import com.termux.terminal.TerminalSession
 import com.termux.terminal.TerminalSessionClient
@@ -82,6 +83,9 @@ class TerminalBackEnd(
     }
 
     override fun onSingleTapUp(e: MotionEvent) {
+        // Read live: the setting is changed on another screen while this object
+        // is alive, so a constructor copy would go stale.
+        if (!PreferencesManager.getInstance(activity).terminalTapKeyboard) return
         val keyboard = terminal.resources.configuration.keyboard
         if (keyboard == Configuration.KEYBOARD_NOKEYS ||
             keyboard == Configuration.KEYBOARD_12KEY) {
@@ -131,9 +135,14 @@ class TerminalBackEnd(
         if (terminal.mEmulator != null) terminal.setTerminalCursorBlinkerState(true, true)
     }
 
-    private fun showSoftInput() {
+    internal fun showSoftInput() {
         terminal.requestFocus()
         val imm = activity.getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
         imm.showSoftInput(terminal, InputMethodManager.SHOW_IMPLICIT)
+    }
+
+    internal fun hideSoftInput() {
+        val imm = activity.getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
+        imm.hideSoftInputFromWindow(terminal.windowToken, 0)
     }
 }

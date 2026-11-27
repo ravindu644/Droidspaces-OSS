@@ -1,468 +1,188 @@
 <!--
-title: 功能详解
-section: 指南
-order: 1
-desc: 深入了解每个 Droidspaces 功能：命名空间隔离、初始化系统支持、OverlayFS 易失模式、GPU 加速、cgroup 隔离、seccomp 防护盾以及 Android 特定调优。
-keywords: droidspaces, 功能, 命名空间, 隔离, cgroup, overlayfs, 易失, 模式, 初始化, 系统, 支持, gpu, 加速
+title: 容器设置
+section: Guides
+order: 2
+desc: 按 App 显示顺序介绍 Droidspaces 的每一项容器设置：每个开关或参数做什么、什么时候打开，以及它对内核有什么要求。
+keywords: droidspaces, settings, features, network, mode, hardware, access, gpu, volatile, bind, mount, resource, limits, privileged, sandboxing, run, at, boot
 -->
 
-# 功能详解
+# 容器设置
 
-每个主要 Droidspaces 功能及其底层工作原理的详细说明。
+下面每一项设置在 App 的容器配置里是一个开关，在命令行上是一个参数。它们按 App 显示的顺序排列。每一项都给出 CLI 参数，以及它写入容器配置文件的键名，因此本页同时服务于 App 和 CLI 用户。
 
----
+## 设置如何保存
 
-## 命名空间隔离
+每个容器都有一个 `container.config` 文件，内容由若干 `key=value` 行组成。App 根据配置表单写入它。在 CLI 上，第一次 `start` 传入的参数会被保存进该文件，之后启动只需要 `--name`。之后的 `start` 或 `restart` 传入的参数会更新该文件；`--reset` 会把它恢复为默认值，同时保留容器名和 rootfs。
 
-### 什么是命名空间？
+改动在容器下次启动时生效。在 App 中，容器菜单里有 **编辑容器配置**。
 
-Linux 命名空间是一种内核功能，用于划分系统资源，使每组进程只能看到自己隔离的资源集合。Droidspaces 使用五种命名空间来创建隔离的容器：
+## 网络
 
-| 命名空间 | 标志 | 隔离内容 |
-|-----------|------|-----------------|
-| **PID** | `CLONE_NEWPID` | 进程 ID。容器获得自己的 PID 树，其中 init 为 PID 1。 |
-| **MNT** | `CLONE_NEWNS` | 挂载点。容器通过 `pivot_root` 拥有自己的文件系统视图。 |
-| **UTS** | `CLONE_NEWUTS` | 主机名和域名。每个容器可以有自己的主机名。 |
-| **IPC** | `CLONE_NEWIPC` | System V IPC 和 POSIX 消息队列。防止跨容器 IPC 泄漏。 |
-| **Cgroup** | `CLONE_NEWCGROUP` | Cgroup 根目录。每个容器看到自己的 cgroup 层次结构。 |
-| **Network**| `CLONE_NEWNET` | 网络栈。隔离的接口、路由和防火墙（NAT/None 模式）。 |
+### 网络模式
 
-### 网络命名空间隔离 (`--net`)
+`--net=MODE`，键 `net_mode`。默认是 `nat`。
 
-Droidspaces 支持三种网络模式，决定是否使用网络命名空间 (`CLONE_NEWNET`)：
+| 模式 | 容器获得什么 | 什么时候用 |
+|------|-------------------------|-------------|
+| **NAT**（`nat`） | 独立的网络栈和私有地址，通过宿主机上网。无需任何配置。会跟随宿主机当前连接在 Wi-Fi、移动数据和以太网之间的切换。 | 你只想让容器能上网。几乎所有场景都该选它。 |
+| **网关**（`gateway`） | 独立的网络栈，位于另一个运行中的容器（通常是 OpenWrt）所拥有的 LAN 上，由后者为它提供 DHCP、DNS、防火墙、路由和 VPN。 | 你想要 VPN 断网保护、DNS 过滤，或者让多个容器处于同一台路由器后面的同一个隔离 LAN 中。 |
+| **Macvlan**（`macvlan`） | 手机所接入的有线网络上的独立 MAC 地址，以及来自该网络路由器的地址。没有 NAT。 | 容器应当成为家庭 LAN 上的一等设备，无需端口转发即可访问。手机端需要 USB 以太网适配器。 |
+| **主机**（`host`） | 直接共享宿主机自身的网络栈。 | 某个程序需要只有宿主机才有的接口。服务会直接绑定宿主机端口，而容器内的网络管理器可能破坏手机的连接。 |
+| **无**（`none`） | 只有 loopback 的网络栈。 | 容器必须离线。 |
 
-1. **Host 模式 (`--net=host`) - 默认**：Droidspaces 有意**不**隔离网络命名空间。容器共享宿主的网络栈。这大大简化了配置：容器无需虚拟网桥、NAT 或防火墙规则即可立即获取互联网访问。在 Android 上，网络本来就复杂（蜂窝网络、Wi-Fi、VPN），这避免了一整类连接问题。
+[从零开始的网络基础](./Networking-From-Zero.md)详细讲解了这五种模式，包括如何搭建 OpenWrt 网关。
 
-2. **NAT 模式 (`--net=nat`)**：容器被放置在私有网络命名空间中。通过虚拟网桥或 veth 对连接到宿主，提供**纯网络隔离**，同时通过宿主当前的互联网上行链路（自动检测）保持互联网访问。兼容绝大多数 Android 设备。
+### 静态 IP 地址
 
-3. **None 模式 (`--net=none`)**：容器被放置在一个私有的、网络隔离的命名空间中，仅启用 loopback 接口，以实现最大安全性。
+`--nat-ip=IP`，键 `static_nat_ip`。仅限 NAT 模式。把容器的地址固定在 `172.28.0.0/16` 范围内。不设置时，地址由容器的 PID 推导而来，可能在两次启动之间变化；当其他设备或路由器上的端口转发记录了这个地址时，就会成为问题。
 
-### 与 Chroot 的对比
+### 上行接口
 
-`chroot` 仅改变进程的可见根目录。它不提供进程隔离、不提供挂载隔离、不提供主机名隔离，也不提供 IPC 隔离。chroot 内的任何进程共享宿主的 PID 空间，可以看到并向其他进程发送信号，且无法运行像 systemd 这样的初始化系统。
+`--upstream=IFACE[,IFACE...]`，键 `upstream_interfaces`。仅限 NAT 模式。留空时容器跟随宿主机当前使用的连接。设置后，容器的互联网只经列出的接口出去，使用第一个已启用且有互联网的接口。支持通配符，`rmnet*` 是给移动数据接口命名的方式，它的编号每次重连后都会变化。
 
-Droidspaces 使用 `pivot_root` 而不是 `chroot`，这是一种更强的隔离机制。结合私有挂载传播 (`MS_PRIVATE`)，容器的挂载事件对宿主完全不可见。
+- `tun0`：容器只能通过手机上运行的 VPN 应用访问互联网。VPN 断开时，容器即离线。
+- `rmnet*`：手机用着 Wi-Fi，但容器留在移动数据上。为此需要在开发者选项中打开"始终保持移动数据连接"。
+- `wlan0,rmnet*`：有 Wi-Fi 时走 Wi-Fi，否则走移动数据。
 
----
+### 端口转发
 
-## 初始化系统支持
+`--port=[HOST:]CONTAINER[/tcp|udp]`，键 `port_forwards`。仅限 NAT 模式。让容器内的服务可以通过宿主机的某个端口访问，宿主机自身及其所在的任何网络都能访问。`--port=22` 表示两端使用同一端口，`--port=8080:80` 把宿主机 8080 映射到容器 80，`--port=1000-2000:1000-2000` 映射一段大小相同的端口范围。未指定协议时 TCP 和 UDP 都会转发。可以重复该参数，或用逗号分隔多个条目。
 
-### 为什么初始化系统很重要
+### 禁用 IPv6
 
-如果没有初始化系统，您只是在 chroot 中运行单个进程。您无法管理服务、无法使用 `systemctl`、没有 journald 进行日志记录，也没有适当的会话管理。这只不过是一个加强版的 shell。
+`--disable-ipv6`，键 `disable_ipv6`。在容器内关闭 IPv6。在 NAT 模式下，只要内核支持 IPv6 NAT，容器通常同时获得 IPv6 和 IPv4；不支持时 App 会强制打开此开关。在主机模式下，该设置会作用于宿主机自身的网络栈，可能破坏手机上的 VPN 应用。
 
-Droidspaces 启动一个真正的初始化系统。当 systemd 作为容器内的 PID 1 启动时：
+### DNS 服务器
 
-- 服务通过 `systemctl start/stop/enable` 进行管理
-- 日志通过 `journalctl` 可用
-- 用户会话通过 `login`、`su` 和 `sudo` 正常工作
-- 目标 (target) 和依赖关系被正确解析
-- 定时器单元、套接字激活以及所有其他 systemd 功能均可正常使用
+`--dns=SERVER[,SERVER...]`，键 `dns_servers`。不设置时，NAT、主机和无模式的容器使用 Cloudflare 和 Google 的公共解析器。网关和 Macvlan 容器使用其 LAN 的 DHCP 服务器下发的 DNS；当网关负责过滤广告或解析本地名称时，这正是你想要的，所以只有确实要覆盖它时才设置这里。
 
-### Droidspaces 如何实现这一点
+## 集成与硬件
 
-systemd 要在容器内运行需要三个条件：
+### Android 存储
 
-1. **PID 1：** 初始化进程必须是 PID 1。Droidspaces 通过 PID 命名空间 (`CLONE_NEWPID`) 后接 fork 来实现这一点，使容器的 init 成为其命名空间中的第一个进程。
-
-2. **容器检测：** Systemd 需要知道它正在容器内运行。Droidspaces 将 `droidspaces` 写入 `/run/systemd/container` 并设置 `container=droidspaces` 环境变量。
-
-3. **Cgroup 访问：** Systemd 需要对其 cgroup 层次结构具有写权限，以创建 scope 和 slice。Droidspaces 通过每个容器的 cgroup 树来提供此功能（参见[Cgroup 隔离](#cgroup-isolation)）。
-
-### 支持的初始化系统
-
-Droidspaces 理论上兼容**任何可运行作为 PID 1 的初始化系统**，包括：
-
-- **systemd**（大多数 Linux 发行版）
-- **OpenRC**（Alpine Linux、Gentoo）
-- **runit**（Void Linux、Devuan）
-- **s6-init**（Alpine、各种容器）
-- **SysVinit**（Debian、Devuan）
-
-初始化二进制文件严格预期位于 `/sbin/init`。如果此二进制文件缺失或不可执行，Droidspaces 将无法启动容器，以确保服务管理和会话管理按预期运行。
-
----
-
-## 易失模式 (Volatile Mode)
-
-### 什么是易失模式？
-
-易失模式（`--volatile` 或 `-V`）创建一个临时容器，所有修改都存储在 RAM 中，并在容器停止时丢弃。原始 rootfs 永远不会被修改。
-
-### 工作原理
-
-Droidspaces 使用 **OverlayFS**，这是一种内置于 Linux 内核的联合文件系统：
-
-- **Lower 层：** 原始 rootfs（如果使用 rootfs.img 模式则只读挂载）
-- **Upper 层：** tmpfs 支持的目录，捕获所有写入操作
-- **合并视图：** 容器看到一个统一的文件系统，读取来自 lower 层，写入进入 upper 层
-
-当容器停止时，upper 层（在 RAM 中）被丢弃。原始 rootfs 保持不变。
-
-### 使用场景
-
-- **测试：** 安装软件包、修改配置并验证更改，而不提交任何内容
-- **开发：** 为每次构建启动一个干净的环境
-- **安全：** 每次启动时保证清洁状态
-- **实验：** 随意破坏而无后果
-
-### 使用方法
-
-```bash
-# 从目录创建易失容器
-droidspaces --name=test --rootfs=/path/to/rootfs --volatile start
-
-# 从镜像创建易失容器
-droidspaces --name=test --rootfs-img=/path/to/rootfs.img --volatile start
-```
-
-### 已知限制：Android 上的 f2fs
-
-大多数 Android 设备对 `/data` 分区使用 f2fs 文件系统。许多 Android 内核上的 OverlayFS 不支持将 f2fs 作为 lower 目录。这意味着**在 f2fs 上使用目录 rootfs 的易失模式将失败**。
-
-**变通方案：** 改用 rootfs 镜像（`--rootfs-img`）。ext4 loop 挂载为 OverlayFS 提供兼容的 lower 目录。
-
-Droidspaces 在运行时会检测到这种不兼容性并提供清晰的诊断消息。
-
----
+`--enable-android-storage`，键 `enable_android_storage`。仅限 Android。把手机的共享存储挂载到容器内的 `/storage/emulated/0`，这样你的照片、下载内容和文档在 Linux 中也能访问。
 
 <a id="hardware-access-mode"></a>
-## 硬件访问模式
+
+### 硬件访问
+
+`--hw-access`，键 `enable_hw_access`。把宿主机真实的 `/dev` 交给容器：GPU、USB 设备、传感器、输入设备，以及所有块设备，包括分区和 SD 卡。容器表现得像一台拥有这些硬件的 Linux 机器。需要 USB 外设、在 Linux 上需要带 GPU 加速的桌面，或需要任何 GPU 开关覆盖不到的设备节点时，就打开它。
 
 > [!CAUTION]
-> 启用硬件访问模式 (`--hw-access`) 会将所有宿主设备（包括原始块设备）直接暴露给容器。如果恶意进程或意外命令命中了这些设备，可能会永久性地破坏您的分区表、擦除 SD 卡或使设备变砖。Droidspaces 的开发者不对因使用此功能而导致的任何数据丢失或硬件损坏负责。**使用风险自负。**
-
-### 它有什么作用
-
-`--hw-access` 标志通过挂载 `devtmpfs` 而不是私有 `tmpfs` 到 `/dev`，将宿主硬件设备暴露给容器。
-
-这使容器可以访问：
-- **GPU**（通过 Turnip + Zink 进行硬件加速图形渲染，以及桌面端 Intel 和 AMD 的 Panfrost/原生 GPU 加速）
-- **摄像头**
-- **传感器**
-- **USB 设备**
-- **块设备**（分区和物理磁盘）
-
-### 安全性影响
-
-硬件访问模式授予容器对**所有**宿主设备的可见性。容器可以直接与 GPU、USB 控制器和其他硬件交互。仅当您信任容器内容并需要硬件访问时才使用此模式。
-
-### systemd 258+ 修复
-
-从 systemd 258 开始，容器检测逻辑得到了强化。systemd 现在会检查 `/sys` 是否为只读挂载，以判断它是在容器内运行还是物理机上运行。如果 `/sys` 是可读写的，systemd 就会假定它具有完整的硬件管理权限，并尝试将服务（如 `getty`）附加到物理 TTY（`tty1`-`tty6`）。由于这些在隔离的容器环境中不存在，服务无法启动，导致控制台没有登录提示。
-
-> [!NOTE]
-> 此信息基于当前开发者对 Droidspaces 中 systemd 行为的理解，可能需要进一步验证。
-
-Droidspaces 通过一种"动态打洞"技术处理此问题：
-
-1. **固定子系统**：所有 `/sys` 子目录通过自我 bind mount 来保留对个别硬件子系统的读写访问。
-2. **只读重新挂载**：顶层的 `/sys` 被重新挂载为只读。
-3. **容器识别**：systemd 检测到只读 `/sys`，正确识别容器环境，并回退到容器原生的控制台管理。
-4. **硬件访问**：通过步骤 1 中创建的固定子挂载，各个硬件子系统保持完全可访问。
-
-### 使用方法
-
-```bash
-droidspaces --name=gpu-test --rootfs=/path/to/rootfs --hw-access start
-```
-
-### 自动 GPU 组设置
-
-当启用 `--hw-access` 时，Droidspaces 会自动：
-
-1. **扫描宿主 GPU 设备** - 在 `pivot_root` 之前，探查约 40 个已知的 GPU 设备路径（`/dev/dri/*`、`/dev/mali*`、`/dev/kgsl-3d0`、`/dev/nvidia*` 等）并通过 `stat()` 收集它们的组 ID。**显式跳过像 `/dev/dri/card*` 这样的危险节点**，以防止宿主机内核恐慌，因为这些节点仅限于宿主的显示管理器。
-2. **创建匹配的组** - 在 `pivot_root` 之后，将类似 `gpu_<GID>:x:<GID>:root` 的条目追加到容器的 `/etc/group` 中。容器的 root 用户自动添加到每个组中。
-3. **幂等重启** - 容器重启时，检测到现有组并跳过（不产生重复条目）。
-
-这消除了容器内手动执行 `groupadd`/`usermod` 命令的需要，同时通过避免受限的硬件路径来确保宿主内核的稳定性。
-
-### X11 套接字挂载
-
-为支持 GUI 应用程序，Droidspaces 自动 bind mount X11 套接字目录：
-
-- **Android (Termux X11)：** 检测并挂载 `/data/data/com.termux/files/usr/tmp/.X11-unix`
-- **桌面 Linux：** 通过 `/proc/1/root/tmp/.X11-unix` 挂载 `/tmp/.X11-unix`
-
-> [!TIP]
-> X11 支持可以使用 `--termux-x11` (`-X`) 标志独立启用。如果您不需要完整的 GPU/硬件访问权限，这是在 Android 上使用 GUI 应用程序的推荐方式，因为它保留了更高级别的隔离性。
-
-
-Droidspaces 会通过 `/run/droidspaces.env`（从 `/etc/profile.d/droidspaces_env.sh` 符号链接）自动将 `DISPLAY=:5` 以及（启用 VirGL 时）`GALLIUM_DRIVER=virpipe` 注入到容器环境中。`bash` 和 `sh` 会自动读取此文件。如果您使用 `zsh`、`fish` 或其他非登录 shell，请手动执行：`source /run/droidspaces.env`。
-
-### 支持的 GPU 系列
-
-| 系列 | 设备路径 |
-|--------|-------------|
-| **DRI** (Intel, AMD, Mesa) | `/dev/dri/renderD128-130`、`/dev/dri/card0-2` |
-| **NVIDIA** (专有驱动) | `/dev/nvidia*`、`/dev/nvidia-uvm*`、`/dev/nvidia-caps/*` |
-| **ARM Mali** | `/dev/mali`、`/dev/mali0`、`/dev/mali1` |
-| **Qualcomm Adreno** | `/dev/kgsl-3d0`、`/dev/kgsl`、`/dev/genlock` |
-| **AMD Compute** | `/dev/kfd` |
-| **PowerVR** | `/dev/pvr_sync` |
-| **NVIDIA Tegra** | `/dev/nvhost-ctrl`、`/dev/nvhost-gpu`、`/dev/nvmap` |
-| **DMA Heaps** | `/dev/dma_heap/system`、`/dev/dma_heap/linux,cma`、`/dev/dma_heap/reserved`、`/dev/dma_heap/qcom,system` |
-| **Sync** | `/dev/sw_sync` |
-
----
-
-## 自定义 Bind 挂载
-
-### 什么是 Bind 挂载？
-
-Bind 挂载允许您将宿主文件系统上的目录映射到容器内的指定位置。宿主目录在容器内变为可见且可写。
-
-### 语法
-
-```bash
-# 单个挂载
---bind-mount=/host/path:/container/path
--B /host/path:/container/path
-
-# 多个挂载（逗号分隔）
--B /src1:/dst1,/src2:/dst2,/src3:/dst3
-
-# 多个挂载（链式）
--B /src1:/dst1 -B /src2:/dst2
-
-# 混合使用
--B /src1:/dst1,/src2:/dst2 -B /src3:/dst3
-```
-
-### 限制
-
-- 目标路径必须是**绝对路径**
-- 目标路径中的路径遍历 (`..`) 出于安全原因会被**拒绝**
-
-### 自动目录创建
-
-如果目标目录在 rootfs 内不存在，Droidspaces 会使用 `mkdir -p` 自动创建。
-
-### 软失败模型
-
-如果宿主源路径不存在或挂载失败，Droidspaces 会发出警告并跳过该条目，而不是导致整个启动失败。这使得容器在可选 bind 源暂时不可用时仍能启动。
-
-### 安全性
-
-Droidspaces 通过两种保护机制验证 bind 挂载目标：
-1. **挂载前：** 使用 `lstat()` 确保 rootfs 内的目标不是符号链接
-2. **挂载后：** 使用 `realpath()` 通过 `is_subpath()` 辅助函数验证已挂载的路径无法逃逸容器根目录
-
----
-
-## 网络隔离（3 种模式）
-
-Droidspaces 提供三种不同的网络模式，以便于在使用便捷性和高级隔离之间取得平衡。
-
-### 1. Host 模式 (`--net=host`) - 默认
-容器共享宿主的网络命名空间。
-- **优点**：零配置、即时互联网访问、兼容所有 Android VPN/热点。
-- **缺点**：无端口隔离；容器内的服务直接绑定到宿主端口。
-
-### 2. NAT 模式 (`--net=nat`)
-容器被放置在私有网络命名空间 (`CLONE_NEWNET`) 中，并通过虚拟网桥 (`ds-br0`) 或直接的 veth 对连接到宿主。
-- **确定性 IP**：每个容器在 `172.28.0.0/16` 范围内分配唯一 IP，由其 PID 决定。
-- **内置 DHCP**：Droidspaces 包含一个最小的内置 DHCP 服务器，用于自动配置容器的 `eth0`。
-- **纯净隔离**：容器无法直接看到或与宿主的网络接口交互。
-- **自动上行链路检测**：无需任何配置。Droidspaces 直接读取内核的路由状态来确定提供互联网访问的接口——在 Android 上读取 netd 为活跃默认网络安装的策略路由规则；在标准 Linux 上读取主路由表的默认路由。纯 IPv6 移动网络上的 CLAT (464xlat) 接口也会被自动处理。
-
-> [!IMPORTANT]
-> NAT 模式仅支持 **IPv4**。如果宿主的上行链路缺少 IPv4 地址（纯 IPv6 网络），互联网访问将无法正常工作。请参阅[IPv4 NAT 常见问题](./Troubleshooting.md#ipv4-quirks)以获取变通方案。
-
-### 3. None 模式 (`--net=none`)
-容器获得一个私有网络命名空间，仅启用 loopback (`lo`) 接口。
-- **使用场景**：离线任务的最大安全性。
-
-### 端口转发（NAT 模式）
-
-在 NAT 模式下，您可以使用 `--port` 标志将容器服务暴露给宿主或本地网络。支持的格式：
-
-```bash
-# 将宿主端口 8080 转发到容器端口 80
---port 8080:80
-
-# 对称简写（宿主 8080 -> 容器 8080）
---port 8080
-
-# 将宿主端口范围转发到容器端口范围（必须相同大小）
---port 1000-2000:1000-2000
-
-# 混合使用并显式指定协议
---port 2222:22/tcp --port 5000-5050:5000-5050/udp
-```
-
-转发的端口可以从宿主所在的任何网络访问——包括在 Android 上连接到手机自身热点或 USB 网络共享的客户端。
-
-
-### 实时上行链路监控
-在 Android 上，连接经常在 WiFi 和移动数据之间切换。Droidspaces 包含一个**路由监控器**，订阅内核路由事件（FIB 规则、路由、链路、地址）。当 Android 切换其默认网络时（例如您走出了 WiFi 覆盖范围），监控器会立即更新内核的策略路由以保持容器连接——无需配置，无需重启。
-
----
-
-## Rootfs 镜像支持
-
-### 为什么使用镜像？
-
-基于目录的 rootfs 配置虽然简单，但有局限性：
-- 在某些文件系统上（特别是 Android 上的 f2fs）文件权限可能无法正确保留
-- OverlayFS 可能与底层文件系统不兼容
-- **内置完整性检查**：镜像可以在运行时通过 `e2fsck` 进行验证。
-- **可移植性**：您的整个容器封装在一个单独的 `.img` 文件中。这使得备份、分享或随身携带变得极其容易。只需将文件复制到任何装有 Droidspaces 的设备上即可启动。
-
-Ext4 镜像解决了这些问题。镜像文件包含一个完整的 ext4 文件系统，在运行时通过 loop 挂载，提供一致的行为，不受宿主文件系统的影响。
-
-### 工作原理
-
-当您使用 `--rootfs-img` 时：
-
-1. **文件系统检查：** Droidspaces 对镜像运行 `e2fsck -f -y` 以确保完整性
-2. **SELinux 上下文：** 在 Android 上，应用 `vold_data_file` SELinux 上下文以防止静默 I/O 拒绝
-3. **Loop 挂载：** 镜像挂载到 `/mnt/Droidspaces/<name>`
-4. **重试逻辑：** 在内核 4.14 上，由于残留的 loop 设备状态，挂载可能会失败。Droidspaces 最多使用`sync()` 重试 3 次，并解决延迟问题。
-
-### 使用方法
-
-```bash
-# 基于镜像的容器（--name 为必填项）
-droidspaces --name=ubuntu --rootfs-img=/path/to/rootfs.img start
-
-# 带镜像的易失模式（镜像只读挂载）
-droidspaces --name=ubuntu --rootfs-img=/path/to/rootfs.img --volatile start
-```
-
----
-
-<a id="cgroup-isolation"></a>
-## Cgroup 隔离
-
-### 它有什么作用
-
-Droidspaces 在宿主的 `/sys/fs/cgroup/droidspaces/<name>` 路径下为每个容器创建 cgroup 树。结合 cgroup 命名空间，每个容器看到自己干净的 cgroup 层次结构。
-
-**注意：** Cgroup 隔离在 `--force-cgroupv1` 模式下不可用。
-
-### 为什么它很重要
-
-systemd 严重依赖 cgroups 来执行以下操作：
-- 创建 scope 和 slice 服务
-- 资源统计（每个服务的 CPU、内存）
-- 进程追踪（知道哪些进程属于哪个服务）
-- 干净关闭（终止服务 cgroup 中的所有进程）
-
-没有适当的 cgroup 隔离，systemd 将无法正常工作。多个容器会在 cgroup 层次结构中发生冲突，服务管理将失败。
-
-### "软禁 (Jail)"技巧
-
-在创建 cgroup 命名空间之前，Droidspaces 会将监控器进程移动到容器特定的 cgroup 中。这确保了当调用 `unshare(CLONE_NEWCGROUP)` 时，新命名空间的根会映射到容器的子树。
-
-### Cgroup v1 和 v2 支持
-
-Droidspaces 支持两种 cgroup 版本：
-
-- **Cgroup v2 (统一)：** 现代发行版使用。作为单一层次结构挂载。
-- **Cgroup v1 (旧版)：** 旧发行版使用。Droidspaces 处理联合挂载的控制器（如 `cpu,cpuacct`），并在旧内核或 `--force-cgroupv1` 模式下为次要名称创建符号链接。
-
-### 强制使用旧版 Cgroup V1 (`--force-cgroupv1`)
-
-在旧版 Android 内核（3.18、4.4 或 4.9）上，宿主系统可能完全缺少 Cgroup v2 支持，或者提供了不完整的实现，缺少现代 `systemd` 所需的基本控制器（CPU、内存等）。这种不一致性常常导致 `systemd` 错误识别环境，从而导致关键的启动失败。
-
-`--force-cgroupv1` 参数作为一个**专家级应急出口**。它指示 Droidspaces 严格使用旧版 v1 层次结构，即使 v2 在宿主上似乎可用。这确保了在旧内核基础设施上使用现代 `systemd` 版本的发行版实现最大的稳定性和兼容性。
-
-### `su` 修复
-
-当使用 `enter` 或 `run` 进入容器时，进程必须在加入命名空间之前位于容器的宿主端 cgroup 中。否则，容器内的 `systemd-logind` 和 `sd-pam` 无法将进程映射到有效会话，导致 `su` 和 `sudo` 挂起。Droidspaces 在任何 `setns()` 调用之前自动附加到容器的 cgroup 来处理此问题。
-
----
-
-## 自适应安全与死锁防护盾
-
-Droidspaces 包含基于 BPF 的复杂 seccomp 过滤器，以解决关键的 Android 内核冲突：
-
-### 1. FBE 密钥环冲突（自动）
-Android 的文件级加密将文件系统密钥存储在内核会话密钥环中。当 systemd 尝试创建新的会话密钥环时，进程失去对宿主加密密钥的访问权限，导致 `ENOKEY` 错误。
-
-**解决方案：** 在旧内核（< 5.0）上，Droidspaces *自动*拦截密钥环系统调用（`keyctl`、`add_key`、`request_key`），返回 `ENOSYS`，强制 systemd 使用现有的密钥环。
-
-<a id="vfs-deadlock"></a>
-
-### 2. VFS 命名空间死锁（手动启用）
-在某些使用旧内核（特别是 4.14.113，常见于 2019-2020 年的 Android 设备）的设备上，systemd 的服务沙箱功能会触发内核 VFS 层中的竞态条件（`grab_super()` 缺陷）。这会导致 systemd 挂起、`systemctl` 冻结以及潜在的设备死锁。4.9 和 4.19 内核基本不受影响。
-
-**修复方法：** 您可以手动启用**死锁防护盾**（在 Android 应用配置中或通过 `--block-nested-namespaces` CLI 参数）。这会拦截 `unshare` 和 `clone` 命名空间请求并返回 `EPERM`，阻止 systemd 触发死锁。
-
-### 嵌套容器（Docker、Podman、LXC）
-
-由于死锁防护盾现在严格作为**可选开关**而不是硬编码的全面禁止：
-- **原生支持：** 所有内核上的用户现在都可以开箱即用地原生运行 Docker、Podman 和 LXC。
-- **权衡取舍：** 如果您的设备需要死锁防护盾来启动 systemd，启用它将有意阻止 Docker/Podman 所需的命名空间创建。
-
-> [!TIP]
 >
-> **旧内核网络：** 在旧内核上的 Droidspaces 内运行 Docker/Podman 时，现代 `nftables` 可能无法正确路由流量。我们建议使用 Droidspaces 的 NAT 模式，并将容器的网络栈切换到 `iptables-legacy` 和 `ip6tables-legacy`。
+> 这里面包含裸块设备。容器内一次错误的 `dd` 或 `mkfs` 会毁掉手机的分区。只对信任的容器使用它，并且不要上报在开启它时出现的问题。App 要求你输入确认语句，正是出于这个原因。
 
+即使打开硬件访问，六个宿主机虚拟终端 `tty1` 到 `tty6` 仍然隐藏，因为 systemd 容器否则会把登录提示打到宿主机控制台上。`--allow-vts` 可以暴露它们，App 没有对应开关。
+
+### GPU 访问
+
+`--gpu`，键 `enable_gpu_mode`。折中方案。容器保留私有的 `/dev`，只把 GPU 渲染节点镜像进去，因此程序可以使用 GPU，而宿主机上的其他设备都不会暴露。镜像进来的节点属于 root 所在的 `droidspaces-gpu` 组；用 `usermod` 把其他用户加入该组。硬件访问也会一并打开它。
+
+已知支持的 GPU 系列：Intel、AMD 和多数 ARM SoC 上的 Mesa DRI 渲染节点，高通 Adreno（`kgsl`），ARM Mali，NVIDIA，PowerVR，以及这些驱动所需的 DMA heap。
+
+### 配置 Termux:X11
+
+`--x11`，键 `enable_x11`。Android：容器启动时启动 Termux:X11 服务，把它的 socket 挂载进容器，并为每个登录 shell 设置 `DISPLAY`。需要 Termux 和 Termux:X11 两个应用，以及[显示指南](./Graphics-and-Audio.md)里的一次性设置。Linux：挂载宿主机的 X11 socket，让容器内的图形程序显示在你的桌面上。
+
+### Anland 显示
+
+`--anland`，键 `enable_anland`。仅限 Android。为容器启动 Anland 显示守护进程，这样为 Anland 打过补丁的 Wayland 合成器就能把桌面显示在 Anland 应用里。需要 GPU 访问、容器内打过补丁的合成器，以及手机上的 Anland 应用；它会取代 Termux:X11，而不是叠加。[Anland 指南](./Anland.md)有完整步骤。
+
+### 配置 VirGL 3D 加速
+
+`--virgl`，键 `enable_virgl`。仅限 Android。在 Termux 中与 Termux:X11 一起启动 VirGL 服务，并在容器内设置 `GALLIUM_DRIVER=virpipe`，让 OpenGL 程序在手机的 GPU 上渲染，而不是用软件渲染。这是 Mali 和 PowerVR GPU 上的正确选择。在高通设备上，容器内配合 GPU 访问使用 Turnip 更快；[显示指南](./Graphics-and-Audio.md)对两者做了对比。
+
+### 配置 PulseAudio
+
+`--pulse-audio`，键 `enable_pulseaudio`。仅限 Android。在 Termux 中启动 PulseAudio 服务，把它的 socket 挂载进容器并设置 `PULSE_SERVER`，让容器内任何播放声音的程序都从手机扬声器出声。
+
+## 资源限制
+
+`--memory=SIZE`、`--cpus=COUNT` 和 `--pids-limit=N`，键分别为 `memory_limit`、`cpu_quota`（配合 `cpu_period`）和 `pids_limit`。默认关闭；容器共享设备的全部资源。
+
+- **限制内存**：`--memory=512M` 或 `--memory=2G`。容器无法越过该上限使用设备的 swap，因此到达上限时，是容器自己的 OOM killer 终止容器内的某个进程，而不是让手机随着 zram 被填满而变慢。容器内的一切，包括 `free` 和 fastfetch，都会依据该上限报告用量，并且看不到 swap。
+- **允许 swap**：`--allow-swap`，键 `allow_swap`。让受内存限制的容器越过上限使用设备的 swap，就像设置上限之前那样，并让它看到设备的 swap。`droidspaces info` 和 `show --json` 会显示运行中的容器是否可以使用 swap。
+- **限制 CPU**：`--cpus=1.5` 给容器一个半核心的计算时间，分摊到所有核心上。
+- **限制进程数**：容器同时可以拥有的最大进程和线程数，最小为 16。一个 systemd 发行版需要几百个。
+
+每个限制都需要内核中对应的 cgroup 控制器：`CONFIG_MEMCG`、`CONFIG_CFS_BANDWIDTH` 和 `CONFIG_CGROUP_PIDS`。内核无法执行某项限制时，App 会把它置灰并指出缺少的选项；CLI 会在启动时跳过它并给出警告。原厂 Android 内核常常缺少 CPU 和进程这两项。`droidspaces info` 会打印当前生效的限制和当前用量。
+
+有一个缺口：直接通过 `sysinfo()` 向内核查询、而不读取 `/proc` 的程序，看到的仍是宿主机的内存和负载。OpenWrt 的 LuCI 就是这样。限制本身依然照常执行。
+
+## 安全与启动
+
+### SELinux 宽容模式
+
+`--selinux-permissive`，键 `selinux_permissive`。仅限 Android 和受支持的 Linux 发行版。在容器运行期间把宿主机的 SELinux 切换为宽容模式，并在最后一个请求它的容器停止后恢复为强制模式。
+
+<a id="sandboxing"></a>
+
+### 允许沙箱
+
+`--allow-sandboxing`，键 `allow_sandboxing`。默认关闭。当容器内的程序要构建自己的沙箱时打开：rootless Docker 或 Podman、Flatpak、bwrap、Firefox、Chromium。它们都会创建用户命名空间，并在其中挂载自己的 `/proc`，而默认配置的容器会同时拦截这两步。打开后，用户命名空间被允许，容器会获得内核为此所需的干净 `/proc` 和只读 `/sys` 实例，位于 `/run/droidspaces/` 下。
+
+代价是容器内的 root 可以通过那份干净的 `/proc` 触达宿主机实时的 sysctl 树，因此这相当于对容器 root 用户的信任声明。需要 `CONFIG_USER_NS`，`droidspaces check` 会把缺失报告为 user namespace 支持缺失。容器内使用 Docker 时，请在 `/etc/docker/daemon.json` 中加入 `{"userns-remap": "default"}` 并重启它。
+
+### 易失模式
+
+`--volatile`，键 `volatile_mode`。所有写入都进入 RAM，并在容器停止时丢弃；rootfs 永远不会改变。适合试用软件包、每次启动都要干净环境，或者故意搞坏东西。需要内核支持 OverlayFS。在 Android 上需要稀疏镜像 rootfs，因为多数 Android 内核上的 OverlayFS 拒绝以 f2fs 目录作为基底。
+
+### 强制使用 Cgroup V1
+
+`--force-cgroupv1`，键 `force_cgroupv1`。即使宿主机提供 v2，也让容器使用旧版 cgroup v1 层级。用于旧的 Android 内核（4.9 及更早），它们的 cgroup v2 缺少 systemd 期望的控制器，会导致 systemd 误判环境并启动失败。除非 systemd 容器在这类内核上无法启动，否则不要打开。
+
+### 特权模式
+
+`--privileged=TAG[,TAG...]`，键 `privileged`。逐个移除安全防线：
+
+- `nomask`：不遮蔽 `/proc` 和 `/sys`。除非打开硬件访问，`/sys` 仍为只读。
+- `nocaps`：不丢弃任何 capabilities；容器内的 root 是完整的 root。
+- `noseccomp`：不做系统调用过滤。
+- `shared`：容器内的挂载会传播到宿主机。
+- `full`：以上全部。
+
+每一项都是容器隔离上的一个洞。日常使用都不需要它们；Flatpak、bwrap 和 rootless Docker 单独用允许沙箱就够了。开启特权模式时发现的问题我们不予受理，App 也会要求你确认这一点。
+
+### 开机自启动
+
+键 `run_at_boot`，配合 `run_at_boot_priority`。仅限 App。手机开机时、在锁屏之前，通过 App 安装的启动模块拉起容器。容器按 **设置**、**自启动优先级** 中设定的顺序启动；把网关容器排在使用它做路由的容器之前。
+
+## 高级选项
+
+### 环境变量
+
+`--env=PATH`，键 `env_file`。一个由 `KEY=value` 行组成的文件，每行一个，`#` 开头为注释。这些变量会为容器的 init 以及每个 `enter` 和 `run` 会话设置。App 会替你编辑该文件。
+
+### Bind 挂载
+
+`--bind=SRC:DEST[:ro]`，键 `bind_mounts`。让宿主机的目录在容器内 `DEST` 处可见，加 `:ro` 则为只读。可以重复该参数，或用逗号分隔多个条目。目标必须是容器内的绝对路径，且不能是 `/`。启动时缺失的源会被跳过并给出警告，而不是让启动失败。
+
+### 自定义 init 二进制
+
+`--init=PATH`，键 `custom_init`。用来代替 `/sbin/init` 作为 PID 1 运行的程序。适用于 init 放在别处的发行版，或在调试无法启动的 rootfs 时以 shell 作为 PID 1 启动。
+
+### Termux:X11 额外参数与 VirGL 额外参数
+
+`--tx11-flags="..."`，键 `tx11_extra_flags`；`--virgl-flags="..."`，键 `virgl_extra_flags`。传给 Droidspaces 启动的 Termux:X11 和 VirGL 服务的额外参数。只有在对应开关打开时，App 才会显示它们。
+
+## 存储
+
+安装容器时选定一次。
+
+**稀疏镜像**：rootfs 存放在一个 ext4 镜像文件里，由 Droidspaces 在启动时 loop 挂载。CLI 上对应 `--rootfs-img=PATH`，也可以接受块设备。无论宿主机使用什么文件系统，镜像的行为都一致，这在 Android 的 f2fs 上很重要；迁移容器时也只有一个文件需要复制。镜像的超级块表明需要时，会用 `e2fsck` 检查。你选择的大小是上限；文件随容器占用空间增长。App 之后可以 **调整稀疏镜像容量**，也可以用 **迁移至稀疏镜像** 把目录形式的容器转换过去。
+
+**目录**：rootfs 就是一个普通目录，CLI 上是 `--rootfs=PATH`。从宿主机查看更简单。在 Android 上，只有在无法使用镜像时才用它。
+
+**存储位置**：默认内部存储，或你选择的任何文件夹，包括 SD 卡和 U 盘。无法容纳目录形式 rootfs 的位置会强制使用稀疏镜像。
+
+## 没有开关的设置项
+
+**init 系统：** 任何能作为 PID 1 运行的 init 都可以：systemd、OpenRC、runit、s6、SysVinit、OpenWrt 的 procd。容器的 `/sbin/init` 必须存在，或者你用自定义 init 二进制指定另一个。App 的容器详情能识别 systemd、OpenRC、procd 和 runit，并让你管理它们的服务。
+
+**主机名：** `--hostname=NAME`，键 `hostname`。默认为容器名。
+
+**前台模式：** CLI 上的 `--foreground` 会把你的终端在整个启动过程中附着到容器控制台，这是排查容器起不来的最佳方式。
 
 ---
 
-## Android 特定调优
-
-为了应对 Android Linux 内核的"特性化"本质并确保容器稳定性、网络连接和硬件访问，必须对容器的 rootfs 应用若干调整。
-
-> [!NOTE]
->
-> Droidspaces 后端本身不会修改 rootfs。这些更改在用户使用 Android App 内置安装器安装新 rootfs tarball 时自动应用，或者在使用来自 [Droidspaces rootfs-builder](https://github.com/Droidspaces/Droidspaces-rootfs-builder) 的官方 rootfs tarball 时已预先配置好。
-
-### 1. Android 网络与硬件组
-
-旧版 Android 内核将网络套接字创建和直接硬件访问限制为特定的硬编码组 ID (GID)。Droidspaces 在容器 rootfs 内映射并配置这些组：
-
-- **GID 映射**：将 Android 特定组追加到 `/etc/group`：
-  - `aid_inet` (3003)：允许互联网访问。
-  - `aid_net_raw` (3004)：允许创建原始套接字（例如用于 `ping`）。
-  - `aid_net_admin` (3005)：允许网络管理。
-- **权限分配**：将容器的 `root` 用户添加到 `aid_inet`、`aid_net_raw`、`input`、`video` 和 `tty` 组。
-- **包管理器修复**：将 Debian/Ubuntu 的 `_apt` 用户配置为使用 `aid_inet` 作为其主要组，从而允许安装和更新软件包而不会出现权限错误。
-- **用户自动化**：修改 `/etc/adduser.conf`，使任何新创建的用户自动继承这些组。
-
-### 2. Udev 触发器与服务覆盖
-
-标准 Linux 发行版在启动期间运行 `udevadm trigger` 来冷插拔硬件设备。在 Android 设备上同时触发所有子系统可能导致内核恐慌。
-
-- **硬件访问防护**：由于 udev 服务仅在显式启用硬件访问时才有用，Droidspaces 注入了一个 drop-in `ExecCondition` 覆盖，阻止 `systemd-udevd.service`、`systemd-udev-trigger.service` 和 `systemd-udev-settle.service` 启动，除非容器配置了硬件访问 (`enable_hw_access=1`)：
-  ```ini
-  [Service]
-  ExecCondition=
-  ExecCondition=/bin/sh -c "grep -q 'enable_hw_access=1' /run/droidspaces/container.config"
-  ```
-- **安全 Udev 触发器**：Droidspaces 使用 drop-in 配置覆盖默认的 `systemd-udev-trigger.service`。如果启用了硬件访问，此配置将触发器限制为一组严格定义的安全子系统：
-  ```ini
-  [Service]
-  ExecStart=
-  ExecStart=-/usr/bin/udevadm trigger --subsystem-match=usb --subsystem-match=block --subsystem-match=input --subsystem-match=tty --subsystem-match=net
-  ```
-  这使容器能够动态检测新的 USB 驱动器、键盘和网络接口，同时避免导致宿主机崩溃的风险。
-- **只读路径修复**：覆盖所有 udev 单元的 `ConditionPathIsReadWrite`，以防止在关键系统目录以只读方式挂载的环境中发生故障。
-
-### 3. 优化 systemd 与日志记录
-
-Android 内核以极其冗长而闻名。如果不进行调优，标准的 `journald` 设置会读取宿主机内核消息并产生数 GB 的日志，迅速填满设备的内部存储空间：
-
-- **Journald 调整**：在 `journald.conf` 中禁用读取内核消息和系统审计（`ReadKMsg=no`、`Audit=no`），以防止容器囤积系统级内核日志。
-- **易失存储**：将 systemd 日志配置为仅存储在内存中（`Storage=volatile`），并强制执行严格的最大大小限制（200MB），以防止持续写入消耗并填满设备的物理内部闪存。
-- **服务屏蔽**：屏蔽 `systemd-networkd-wait-online.service` 以防止启动延迟，屏蔽 `systemd-journald-audit.socket` 以防止在 4.9 等旧内核中发生 systemd 死锁。
-- **电源键处理**：指示 `systemd-logind` 忽略宿主机电源和挂起键事件，使容器不会尝试处理宿主机的电源状态转换。
-
-### 4. NAT 模式网络防护
-
-在 Host 网络模式下，容器内运行 `NetworkManager` 或 `systemd-networkd` 等网络管理器可能会与 Android 宿主机的路由表冲突，导致移动数据/Wi-Fi 连接中断。
-
-Droidspaces 为标准网络服务（如 `NetworkManager.service`、`systemd-networkd.service`、`dhcpcd.service` 和 `systemd-resolved.service`）注入 drop-in `ExecCondition` 覆盖。这确保这些服务仅在容器显式配置为 NAT 模式时执行：
-```ini
-[Service]
-ExecCondition=
-ExecCondition=/bin/sh -c "grep -q 'net_mode=nat' /run/droidspaces/container.config"
-```
-
-### 5. 存储与 DHCP 配置
-
-- **systemd-networkd 配置**：自动配置 `10-eth-dhcp.network`，为任何 `eth*` 接口启用 DHCP 和 IPv6 路由接收。
-- **Logrotate 限制**：在 `/etc/logrotate.conf` 中强制执行 `maxsize 50M` 限制，以防止日志长期占用过多磁盘空间。
+上一页：[Android 应用指南](./Usage-Android-App.md) | 下一页：[Linux CLI](./Linux-CLI.md)

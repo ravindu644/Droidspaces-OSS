@@ -10,8 +10,6 @@ output/
 *.config
 .cache
 .claude
-Android/app/src/main/assets/binaries/
-Android/app/src/main/assets/supported_locales.txt
 
 # Keystores
 *.keystore
@@ -26,3 +24,5 @@ compile_commands.json
 
 # Android stuff
 .gradle
+# Python
+__pycache__/

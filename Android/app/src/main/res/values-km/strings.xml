@@ -2,14 +2,10 @@
 <resources>
     <string name="app_name" translatable="false">Droidspaces</string>
     <string name="get_started">ចាប់ផ្តើម</string>
-    <string name="root_check_title">ការពិនិត្យសិទ្ធិ Root</string>
     <string name="checking_root">កំពុងពិនិត្យសិទ្ធិ Root...</string>
-    <string name="root_granted">ទទួលបានសិទ្ធិ Root</string>
     <string name="root_denied">សិទ្ធិ Root ត្រូវបានបដិសេធ</string>
     <string name="root_required_message">តម្រូវឲ្យមានសិទ្ធិ Root ដើម្បីគ្រប់គ្រងកុងតឺន័រ។</string>
     <string name="check_root_access">ការពិនិត្យសិទ្ធិ Root</string>
-    <string name="check_root_access_click">ចុចខាងក្រោមដើម្បីពិនិត្យសិទ្ធិ Root</string>
-    <string name="root_available_message">ឥឡូវនេះ អ្នកអាចប្រើប្រាស់ Droidspaces បានហើយ</string>
     <string name="skip">រំលង</string>
     <string name="continue_button">បន្ត</string>
     <string name="home_title">ទំព័រដើម</string>
@@ -20,7 +16,6 @@
     <string name="close">បិទ</string>
     <string name="refresh">ផ្ទុកឡើងវិញ</string>
     <string name="search">ស្វែងរក</string>
-    <string name="clear">សម្អាត</string>
     <string name="container_singular">កុងតឺន័រ</string>
     <string name="running">កំពុងដំណើរការ</string>
     <string name="backend_checking">Backend: កំពុងពិនិត្យ...</string>
@@ -83,7 +78,6 @@
     <string name="backend_attention_required">ផ្នែកខាងក្រោយ៖ ត្រូវការចំណាត់ការ</string>
     <string name="view_logs">មើលកំណត់ហេតុ</string>
     <string name="feat_hardware_title">ទទួលបានសិទ្ធិប្រើប្រាស់ Hardware និង GPU ទាំងស្រុង</string>
-    <string name="welcome_tagline">កុងតឺន័រ Linux។ ដើម (Native)។ គ្មានការចំណាយបន្ថែម។</string>
     <string name="feat_isolation_desc">រចនាសម្ព័ន្ធ PID ឯកជន, Mount Table, Hostname, IPC, និងឋានានុក្រម Cgroup សម្រាប់កុងតឺន័រនីមួយៗ។</string>
     <string name="feat_containers_title">កុងតឺន័រ Linux ពិតប្រាកដ</string>
     <string name="feat_hardware_desc">បើកសិទ្ធិឱ្យកុងតឺន័ររបស់អ្នក ចូលប្រើប្រាស់ Hardware របស់ម៉ាស៊ីនផ្ទាល់ (GPU, សេនស័រ, USB, ឧបករណ៍ Block) ដោយផ្ទាល់។</string>
@@ -93,7 +87,6 @@
     <string name="tap_to_fix_system">ចុចដើម្បីជួសជុលការកំណត់រចនាសម្ព័ន្ធប្រព័ន្ធ</string>
     <string name="feat_init_desc">គាំទ្រប្រព័ន្ធ Init ពេញលេញ (Full init system support)។ ការគ្រប់គ្រងសេវាកម្មពិតប្រាកដ មិនមែនជាបរិស្ថានធ្វើត្រាប់តាម (Simulated environment) នោះទេ។</string>
     <string name="feat_containers_desc">ប្រើប្រាស់បច្ចេកវិទ្យា Kernel Namespace ដូចគ្នាទៅនឹង LXC, Podman និង Docker។ គ្មានការធ្វើត្រាប់តាម (No emulation) និងមិនមែនត្រឹមតែជា chroot នោះទេ។</string>
-    <string name="status_restarting">កំពុងចាប់ផ្ដើមឡើងវិញ</string>
     <string name="status_stopped">បានឈប់</string>
     <string name="pid_label">លេខសម្គាល់ដំណើរការ (PID): %1$d</string>
     <string name="feat_privileged_desc">កាត់បន្ថយរបាំងការពារសន្តិសុខ ដោយប្រើប្រាស់របៀបសិទ្ធិខ្ពស់ (Privileged Mode) ដែលរៀបចំឡើងសម្រាប់អ្នកប្រើប្រាស់កម្រិតខ្ពស់។</string>
@@ -109,8 +102,6 @@
     <string name="feat_unkillable_desc">គាំទ្រការភ្ជាប់ជាមួយ native init.rc និង daemon កម្រិត userspace ចំនួន ២ ជាន់ (2-layer userspace daemons)។ មិនអាចរលត់បានជាដាច់ខាត (Completely unkillable)។</string>
     <string name="edit_container_configuration">កែសម្រួលការកំណត់រចនាសម្ព័ន្ធកុងតឺន័រ</string>
     <string name="feat_autoboot_title">ចាប់ផ្ដើមដំណើរការដោយស្វ័យប្រវត្តិនៅពេលបើកម៉ាស៊ីន</string>
-    <string name="install">តម្លើង</string>
-    <string name="hostname_label">ឈ្មោះម៉ាស៊ីន: %1$s</string>
     <string name="symlink_integration_description">បង្កើត Symlink នៅត្រង់ /system/bin ដើម្បីចូលប្រើប្រាស់បញ្ជា (Command) droidspaces នៅក្នុង Android Root Shell។ការព្រមាន៖ ការបើកមុខងារនេះនឹងបង្កឱ្យមានបញ្ហាគាំងបើកឧបករណ៍មិនឡើង (Bootloop) ប្រសិនបើប្រព័ន្ធ Mount របស់អ្នកជាប្រភេទ OverlayFS Meta Modules។ សូមប្រើប្រាស់ជម្រើសនេះ តែក្នុងករណីដែលអ្នកកំពុងប្រើប្រាស់ប្រព័ន្ធ Mount ផ្អែកលើ Magic Mount តែប៉ុណ្ណោះ (តម្រូវឱ្យចាប់ផ្តើមឧបករណ៍ឡើងវិញ)។</string>
     <string name="feat_unkillable_title">រចនាឡើងមិនអាចបំផ្លាញបាន</string>
     <string name="kernel_requirements_nongki">តម្រូវការខឺណែលមិនមែន GKI (&lt;=4.19)</string>
@@ -127,7 +118,6 @@
     <string name="selinux_permissive_option">SELinux របៀប Permissive</string>
     <string name="volatile_option">បណ្តោះអាសន្ន</string>
     <string name="cgroup_v1_option">Cgroup ជំនាន់ទី១ (V1)</string>
-    <string name="deadlock_shield_option">ប្រព័ន្ធការពារការគាំងជាប់ (Deadlock Shield)</string>
     <string name="privileged_option">មានសិទ្ធិពេញលេញ</string>
     <string name="installation_setup_summary">សេចក្តីសង្ខេបនៃការដំឡើង</string>
     <string name="review_configuration">ពិនិត្យមើលការកំណត់រចនាសម្ព័ន្ធ</string>
@@ -154,7 +144,6 @@
     <string name="changes_take_effect_after_restart">ការផ្លាស់ប្ដូរនឹងមានប្រសិទ្ធភាពបន្ទាប់ពីចាប់ផ្ដើមឡើងវិញ</string>
     <string name="disable_ipv6">បិទ IPv6</string>
     <string name="disable_ipv6_description">បិទ IPv6 នៅក្នុងកុងតឺន័រនេះ។ ការបិទ IPv6 អាចធ្វើឱ្យកម្មវិធី VPN ដែលកំពុងដំណើរការនៅក្នុងម៉ាស៊ីនខូច។</string>
-    <string name="disable_ipv6_nat_forced">IPv6 តែងតែត្រូវបានបិទនៅក្នុងរបៀបបណ្តាញ NAT និង None។</string>
     <string name="android_storage">ឧបករណ៍ផ្ទុកទិន្នន័យ Android</string>
     <string name="android_storage_description">ម៉ោនឧបករណ៍ផ្ទុកទិន្នន័យ Android</string>
     <string name="hardware_access">ការចូលប្រើផ្នែករឹង</string>
@@ -169,8 +158,6 @@
     <string name="run_at_boot_description">ចាប់ផ្ដើមកុងតឺន័រនៅពេលចាប់ផ្ដើម</string>
     <string name="force_cgroupv1">កម្លាំង Cgroup V1</string>
     <string name="force_cgroupv1_description">បង្ខំឱ្យប្រើប្រាស់ឋានានុក្រម Cgroup V1 ចាស់</string>
-    <string name="manual_deadlock_shield">របាំងការពារការជាប់គាំងដោយដៃ</string>
-    <string name="manual_deadlock_shield_description">ការពារការជាប់គាំង VFS កម្រិតខឺណែលលើខឺណែលចាស់ (ឧ. 4.14.x) ដោយរារាំងការបង្កើត namespace ដែលដាក់ជាស្រទាប់ៗ។\n\nការព្រមាន៖ ការបើកដំណើរការនេះនឹងរារាំងការគាំទ្រ sandboxing Docker, Podman, LXC និង Systemd នៅខាងក្នុងកុងតឺន័រ។</string>
     <string name="cat_networking">បណ្តាញ</string>
     <string name="cat_integration">ការរួមបញ្ចូល និងផ្នែករឹង</string>
     <string name="cat_security">សុវត្ថិភាព និង ការចាប់ផ្ដើមប្រព័ន្ធ</string>
@@ -182,20 +169,11 @@
     <string name="network_mode_host_short">Host</string>
     <string name="network_mode_nat_short">NAT</string>
     <string name="network_mode_none_short">គ្មាន</string>
-    <string name="nat_settings">ការកំណត់ NAT</string>
     <string name="upstream_interface_title">ចំណុចប្រទាក់ខាងលើ (ស្រេចចិត្ត)</string>
     <string name="upstream_interface_hint">ភ្ជាប់អ៊ីនធឺណិតទៅចំណុចប្រទាក់ជាក់លាក់។ ទុកឱ្យនៅទទេ ដើម្បីរកឃើញការតភ្ជាប់សកម្មដោយស្វ័យប្រវត្តិ។</string>
     <string name="add_upstream_interface">បន្ថែមចំណុចប្រទាក់ខាងលើ</string>
-    <string name="available_system_interfaces">ចំណុចប្រទាក់ប្រព័ន្ធដែលអាចប្រើបាន៖</string>
-    <string name="enter_manually">ឬបញ្ចូលវាដោយដៃ (អក្សរជំនួសក៏ត្រូវបានគាំទ្រផងដែរ)៖</string>
-    <string name="interface_name_hint">ឈ្មោះចំណុចប្រទាក់ (ឧ. wlan0, v4-rmnet_data*)</string>
     <string name="port_forwarding">ការបញ្ជូនបន្តច្រក</string>
     <string name="add_port_forward">បន្ថែម​ច្រក​បញ្ជូនបន្ត</string>
-    <string name="host_port_hint">ច្រកម៉ាស៊ីន (1-65535 ឬចន្លោះពី 100-200)</string>
-    <string name="container_port_hint">កំពង់ផែកុងតឺន័រ (1-65535 ឬជួរ)</string>
-    <string name="protocol">ពិធីការ</string>
-    <string name="optional_symmetric_hint">ជាជម្រើស (ឧ. 8080 ឬ 1000-2000)</string>
-    <string name="leave_blank_for_symmetric">ទុកឲ្យទទេសម្រាប់ការគូសផែនទីស៊ីមេទ្រី</string>
     <string name="error_invalid_range_format">ទម្រង់​ជួរ​មិន​ត្រឹមត្រូវ (START-END)</string>
     <string name="error_ports_must_be_numbers">ច្រកត្រូវតែជាលេខ</string>
     <string name="error_port_out_of_range">ច្រកត្រូវតែមានលេខ 1-65535</string>
@@ -203,7 +181,6 @@
     <string name="error_port_must_be_number">ច្រកត្រូវតែជាលេខ</string>
     <string name="error_port_width_mismatch">ភាពមិនស៊ីគ្នានៃទទឹងជួរម៉ាស៊ីន/កុងតឺន័រ</string>
     <string name="error_port_overlap">ត្រួតស៊ីគ្នាជាមួយច្បាប់បញ្ជូនបន្តច្រកដែលមានស្រាប់</string>
-    <string name="symmetric_label">(ស៊ីមេទ្រី)</string>
     <string name="port_forward_examples">ឧទាហរណ៍៖ 8080 (តែមួយ), 8000-8010 (ជួរ)។ ទុកគោលដៅឱ្យនៅទទេសម្រាប់ការគូសផែនទីស៊ីមេទ្រី។</string>
     <string name="saved">បានរក្សាទុក</string>
     <string name="saving">កំពុងរក្សាទុក...</string>
@@ -219,20 +196,13 @@
     <string name="bind_mounts">ភ្ជាប់ម៉ោន</string>
     <string name="add">បន្ថែម</string>
     <string name="add_bind_mount">បន្ថែម​ការ​ភ្ជាប់​ម៉ោន</string>
-    <string name="enter_container_path">បញ្ចូលផ្លូវកុងតឺន័រ</string>
     <string name="container_path_placeholder">ឧ. /mnt/sdcard</string>
-    <string name="host_path">ផ្លូវម៉ាស៊ីន៖ %1$s</string>
-    <string name="container_path">ផ្លូវកុងតឺន័រ៖ %1$s</string>
     <string name="dns_servers_label">ម៉ាស៊ីនបម្រើ DNS</string>
     <string name="dns_servers_placeholder">ឧ. 1.1.1.1,8.8.8.8 (ស្រេចចិត្ត)</string>
     <string name="dns_servers_hint">លេខ ចំណុច និងសញ្ញាក្បៀសតែប៉ុណ្ណោះ</string>
     <string name="environment_variables">អថេរបរិស្ថាន</string>
     <string name="environment_variables_configured">អថេរ %1$d ត្រូវបានកំណត់រចនាសម្ព័ន្ធ</string>
     <string name="not_configured">មិនត្រូវបានកំណត់រចនាសម្ព័ន្ធទេ</string>
-    <string name="env_hint_row">ជួរនីមួយៗមានគូ KEY=VALUE មួយគូ</string>
-    <string name="key_label">លេខសម្ងាត់</string>
-    <string name="value_label">តម្លៃ</string>
-    <string name="add_variable">បន្ថែមអថេរ</string>
     <string name="custom_init_label">គោលពីរ Init ផ្ទាល់ខ្លួន</string>
     <string name="custom_init_placeholder">/sbin/init (default)</string>
     <string name="custom_init_hint">ទុក​ឲ្យ​ទទេ​ដើម្បី​ប្រើ init លំនាំដើម (/sbin/init)</string>
@@ -247,36 +217,19 @@
     <string name="container_name_exists">កុងតឺន័រដែលមានឈ្មោះនេះមានរួចហើយ</string>
     <string name="next_configuration">បន្ទាប់៖ ការកំណត់រចនាសម្ព័ន្ធ</string>
     <string name="configuration_title">ការកំណត់រចនាសម្ព័ន្ធ</string>
-    <string name="container_options">ជម្រើសកុងតឺន័រ</string>
     <string name="next_storage">បន្ទាប់៖ កន្លែងផ្ទុក</string>
     <string name="installing_container">កំពុងដំឡើងកុងតឺន័រ</string>
     <string name="installation_complete">ការដំឡើងបានបញ្ចប់</string>
     <string name="installation_failed">ការដំឡើងបរាជ័យ</string>
     <string name="done">រួចរាល់</string>
-    <string name="installing_module">កំពុងដំឡើងម៉ូឌុល</string>
     <string name="installing_droidspaces">កំពុងដំឡើង Droidspaces</string>
-    <string name="module_installed_success">ម៉ូឌុល Magisk ត្រូវបានដំឡើងដោយជោគជ័យ</string>
     <string name="backend_installed_success">បានដំឡើងផ្នែកខាងក្រោយ Droidspaces ដោយជោគជ័យ</string>
-    <string name="unknown_error">កំហុសមិនស្គាល់បានកើតឡើង</string>
     <string name="module_installation_failed">ការដំឡើងម៉ូឌុលបានបរាជ័យ</string>
     <string name="binary_installation_failed">ការដំឡើងប្រព័ន្ធគោលពីរបានបរាជ័យ</string>
-    <string name="removing_old_module">ការដកម៉ូឌុលចាស់ចេញ...</string>
-    <string name="installing_module_step">កំពុងដំឡើងម៉ូឌុល...</string>
-    <string name="setting_permissions">ការកំណត់សិទ្ធិអនុញ្ញាត...</string>
-    <string name="verifying_installation">កំពុងផ្ទៀងផ្ទាត់ការដំឡើង...</string>
-    <string name="preparing_module_installation">កំពុងរៀបចំដំឡើងម៉ូឌុល...</string>
-    <string name="detected_architecture">ស្ថាបត្យកម្មដែលបានរកឃើញ៖ %1$s</string>
-    <string name="creating_directories">កំពុងបង្កើតថតឯកសារ...</string>
-    <string name="installing_binary">កំពុងដំឡើងប្រព័ន្ធគោលពីរ៖ %1$s</string>
-    <string name="granting_permissions">កំពុងផ្តល់សិទ្ធិ...</string>
-    <string name="preparing_installation">កំពុងរៀបចំដំឡើង...</string>
     <string name="filter_absolute_path_hint">ត្រង ឬវាយបញ្ចូលផ្លូវដាច់ខាត…</string>
     <string name="no_matches">គ្មាន​ការ​ផ្គូផ្គង​ទេ</string>
     <string name="empty_directory">ថតឯកសារទទេ</string>
     <string name="select_folder">ជ្រើសរើសថតឯកសារ</string>
-    <string name="tcp">TCP</string>
-    <string name="extracting_module_files">កំពុងស្រង់ឯកសារម៉ូឌុល...</string>
-    <string name="udp">UDP</string>
     <string name="cpu">CPU:</string>
     <string name="ram">RAM:</string>
     <string name="terminal_logs">កំណត់ហេតុស្ថានីយ</string>
@@ -289,7 +242,6 @@
     <string name="cpu_usage_label">ការប្រើប្រាស់ស៊ីភីយូ</string>
     <string name="ram_usage_label">ការប្រើប្រាស់ RAM</string>
     <string name="cpu_percent_label">%1$.1f%%</string>
-    <string name="ram_percent_label">%1$d មេកាបៃ (%2$.1f%%)</string>
     <string name="sessions_running_plural">កំពុងដំណើរការវគ្គ %1$d · ចុចដើម្បីស្ដារ</string>
     <string name="session_running_singular">កំពុងដំណើរការវគ្គចំនួន 1 · ចុចដើម្បីស្ដារ</string>
     <string name="systemd_services">សេវាកម្មប្រព័ន្ធ</string>
@@ -343,7 +295,6 @@
     <string name="copy_login">ចម្លងការចូល</string>
     <string name="comma">,</string>
     <string name="gb_size">%1$dជីកាបៃ</string>
-    <string name="sparse_image_configuration">ការកំណត់រចនាសម្ព័ន្ធរូបភាពរាយប៉ាយ</string>
     <string name="storage_configuration">ការកំណត់រចនាសម្ព័ន្ធឧបករណ៍ផ្ទុក</string>
     <string name="about_sparse_images">អំពីរូបភាពស្ប៉ាស</string>
     <string name="sparse_images_recommended">ការប្រើប្រាស់ Sparse images ត្រូវបានណែនាំ នៅពេលដែលអ្នកប្រើប្រាស់ Containers នៅលើទំហំផ្ទុកទិន្នន័យដែលបានកូដនីយកម្ម (Encrypted storage), ភាគថាស (Partitions) នៃ F2FS /data ឬប្រព័ន្ធឯកសារ (Filesystems) ផ្សេងទៀត ដែលអាចមានបញ្ហាភាពស៊ីគ្នាចំពោះការភ្ជាប់ថតឯកសារដោយផ្ទាល់ (Direct directory mounting)។</string>
@@ -362,7 +313,6 @@
     <string name="copy_logs">ចម្លងអត្ថបទកំណត់ហេតុ</string>
     <string name="error_container_name_empty">ឈ្មោះកុងតឺន័រមិនអាចទទេបានទេ</string>
     <string name="error_container_name_invalid">ឈ្មោះកុងតឺន័រអាចមានត្រឹមតែ អក្សរ, លេខ, សញ្ញាដក (-), សញ្ញាគូសក្រោម (_), សញ្ញាចុច (.) និងចន្លោះមិនឃើញ (ដកឃ្លា) តែប៉ុណ្ណោះ</string>
-    <string name="error_container_name_too_long">ឈ្មោះវែងពេក - អតិបរមា 17 តួអក្សរ (ដែនកំណត់ផ្លូវឧបករណ៍ kernel loop)</string>
     <string name="error_hostname_invalid">ឈ្មោះម៉ាស៊ីន (Hostname) អាចមានត្រឹមតែ អក្សរ, លេខ និងសញ្ញាដក (-) តែប៉ុណ្ណោះ</string>
     <string name="check_requirements">ពិនិត្យតម្រូវការ</string>
     <string name="requirements_check_title">ការពិនិត្យលក្ខខណ្ឌតម្រូវ</string>
@@ -379,8 +329,6 @@
     <string name="select_user_to_enter">ជ្រើសរើសគណនីអ្នកប្រើប្រាស់ដើម្បីចូលទៅក្នុងកុងតឺន័រ៖</string>
     <string name="notification_permission_title">ការអនុញ្ញាតការជូនដំណឹង</string>
     <string name="notification_permission_rationale">Droidspaces ចាំបាច់ត្រូវបង្ហាញការជូនដំណឹងជាប្រចាំ ដើម្បីរក្សាដំណើរការវគ្គ Terminal របស់អ្នកឱ្យរត់នៅផ្ទៃខាងក្រោយ។ បើគ្មានការអនុញ្ញាតនេះទេ ប្រព័ន្ធ Android (ជាពិសេសនៅលើឧបករណ៍ Samsung) អាចនឹងបិទសេវាកម្ម Terminal ដោយមិនបានរំពឹងទុក។</string>
-    <string name="grant_permission">ផ្តល់ការអនុញ្ញាត</string>
-    <string name="i_understand">ខ្ញុំយល់ព្រម</string>
     <string name="notification_title">Droidspaces Terminal</string>
     <string name="notification_action_exit">ចាកចេញ</string>
     <string name="notification_wakelock_on">ទប់ស្កាត់ការរលត់អេក្រង់ (Wake lock)៖ បើក</string>
@@ -402,12 +350,10 @@
     <string name="help_card_message">ចុចទីនេះ ដើម្បីស្វែងយល់ពីរបៀបដំឡើងកុងតឺន័រ Linux ដំបូងរបស់អ្នក!</string>
     <string name="help_card_url" translatable="false">https://github.com/ravindu644/Droidspaces-OSS/blob/main/Documentation/Installation-Android.md</string>
     <string name="privileged_mode">របៀប Privileged</string>
-    <string name="privileged_mode_description">កំណត់រចនាសម្ព័ន្ធបន្ធូរបន្ថយសន្តិសុខតាមកម្រិតលម្អិត សម្រាប់ការធ្វើនិម្មិតកម្មត្រួតគ្នា (Nested Virtualization) ឬការចូលប្រើប្រាស់ Hardware កម្រិតខ្ពស់។</string>
     <string name="privileged_nomask_desc">បិទ Jail Masks ដើម្បីអនុញ្ញាតឱ្យមានសិទ្ធិកែប្រែ (Write Access) ទៅលើ /proc និង /sys។ សម្គាល់៖ /sys នៅតែរក្សាស្ថានភាពសម្រាប់តែអានប៉ុណ្ណោះ (Read-only) លុះត្រាតែមុខងារចូលប្រើប្រាស់ Hardware ត្រូវបានបើកដំណើរការផងដែរ។</string>
     <string name="privileged_nocaps_desc">មិនលុបបំបាត់សមត្ថភាព Linux ណាមួយឡើយ (ទទួលបានអំណាច root ពេញលេញ)។</string>
     <string name="privileged_noseccomp_desc">បិទការច្រោះ Seccomp Syscall។ មុខងារនេះនឹងបើកដំណើរការលក្ខណៈពិសេសកម្រិតខ្ពស់របស់ Kernel ដូចជា Unprivileged User Namespaces ដែលជាលក្ខខណ្ឌតម្រូវដាច់ខាតសម្រាប់ Nested Sandboxing (Bubblewrap, Flatpak) ហើយវាក៏អនុញ្ញាតឱ្យផ្ទុក Out-of-tree Kernel Modules ផងដែរ។</string>
     <string name="privileged_shared_desc">បើកដំណើរការការបញ្ជូនទិន្នន័យម៉ោន (Mount Propagation) បែប MS_SHARED ទៅកាន់ម៉ាស៊ីនផ្ទាល់ (Host)។</string>
-    <string name="privileged_unfiltered_desc">រំលងការច្រោះឧបករណ៍ (Device Filtering)។ រាល់ Device Nodes (/dev) ទាំងអស់របស់ម៉ាស៊ីនផ្ទាល់ (Host) នឹងត្រូវបានបង្ហាញឱ្យឃើញ។</string>
     <string name="privileged_full_desc">បើកដំណើរការគ្រប់សិទ្ធិខ្ពស់ទាំងអស់ក្នុងពេលតែមួយ។</string>
     <string name="privileged_warning_title">តំបន់គ្រោះថ្នាក់</string>
     <string name="privileged_disclaimer">តាមរយៈការបើកដំណើរការជម្រើសទាំងនេះ អ្នកកំពុងធ្វើឱ្យប៉ះពាល់ដល់សន្តិសុខឧបករណ៍របស់អ្នកហើយ។ យើងមិនទទួលខុសត្រូវចំពោះការបាត់បង់ទិន្នន័យ ឧបករណ៍ខូចដំណើរការទាំងស្រុង (Bricked) ឬបញ្ហាបច្ចេកទេសចម្លែកៗ (Weird Bugs) ណាមួយឡើយ។ សូមកុំរាយការណ៍ពីបញ្ហាដែលបានកើតឡើង អំឡុងពេលកំពុងប្រើប្រាស់របៀប (Modes) ទាំងនេះ។</string>
@@ -428,16 +374,9 @@
     <string name="repo_retry">ព្យាយាមម្តងទៀត</string>
     <string name="repo_notification_description">ទាញយក Droidspaces rootfs</string>
     <string name="repo_error_no_assets">រកមិនឃើញ rootfs tarballs នៅក្នុងការចេញផ្សាយចុងក្រោយបំផុតទេ</string>
-    <string name="repo_error_network">កំហុសបណ្តាញ ឬ មានកំហុសប្រព័ន្ធបណ្តាញ</string>
     <string name="repo_dl_error_unknown">កំហុសមិនស្គាល់ ឬ មានកំហុសមិនស្គាល់អត្តសញ្ញាណ</string>
-    <string name="repo_dl_error_cannot_resume">មិនអាចបន្តការទាញយកបានទេ</string>
-    <string name="repo_dl_error_device_not_found">រកមិនឃើញទំហំផ្ទុកទិន្នន័យទេ</string>
-    <string name="repo_dl_error_file_exists">ឯកសារមានរួចហើយ</string>
     <string name="repo_dl_error_file_error">កំហុសប្រព័ន្ធឯកសារ</string>
     <string name="repo_dl_error_http_data">កំហុសទិន្នន័យ HTTP</string>
-    <string name="repo_dl_error_no_space">ទំហំផ្ទុកមិនគ្រប់គ្រាន់</string>
-    <string name="repo_dl_error_too_many_redirects">ការបញ្ជូនបន្តច្រើនដងពេក</string>
-    <string name="repo_dl_error_unhandled_http">ការឆ្លើយតប HTTP មិនរំពឹងទុក</string>
     <string name="repo_dl_error_not_found">រកមិនឃើញឯកសារ (404)</string>
     <string name="repo_dl_error_code">លេខកូដកំហុស %1$d</string>
     <string name="repo_status_ready">រួចរាល់</string>
@@ -453,7 +392,6 @@
     <string name="repo_custom_name_empty">ឈ្មោះមិនអាចទទេបានទេ</string>
     <string name="repo_custom_url_empty">URL មិនអាចទទេបានទេ</string>
     <string name="repo_custom_url_invalid">URL ត្រូវតែចាប់ផ្តើមដោយ https://</string>
-    <string name="repo_no_custom">មិនទាន់មានការជាវ Repository ផ្ទាល់ខ្លួននៅឡើយទេ។</string>
     <string name="termux_requirements">តម្រូវការប្រព័ន្ធសម្រាប់ Termux</string>
     <string name="virgl_option">VirGL</string>
     <string name="pulseaudio_option">PulseAudio</string>
@@ -476,13 +414,12 @@
     <string name="allow_userns_description_not_supported">មិនគាំទ្រទេ​. CONFIG_USER_NS មិនត្រូវបានបើកដំណើរការនៅក្នុង kernel ទេ.</string>
     <string name="auto_boot_priority">អាទិភាពចាប់ផ្ដើមស្វ័យប្រវត្តិ</string>
     <string name="auto_boot_priority_description">លំដាប់នៃការចាប់ផ្តើមខនតឺន័រដំណើរការពេលចាប់ផ្ដើមប្រព័ន្ធ</string>
-    <string name="auto_boot_priority_hint">អូសដើម្បីប្ដូរលំដាប់។ ខនតឺន័រចាប់ផ្ដើមពីលើចុះក្រោម - សូមដាក់ច្រកទ្វារ (ឧ. OpenWRT) មុនគេ ដើម្បីវាចាប់ផ្ដើមមុនខនតឺន័រដែលត្រូវតភ្ជាប់ឆ្លងកាត់វា។</string>
+    <string name="auto_boot_priority_hint">អូសដើម្បីប្ដូរលំដាប់។ ខនតឺន័រចាប់ផ្ដើមពីលើចុះក្រោម - សូមដាក់ច្រកទ្វារ (ឧ. OpenWrt) មុនគេ ដើម្បីវាចាប់ផ្ដើមមុនខនតឺន័រដែលត្រូវតភ្ជាប់ឆ្លងកាត់វា។</string>
     <string name="auto_boot_priority_empty">គ្មានខនតឺន័រណាមួយត្រូវបានបើកដំណើរការពេលចាប់ផ្ដើមប្រព័ន្ធទេ។</string>
     <string name="reorder_handle">អូសដើម្បីប្ដូរលំដាប់</string>
     <string name="network_mode_gateway">ច្រកទ្វារ (រ៉ោតទ័រនិម្មិត)</string>
     <string name="network_mode_gateway_short">ច្រកទ្វារ (Gateway)</string>
-    <string name="gateway_settings">ការកំណត់ច្រកទ្វារ</string>
-    <string name="gateway_settings_description">បញ្ជូនបណ្តាញរបស់ខនតឺន័រនេះឆ្លងកាត់ខនតឺន័រផ្សេងទៀតដែលធ្វើជាតួអង្គរ៉ោតទ័រ (ឧ. OpenWRT)។ ខនតឺន័រច្រកទ្វារនោះត្រូវតែដំណើរការមុន។</string>
+    <string name="gateway_settings_description">បញ្ជូនបណ្តាញរបស់ខនតឺន័រនេះឆ្លងកាត់ខនតឺន័រផ្សេងទៀតដែលធ្វើជាតួអង្គរ៉ោតទ័រ (ឧ. OpenWrt)។</string>
     <string name="gateway_container">ខនតឺន័រច្រកទ្វារ</string>
     <string name="gateway_net">ឈ្មោះបណ្តាញ LAN</string>
     <string name="gateway_net_hint">បណ្តាញ lan</string>
@@ -490,10 +427,8 @@
     <string name="gateway_iface_hint">eth1</string>
     <string name="gateway_bridge">ស្ពានតភ្ជាប់ប្រព័ន្ធគោល (Host Bridge)</string>
     <string name="gateway_bridge_hint">ds-lan</string>
-    <string name="gateway_configure">កំណត់រចនាសម្ព័ន្ធច្រកទ្វារ</string>
-    <string name="gateway_configure_title">កំណត់រចនាសម្ព័ន្ធច្រកទ្វារ</string>
     <string name="gateway_configure_intro">ការកំណត់ទាំងនេះគ្រប់គ្រងពីរបៀបដែលខនតឺន័រនេះភ្ជាប់ទៅនឹងបណ្តាញ LAN និម្មិតរបស់ច្រកទ្វារ។ តម្លៃលំនាំដើមគឺសាកសមសម្រាប់បណ្តាញ LAN តែមួយនៅពីក្រោយច្រកទ្វារតែមួយ - សូមផ្លាស់ប្តូរវាលុះត្រាតែអ្នកដំណើរការបណ្តាញ LAN ច្រើន ឬមានច្រកទ្វារច្រើនជាងមួយ។</string>
-    <string name="gateway_iface_explain">ឈ្មោះចំណុចប្រទាក់ដែលការតភ្ជាប់នេះបង្ហាញ ខាងក្នុង ខនតឺន័រច្រកទ្វារ (ឧ. eth1 ក្នុង OpenWRT)។ វាត្រូវតែត្រូវគ្នាទៅនឹងចំណុចប្រទាក់ដែលច្រកទ្វាររបស់អ្នកត្រូវបានកំណត់ឱ្យផ្ដល់សេវា DHCP។ សេនហ្កាម (Segment) នីមួយៗនៅលើច្រកទ្វារតែមួយ ត្រូវការឈ្មោះផ្ទាល់ខ្លួនដែលមិនត្រួតស៊ីគ្នា។ លំនាំដើម៖ eth1។</string>
+    <string name="gateway_iface_explain">ឈ្មោះចំណុចប្រទាក់ដែលការតភ្ជាប់នេះបង្ហាញ ខាងក្នុង ខនតឺន័រច្រកទ្វារ (ឧ. eth1 ក្នុង OpenWrt)។ វាត្រូវតែត្រូវគ្នាទៅនឹងចំណុចប្រទាក់ដែលច្រកទ្វាររបស់អ្នកត្រូវបានកំណត់ឱ្យផ្ដល់សេវា DHCP។ សេនហ្កាម (Segment) នីមួយៗនៅលើច្រកទ្វារតែមួយ ត្រូវការឈ្មោះផ្ទាល់ខ្លួនដែលមិនត្រួតស៊ីគ្នា។ លំនាំដើម៖ eth1។</string>
     <string name="gateway_net_explain">ស្លាកសម្រាប់បណ្តាញ LAN នេះ។ ខនតឺន័រដែលប្រើប្រាស់ច្រកទ្វារ និងឈ្មោះបណ្តាញ LAN ដូចគ្នា នឹងចូលរួមក្នុងស្វ៊ីចនិម្មិត (virtual switch) តែមួយ និងអាចមើលឃើញគ្នាទៅវិញទៅមក។ សូមប្រើប្រាស់ឈ្មោះផ្សេងដើម្បីបង្កើតបណ្តាញដាច់ដោយឡែកទីពីរ។ លំនាំដើម៖ lan។</string>
     <string name="gateway_bridge_explain">ឈ្មោះរបស់ស្ពាននិម្មិត (virtual switch) ដែលបានបង្កើតនៅលើប្រព័ន្ធប្រតិបត្តិការ Android គោល។ សូមទុកវាឱ្យនៅទว่างដើម្បីដាក់ឈ្មោះដោយស្វ័យប្រវត្តិផ្អែកលើឈ្មោះ LAN (ds-)។ កំណត់វាលុះត្រាតែអ្នកត្រូវការឈ្មោះស្ពានពិតប្រាកដប៉ុណ្ណោះ។ អតិបរមា ១៥ តួអក្សរ។</string>
     <string name="error_gateway_required">ជ្រើសរើសខនតឺន័រច្រកទ្វារ (Select a gateway container)</string>
@@ -506,8 +441,6 @@
     <string name="error_gateway_iface_taken">ចំណុចប្រទាក់ត្រូវបានប្រើប្រាស់រួចហើយដោយបណ្តាញផ្សេង (\'%1$s\')។ សូមប្រើចំណុចប្រទាក់ផ្សេង។</string>
     <string name="openwrt_services">សេវាកម្មOpenWrt</string>
     <string name="openwrt">OpenWrt</string>
-    <string name="procd_detected">បានរកឃើញ OpenWrt/procd</string>
-    <string name="procd_services_placeholder_desc">ការគ្រប់គ្រងសេវាកម្មសម្រាប់ %1$s នឹងត្រូវបន្ថែមនៅក្នុងកំណែបច្ចុប្បន្នភាពបន្ទាប់។</string>
     <string name="unknown_legend">មិនស្គាល់</string>
     <string name="reload_service">ផ្ទុកសេវាកម្មឡើងវិញ (Reload service)</string>
     <string name="no_unknown_services">គ្មានសេវាកម្មដែលមានស្ថានភាពមិនស្គាល់ទេ</string>

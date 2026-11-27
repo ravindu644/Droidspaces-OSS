@@ -1,8 +1,4 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <plurals name="container_count">
-        <item quantity="one">%d ka container</item>
-        <item quantity="other">%d ka mga container</item>
-    </plurals>
 </resources>
 

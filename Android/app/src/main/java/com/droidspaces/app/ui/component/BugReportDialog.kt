@@ -21,8 +21,6 @@ fun BugReportDialog(
     val logger = remember {
         ViewModelLogger { level, message ->
             logs.add(level to message)
-        }.apply {
-            verbose = true
         }
     }
 

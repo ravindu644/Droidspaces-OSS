@@ -1,0 +1,14 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:viewportWidth="180"
+    android:viewportHeight="180"
+    android:width="128dp"
+    android:height="128dp">
+    <!-- Artix signet, artix-branding/logo/Signet_BW.svg, cropped to the glyph and centred -->
+    <group
+        android:translateX="-84.43"
+        android:translateY="-86.6">
+        <path
+            android:pathData="m 174.43164,88.300781 -30.36719,62.263669 83.57422,46.82617 z M 134.89062,169.375 88.300781,264.90039 226.54883,207.78516 Z m 101.88086,46.74219 -43.60156,25.03125 67.39453,23.75195 z"
+            android:fillColor="#000000" />
+    </group>
+</vector>

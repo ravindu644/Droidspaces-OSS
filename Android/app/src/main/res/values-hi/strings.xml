@@ -3,14 +3,10 @@
     <!-- Welcome Screen -->
     <string name="get_started">शुरू करें</string>
     <!-- Root Check Screen -->
-    <string name="root_check_title">रूट एक्सेस जांच</string>
     <string name="checking_root">रूट एक्सेस की जांच की जा रही है…</string>
-    <string name="root_granted">रूट एक्सेस प्राप्त</string>
     <string name="root_denied">रूट एक्सेस अस्वीकृत</string>
     <string name="root_required_message">कंटेनरों को प्रबंधित करने के लिए रूट एक्सेस आवश्यक है।</string>
     <string name="check_root_access">रूट एक्सेस जांचें</string>
-    <string name="check_root_access_click">रूट एक्सेस जांचने के लिए नीचे क्लिक करें</string>
-    <string name="root_available_message">अब आप Droidspaces का उपयोग कर सकते हैं</string>
     <string name="skip">छोड़ें</string>
     <string name="continue_button">जारी रखें</string>
     <!-- Navigation -->
@@ -22,7 +18,6 @@
     <string name="close">बंद करें</string>
     <string name="refresh">रीफ्रेश</string>
     <string name="search">खोजें</string>
-    <string name="clear">साफ करें</string>
     <!-- Main Tab Screen -->
     <string name="container_singular">कंटेनर</string>
     <string name="running">चल रहा है</string>
@@ -87,10 +82,8 @@
     <string name="uninstall_container_menu">कंटेनर अनइंस्टॉल करें</string>
     <!-- Container Card -->
     <string name="status_running">चल रहा है</string>
-    <string name="status_restarting">पुनः प्रारंभ हो रहा है</string>
     <string name="status_stopped">रुका हुआ</string>
     <string name="pid_label">PID: %1$d</string>
-    <string name="hostname_label">होस्टनेम: %1$s</string>
     <string name="options_label">विकल्प: %1$s</string>
     <string name="start">शुरू करें</string>
     <string name="stop">रोकें</string>
@@ -115,7 +108,6 @@
     <string name="changes_take_effect_after_restart">परिवर्तन पुनः प्रारंभ के बाद प्रभावी होंगे</string>
     <string name="disable_ipv6">IPv6 अक्षम करें</string>
     <string name="disable_ipv6_description">इस कंटेनर में IPv6 अक्षम करें। IPv6 अक्षम करने से होस्ट पर VPN ऐप्स टूट सकते हैं।</string>
-    <string name="disable_ipv6_nat_forced">NAT और None नेटवर्क मोड में IPv6 हमेशा अक्षम रहता है।</string>
     <string name="android_storage">Android स्टोरेज</string>
     <string name="android_storage_description">Android स्टोरेज माउंट करें</string>
     <string name="hardware_access">हार्डवेयर एक्सेस</string>
@@ -139,29 +131,14 @@
     <string name="next_configuration">अगला: कॉन्फ़िगरेशन</string>
     <!-- Container Config Screen -->
     <string name="configuration_title">कॉन्फ़िगरेशन</string>
-    <string name="container_options">कंटेनर विकल्प</string>
     <string name="next_storage">अगला: स्टोरेज</string>
     <!-- Installation Screen -->
     <string name="installation_complete">इंस्टॉलेशन पूर्ण</string>
     <string name="installation_failed">इंस्टॉलेशन विफल</string>
-    <string name="installing_module">मॉड्यूल इंस्टॉल किया जा रहा है</string>
     <string name="installing_droidspaces">Droidspaces इंस्टॉल किया जा रहा है</string>
-    <string name="module_installed_success">Magisk मॉड्यूल सफलतापूर्वक इंस्टॉल हुआ</string>
     <string name="backend_installed_success">Backend सफलतापूर्वक स्थापित हो गया</string>
-    <string name="unknown_error">अज्ञात त्रुटि हुई</string>
     <string name="module_installation_failed">मॉड्यूल इंस्टॉलेशन विफल</string>
     <string name="binary_installation_failed">बाइनरी इंस्टॉलेशन विफल</string>
-    <string name="removing_old_module">पुराना मॉड्यूल हटाया जा रहा है...</string>
-    <string name="extracting_module_files">मॉड्यूल फ़ाइलें निकाली जा रही हैं...</string>
-    <string name="installing_module_step">मॉड्यूल इंस्टॉल किया जा रहा है...</string>
-    <string name="setting_permissions">अनुमतियाँ सेट की जा रही हैं...</string>
-    <string name="verifying_installation">इंस्टॉलेशन सत्यापित किया जा रहा है...</string>
-    <string name="preparing_module_installation">मॉड्यूल इंस्टॉलेशन की तैयारी...</string>
-    <string name="detected_architecture">पता चली आर्किटेक्चर: %1$s</string>
-    <string name="creating_directories">डायरेक्टरी बनाई जा रही हैं...</string>
-    <string name="installing_binary">बाइनरी इंस्टॉल की जा रही है: %1$s</string>
-    <string name="granting_permissions">अनुमतियाँ दी जा रही हैं...</string>
-    <string name="preparing_installation">इंस्टॉलेशन की तैयारी...</string>
     <!-- Control Panel Screen -->
     <string name="no_containers_running">कोई कंटेनर नहीं चल रहा</string>
     <string name="start_container_first">यहाँ देखने के लिए पहले कंटेनर शुरू करें</string>
@@ -225,7 +202,6 @@
     <string name="comma">,</string>
     <string name="gb_size">%1$dGB</string>
     <!-- Sparse Image Config Screen -->
-    <string name="sparse_image_configuration">Sparse इमेज कॉन्फ़िगरेशन</string>
     <string name="storage_configuration">स्टोरेज कॉन्फ़िगरेशन</string>
     <string name="about_sparse_images">Sparse इमेज के बारे में</string>
     <string name="sparse_images_recommended">एन्क्रिप्टेड स्टोरेज, F2FS /data पार्टिशन या अन्य फ़ाइल सिस्टम के साथ कंटेनर उपयोग करते समय Sparse इमेज की सिफारिश की जाती है।</string>
@@ -255,7 +231,6 @@
     <string name="requirements_check_completed_successfully">आवश्यकता जांच सफलतापूर्वक पूर्ण हुई</string>
     <string name="requirements_check_completed_with_errors">आवश्यकता जांच त्रुटियों के साथ पूर्ण हुई</string>
     <string name="kernel_requirements_copied">कर्नेल आवश्यकताएँ क्लिपबोर्ड में कॉपी की गईं</string>
-    <string name="welcome_tagline">Linux कंटेनर। नेटिव। बिना किसी ओवरहेड के।</string>
     <string name="feat_containers_title">असली Linux कंटेनर</string>
     <string name="feat_containers_desc">LXC, Podman और Docker के समान kernel namespace तकनीक। कोई emulation नहीं, कोई chroot नहीं।</string>
     <string name="feat_overhead_title">शून्य ओवरहेड</string>
@@ -265,4 +240,5 @@
     <string name="feat_init_title">systemd / Open RC को PID 1 के तौर पर</string>
     <string name="feat_init_desc">पूर्ण init system समर्थन । वास्तविक service management, नकली वातावरण नहीं।</string>
     <string name="feat_isolation_title">पूर्ण आइसोलेशन</string>
+    <string name="help_card_title">Droidspaces में नए हैं?</string>
 </resources>

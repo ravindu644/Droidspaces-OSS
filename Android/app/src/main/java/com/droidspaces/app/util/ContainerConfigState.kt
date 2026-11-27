@@ -12,7 +12,7 @@ package com.droidspaces.app.util
  * is just `current != saved`, and config plumbing can never transpose fields.
  *
  * Note: `name`, `hostname`, `rootfsPath`, sparse-image and runtime fields are
- * NOT part of this state — they are owned by the surrounding screens/ViewModel.
+ * NOT part of this state. They are owned by the surrounding screens/ViewModel.
  */
 data class ContainerConfigState(
     val netMode: String = "nat",
@@ -22,11 +22,12 @@ data class ContainerConfigState(
     val enableGpuMode: Boolean = false,
     val enableTermuxX11: Boolean = false,
     val tx11ExtraFlags: String = "",
+    val enableAnland: Boolean = false,
     val enableVirgl: Boolean = false,
     val virglExtraFlags: String = "",
     val enablePulseaudio: Boolean = false,
     val selinuxPermissive: Boolean = false,
-    val allowUserns: Boolean = false,
+    val allowSandboxing: Boolean = false,
     val volatileMode: Boolean = false,
     val bindMounts: List<BindMount> = emptyList(),
     val dnsServers: String = "",
@@ -34,7 +35,6 @@ data class ContainerConfigState(
     val customInit: String = "",
     val staticNatIp: String = "",
     val forceCgroupv1: Boolean = false,
-    val blockNestedNs: Boolean = false,
     val privileged: String = "",
     val envFileContent: String = "",
     val upstreamInterfaces: List<String> = emptyList(),
@@ -43,6 +43,12 @@ data class ContainerConfigState(
     val gatewayNet: String = "",
     val gatewayIface: String = "",
     val gatewayBridge: String = "",
+    val macvlanParent: String = "",
+    val macvlanMode: String = "",
+    val memoryLimit: Long = 0,
+    val cpuQuota: Long = 0,
+    val pidsLimit: Long = 0,
+    val allowSwap: Boolean = false,
 )
 
 /** Extract the editable config fields from an existing container. */
@@ -54,11 +60,12 @@ fun ContainerInfo.toConfigState(): ContainerConfigState = ContainerConfigState(
     enableGpuMode = enableGpuMode,
     enableTermuxX11 = enableTermuxX11,
     tx11ExtraFlags = tx11ExtraFlags,
+    enableAnland = enableAnland,
     enableVirgl = enableVirgl,
     virglExtraFlags = virglExtraFlags,
     enablePulseaudio = enablePulseaudio,
     selinuxPermissive = selinuxPermissive,
-    allowUserns = allowUserns,
+    allowSandboxing = allowSandboxing,
     volatileMode = volatileMode,
     bindMounts = bindMounts,
     dnsServers = dnsServers,
@@ -66,7 +73,6 @@ fun ContainerInfo.toConfigState(): ContainerConfigState = ContainerConfigState(
     customInit = customInit,
     staticNatIp = staticNatIp,
     forceCgroupv1 = forceCgroupv1,
-    blockNestedNs = blockNestedNs,
     privileged = privileged,
     envFileContent = envFileContent ?: "",
     upstreamInterfaces = upstreamInterfaces,
@@ -75,6 +81,12 @@ fun ContainerInfo.toConfigState(): ContainerConfigState = ContainerConfigState(
     gatewayNet = gatewayNet,
     gatewayIface = gatewayIface,
     gatewayBridge = gatewayBridge,
+    macvlanParent = macvlanParent,
+    macvlanMode = macvlanMode,
+    memoryLimit = memoryLimit,
+    cpuQuota = cpuQuota,
+    pidsLimit = pidsLimit,
+    allowSwap = allowSwap,
 )
 
 /**
@@ -90,11 +102,12 @@ fun ContainerInfo.withConfig(state: ContainerConfigState): ContainerInfo = copy(
     enableGpuMode = state.enableGpuMode,
     enableTermuxX11 = state.enableTermuxX11,
     tx11ExtraFlags = state.tx11ExtraFlags,
+    enableAnland = state.enableAnland,
     enableVirgl = state.enableVirgl,
     virglExtraFlags = state.virglExtraFlags,
     enablePulseaudio = state.enablePulseaudio,
     selinuxPermissive = state.selinuxPermissive,
-    allowUserns = state.allowUserns,
+    allowSandboxing = state.allowSandboxing,
     volatileMode = state.volatileMode,
     bindMounts = state.bindMounts,
     dnsServers = state.dnsServers,
@@ -102,7 +115,6 @@ fun ContainerInfo.withConfig(state: ContainerConfigState): ContainerInfo = copy(
     customInit = state.customInit,
     staticNatIp = state.staticNatIp,
     forceCgroupv1 = state.forceCgroupv1,
-    blockNestedNs = state.blockNestedNs,
     privileged = state.privileged,
     envFileContent = state.envFileContent.ifBlank { null },
     upstreamInterfaces = state.upstreamInterfaces,
@@ -111,4 +123,10 @@ fun ContainerInfo.withConfig(state: ContainerConfigState): ContainerInfo = copy(
     gatewayNet = state.gatewayNet,
     gatewayIface = state.gatewayIface,
     gatewayBridge = state.gatewayBridge,
+    macvlanParent = state.macvlanParent,
+    macvlanMode = state.macvlanMode,
+    memoryLimit = state.memoryLimit,
+    cpuQuota = state.cpuQuota,
+    pidsLimit = state.pidsLimit,
+    allowSwap = state.allowSwap,
 )

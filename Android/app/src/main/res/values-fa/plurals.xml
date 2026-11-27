@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <plurals name="commit_count">
+        <item quantity="one">%d کامیت</item>
+        <item quantity="other">%d کامیت</item>
+    </plurals>
+    <plurals name="notification_sessions_running">
+        <item quantity="one">%d زبانه درحال اجرا</item>
+        <item quantity="other">%d زبانه درحال اجرا</item>
+    </plurals>
+</resources>

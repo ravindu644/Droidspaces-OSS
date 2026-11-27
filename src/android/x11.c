@@ -1,5 +1,5 @@
 /*
- * Droidspaces v6 - X11 Server and Socket Manager
+ * Droidspaces v7 - X11 Server and Socket Manager
  *
  * Manages the Termux-X11 server lifecycle on Android (spawning, logging, and
  * stopping) and unifies host-to-container X11 socket bridging for both Android
@@ -10,12 +10,14 @@
  */
 
 #define _GNU_SOURCE
-#include "droidspace.h"
+#include "droidspaces.h"
 #include <fcntl.h>
 #include <grp.h>
 #include <sys/wait.h>
 
-/* ---- helpers ---------------------------------------------------------- */
+#include "internal.h"
+
+/* helpers */
 
 /*
  * Resolve Termux UID and verify that termux-x11 is installed.
@@ -38,7 +40,7 @@ static int resolve_termux_uid(void) {
   return uid;
 }
 
-/* ---- xserver child ---------------------------------------------------- */
+/* xserver child */
 
 struct xserver_args {
   int uid;
@@ -91,6 +93,7 @@ static void xserver_child_wrapper(int ready_fd, void *user_data) {
 
   /* Socket dir -- created as root before we drop privs */
   mkdir_p(TX11_SOCK_DIR, 01777);
+  chmod(TX11_SOCK_DIR, 01777); /* the umask strips it, Xtrans wants 1777 */
   if (chown(TX11_SOCK_DIR, (uid_t)args->uid, (gid_t)args->uid) < 0) {
     /* ignore */
   }
@@ -147,7 +150,7 @@ static void xserver_child_wrapper(int ready_fd, void *user_data) {
   _exit(1);
 }
 
-/* ---- spawn ------------------------------------------------------------ */
+/* spawn */
 
 /*
  * Fork the xserver child and a log-relay grandchild writing to Logs/x11.log.
@@ -181,10 +184,10 @@ static pid_t spawn_xserver(int uid, const char *display,
   return child;
 }
 
-/* ---- public API ------------------------------------------------------- */
+/* public API */
 
 int ds_x11_daemon_start(struct ds_config *cfg) {
-  if (!cfg || !cfg->termux_x11 || !is_android())
+  if (!cfg || !cfg->x11 || !is_android())
     return -1;
   if (getuid() != 0) {
     ds_error("[X11] not running as root");
@@ -192,7 +195,9 @@ int ds_x11_daemon_start(struct ds_config *cfg) {
   }
 
   /* Reuse existing global server if still alive */
-  pid_t existing = ds_daemon_read_pid("x11.xpid");
+  pid_t existing =
+      ds_global_daemon_reuse(check_x11_needs, "x11.xpid", cfg->tx11_extra_flags,
+                             TX11_SOCK_DIR "/" TX11_DISPLAY_SOCK, "[X11]");
   if (existing > 0) {
     ds_log("Termux:X11: xserver already running (PID %d)", (int)existing);
     cfg->x11_pid = existing;
@@ -207,7 +212,7 @@ int ds_x11_daemon_start(struct ds_config *cfg) {
   pid_t child = spawn_xserver(uid, TX11_DISPLAY_STR, cfg->tx11_extra_flags);
   if (child > 0) {
     cfg->x11_pid = child;
-    ds_daemon_write_pid("x11.xpid", child);
+    ds_daemon_write_pid("x11.xpid", child, cfg->tx11_extra_flags);
     return 0;
   }
   return -1;
@@ -221,9 +226,12 @@ void ds_x11_daemon_stop(struct ds_config *cfg) {
                         "[X11]");
 }
 
-/* ---- socket bridge ---------------------------------------------------- */
+/* socket bridge */
 
 int ds_setup_x11_socket(struct ds_config *cfg) {
+  if (!cfg->x11)
+    return 0;
+
   if (!is_android()) {
     /* Desktop Linux path */
     char src[PATH_MAX], dst[PATH_MAX];
@@ -233,6 +241,7 @@ int ds_setup_x11_socket(struct ds_config *cfg) {
       return 0;
     }
     mkdir_p(DS_X11_CONTAINER_DIR, 01777);
+    chmod(DS_X11_CONTAINER_DIR, 01777); /* the umask strips it, users need :1 */
     snprintf(dst, sizeof(dst), "%s/X0", DS_X11_CONTAINER_DIR);
     if (ds_bind_mount_socket(src, dst, 0, "X11") < 0)
       return -1;
@@ -241,9 +250,6 @@ int ds_setup_x11_socket(struct ds_config *cfg) {
   }
 
   /* Android path */
-  if (!cfg->termux_x11)
-    return 0;
-
   char src_dir[PATH_MAX], src[PATH_MAX], dst[PATH_MAX];
   snprintf(src_dir, sizeof(src_dir), "%s/.X11-unix", DS_TERMUX_TMP_OLDROOT);
   snprintf(src, sizeof(src), "%s/.X11-unix/" TX11_DISPLAY_SOCK,

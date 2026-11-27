@@ -1,99 +1,82 @@
 <!--
-title: 内核配置指南
-section: 指南
-order: 3
-desc: 编译支持 Droidspaces 的自定义 Android 内核完整指南，包括非 GKI 和 GKI 补丁及兼容性修复。
-keywords: 内核, 配置, droidspaces, android, 编译, gki, 非gki, 补丁, 兼容性
+title: 内核配置
+section: Guides
+order: 6
+desc: 如何构建支持 Droidspaces 的 Android 内核：非 GKI 和 GKI 内核所需的配置选项与补丁，以及如何检查结果。
+keywords: kernel, configuration, droidspaces, android, compile, gki, nongki, patches, compatibility, kabi
 -->
 
-# 内核配置指南
+# 内核配置
 
-本指南介绍如何为 Android 设备编译支持 Droidspaces 的 Linux 内核。
+Droidspaces 需要一些多数 Android 原厂内核没有启用的内核特性：PID 和 IPC 命名空间、一些网络组件以及 devtmpfs。本页列出了构建具备这些特性的内核所需的选项和补丁。支持的最旧内核是 3.10。
 
-> [!TIP]
->
-> **内核编译新手？** 查看综合教程：
-> https://github.com/ravindu644/Android-Kernel-Tutorials
+如果你从未编译过 Android 内核，请先从 [Android 内核教程](https://github.com/ravindu644/Android-Kernel-Tutorials)开始，并先查看[社区支持的设备](./community-supported-devices.md)页面：可能已经有人为你的手机构建好了内核。
 
----
+这些步骤在非 GKI 内核（4.19 及更早）和 GKI 内核（5.4 及更新）之间有所不同。
 
-### 快速导航
+## 非 GKI 内核（3.18 到 4.19）
 
-- [概述](#overview)
-- [配置非 GKI 内核](#non-gki)
-- [配置 GKI 内核](#gki)
-- [测试您的内核](#testing)
-- [推荐的内核版本](#versions)
-- [嵌套容器](#nested)
-- [附加资源](#resources)
+这些内核可以直接接受这些选项，没有需要保护的 ABI。共四步。
 
----
+### 第 1 步：必需选项
 
-<a id="overview"></a>
-## 概述
-
-Droidspaces 需要特定的内核选项来运行隔离的容器。这些选项将会启用 Linux 命名空间、cgroups、seccomp 过滤、网络以及设备文件系统支持。
-
----
-
-<a id="required-kernel-configuration"></a>
-<a id="non-gki"></a>
-## 配置非 GKI 内核（旧版内核）
-
-**适用对象：** 内核 3.18、4.4、4.9、4.14、4.19
-
-非 GKI 内核是最容易配置的。请按以下步骤操作：
-
-### 步骤 1：必要配置
-
-将这些选项放入您的设备 defconfig 中，或将其用作配置片段。
+把这些加入你设备的 defconfig，或保留为 fragment 并在构建时合并：
 
 ```makefile
-# 完全支持Droidspaces的内核配置
+# Kernel configurations for full DroidSpaces support
 # Copyright (C) 2026 ravindu644 <droidcasts@protonmail.com>
 
-# IPC 机制
+# IPC mechanisms
 CONFIG_SYSCTL=y
 CONFIG_SYSVIPC=y
 CONFIG_POSIX_MQUEUE=y
 
-# 核心命名空间支持
+# Core namespace support
 CONFIG_NAMESPACES=y
 CONFIG_PID_NS=y
 CONFIG_UTS_NS=y
 CONFIG_IPC_NS=y
 
-# Seccomp 支持
+# Seccomp support
 CONFIG_SECCOMP=y
 CONFIG_SECCOMP_FILTER=y
 
-# 控制组支持
+# Control groups support
 CONFIG_CGROUPS=y
 CONFIG_CGROUP_DEVICE=y
-CONFIG_CGROUP_PIDS=y
-CONFIG_MEMCG=y
 CONFIG_CGROUP_SCHED=y
 CONFIG_FAIR_GROUP_SCHED=y
 CONFIG_CGROUP_FREEZER=y
 CONFIG_CGROUP_NET_PRIO=y
 
-# 设备文件系统支持
+# Resource limits: --memory, --cpus, --pids-limit, in that order, then the
+# accounting that reports CPU usage on kernels before 4.15.
+# Optional: a limit whose option is missing is skipped with a warning
+CONFIG_MEMCG=y
+# Keeps a memory-limited container out of swap. Before 6.1 only; before 5.8
+# also boot with swapaccount=1 unless CONFIG_MEMCG_SWAP_ENABLED=y
+CONFIG_MEMCG_SWAP=y
+CONFIG_CFS_BANDWIDTH=y
+CONFIG_CGROUP_PIDS=y
+CONFIG_CGROUP_CPUACCT=y
+
+# Device filesystem support
 CONFIG_DEVTMPFS=y
 
-# Overlay 文件系统支持（易失模式必需）
+# Overlay filesystem support (required for volatile mode)
 CONFIG_OVERLAY_FS=y
 
-# 启用 tmpfs 上的 xattr、posix acl 支持
-# 用于 NixOS 支持
+# Enable xattr, posix acl support on tmpfs
+# For NixOS support
 CONFIG_TMPFS_POSIX_ACL=y
 CONFIG_TMPFS_XATTR=y
 
-# 固件加载支持
+# Firmware loading support
 CONFIG_FW_LOADER=y
 CONFIG_FW_LOADER_USER_HELPER=y
 CONFIG_FW_LOADER_COMPRESS=y
 
-# Droidspaces 网络隔离支持 - NAT/None 模式
+# Droidspaces Network Isolation Support - NAT/none modes
 CONFIG_NET_NS=y
 CONFIG_VETH=y
 CONFIG_BRIDGE=y
@@ -114,33 +97,50 @@ CONFIG_NF_NAT_REDIRECT=y
 CONFIG_IP_ADVANCED_ROUTER=y
 CONFIG_IP_MULTIPLE_TABLES=y
 
-# 旧版兼容
+# legacy compat
 CONFIG_NF_CONNTRACK_IPV4=y
 CONFIG_NF_NAT_IPV4=y
 CONFIG_IP_NF_NAT=y
 
-# 在旧内核上禁用此选项以使互联网正常工作
+# IPv6 in NAT mode (NAT66). Optional: without these, NAT containers are IPv4 only
+CONFIG_IPV6=y
+CONFIG_IPV6_MULTIPLE_TABLES=y
+CONFIG_IP6_NF_IPTABLES=y
+CONFIG_IP6_NF_FILTER=y
+CONFIG_IP6_NF_MANGLE=y
+CONFIG_IP6_NF_NAT=y
+CONFIG_IP6_NF_TARGET_MASQUERADE=y
+
+# legacy compat
+CONFIG_NF_CONNTRACK_IPV6=y
+CONFIG_NF_NAT_IPV6=y
+
+# Macvlan mode (--net=macvlan): a container straight on a wired LAN.
+# Optional: without it, macvlan mode is unavailable
+CONFIG_MACVLAN=y
+
+# Disable this on older kernels to make internet work
 CONFIG_ANDROID_PARANOID_NETWORK=n
+
+# Fix for docker unsafe procfs error
+CONFIG_USER_NS=y
 ```
 
-<a id="additional-kernel-configuration-for-ufwfail2ban"></a>
-### 步骤 2：防火墙支持（UFW/Fail2ban） - 可选
+<a id="step-2-firewall-support-optional"></a>
 
-> [!TIP]
->
-> 仅当您想在容器内运行 UFW 或 Fail2ban 时才需要这些选项。
-> 
-> 运行这些服务时请**使用 NAT 模式**以避免宿主网络冲突。
+### 第 2 步：防火墙支持（可选）
+
+只有在容器内运行 UFW 或 Fail2Ban 时才需要，例如[家庭服务器配方](./Cool-things-you-can-do.md#把手机变成随处可访问的家庭服务器)：
 
 ```makefile
-# UFW & FAIL2BAN 核心
+# UFW & FAIL2BAN CORE
 CONFIG_NETFILTER_XT_MATCH_COMMENT=y
 CONFIG_NETFILTER_XT_MATCH_STATE=y
 CONFIG_NETFILTER_XT_MATCH_CONNTRACK=y
 CONFIG_NETFILTER_XT_MATCH_MULTIPORT=y
 CONFIG_NETFILTER_XT_MATCH_HL=y
-CONFIG_NETFILTER_XT_TARGET_REJECT=y
 CONFIG_IP_NF_TARGET_REJECT=y
+CONFIG_IP6_NF_TARGET_REJECT=y
 CONFIG_NETFILTER_XT_TARGET_LOG=y
 CONFIG_IP_NF_TARGET_ULOG=y
 CONFIG_NETFILTER_XT_MATCH_RECENT=y
@@ -159,212 +159,173 @@ CONFIG_NETFILTER_NETLINK_LOG=y
 CONFIG_NETFILTER_XT_TARGET_NFLOG=y
 ```
 
-### 步骤 3：应用补丁
+### 第 3 步：补丁
 
-使用以下命令应用 [Documentation/resources/kernel-patches/non-GKI](../resources/kernel-patches/non-GKI) 目录中的所有补丁：
+应用 [Documentation/resources/kernel-patches/non-GKI](../resources/kernel-patches/non-GKI/) 下的所有补丁：
 
 ```bash
-patch -p1 < /path/to/extracted/patchfile.patch
+patch -p1 < /path/to/patchfile.patch
 ```
 
-### 步骤 4：编译、刷入和测试
+### 第 4 步：构建、刷入、检查
 
-1. 将上述配置块保存为 `.config` 片段或合并到您的 defconfig 中。
-2. 编译内核并将其刷入您的设备。
-3. 通过 Droidspaces 应用 **设置 -> 需求检查 -> 检查需求** 来验证。
+按你设备的常规方式构建并刷入，然后打开 Droidspaces 应用，依次进入 **设置**、**要求**、**检查要求**。"必须"和"推荐"下的所有项都应该通过。
 
----
+## GKI 内核（5.4 及更新）
 
-<a id="gki"></a>
-## 配置 GKI 内核
+Google 的 Generic Kernel Image 保持固定的内核 ABI，以便针对原厂内核构建的厂商模块继续加载。Droidspaces 需要的若干选项 `CONFIG_SYSVIPC`、`CONFIG_IPC_NS` 和 `CONFIG_POSIX_MQUEUE` 会向核心结构体添加字段并移动 ABI。直接开启它们，厂商模块会拒绝加载，手机就会无限重启。下面的补丁把这些字段移入 ABI 已经预留的填充区，因此可以在不改变任何偏移的情况下开启这些选项。
 
-**适用对象：** 内核 5.4、5.10、5.15、6.1、6.6、6.12+
-
-Google 的通用内核镜像 (GKI) 强制执行严格的 **kABI（内核应用二进制接口）** 兼容性。启用像 `CONFIG_SYSVIPC` 或 `CONFIG_IPC_NS` 这样的标准 Droidspaces 功能通常会移动核心 `task_struct` 中的内存偏移量，导致预编译的供应商模块（GPU、摄像头等）崩溃或设备无限重启。
-
-为解决此问题，Droidspaces 提供了专用的 **kABI 友好补丁**，使得在不改变内存偏移量的情况下启用这些功能。
-
-### 步骤 1：应用必要的 kABI 补丁
+### 第 1 步：kABI 补丁
 
 > [!IMPORTANT]
 >
-> **这些补丁不是可选的。** 您**必须**为您的内核版本应用正确的 kABI 修复补丁。跳过这些补丁将在启用 `CONFIG_SYSVIPC`、`CONFIG_IPC_NS` 或 `CONFIG_POSIX_MQUEUE` 后立即导致设备无限重启。
+> 这些补丁不是可选的。没有对应你内核版本的补丁，开启 IPC 选项会让设备无限重启。
 
-**对于所有 6.12 以下的内核（5.4、5.10、5.15、6.1、6.6）：**
-
-- 从 [Documentation/resources/kernel-patches/GKI/below-kernel-6.12/](../resources/kernel-patches/GKI/below-kernel-6.12) 应用 `SYSVIPC` kABI 修复：
-
-> [!TIP]
->
-> 推荐使用 [`001.GKI-below-6.12-fix_sysvipc_kABI_6_7_8.patch`](../resources/kernel-patches/GKI/below-kernel-6.12/001.GKI-below-6.12-fix_sysvipc_kabi_6_7_8.patch)。
->
-> 如果此补丁导致无限重启，请尝试同一文件夹中的其他补丁（例如 `1_2_3` 或 `3_4_5`）。
-
-**仅适用于 5.10 及以下内核：**
-
-- 您**还必须**应用 `POSIX_MQUEUE` kABI 修复：
-  [Documentation/resources/kernel-patches/GKI/below-kernel-6.12/002.5.10_or_lower_use_android_abi_padding_for_posix_mqueue.patch](../resources/kernel-patches/GKI/below-kernel-6.12/002.5.10_or_lower_use_android_abi_padding_for_posix_mqueue.patch)
-
-**对于 6.12 及以上内核：**
-
-- 从 [Documentation/resources/kernel-patches/GKI/kernel-6.12/001.GKI-6.12-or-above-fix_sysvipc_kabi.patch](../resources/kernel-patches/GKI/kernel-6.12/001.GKI-6.12-or-above-fix_sysvipc_kabi.patch) 应用补丁。
-
-**如何应用补丁：**
+- **5.4 到 6.6：** 应用 [kernel-patches/GKI/below-kernel-6.12](../resources/kernel-patches/GKI/below-kernel-6.12/) 中的 SYSVIPC 补丁。先试 `001.GKI-below-6.12-fix_sysvipc_kabi_6_7_8.patch`；如果设备无限重启，再试同一目录下使用不同填充槽的替代补丁。
+- **5.10 及更旧：** 还要应用同一目录下的 `002.5.10_or_lower_use_android_abi_padding_for_posix_mqueue.patch`。
+- **6.12 及更新：** 应用 [kernel-patches/GKI/kernel-6.12](../resources/kernel-patches/GKI/kernel-6.12/) 中的补丁。
 
 ```bash
-# 为您的内核版本应用每个必需的补丁
-patch -p1 < /path/to/extracted/patchfile.patch
+patch -p1 < /path/to/patchfile.patch
 ```
 
-### 步骤 2：编辑 `gki_defconfig`
+### 第 2 步：修改 GKI defconfig
 
-不要使用单独的片段文件，而是直接编辑 `arch/arm64/configs/gki_defconfig`，使用此 **GKI 专用配置**。
-
-这些选项已经过测试，并被证明可以在所有 GKI 内核上正常工作，而不会破坏 ABI。
+直接编辑 `arch/arm64/configs/gki_defconfig`，而不是添加 fragment。对下面每个选项，在文件中找到它：把 `# CONFIG_X is not set` 改成 `CONFIG_X=y`，如果已经是开启状态就保持不动，如果不存在就添加到末尾。
 
 > [!WARNING]
 >
-> **不要**启用下面推荐的 GKI 配置以外的任何内容。当与步骤 1 中的补丁结合使用时，这些特定选项是 kABI 安全的。
+> 配合第 1 步的补丁，这些选项是 ABI 安全的。不要开启这之外的任何选项。末尾的两个资源限制选项是有意注释掉的；在改动它们之前，请先阅读 [GKI 上的 CPU 和进程限制](#cpu-and-process-limits-on-gki)。
 
 ```makefile
-# 完全支持 DroidSpaces 的 GKI 内核配置
+# Kernel configurations for full DroidSpaces support for GKI
 # Copyright (C) 2026 ravindu644 <droidcasts@protonmail.com>
 
 # IPC
 CONFIG_SYSVIPC=y
 CONFIG_POSIX_MQUEUE=y
 
-# 命名空间
+# Namespaces
 CONFIG_IPC_NS=y
 CONFIG_PID_NS=y
 
-# 硬件访问支持
+# HW Access Support
 CONFIG_DEVTMPFS=y
 
-# 网络（增强 NAT 支持）
+# Networking (Enhanced NAT support)
 CONFIG_NETFILTER_XT_MATCH_ADDRTYPE=y
 
-# --- 以下配置为可选但建议开启 ---
+# --- Below configs are optional but recommended ---
 
-# UFW 支持
-CONFIG_NETFILTER_XT_TARGET_REJECT=y
+# Fix for docker unsafe procfs error
+CONFIG_USER_NS=y
+
+# IPv6 in NAT mode (NAT66)
+CONFIG_IP6_NF_NAT=y
+CONFIG_IP6_NF_TARGET_MASQUERADE=y
+
+# Macvlan mode (--net=macvlan). kABI-safe: on a 5.15 GKI tree it changed none
+# of the 8423 exported symbols, and the driver is self-contained
+CONFIG_MACVLAN=y
+
+# UFW support
+CONFIG_IP_NF_TARGET_REJECT=y
+CONFIG_IP6_NF_TARGET_REJECT=y
 CONFIG_NETFILTER_XT_TARGET_LOG=y
 CONFIG_NETFILTER_XT_MATCH_RECENT=y
 
-# Fail2ban 支持
+# Fail2ban support
 CONFIG_IP_SET=y
 CONFIG_IP_SET_HASH_IP=y
 CONFIG_IP_SET_HASH_NET=y
 CONFIG_NETFILTER_XT_SET=y
 
-# 启用 tmpfs 上的 xattr、posix acl 支持
-# 用于 NixOS 支持
+# Enable xattr, posix acl support on tmpfs
+# For NixOS support
 CONFIG_TMPFS_POSIX_ACL=y
 CONFIG_TMPFS_XATTR=y
+
+# Resource limits: --cpus and --pids-limit. CONFIG_MEMCG is already on in GKI.
+# These two BREAK the kABI and no patch covers them: they resize scheduler and
+# cgroup structures, which changes the CRC of thousands of exported symbols.
+# Stock vendor modules then refuse to load and the device bootloops.
+# Leave them commented out unless you rebuild EVERY kernel module from the
+# same source and flash vendor_boot, vendor_dlkm and system_dlkm together
+# with the new boot.img, all at once.
+# CONFIG_CFS_BANDWIDTH=y
+# CONFIG_CGROUP_PIDS=y
 ```
 
-**工作流程规则：**
-- **不要**将此配置作为代码块追加到文件末尾。
-- 逐个搜索每个选项。
-- 如果某个选项显示为 `# CONFIG_NAME is not set`，将其改为 `CONFIG_NAME=y`。
-- 如果某个选项已设置为 `CONFIG_NAME=y`，请保持不变。
-- 如果某个选项不存在，将其添加在末尾。
+### 第 3 步：构建、刷入、检查
 
-### 步骤 3：编译
+用 Bazel、AOSP 构建脚本或纯 `make` 构建（取决于你的源码树），然后刷入结果。由于 ABI 没有移动，原厂厂商模块仍能正常工作。然后打开 Droidspaces 应用，依次进入 **设置**、**要求**、**检查要求**。
 
-使用您偏好的编译方法：Bazel、官方 AOSP `build.sh`/`prepare_vendor.sh` 脚本，或使用 `make` 的传统 `Kbuild`。
+<a id="cpu-and-process-limits-on-gki"></a>
 
-### 步骤 4：刷入和测试
+### GKI 上的 CPU 和进程限制
 
-使用 Odin、fastboot、Heimdall、Anykernel3 或您设备偏好的方法刷入编译好的 `boot.img` 或 `Image`。由于我们使用了 kABI 安全的补丁，您的原始供应商模块将继续完美工作。
+`--cpus` 需要的 `CONFIG_CFS_BANDWIDTH` 和 `--pids-limit` 需要的 `CONFIG_CGROUP_PIDS` 会改变调度器和 cgroup 结构体的大小，而几乎所有导出的内核函数都会引用这些结构体。在 5.15 GKI 树上，它们改变了大约四千个导出符号的校验和，没有任何填充技巧能覆盖这一点。原厂厂商模块随后会拒绝加载，设备无限重启。
 
-启动后，打开 Droidspaces 应用，前往 **设置**（齿轮图标）-> **要求** -> **检查要求** 来验证您的配置。
+只有当你能够用同一份源码树和配置重新构建设备上的每一个内核模块，并把它们放进 `vendor_boot`、`vendor_dlkm` 和 `system_dlkm`，与新 `boot.img` 一起一次性刷入时，才开启它们。只要有任何模块是没有源码的预编译文件，你就做不到。不要通过禁用 `CONFIG_MODVERSIONS` 或强制加载模块来绕过检查；结构体确实变了。
 
----
+没有这两个选项，其他一切仍然可用。`--cpus` 和 `--pids-limit` 会被跳过并给出警告，App 会把这两个开关置灰。内存限制只需要 `CONFIG_MEMCG`，GKI 已经具备。要让受限容器不进入 swap，还需要 `CONFIG_MEMCG_SWAP`，并在 5.8 之前的内核命令行上加上 `swapaccount=1`（除非设置了 `CONFIG_MEMCG_SWAP_ENABLED`）；否则容器仍可能越过限制溢入 swap，启动日志会说明这一点，App 也会把 **允许交换空间（swap）** 置灰。
 
-<a id="testing"></a>
-## 测试您的内核
+## 如果你无法刷写内核
 
-### 1. 运行需求检查
+引导加载程序已锁定，或只有临时 root 时，无法刷写内核。下面这些第三方项目改为在原厂 GKI 内核上加载内核模块，模拟缺失的 PID 和 IPC 命名空间：
 
-- **在应用内**：前往 **设置**（齿轮图标）-> **要求** -> **检查要求**。
-- **在终端中**：运行：
+| 项目 | 适用于 |
+|------|--------|
+| [lkm4ctr](https://github.com/cyanmint/lkm4ctr) | GKI 5.10 到 6.18 |
+| [droid_lkm](https://github.com/Dere3046/_patchHarmony) | GKI 5.10 到 6.18 |
+| [Droidspaces-LKM](https://github.com/Shikochin/Droidspaces-LKM) | 6.12 内核的 PLZ110，另有适用于 GKI 5.10 到 6.18 的实验版本 |
+| [droidspaces-6.12-pmb110](https://github.com/ai-luo2006/droidspaces-6.12-pmb110) | 6.12 内核的一加 PMB110 |
 
-```bash
-su -c droidspaces check
-```
+> [!WARNING]
+>
+> **Droidspaces 不支持这些模块。** 我们不接受来自使用这类模块的设备的错误报告，也不会为了让某个模块能用而修复或改动 Droidspaces。这完全由模块的开发者负责，遇到问题请向他们反馈。
+>
+> Droidspaces 团队没有审查过这些项目。它们会改动正在运行的内核：用错模块可能导致手机死机或重启，而且即使所有检查都通过，模拟的命名空间也可能无法像真正的命名空间那样隔离。使用风险自负。
 
-这会检查以下内容：
+请使用为你的确切内核版本构建的模块。模块在重启后不会保持加载，每次都需要重新加载。
 
-- Root 访问权限
-- 内核版本（最低 3.18）
-- PID、MNT、UTS、IPC 命名空间
-- 网络命名空间（可选，NAT/None 模式需要）
-- Cgroup 命名空间（可选，用于现代 cgroup 隔离）
-- devtmpfs 支持
-- OverlayFS 支持（可选，用于易失模式）
-- VETH 和 Bridge 支持（可选，用于 NAT 模式）
-- PTY/devpts 支持
-- Loop 设备支持
-- ext4 支持
+## 检查会看什么
 
-### 2. 理解结果
+`droidspaces check` 和 App 的"要求"页面探测的是正在运行的内核，而不是它的配置。每项探测需要什么，以及缺少它时会失去什么：
 
-| 结果 | 含义 |
-|--------|---------|
-| 绿色对勾 | 功能可用 |
-| 黄色警告 | 功能为可选项且不可用（例如 OverlayFS） |
-| 红色叉号 | 缺少必需功能；容器可能无法正常工作 |
-
-### 3. 如果缺少某些功能该怎么办
-
-| 缺少的功能 | 所需配置 | 缺少时的影响 |
-|----------------|----------------|-------------------|
-| PID 命名空间 | `CONFIG_PID_NS=y` | **致命。** 容器无法启动。 |
-| MNT 命名空间 | `CONFIG_NAMESPACES=y` | **致命。** 容器无法启动。 |
-| UTS 命名空间 | `CONFIG_UTS_NS=y` | **致命。** 容器无法启动。 |
-| IPC 命名空间 | `CONFIG_IPC_NS=y` | **致命。** 容器无法启动。 |
-| Cgroup device | `CONFIG_CGROUP_DEVICE=y` | **致命。** 容器无法启动。 |
-| devtmpfs | `CONFIG_DEVTMPFS=y` | **致命。** Droidspaces 无法设置 `/dev`。 |
+| 探测项 | 选项 | 缺少时 |
+|-------|--------|------------|
+| PID、mount、UTS 和 IPC 命名空间 | `CONFIG_NAMESPACES`、`CONFIG_PID_NS`、`CONFIG_UTS_NS`、`CONFIG_IPC_NS` | 容器无法启动。 |
+| pivot_root、procfs、sysfs | 始终存在 | 容器无法启动。 |
+| Seccomp | `CONFIG_SECCOMP`、`CONFIG_SECCOMP_FILTER` | 容器无法启动。 |
+| devtmpfs | `CONFIG_DEVTMPFS` | 硬件访问不可用。 |
+| Cgroup 命名空间、cgroup v2 | `CONFIG_CGROUPS`、cgroup v2 | systemd 容器行为异常。 |
+| 新挂载 API | 内核 5.2，`fsopen()` 及相关系统调用 | systemd 259 及更新版本会把服务凭据放在普通目录中，`ProtectProc=` 不起作用。在这类容器中，Droidspaces 会对这些调用返回 EPERM，让 systemd 走这些回退路径而不是失败，并为每个单元和登录 shell 设置 `LIBMOUNT_FORCE_MOUNT2=always`，让 `mount` 继续使用传统调用。经过环境重置运行的 `mount`（例如 `sudo`）需要把该变量传递下去。更旧的 systemd 不受影响。 |
+| Loop 设备、ext4 | `CONFIG_BLK_DEV_LOOP`、`CONFIG_EXT4_FS` | 稀疏镜像容器无法挂载。 |
+| PTY、devpts、epoll、signalfd | Android 上始终存在 | 交互式会话失败。 |
+| 网络命名空间、veth、网桥 | `CONFIG_NET_NS`、`CONFIG_VETH`、`CONFIG_BRIDGE` | 只有主机模式可用。仅缺少网桥时，NAT 会使用直连 veth。 |
+| IPv6 NAT | `CONFIG_IP6_NF_NAT`、`CONFIG_IP6_NF_TARGET_MASQUERADE` | NAT 容器仅支持 IPv4。 |
+| Macvlan | `CONFIG_MACVLAN` | Macvlan 模式不可用。 |
 | OverlayFS | `CONFIG_OVERLAY_FS` | 易失模式不可用。 |
-| 网络命名空间 | `CONFIG_NET_NS=y` | NAT 和 None 模式不可用。 |
-| VETH / Bridge | `CONFIG_VETH` / `CONFIG_BRIDGE` | NAT 模式不可用。 |
-| Seccomp | `CONFIG_SECCOMP=y` | Seccomp 防护盾已禁用。存在安全风险。 |
+| FUSE、TUN | `CONFIG_FUSE_FS`、`CONFIG_TUN` | 容器内的 FUSE 文件系统和 VPN 无法工作。 |
+| 用户命名空间 | `CONFIG_USER_NS` | 允许沙箱不可用。 |
+| 内存、CPU 和进程限制 | `CONFIG_MEMCG`、`CONFIG_CFS_BANDWIDTH`、`CONFIG_CGROUP_PIDS`，且内核命令行上没有针对它们的 `cgroup_disable=` | 对应的限制会被跳过。 |
+| Swap 限制 | 开启 swap 统计的 `CONFIG_MEMCG_SWAP`，5.8 之前需要 `swapaccount=1` | 受内存限制的容器仍可使用 swap。 |
+| CPU 用量统计 | 4.15 之前的内核需要 `CONFIG_CGROUP_CPUACCT` | `info` 不显示 CPU 用量。 |
+
+## 该选哪个内核版本
+
+| 版本 | 预期情况 |
+|---------|----------------|
+| 3.10 到 3.18 | 最低门槛。命名空间可用，但 systemd 发行版可能不稳定。Alpine、Artix 或带 OpenRC 的 Gentoo 是稳妥选择。 |
+| 4.4 到 4.19 | 稳定。可使用任何 systemd 早于 258 的发行版，以及容器内的 Docker。 |
+| 5.4 到 5.10 | 一切可用，包括 cgroup v2 和当前发行版。 |
+| 5.15 及更新 | 一切可用，性能最佳。 |
+
+## 到哪里提问
+
+内核问题可以在 [Telegram 频道](https://t.me/Droidspaces)得到解答。内核自身的选项参考是[内核文档](https://www.kernel.org/doc/html/latest/admin-guide/kernel-parameters.html)。
 
 ---
 
-<a id="versions"></a>
-## 推荐的内核版本
-
-| 版本 | 支持级别 | 备注 |
-|---------|---------|-------|
-| 3.18 | 旧版 | 最低支持版本。仅提供基础命名空间支持。现代发行版不稳定或可能根本无法启动。 |
-| 4.4 - 4.19 | 稳定 | 全面支持。嵌套容器（Docker/Podman）可原生运行。如果在像 4.14.113 这样的内核上遇到由于 VFS 死锁缺陷导致的 systemd 挂起，请尝试在应用中启用"死锁防护盾"，或在 CLI 中传入 `--block-nested-namespaces`，然后硬重启再试。 |
-| 5.4 - 5.10 | 推荐 | 完整功能支持，包括嵌套容器和现代 cgroup v2。 |
-| 5.15+ | 理想 | 所有功能可用，最佳性能和最广泛的兼容性。 |
-
----
-
-<a id="nested"></a>
-## 嵌套容器（Docker、Podman、LXC）
-
-Droidspaces 在所有支持的内核版本上开箱即用地支持在容器内运行 Docker、Podman 或 LXC。
-
-### 旧内核注意事项（4.19 及以下）
-
-旧内核可能会对现代嵌套容器工具带来一些挑战：
-
-- **死锁防护盾的权衡**：如果您的设备受到 4.14.113 `grab_super()` VFS 死锁的影响，并且需要死锁防护盾来启动 systemd，启用防护盾也将阻止 Docker、LXC 和 Podman 所需的命名空间系统调用。当防护盾处于激活状态时，您无法使用嵌套容器。
-
-- **网络不兼容性**：现代 Docker、LXC 和 Podman 依赖 `nftables`。旧版内核通常缺少完整的 `nftables` 支持。要解决此问题，请在 NAT 模式下使用 Droidspaces，并将容器的 iptables 替代方案切换为 `iptables-legacy` 和 `ip6tables-legacy`。
-
-- **BPF 冲突**：现代 Docker 和 runc 使用 `BPF_CGROUP_DEVICE` 进行设备管理。旧版内核不支持所需的 BPF 附加类型，这会导致 `Invalid argument` 错误。要解决此问题，请配置 Docker 使用 `cgroupfs` 驱动和 `vfs` 存储驱动。
-
----
-
-<a id="resources"></a>
-## 附加资源
-
-- [Android内核教程](https://github.com/ravindu644/Android-Kernel-Tutorials) 作者 ravindu644
-- [内核配置参考](https://www.kernel.org/doc/html/latest/admin-guide/kernel-parameters.html)
-- [Droidspaces Telegram 频道](https://t.me/Droidspaces) 获取内核相关支持
+上一页：[Anland](./Anland.md) | 下一页：[实用配方](./Cool-things-you-can-do.md)
