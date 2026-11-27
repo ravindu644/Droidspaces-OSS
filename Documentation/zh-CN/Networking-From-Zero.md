@@ -192,7 +192,7 @@ ISP 只给你**一个**公网 IP 地址。但你家有 10 台设备。这 10 台
 - Droidspaces 安装 iptables `MASQUERADE` 规则（这是 Linux 中实现 NAT 目标的名称），外加 FORWARD 接受规则和 MSS 钳制规则，确保流量真正流通
 - 容器可以访问互联网；互联网看到的是 Android 的 IP，而不是容器的 IP
 - Droidspaces 还会为容器运行一个嵌入式 DHCP 服务器并配置其 DNS
-- 容器同时获得 IPv6。Droidspaces 通过路由通告 (RA) 发布一个私有前缀（`fd64:7370::/64`），容器据此自行配置地址，出站时由 IPv6 版本的 `MASQUERADE` 进行转换。这需要内核提供 IPv6 NAT 表，否则容器仅有 IPv4
+- 容器同时获得 IPv6。Droidspaces 通过路由通告 (RA) 发布 `fd64:7370::/48` 下的一个私有 `/64` 前缀，容器据此自行配置地址，出站时由 IPv6 版本的 `MASQUERADE` 进行转换。这需要内核提供 IPv6 NAT 表，否则容器仅有 IPv4
 - 在 Android 上，后台路由监视器会自动检测活跃的互联网上行链路（通过读取内核的路由规则），并在活跃网络切换时（例如 Wi-Fi 到移动数据切换）立即将容器流量重新指向正确的接口。在 Linux 上，同一个监视器会保持 IP 转发开启，并把防火墙重载时删掉的 NAT 规则补回来
 
 ### NAT 模式如何选择 WAN 上行链路（自动）
@@ -601,7 +601,7 @@ droidspaces --name=torbox --net=gateway --gateway=openwrt --gateway-net=vpn --ga
 
 ### 通过网关使用 IPv6
 
-NAT 模式除了 IPv4 之外也会给容器提供 IPv6：Droidspaces 通过路由通告 (RA) 发布一个私有 IPv6 前缀（`fd64:7370::/64`），并在出站时进行地址转换，原理与 IPv4 NAT 相同。网关容器的 WAN 口就是一个 NAT 接口，所以 OpenWrt 也可以获得 IPv6。但它不会自动配置好，开始之前需要先了解两点：
+NAT 模式除了 IPv4 之外也会给容器提供 IPv6：Droidspaces 通过路由通告 (RA) 发布 `fd64:7370::/48` 下的一个私有 IPv6 `/64` 前缀，并在出站时进行地址转换，原理与 IPv4 NAT 相同。网关容器的 WAN 口就是一个 NAT 接口，所以 OpenWrt 也可以获得 IPv6。但它不会自动配置好，开始之前需要先了解两点：
 
 - **Droidspaces 只给 OpenWrt 一个地址，而不是一段可以继续分发的地址：** 因此 OpenWrt 用自己的私有前缀 (ULA) 为 LAN 编址，并在 WAN 口再做一次 IPv6 NAT。客户端流量会被转换两次，一次由 OpenWrt，一次由 Droidspaces。这样可以正常工作，只是与真实运营商线路上使用 IPv6 的方式不同。
 - **两者都依赖宿主内核：** 容器共享宿主的内核，所以 Droidspaces 和 OpenWrt 都需要内核启用 `CONFIG_IP6_NF_NAT` 和 `CONFIG_IP6_NF_TARGET_MASQUERADE`。`droidspaces check` 会以 "IPv6 NAT support" 显示这一项。

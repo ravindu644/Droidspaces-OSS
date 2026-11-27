@@ -199,7 +199,7 @@ In NAT mode, Droidspaces does for containers what your home router does for your
 - Droidspaces installs iptables `MASQUERADE` rules (`MASQUERADE` is the Linux name for the NAT target), plus FORWARD-accept and MSS-clamp rules so traffic actually flows.
 - The container can reach the internet, and the internet sees Android's IP, not the container's.
 - Droidspaces runs an embedded DHCP server for the container and configures its DNS.
-- The container also gets IPv6. Droidspaces announces a private prefix (`fd64:7370::/64`) with router advertisements, so the container configures its own address, and translates it on the way out with the IPv6 version of `MASQUERADE`. This needs the IPv6 NAT table in the kernel; without it the container is IPv4 only.
+- The container also gets IPv6. Droidspaces announces a private `/64` prefix under `fd64:7370::/48` with router advertisements, so the container configures its own address, and translates it on the way out with the IPv6 version of `MASQUERADE`. This needs the IPv6 NAT table in the kernel; without it the container is IPv4 only.
 - On Android, a background route monitor finds the active internet uplink by reading the kernel's routing rules, and re-points container traffic as soon as the active network changes (for example, a handoff from Wi-Fi to mobile data). On Linux the same monitor keeps IP forwarding on and puts back NAT rules that a firewall reload removed.
 
 ### How NAT mode picks the WAN uplink (automatic)
@@ -613,7 +613,7 @@ When the second command runs, Droidspaces sees that OpenWrt already has an `eth1
 
 ### IPv6 through the gateway
 
-NAT mode gives a container IPv6 as well as IPv4: Droidspaces announces a private IPv6 prefix (`fd64:7370::/64`) with router advertisements and translates it on the way out, the same idea as IPv4 NAT. The gateway container's WAN is a NAT interface, so OpenWrt can have IPv6 too. It does not pick it up by itself, and there are two things to understand before the steps:
+NAT mode gives a container IPv6 as well as IPv4: Droidspaces announces a private IPv6 `/64` prefix under `fd64:7370::/48` with router advertisements and translates it on the way out, the same idea as IPv4 NAT. The gateway container's WAN is a NAT interface, so OpenWrt can have IPv6 too. It does not pick it up by itself, and there are two things to understand before the steps:
 
 - **Droidspaces hands OpenWrt one address, not a block of addresses to pass on.** OpenWrt therefore numbers its own LAN from a private prefix of its own (a ULA) and does IPv6 NAT a second time on its WAN. Client traffic is translated twice, once by OpenWrt and once by Droidspaces. It works, it is just not how IPv6 is used on a real ISP line.
 - **The host kernel does the work for both.** A container shares the host's kernel, so both Droidspaces and OpenWrt need `CONFIG_IP6_NF_NAT` and `CONFIG_IP6_NF_TARGET_MASQUERADE` in it. `droidspaces check` reports this as "IPv6 NAT support".

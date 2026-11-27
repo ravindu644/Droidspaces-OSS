@@ -222,12 +222,13 @@ fun AddPortForwardSheet(existing: List<PortForward>, onDismiss: () -> Unit, onAd
         errs.pair?.let { Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall) }
 
         SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
-            listOf("tcp", "udp").forEachIndexed { i, p ->
+            val protocols = listOf("tcp", "udp", "tcp6", "udp6")
+            protocols.forEachIndexed { i, p ->
                 SegmentedButton(
                     selected = proto == p,
                     onClick = { proto = p },
-                    shape = SegmentedButtonDefaults.itemShape(i, 2)
-                ) { Text(p.uppercase()) }
+                    shape = SegmentedButtonDefaults.itemShape(i, protocols.size)
+                ) { Text(p.uppercase(), maxLines = 1, softWrap = false) }
             }
         }
     }

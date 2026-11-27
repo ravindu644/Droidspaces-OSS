@@ -9,6 +9,7 @@
 #include <arpa/inet.h>
 #include <fnmatch.h>
 #include <linux/ethtool.h>
+#include <linux/if_addr.h>
 #include <linux/rtnetlink.h>
 #include <linux/sockios.h>
 #include <net/if.h>
@@ -62,9 +63,64 @@ void install_netfilter_rules(void) {
   if (g_host_nat6)
     install_family_rules(AF_INET6, DS_NAT6_SUBNET);
 
-  if (g_host_port_forward_count > 0 && g_host_container_ip[0])
+  if (g_host_port_forward_count > g_host_port_forward6_count &&
+      g_host_container_ip[0])
     ds_ipt_add_portforwards(g_host_port_forwards, g_host_port_forward_count,
                             g_host_container_ip);
+}
+
+int g_host_port_forward6_active;
+
+/* SLAAC can finish after init starts, and some guests use stable privacy
+ * addresses. Read the address the kernel assigned instead of guessing it
+ * from the veth MAC. Only consider our advertised prefix on eth0. */
+void sync_ipv6_portforwards(int force) {
+  static char current[INET6_ADDRSTRLEN];
+  char next[INET6_ADDRSTRLEN] = "";
+  if (g_host_nat6 && g_host_init_pid > 0) {
+    char path[64];
+    snprintf(path, sizeof(path), "/proc/%d/net/if_inet6", g_host_init_pid);
+    FILE *f = fopen(path, "re");
+    if (!f && !force)
+      return;
+    if (f) {
+      char line[128], hex[33], iface[IFNAMSIZ];
+      while (fgets(line, sizeof(line), f)) {
+        unsigned int scope, flags;
+        if (sscanf(line, "%32[0-9a-f] %*x %*x %x %x %15s", hex, &scope, &flags,
+                   iface) != 4 ||
+            strlen(hex) != 32 || scope || strcmp(iface, "eth0") != 0 ||
+            (flags & (IFA_F_TEMPORARY | IFA_F_TENTATIVE | IFA_F_DADFAILED |
+                      IFA_F_DEPRECATED)))
+          continue;
+        char expanded[40];
+        snprintf(expanded, sizeof(expanded),
+                 "%.4s:%.4s:%.4s:%.4s:%.4s:%.4s:%.4s:%.4s", hex, hex + 4,
+                 hex + 8, hex + 12, hex + 16, hex + 20, hex + 24, hex + 28);
+        struct in6_addr addr;
+        if (inet_pton(AF_INET6, expanded, &addr) == 1 &&
+            memcmp(&addr, &g_host_nat6_prefix, 8) == 0) {
+          inet_ntop(AF_INET6, &addr, next, sizeof(next));
+          if (strcmp(next, current) == 0)
+            break;
+        }
+      }
+      int failed = ferror(f);
+      fclose(f);
+      if (failed)
+        return;
+    }
+  }
+
+  if (force || strcmp(current, next) != 0) {
+    g_host_port_forward6_active =
+        ds_ipt_sync_portforwards6(g_host_port_forwards,
+                                  g_host_port_forward_count,
+                                  g_host_container_ip, next) > 0;
+    /* Record the address even on failure so a kernel without ip6tables DNAT or
+     * addrtype does not re-attempt and spam warnings on every 1.5s tick. */
+    safe_strncpy(current, next, sizeof(current));
+  }
 }
 
 /* Turning on IPv6 forwarding makes the kernel ignore Router Advertisements on
@@ -139,34 +195,35 @@ int setup_nat6_host(ds_nl_ctx_t *ctx, struct ds_config *cfg,
     write_file(path, knobs[i][1]);
   }
 
-  struct in6_addr gw_ll;
+  struct in6_addr gw_ll, net6;
   inet_pton(AF_INET6, DS_NAT6_GW_LL, &gw_ll);
-  inet_pton(AF_INET6, DS_NAT6_PREFIX, prefix);
+  inet_pton(AF_INET6, DS_NAT6_PREFIX, &net6);
+  *prefix = net6;
+
+  /* Give every container its own /64 from the last two octets of static_nat_ip
+   * (172.28.XX.YY, where XX is 1..254). The IPv4 allocator guarantees
+   * uniqueness and reserves subnet 0000 for ds-br0's fd64:7370::1, so a guest
+   * cannot steer IPv6 port forwarding at the host or a sibling container. */
+  struct in_addr v4;
+  if (inet_pton(AF_INET, cfg->static_nat_ip, &v4) != 1)
+    return 0;
+  memcpy(&prefix->s6_addr[6], (uint8_t *)&v4 + 2, 2);
 
   int err = ds_nl_add_addr6(ctx, iface, &gw_ll, 64);
-  if (cfg->net_bridgeless) {
-    /* No shared segment, so each container gets its own /64 routed at its
-     * veth. Reusing the last two octets of the IPv4 address means the IPv4
-     * allocator's uniqueness check covers this prefix too. */
-    struct in_addr v4;
-    if (inet_pton(AF_INET, cfg->static_nat_ip, &v4) != 1)
-      return 0;
-    memcpy(&prefix->s6_addr[6], (uint8_t *)&v4 + 2, 2);
-  } else if (err == 0) {
-    struct in6_addr gw = *prefix;
+  if (!cfg->net_bridgeless && err == 0) {
+    struct in6_addr gw = net6;
     gw.s6_addr[15] = 1;
     err = ds_nl_add_addr6(ctx, iface, &gw, 64);
   }
 
-  /* Route the prefix in the main table ourselves, in both modes. Bridgeless
-   * has no address in the prefix, so nothing else would create the route.
-   * Bridge mode gets one from the kernel, but on Android it may sit in that
-   * private per-interface table: a bridge that existed before the sysctl
-   * above was written keeps its route there. Replies to the container are
-   * looked up in main, and without this they die as "network unreachable"
-   * while outbound packets and IPv4 carry on working. */
+  /* Route the container prefix in main in both modes: /64 per veth in
+   * bridgeless mode, or the whole /48 on ds-br0 in bridge mode. On Android the
+   * kernel may file connected routes in a private per-interface table instead
+   * of main, which would drop replies as "network unreachable". */
   if (err == 0)
-    err = ds_nl_add_route6(ctx, prefix, 64, ds_nl_get_ifindex(ctx, iface));
+    err = ds_nl_add_route6(ctx, cfg->net_bridgeless ? prefix : &net6,
+                           cfg->net_bridgeless ? 64 : DS_NAT6_PREFIX_LEN,
+                           ds_nl_get_ifindex(ctx, iface));
   if (err < 0) {
     ds_warn("[NET] IPv6 setup on %s failed (%d) - container stays IPv4 only",
             iface, err);

@@ -72,8 +72,8 @@ void print_usage(void) {
       "--upstream wlan0 or wlan0,rmnet*\n"
       "      --port [H:]C[/P]      Forward ports (supports ranges and "
       "symmetric ports)\n"
-      "                            e.g. --port 22, 80:80/tcp, "
-      "1000-2000:1000-2000/udp\n"
+      "                            tcp/udp for IPv4, tcp6/udp6 for IPv6\n"
+      "                            e.g. --port 22 or --port 2222:22/tcp6\n"
       "  -d, --dns=SERVERS         Set custom DNS servers (comma separated)\n"
       "                            e.g. --dns 1.1.1.1,8.8.8.8\n"
       "  -I, --disable-ipv6        Disable IPv6 inside the container\n\n");

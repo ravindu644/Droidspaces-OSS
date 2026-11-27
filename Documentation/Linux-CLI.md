@@ -59,7 +59,7 @@ Each flag that configures the container is saved in its config file on `start`, 
 | `--net` | `nat` (default), `gateway`, `macvlan`, `host`, `none` | `net_mode` |
 | `--nat-ip` | fixed address in `172.28.0.0/16`, NAT only | `static_nat_ip` |
 | `--upstream` | interfaces to send NAT traffic through, comma-separated, wildcards allowed | `upstream_interfaces` |
-| `--port` | `[HOST:]CONTAINER[/tcp\|udp]`, ranges as `a-b:a-b`, repeatable, NAT only | `port_forwards` |
+| `--port` | `[HOST:]CONTAINER[/tcp\|udp\|tcp6\|udp6]`, ranges as `a-b:a-b`, repeatable, NAT only | `port_forwards` |
 | `-d`, `--dns` | resolvers, comma-separated | `dns_servers` |
 | `--disable-ipv6` | | `disable_ipv6` |
 | `--gateway` | the running container that acts as router, required for gateway mode | `gateway_container` |

@@ -26,6 +26,9 @@ extern int g_host_bridgeless;
 extern char g_host_veth[IFNAMSIZ];
 extern struct ds_port_forward g_host_port_forwards[DS_MAX_PORT_FORWARDS];
 extern int g_host_port_forward_count;
+extern int g_host_port_forward6_count;
+extern int g_host_port_forward6_active;
+extern struct in6_addr g_host_nat6_prefix;
 extern char g_host_container_ip[INET_ADDRSTRLEN];
 extern int g_host_nat6;
 extern pid_t g_host_init_pid;
@@ -52,6 +55,7 @@ int netns_has_link(const char *netns_path, const char *ifname);
 void sync_resolv_order(int v6_first);
 const char *host_filter_iface(void);
 void install_netfilter_rules(void);
+void sync_ipv6_portforwards(int force);
 int setup_nat6_host(ds_nl_ctx_t *ctx, struct ds_config *cfg,
                     struct in6_addr *prefix);
 void ds_net_setup_android_routing(ds_nl_ctx_t *ctx);

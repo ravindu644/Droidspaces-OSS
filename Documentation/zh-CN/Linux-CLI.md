@@ -59,7 +59,7 @@ keywords: droidspaces, cli, linux, container, command, line, reference, flags, c
 | `--net` | `nat`（默认）、`gateway`、`macvlan`、`host`、`none` | `net_mode` |
 | `--nat-ip` | `172.28.0.0/16` 内的固定地址，仅 NAT | `static_nat_ip` |
 | `--upstream` | 发送 NAT 流量所用的接口，逗号分隔，支持通配符 | `upstream_interfaces` |
-| `--port` | `[HOST:]CONTAINER[/tcp\|udp]`，范围写作 `a-b:a-b`，可重复，仅 NAT | `port_forwards` |
+| `--port` | `[HOST:]CONTAINER[/tcp\|udp\|tcp6\|udp6]`，范围写作 `a-b:a-b`，可重复，仅 NAT | `port_forwards` |
 | `-d`, `--dns` | 解析器，逗号分隔 | `dns_servers` |
 | `--disable-ipv6` | | `disable_ipv6` |
 | `--gateway` | 充当路由器的运行中容器，网关模式必需 | `gateway_container` |

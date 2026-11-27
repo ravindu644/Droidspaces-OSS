@@ -54,8 +54,12 @@ struct ds_port_forward {
   uint16_t host_port_end;      /* end of range (0 if single) */
   uint16_t container_port;     /* port inside the container       */
   uint16_t container_port_end; /* end of range (0 if single) */
-  char proto[4];               /* "tcp" or "udp"                  */
+  char proto[5];               /* "tcp", "udp", "tcp6" or "udp6" */
 };
+
+static inline int ds_port_forward_is_ipv6(const struct ds_port_forward *pf) {
+  return pf->proto[3] == '6';
+}
 
 typedef enum {
   DS_INIT_UNKNOWN = 0,

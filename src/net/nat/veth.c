@@ -28,6 +28,8 @@ int g_host_bridgeless = 0;
 char g_host_veth[IFNAMSIZ];
 struct ds_port_forward g_host_port_forwards[DS_MAX_PORT_FORWARDS];
 int g_host_port_forward_count = 0;
+int g_host_port_forward6_count = 0;
+struct in6_addr g_host_nat6_prefix;
 char g_host_container_ip[INET_ADDRSTRLEN];
 int g_host_nat6 = 0; /* NAT66 is set up, replay its rules too */
 pid_t g_host_init_pid = 0;
@@ -71,6 +73,10 @@ int setup_veth_host_side(struct ds_config *cfg, pid_t child_pid) {
   g_host_dns_managed = cfg->net_mode == DS_NET_NAT && !cfg->dns_servers[0];
   safe_strncpy(g_host_veth, veth_host, sizeof(g_host_veth));
   g_host_port_forward_count = cfg->port_forward_count;
+  g_host_port_forward6_count = 0;
+  for (int i = 0; i < cfg->port_forward_count; i++)
+    g_host_port_forward6_count +=
+        ds_port_forward_is_ipv6(&cfg->port_forwards[i]);
   memcpy(g_host_port_forwards, cfg->port_forwards,
          sizeof(g_host_port_forwards));
   safe_strncpy(g_host_container_ip, cfg->static_nat_ip,
@@ -227,6 +233,13 @@ int setup_veth_host_side(struct ds_config *cfg, pid_t child_pid) {
    * rules only when this succeeded. */
   struct in6_addr ra_prefix;
   int nat6 = setup_nat6_host(ctx, cfg, &ra_prefix);
+  if (nat6)
+    g_host_nat6_prefix = ra_prefix;
+  if (g_host_port_forward6_count > 0) {
+    sync_ipv6_portforwards(1);
+    if (!nat6)
+      ds_warn("[NET] IPv6 port forwarding requires IPv6 NAT");
+  }
 
   /* Cache the user-pinned upstream list (if any) into the globals that the
    * routing setup and the route monitor read.  Empty list = auto-detect.  This
