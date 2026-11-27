@@ -90,9 +90,17 @@ dumpsys connectivity | sed 's/}}/\n/g' | grep 'InterfaceName: wlan0' | grep -o '
 
 **症状：** 在 4.14 及相近内核上，systemd 在启动过程中冻结，或者 `stop` 运行超过十五秒后失败。
 
-**原因：** `grab_super()` 中的内核 bug，由 systemd 的服务沙箱（`PrivateTmp`、`ProtectSystem`）触发。Droidspaces 无法绕过。
+**原因：** 从 5.9+ 回移了 `close_range()`、但没有带上 v6.0 的 `last_fd()` 夹取的内核，在 `close_range(3, ~0U, 0)` 上会死循环。systemd 为每个服务都会调用它，于是它派生的所有 worker 都卡在 `pick_file()` 里，连信号都处理不了，启动永远走不完。从未回移 `close_range()` 的内核不受影响，这也是只有部分 4.14 设备中招的原因。
 
-**解决方法：** 使用包含上游修复的内核。
+**检查：** 跑下面这行，看是否返回：
+
+```sh
+python3 -c "import ctypes;l=ctypes.CDLL('libc.so.6');print(l.syscall(436,3,0xFFFFFFFF,0))"
+```
+
+返回 `ENOSYS` 说明内核没有 `close_range()`，不受影响；卡住不动则说明中招，只能重启清掉卡住的线程。在内核源码里执行 `grep -A8 'static inline void __range_close' fs/file.c | grep -c last_fd`，输出 `0` 同样表示受影响。
+
+**解决方法：** 应用 [03.fix_close_range_infinite_loop.patch](./resources/kernel-patches/non-GKI/03.fix_close_range_infinite_loop.patch) 后重新编译。这是上游 clamp 的小型可移植回移，不要求换内核版本。
 
 ## 删除文件后稀疏镜像没有收缩
 
