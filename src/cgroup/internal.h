@@ -20,5 +20,8 @@ long long parse_cgroup_ll(const char *buf);
 void mkdir_fresh(const char *dir);
 void v1_each(const char *container_name, int op);
 void v1_setup(struct ds_config *cfg);
+void v1_seed_cpuset(const char *mnt);
+int apply_cpuset(const struct ds_config *cfg);
+int join_cpuset(const struct ds_config *cfg);
 
 #endif /* DS_CGROUP_INTERNAL_H */

@@ -25,7 +25,7 @@ class Cli(DsTest):
             self.assertRegex(out, re.compile(rf"^\s+{cmd}\b", re.M), f"{cmd} missing from help")
         for flag in ("--rootfs", "--rootfs-img", "--name", "--hostname", "--conf", "--net", "--gateway", "--macvlan-parent",
                      "--nat-ip", "--upstream", "--port", "--dns", "--disable-ipv6", "--hw-access", "--gpu", "--x11",
-                     "--memory", "--allow-swap", "--cpus", "--pids-limit", "--privileged", "--allow-sandboxing",
+                     "--memory", "--allow-swap", "--cpus", "--cpuset-cpus", "--pids-limit", "--privileged", "--allow-sandboxing",
                      "--allow-vts", "--foreground", "--init", "--user", "--stdin", "--env", "--bind", "--reset", "--json"):
             self.assertIn(flag, out, f"{flag} missing from help")
 

@@ -55,6 +55,8 @@ int start_rootfs_locked(struct ds_config *cfg, int *lock_fd, int reuse_mount) {
    * its config after those ran, and this is the one both paths go through. */
   if (cfg->net_mode == DS_NET_MACVLAN && ds_net_macvlan_check(cfg) < 0)
     return -1;
+  if (ds_cpu_resolve_cores(cfg) < 0 || ds_cgroup_validate_cpuset(cfg) < 0)
+    return -1;
 
   /* 0. Restart: pick the preserved mount back up. If it is gone after all,
    *    this is an ordinary start that mounts the image again. */
