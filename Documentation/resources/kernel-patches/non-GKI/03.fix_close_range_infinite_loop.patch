@@ -1,0 +1,56 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: aaabbk <2268951925@qq.com>
+Date: Thu, 27 Nov 2026 19:49:37 +0800
+Subject: [PATCH] fs: fix close_range() infinite loop when max_fd is ~0U
+
+systemd calls close_range(3, ~0U, 0) to drop inherited file descriptors
+before exec'ing each service. In the backported __range_close() the loop
+condition is "while (fd <= max_fd)" with both operands unsigned, and fd
+is post-incremented inside the body. Once fd walks past UINT_MAX it wraps
+to 0, the condition stays true, and the task spins in pick_file() forever
+without ever checking for signals.
+
+On a 4.14 kernel this makes systemd freeze during boot: every worker it
+spawns (mount, journald, udevadm, tmpfiles, d-sysctl) sits in R state
+burning CPU with
+
+    pick_file -> __close_range -> SyS_close_range
+
+and cannot even be killed, because the kernel loop never returns to
+userspace. Only a reboot clears it.
+
+Fix: clamp max_fd to the last valid fdtable index before the loop, as
+upstream does since v6.0. If last_fd() is absent in your tree, use
+fdt->max_fds - 1 under the same lock/RCU protection.
+
+Signed-off-by: aaabbk <2268951925@qq.com>
+---
+diff --git a/fs/file.c b/fs/file.c
+index 4f3e861b4080..c1fdf762bb34 100644
+--- a/fs/file.c
++++ b/fs/file.c
+@@ -705,6 +705,21 @@ static inline void __range_cloexec(struct files_struct *cur_fds,
+ static inline void __range_close(struct files_struct *cur_fds, unsigned int fd,
+ 				 unsigned int max_fd)
+ {
++	unsigned n;
++
++	/*
++	 * Clamp max_fd to the last valid fdtable index.
++	 *
++	 * Callers such as systemd pass max_fd = ~0U (close_range(3, ~0U, 0)).
++	 * Without the clamp, "while (fd <= max_fd)" never terminates once
++	 * "fd++" wraps past UINT_MAX, so the task spins in pick_file()
++	 * forever, burning CPU and hanging systemd (and systemctl).
++	 */
++	spin_lock(&cur_fds->file_lock);
++	n = last_fd(files_fdtable(cur_fds));
++	spin_unlock(&cur_fds->file_lock);
++	max_fd = min(max_fd, n);
++
+ 	while (fd <= max_fd) {
+ 		struct file *file;
+ 
+-- 
+2.43.0
+

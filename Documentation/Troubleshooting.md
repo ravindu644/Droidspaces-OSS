@@ -90,9 +90,17 @@ Swap `wlan0` for the mobile data interface, usually `rmnet_data0` or similar, wh
 
 **Symptom.** On kernel 4.14 and neighbours, systemd freezes during boot, or `stop` runs for more than fifteen seconds and fails.
 
-**Cause.** A kernel bug in `grab_super()`, triggered by systemd's service sandboxing (`PrivateTmp`, `ProtectSystem`). Droidspaces cannot work around it.
+**Cause.** Kernels that backported the `close_range()` syscall from 5.9+ without the v6.0 `last_fd()` clamp loop forever on `close_range(3, ~0U, 0)`, which systemd calls for every service. Every worker systemd spawns spins inside `pick_file()` and cannot even be killed, so the boot never completes. Kernels that never backported `close_range()` are not affected, which is why this only hits some 4.14 devices.
 
-**Fix.** Use a kernel that carries the upstream fix.
+**Check.** Run this and watch whether it returns:
+
+```sh
+python3 -c "import ctypes;l=ctypes.CDLL('libc.so.6');print(l.syscall(436,3,0xFFFFFFFF,0))"
+```
+
+`ENOSYS` means your kernel has no `close_range()` and is not affected. If it hangs, the task has to be cleared by a reboot. In the kernel tree, `grep -A8 'static inline void __range_close' fs/file.c | grep -c last_fd` returning `0` also means affected.
+
+**Fix.** Apply [03.fix_close_range_infinite_loop.patch](./resources/kernel-patches/non-GKI/03.fix_close_range_infinite_loop.patch) and rebuild. It is a small, portable backport of the upstream clamp, not a kernel version requirement.
 
 ## The sparse image does not shrink after deleting files
 
